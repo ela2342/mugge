@@ -347,7 +347,8 @@ line with this table on 2026-10-24 (owner directive).
 | F-332 | Low | `audio_mute.py:46` misleading log message. |
 | F-348 | High (AE, architect; Critical if a generated conf or a non-D-063 node is active on the Pi) | Every web-UI profile activation (2-way too) writes a generated conf under the D-063 conf's filename, with profile-gain Mult defaults and no ch 5-8: after a PW restart the outputs come up live while GM shows CLOSED. GM's fixed list can't close N-way gains, close returns Ok (F-339), and integrity misses > 0 dB. Fix: US-159 G12/G13, G8c R-g4, T32-T37; interim rule 10; OBSERVE AC7 on hold (O-2). |
 | F-349 | **Critical** (AE; likelihood low) | Non-finite audio drives full-scale output: a NaN latched in the convolver while Closed fires as a full-scale step at gate open, bypassing the fade-in, HP/IEM included; sink mapping undefined (`-Ofast` converter), worst case rated. Fix: post-gain bit-pattern finite check plus a confirmed convolver reset before every open (AE). Interim rule 12; O-35. |
-| F-351 | AE to rate (architect: confirmed statically) | GM gain integrity and the web UI (mute, thermal limiter, Config tab) read gains from pw-dump text, which prints NaN and -Inf as 0, and `NaN > 1.0` is false, so a NaN gain passes; the pw-cli fallback maps unparseable to 0.0. Fix: one native raw-f32 Props reader in GM shared with US-159 G11 (f); web UI takes gain state from GM. |
+| F-351 | High (AE; architect: confirmed statically) | GM gain integrity and the web UI (mute, thermal limiter, Config tab) read gains from pw-dump text, which prints NaN and -Inf as 0, and `NaN > 1.0` is false, so a NaN gain passes; the pw-cli fallback maps unparseable to 0.0. Fix: one native raw-f32 Props reader in GM shared with US-159 G11 (f); web UI takes gain state from GM. |
+| F-352 | **Critical** if PW parses `nan`, else High (AE) | `POST /api/v1/config/gain` accepts a NaN or subnormal Mult (comparison-only checks, `min(nan, 1.0)` is nan) and pw-cli writes it, past the gate; with no auth (F-037) any host on the network can. Readers then report 0 (F-351). Fix: reject non-finite and subnormal at every input and writer. Interim: rule 7 [Rule 8]. |
 | F-347 | Medium (AE) | Config tab iterates a fixed 2-way `GAIN_NODES` list with a 0.001 fallback: under a generated N-way config it shows phantom enabled -60 dB sliders and hides the real gains (QE, static evidence). |
 | F-346 | High (AE, architect; Critical if room correction runs with amps on before the fix) | `POST /reload-pw` hot-swaps coefficients with no gate check, G8b or auth; probably reloads only `conv_left_hp` and reports success silently; no crossfade; unlocked fallback swap; stalls the PW main loop. No test checks the param names (QE). Fix: US-159 G8c, T22-T26, patch changes, AC13 tests; interim rule 9. |
 | F-345 | High (AE; Critical if the interim rule is not adopted before the next amps-on session) | Thermal limiter (`thermal_limiter.py:356-437`) writes `base_mult * factor` via pw-cli with no gate check, so recovery or an override restores Mult while Closed. Its tests are mock-only. Fix in US-159 (T13). |
@@ -566,6 +567,9 @@ through D-065). Most significant recent decisions:
   AC12 deploy ban accepted (AE); F-351 confirmed and rewritten with
   ACs, status row (architect); interim strict pw-cli oracle; #45 at
   `76b61347`: all six content reviewers approve, SecSpec withheld (CM).
+  Eleventh batch: F-351 rated High with AE's ACs; F-352 filed (Config
+  API accepts NaN Mult; Critical if PW parses `nan`, AE); US-159 G11 (f)
+  -0.0 split (QE); local commits `cac75d44`, `0ced44e5` (CM).
 - Status lines updated with merge evidence: US-113, US-120, US-128,
   US-131, US-140, US-142–US-154, US-132, F-256, F-262, F-272, F-287,
   F-290.
