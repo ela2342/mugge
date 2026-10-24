@@ -60,12 +60,20 @@ let
   isRtKernel = c: (kernel c).modDirVersion == "6.12.62"
     && ((kernel c).structuredExtraConfig.PREEMPT_RT.tristate or null) == "y";
 
+  # Evaluated kernel config value: unwraps lib.mkForce and reads the
+  # tristate ("n" also covers `option no`). Missing means not set here.
+  kconf = c: key: let v = (kernel c).structuredExtraConfig.${key} or null; in
+    if v == null then null else (v.content or v).tristate or null;
+  # F-366: NVMe-oF selects TLS and breaks TLS=no on every RT kernel.
+  nvmeFabricsStripped = c: lib.all (k: kconf c k == "n") [ "NVME_FC" "NVME_TCP" "NVME_TARGET" ];
+
   pi4 = conf:
     let c = cfg conf; in map (a: check conf a.name a.ok) [
       { name = "board is pi4"; ok = c.mugge.board.name == "pi4"; }
       { name = "PREEMPT_RT kernel variant"; ok = c.mugge.board.kernel.variant == "rt"; }
       { name = "kernel 6.12.62 with PREEMPT_RT=y"; ok = isRtKernel c; }
-      { name = "NVMe stripped (US-114)"; ok = !c.mugge.board.kernel.keepNvme; }
+      { name = "NVMe stripped (US-114)"; ok = !c.mugge.board.kernel.keepNvme && kconf c "BLK_DEV_NVME" == "n"; }
+      { name = "NVMe-oF stripped (F-366)"; ok = nvmeFabricsStripped c; }
       { name = "U-Boot/extlinux boot"; ok = c.boot.loader.generic-extlinux-compatible.enable; }
       { name = "no external bootloader hook"; ok = !c.boot.loader.external.enable; }
       { name = "5900/8080 open (allowlist is a follow-up)"; ok = builtins.elem 8080 (tcpPorts c) && builtins.elem 5900 (tcpPorts c); }
@@ -121,6 +129,8 @@ let
     let c = cfg conf; in map (a: check conf a.name a.ok) (pi5Common conf c ++ [
       { name = "PREEMPT_RT kernel variant"; ok = c.mugge.board.kernel.variant == "rt"; }
       { name = "kernel 6.12.62 with PREEMPT_RT=y"; ok = isRtKernel c; }
+      { name = "NVMe-oF stripped (F-366)"; ok = nvmeFabricsStripped c; }
+      { name = "local NVMe not stripped"; ok = kconf c "BLK_DEV_NVME" == null; }
       { name = "bootstrap.minimal unset"; ok = !c.mugge.bootstrap.minimal; }
       { name = "vc4-kms overlay with noaudio"; ok = lib.hasInfix "dtoverlay=vc4-kms-v3d-pi5,noaudio" (configTxt c); }
       { name = "PipeWire enabled"; ok = c.services.pipewire.enable; }
