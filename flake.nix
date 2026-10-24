@@ -804,6 +804,15 @@
             ./nix/nixos/boards/pi4
             ./nix/nixos/lab/us156-route.nix
           ];
+
+          # US-163: Pi 5 modules. No nixos-hardware (it targets the Pi 4)
+          # and no US-156 lab route.
+          pi5Modules = [
+            ./nix/nixos/boards/pi5
+            disko.nixosModules.disko
+            ./nix/nixos/boards/pi5/disko.nix
+            { system.configurationRevision = self.rev or self.dirtyRev or "unknown"; }
+          ];
         in
         {
           # SD card image configuration (T-072-17).
@@ -830,6 +839,28 @@
               disko.nixosModules.disko
               ./nix/nixos/boards/pi4/disko.nix
             ];
+          };
+
+          # Pi 5 first system (US-163): base system only, no audio stack,
+          # on the nixpkgs linux_rpi4 kernel substituted from cache.nixos.org,
+          # so nixos-anywhere can install it without a local kernel build.
+          # Usage: nixos-anywhere --phases disko,install,reboot \
+          #          --flake .#mugge-pi5-bootstrap root@<installer-host>
+          mugge-pi5-bootstrap = nixpkgs.lib.nixosSystem {
+            inherit system;
+            modules = [
+              ./nix/nixos/base.nix
+              { mugge.board.kernel.variant = "rpi-cached"; }
+            ] ++ pi5Modules;
+          };
+
+          # Pi 5 full system: audio stack and the PREEMPT_RT kernel (D-013),
+          # built natively on the Pi after the bootstrap.
+          # Usage (on the Pi): nixos-rebuild switch --flake .#mugge-pi5
+          mugge-pi5 = nixpkgs.lib.nixosSystem {
+            inherit system;
+            specialArgs = sharedSpecialArgs;
+            modules = [ ./nix/nixos/configuration.nix ] ++ pi5Modules;
           };
         };
 
