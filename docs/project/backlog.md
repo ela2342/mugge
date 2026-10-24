@@ -32,7 +32,10 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
   - The allowlist fail-closed + IPv6 AC moves to the backlog with F-037.
 - T57: builder Nix pinned to 2.34.9 (2.34.8 has five Nix advisories of
   2026-10-13; SecSpec, CM-CHG-.88-2); record `nix --version`; every
-  Rust crate shows a non-zero test count.
+  Rust crate shows a non-zero test count. The builder came up on 2.35.4
+  (worker-1); QE ruling 2026-10-24: re-pin to 2.34.9 for the T57 test
+  runs; the 2.35.4 bundle and installer builds stand; #49 only if
+  2.34.9 cannot be installed.
 - AC22 exception (PO, 2026-10-24, AE no veto): test-e2e may run once on
   .88 under Raspbian with the USBStreamer attached, because the owner
   states nothing is connected to any Pi output. Conditions: local-demo
@@ -42,7 +45,8 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
   HiFiBerry means stop and report to AE. Not for the NixOS image, not a
   general rule. Lapses if anything is connected to a Pi output.
 - AD install challenges (2026-10-24; C1-C3 required before the erase):
-  - C1 (bug): installer.nix SHA256SUMS lists itself, so `sha256sum -c`
+  - C1 (bug, FIXED in 41fd1105, bundle verified): installer.nix
+    SHA256SUMS lists itself, so `sha256sum -c`
     always fails. Exclude it or write outside $out; verify staged files
     on the Pi with `sha256sum -c`.
   - C2: in the installer, before disko, confirm MMC_SDHCI_BRCMSTB,
@@ -131,6 +135,9 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
   status.md l.445 F-357 says High, should be Medium; US-169 AC5 citation
   separator.
 - Architect N1-N3 on #48 (CM PR comment).
+- US-163 follow-ups (worker-1): installer has no configurationRevision;
+  wayvnc still in the deploy config with 5900 closed (removal touches
+  display.nix, shared with the Pi 4).
 - AE-F6 (routing.rs:423): check whether tracked; file if not.
 - US-170: Pi 4 allowlist and configurationRevision (AC1); Pi 4 WP ALSA
   rule; drvPath pin removal.
