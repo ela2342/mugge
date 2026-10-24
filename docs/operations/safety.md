@@ -254,16 +254,41 @@ constraints discovered during system testing, updated for D-040 architecture
 |---|-------|---------------|---------------------|
 | 1 | Web UI monitor service stopped (if using JACK backend) | `systemctl --user status pi4audio-webui-monitor` | F-030: SCHED_OTHER JACK client causes xruns under load. US-060 replaces JACK monitoring with PW-native data sources -- retire this check after US-060 validation. |
 | 2 | Mixxx not running | `pgrep -x mixxx` | CPU competition, PipeWire resource contention |
-| 3 | Signal generator running and reachable | `echo '{"cmd":"status"}' \| nc -q1 127.0.0.1 4001` | Measurement audio I/O unavailable. Signal-gen is the sole measurement output path (D-040). |
+| 3 | Signal generator running and reachable | Command #3 below the table | Measurement audio I/O unavailable. Signal-gen is the sole measurement output path (D-040). |
 | 4 | PipeWire running at FIFO/88 | `chrt -p $(pgrep -x pipewire)` | Graph clock not real-time (F-020) |
-| 5 | Correct PipeWire quantum for measurement mode | `pw-metadata -n settings \| grep quantum` | Quantum affects convolver processing latency and CPU load. Measurement typically uses quantum 256 (live mode). |
-| 6 | Signal-gen hard cap is -20 dBFS | `echo '{"cmd":"status"}' \| nc -q1 127.0.0.1 4001` -- check `max_level_dbfs` in response | Safety cap incorrect or missing. The -20 dBFS cap is immutable after startup but verify at pre-flight to confirm correct startup flag. |
-| 7 | Signal-gen ports visible in PipeWire graph | `pw-cli ls Node \| grep signal-gen` | Signal-gen not registered as PW node. In managed mode, GraphManager creates links -- if ports are missing, no audio can flow. |
-| 8 | No USBStreamer capture stream active (unless needed) | `pw-cli ls Node \| grep -iE 'ada8200\|USBStreamer.*input'` returns nothing (no output = pass), and no pcm-bridge or level-bridge capture is attached to a USBStreamer node | F-015: USB bandwidth contention between capture and playback streams on the USBStreamer. This applies to any capture on the USBStreamer, not only the `ada8200-in` adapter. No capture-plus-playback stability run has been done since D-040. |
+| 5 | Correct PipeWire quantum for measurement mode | Command #5 below the table | Quantum affects convolver processing latency and CPU load. Measurement typically uses quantum 256 (live mode). |
+| 6 | Signal-gen hard cap is -20 dBFS | Command #3 below the table -- check `max_level_dbfs` in response | Safety cap incorrect or missing. The -20 dBFS cap is immutable after startup but verify at pre-flight to confirm correct startup flag. |
+| 7 | Signal-gen ports visible in PipeWire graph | Command #7 below the table | Signal-gen not registered as PW node. In managed mode, GraphManager creates links -- if ports are missing, no audio can flow. |
+| 8 | No USBStreamer capture stream active (unless needed) | Command #8 below the table returns nothing (no output = pass). See the notes on check #8 | F-015: USB bandwidth contention between capture and playback streams on the USBStreamer. This applies to any capture on the USBStreamer, not only the `ada8200-in` adapter. No capture-plus-playback stability run has been done since D-040. |
 | 9 | Owner confirmed amp level safe | Verbal/written confirmation | Transient/excursion damage risk |
 | 10 | All 8 gains read 0.0 in PipeWire before amps on | After every boot and after any PipeWire or GraphManager restart: read the gain params from PipeWire itself (`pw-cli enum-params <pi4audio-convolver id> Props`, or `pw-dump`). Pass: exactly 8 `gain_*:Mult` values, all exactly 0.0, and all `Add` values 0.0. Do NOT use the web UI gate indicator (F-320) | Gains live with the gate showing CLOSED. No automated test covers gate-closed-at-boot (F-298, F-313). Fewer than 8 values found, or any non-zero value: amps stay off |
 
-**Notes on check #8:** The NixOS image no longer deploys the ADA8200
+**Commands for checks #3, #5, #7 and #8.** These contain a shell pipe, so
+they are kept out of the table: inside a Markdown table the pipe has to be
+written as `\|`, and a command copied from the raw file with the backslash
+still in it does not run as intended. For check #8 that would print nothing
+and look like a pass. Copy the commands from this block:
+
+```sh
+# 3 and 6: signal generator status (6: check max_level_dbfs)
+echo '{"cmd":"status"}' | nc -q1 127.0.0.1 4001
+
+# 5: PipeWire quantum
+pw-metadata -n settings | grep quantum
+
+# 7: signal-gen node present
+pw-cli ls Node | grep signal-gen
+
+# 8: no capture node on the USBStreamer or ADA8200 (no output = pass)
+pw-cli ls Node | grep -i -e ada8200 -e 'USBStreamer.*input'
+```
+
+**Notes on check #8:** The pcm-bridge and level-bridge captures attach to
+PipeWire capture nodes (`ada8200-in` or the USBStreamer's ALSA input node),
+so if command #8 finds no such node, no capture can be attached either. The
+check is conservative: an idle capture node with no active stream also
+fails it. That is intended (it fails safe). If it fails, find out what
+created the node before going on. The NixOS image no longer deploys the ADA8200
 capture adapter (`20-usbstreamer.conf`, F-295), so `ada8200-in` should be
 absent unless someone started it by hand. As a result, Live-mode mic input
 on the ADA8200 is currently not configured (F-323). The image does define a
@@ -691,18 +716,31 @@ ramp (F-320-F).
       (CLEAR WATCHDOG arrives with US-159). It is the GraphManager RPC
       `watchdog_unlatch` on `127.0.0.1:4002`, so it needs a shell on the Pi:
       the owner over SSH, or a team member in a CHANGE session granted by the
-      Change Manager.
-   3. Press Close Gate.
+      Change Manager. The command is
+      `echo '{"cmd":"watchdog_unlatch"}' | nc -q1 127.0.0.1 4002`.
+   3. Close the gate. The web UI CLOSE GATE button does not work here: it is
+      greyed out while the indicator reads CLOSED, which is the case after an
+      unlatch. Press panic MUTE in the status bar, then close the gate with
+      `POST /api/v1/venue/gate/close` from the engineer's device
+      (`curl -k -X POST https://<pi>:8080/api/v1/venue/gate/close`), or with
+      `echo '{"cmd":"close_gate"}' | nc -q1 127.0.0.1 4002` in the same
+      shell. MUTE stores the live gains as "pre-mute", so a later UNMUTE
+      brings them back (Rule 7).
    4. Verify the venue (Rule 1) and run pre-flight check #10 (Section 5).
    5. Amps back on, then open the gate per Rules 1-4.
 6. **After any GraphManager restart** (crash, redeploy, service restart),
    **treat every output as live** (interim, F-320-E). Keep the amps off
-   during the restart (Rule 9), press Close Gate, and run pre-flight check
-   #10 (Section 5) before assuming the outputs are silent.
+   during the restart (Rule 9), close the gate as in Rule 5 step 3 (panic
+   MUTE, then the REST or RPC close; the CLOSE GATE button is greyed out
+   while the indicator reads CLOSED), and run pre-flight check #10
+   (Section 5) before assuming the outputs are silent.
 7. **Never use UNMUTE** (interim, F-320-F). UNMUTE restores the pre-mute
-   gains instantly, whatever the gate state. To recover from MUTE, press
-   Close Gate, then Open Gate. If someone has already pressed UNMUTE, treat
-   the outputs as live immediately.
+   gains instantly, whatever the gate state. To recover from MUTE: amps off,
+   close the gate as in Rule 5 step 3 (if the indicator reads CLOSED, the
+   CLOSE GATE button is greyed out, so use the REST or RPC close), run
+   pre-flight check #10, then amps on and open the gate per Rules 1-4. If
+   someone has already pressed UNMUTE, treat the outputs as live
+   immediately.
 8. **No amps on a shared network (interim, F-037).** The web UI has no
    authentication: anyone on the network can open the gate, select
    `foh-passthrough` and raise gains. Until F-037 is fixed, do not power the
@@ -721,8 +759,10 @@ ramp (F-320-F).
     use the same filenames (`combined_*.wav`), and the image seeds those
     files as Dirac copies when no venue-specific files are present. So the FIR filters actually running may not be
     the ones the venue was designed for. For example,
-    `markaudio-ultimax-200hz` on 80 Hz or Dirac filters puts bass into the
-    7 W CHN-50P. The check needs a shell on the Pi (the owner over SSH, or a
+    `markaudio-ultimax-200hz` on the wrong filters puts bass into the 7 W
+    CHN-50P: on 80 Hz crossover files the driver is inside the D-031
+    floor, but gets far more power below the 157 Hz box Fc than it was
+    budgeted for; on Dirac files it has no highpass at all. The check needs a shell on the Pi (the owner over SSH, or a
     team member in an OBSERVE session granted by the Change Manager):
     - Compare `sha256sum /etc/pi4audio/coeffs/*.wav`. If any
       `combined_*.wav` matches `dirac.wav`, there is no crossover or driver
