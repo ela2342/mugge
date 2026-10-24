@@ -53,10 +53,10 @@ These steps happen before the Pi is powered on.
    On first boot, with no saved venue, it is `foh-passthrough` (unity gain
    on all 8 channels, no crossover). Keep the amps off while
    `foh-passthrough` is active, and select the correct venue before the gate
-   is ever opened. The Config tab gain sliders show the live gain-node
-   values, which read 0.0 (-inf dB) while the gate is closed. If any slider
-   reads non-zero while the gate shows CLOSED, the outputs are live: keep the
-   amps off and do not proceed. Do not use the Config tab gain Apply: it
+   is ever opened. Open (or re-open) the Config tab: its gain sliders show
+   the gain-node values read when the tab was opened, which are 0.0 (-inf dB)
+   while the gate is closed. If any slider reads non-zero while the gate
+   shows CLOSED, the outputs are live: keep the amps off and do not proceed. Do not use the Config tab gain Apply: it
    writes the gain nodes directly and bypasses the gate (F-344). The gate
    indicator alone does not guarantee silence; see
    `docs/operations/safety.md` Section 10 (Rule 11, gate bypass).
