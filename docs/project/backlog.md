@@ -33,8 +33,9 @@ Next free: F-367, US-172, D-069, T66.
     deploy, T51 deriver.
   - Deploy verb (Architect + QE, final; owner 2026-10-24: "boot is
     fine."): from the Mac, `nixos-rebuild boot --flake
-    .#mugge-pi5-deploy --target-host ela@192.168.178.88 --sudo`, then
-    an announced reboot (not `switch`).
+    .#mugge-pi5-deploy --target-host ela@<current IP> --sudo` (now
+    .89; see first-boot entry), then an announced reboot (not
+    `switch`).
 
 - Rename `mugge-pi5` to `mugge-pi5-deploy` in story and AC text
   (worker-1, 4de6cee0).
@@ -164,6 +165,14 @@ Next free: F-367, US-172, D-069, T66.
     (iii) blkid labels FIRMWARE / NIXOS_SD.
   - Installer host keys logged by SecSpec: ED25519 QVn+Ta3b...MIw8,
     installer boot_id 4da95547.... disko,install GO issued to worker-1.
+- First NixOS boot 2026-10-24: rebooted 18:59:09Z, back 19:00:01Z.
+  DHCP 192.168.178.89 (not .88), found by MAC 88:a2:9e:8c:8d:4e. Host
+  key ED25519 SHA256:a5kILUyr7XhT3D5Vdm4Z0lBDtitGOW2gb33socC/xSE (to
+  SecSpec). /run/current-system = p9mzphhy... (installed bootstrap),
+  kernel 6.12.47. CM ruling: target identity is host key + MAC, not
+  IP; the deploy verb uses the current IP. Open owner question (not
+  blocking): fixed router lease? Then update .88 references (team
+  config, docs, memories, deploy verb). First-boot checks running.
 
 ## P1
 
@@ -187,6 +196,7 @@ Next free: F-367, US-172, D-069, T66.
 - Pi 5 DHCP address changes under NixOS (.89 vs Raspbian's .88; same
   MAC, different client ID). Fix: static lease on the router or
   ClientIdentifier=mac; record the final IP in the AC and lab note.
+  Seen on first NixOS boot: .89 (see US-163 first-boot entry).
   P2 (worker-1; supersedes SecSpec's DHCP LOW note).
 - **F-363** Purifi Qts test is order-dependent (`iterdir()[:20]`).
   Medium; QE ACs 1-4. (worker-2)
