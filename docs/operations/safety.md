@@ -436,7 +436,8 @@ The gain nodes are builtins inside the filter-chain module. They are not
 separate PipeWire graph nodes; they appear as prefixed parameters on the
 `pi4audio-convolver` node (e.g. `gain_left_hp:Mult`). All eight default to
 `Mult = 0.0` in `configs/pipewire/30-filter-chain-convolver.conf` (D-063 gate
-closed at startup). Operating values come from the active venue config and
+closed at startup; by design, see Known Gaps in Section 10, F-298, F-348).
+Operating values come from the active venue config and
 are applied when the gate opens (Section 10).
 
 ### Two-Layer Gain Cap
@@ -678,7 +679,7 @@ controls all eight.
 
 | State or event | What happens | Source |
 |----------------|--------------|--------|
-| PipeWire start (boot, PW restart) | All 8 gain nodes load `Mult = 0.0` from `30-filter-chain-convolver.conf` | `configs/pipewire/30-filter-chain-convolver.conf` |
+| PipeWire start (boot, PW restart) | All 8 gain nodes load `Mult = 0.0` from `30-filter-chain-convolver.conf` (by design; see Known Gaps, F-298, F-348) | `configs/pipewire/30-filter-chain-convolver.conf` |
 | GraphManager start | Gate state is CLOSED. The persisted or default venue is loaded as *pending* gains only | `src/graph-manager/src/main.rs` |
 | Venue selected (gate closed) | New gains become pending. Nothing is applied to PipeWire | `set_venue` RPC |
 | Gate opened | Pending venue gains are written to the 8 gain nodes. Refused if no venue is loaded | `open_gate` RPC, `POST /api/v1/venue/gate/open` |
@@ -888,6 +889,8 @@ in `docs/project/status.md`).
 | CLOSE GATE button disabled while the gate reads CLOSED | The UI cannot close the gate in the F-320 states, where it matters most | Rules 5-7: panic MUTE, then REST or RPC close | F-338 |
 | Live mode not refused on 3-way profiles | Headphone feed on the IEM outputs ch 7-8 | HP/IEM Rule 3: never select Live mode on a 3-way profile; only engineer headphones on outputs 7-8 | F-342 |
 | Gate bypass by web UI Mult writers | Config tab gain Apply and the web UI thermal limiter write Mult bypassing the gate; GraphManager gain integrity checks only > 1.0 and never re-zeroes | Rule 11 | US-159 (sole writer, reduce-only limiter); F-344, F-345 |
+| Profile activation writes an unsafe PipeWire config | Any web UI speaker-profile activation (2-way included) writes a generated config with profile-gain Mult defaults and no ch 5-8; after the next PipeWire restart the outputs are live while the gate shows CLOSED; on non-2-way profiles close cannot reach the gains | Do not activate speaker profiles from the web UI; no non-2-way profile with the amps on; pre-flight check #10 before amps on after every PipeWire restart | F-348; US-159 G12/G13 |
+| Coefficient reload bypasses the gate | Web UI filter reload / `POST /reload-pw` swaps coefficients in place with no gate check and no validation, probably on one channel only, and reports success | Do not use convolver reload; activate new filters by a PipeWire restart (Section 1: warn the owner first) with amps off, headphones off and IEM out or at minimum, then Rules 1 and 10 and pre-flight check #10 before anything goes back on | F-346; US-159 G8c |
 | Close reports success without proof | `close_gate` returns ok without verifying, even if no gains were written (convolver node missing) | Rules 5-7 end with pre-flight check #10 | F-339 |
 | No persisted gate state | D-063's `active.yml` `audio_enabled` field is not implemented; the gate exists only in GraphManager memory | Rules 5-6 | F-320-G |
 | Web UI has no authentication | Anyone on the network can open the gate, change venue and raise gains | Rule 8 | F-037 (Critical) |
@@ -919,6 +922,8 @@ in `docs/project/status.md`).
 - F-342: GraphManager does not enforce D-054 `mode_constraints` on `set_mode`
 - F-344: Config tab gain Apply writes Mult directly, bypassing the gate
 - F-345: Thermal limiter restores Mult while the gate is closed
+- F-346: Coefficient reload (`POST /reload-pw`) bypasses the gate
+- F-348: Generated filter-chain configs remove the D-063 boot gate
 - `src/web-ui/app/audio_mute.py`: MUTE/UNMUTE (independent of the gate)
 - `configs/venues/`: Venue gain configs
 - `src/graph-manager/src/main.rs`: Gate open/close and venue handling
@@ -937,7 +942,7 @@ in `docs/project/status.md`).
 | S-012 | No gain increase without owner confirmation | 7, 8 |
 | F-040 | Panic MUTE sets gain to 0.0 without dropping PW stream | 8 |
 | US-044 | Four-layer ALSA lockout + watchdog defense | 9 |
-| D-063 | 8ch convolver; universal audio gate, all outputs muted at boot | 8, 9, 10 |
+| D-063 | 8ch convolver; universal audio gate, all outputs muted at boot (by design; see Known Gaps, F-298, F-348) | 8, 9, 10 |
 
 ## Safety Incident Register
 
