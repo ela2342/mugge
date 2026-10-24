@@ -1127,5 +1127,5 @@ This process was created in response to L-042. Key failure modes it prevents:
 | 66% of "E2E" tests bypass the browser (L-E2E-AUDIT) | Binding E2E definition: browser required. Non-browser tests are service integration. QE rejects misclassified tests (Sec 3.9) |
 | Stories accepted without owner hands-on testing | Gate 3: owner acceptance is mandatory sub-step of REVIEW (Sec 8) |
 | Too many stories waiting for owner | WIP limit of 3 at Gate 3; PM tracks queue (Sec 8) |
-| Worker claims tests passed but committed code differs | Future CI (Gate 1b) will test committed code automatically (Sec 8.4) |
+| Worker claims tests passed but committed code differs | CI (Gate 1b) tests the PR head commit automatically; a paths-filter skip does not count as green (Sec 8.4, O-22) |
 | Mock-mode early return hides untested real code (L-US120) | Mock-mode branch audit in QE review + Architect checklist item (Sec 3.8, 4.8, QE Rule 11) |

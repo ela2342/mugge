@@ -154,11 +154,15 @@ The test verifies:
 - GM `get_graph_info` and `get_links` RPC respond correctly
 - Full cycle completes in < 30 seconds
 
-### 2.7 Running Everything
+### 2.7 Running the Combined Suites
 
 ```sh
-nix run .#test-all # All suites sequentially against working tree
+nix run .#test-all        # Python, room-correction, MIDI, drivers and Rust suites (no browser tests)
+nix run .#test-everything # test-all plus the browser (integration/E2E) tests
 ```
+
+Neither includes the pcm-bridge, signal-gen or level-bridge suites; run
+those with their own `test-*` apps.
 
 ### 2.8 Three-Gate Testing Process
 
