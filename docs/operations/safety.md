@@ -414,6 +414,11 @@ pipeline.
 | 7 | `gain_iem_l` | Singer IEM L |
 | 8 | `gain_iem_r` | Singer IEM R |
 
+The "Output" column is the 2-way layout, the only one with IEM outputs. On
+3-way profiles, ch 5-6 are speaker channels, ch 7-8 carry the engineer
+headphones, and there is no IEM output (Section 10, "Headphone and IEM
+Channels", Rule 3; F-342).
+
 The gain nodes are builtins inside the filter-chain module. They are not
 separate PipeWire graph nodes; they appear as prefixed parameters on the
 `pi4audio-convolver` node (e.g. `gain_left_hp:Mult`). All eight default to
@@ -809,6 +814,9 @@ gate. Watchdog unlatch and UNMUTE are **not** safe recovery paths.
 
 ### Headphone and IEM Channels (5-8)
 
+This section describes the 2-way layout. On 3-way profiles, ch 5-6 are
+speaker channels and ch 7-8 carry the engineer headphones (Rule 3 below).
+
 The engineer headphone (5-6) and singer IEM (7-8) channels run at unity
 gain (Mult 1.0, 0 dB) in the `production` and `markaudio-ultimax-200hz`
 venue configs. A full-scale digital signal reaches those outputs without
@@ -852,8 +860,8 @@ in `docs/project/status.md`).
 | GraphManager restart does not write gains | Indicator reads CLOSED while PipeWire keeps venue gains | Rule 6 | F-320-E (no automated test, F-313) |
 | MUTE/UNMUTE independent of the gate | Gains re-applied while MUTE shows active; UNMUTE bypasses gate | Rule 7 | F-320-F |
 | CLOSE GATE button disabled while the gate reads CLOSED | The UI cannot close the gate in the F-320 states, where it matters most | Rules 5-7: panic MUTE, then REST or RPC close | F-338 |
-| 3-way profile mode constraint not enforced | Live mode on a 3-way profile sends the headphone feed to the IEM outputs 7-8 | HP/IEM Rule 3 | F-342 |
-| Close reports success without proof | `close_gate` returns ok without reading back the zeroed gains | Rules 5-7 end with pre-flight check #10 | F-339 |
+| Live mode not refused on 3-way profiles | Headphone feed on the IEM outputs ch 7-8 | HP/IEM Rule 3: never select Live mode on a 3-way profile; only engineer headphones on outputs 7-8 | F-342 |
+| Close reports success without proof | `close_gate` returns ok without verifying, even if no gains were written (convolver node missing) | Rules 5-7 end with pre-flight check #10 | F-339 |
 | No persisted gate state | D-063's `active.yml` `audio_enabled` field is not implemented; the gate exists only in GraphManager memory | Rules 5-6 | F-320-G |
 | Web UI has no authentication | Anyone on the network can open the gate, change venue and raise gains | Rule 8 | F-037 (Critical) |
 | HP/IEM chain not measured | No SPL limit can be stated for channels 5-8 | HP/IEM rules above | O-11 |
