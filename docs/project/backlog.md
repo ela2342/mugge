@@ -332,6 +332,11 @@ Next free: F-367, US-172, D-069, T66.
   VM's SSH would likely need LAN exposure. Rule 13 code change, not in
   US-163 unless the owner asks. P3 (Architect).
 - AE-F6 (routing.rs:423): check whether tracked; file if not.
+- Future Pi reinstalls: pre-generate the installed system's host keys
+  inside the verified installer session (`ssh-keygen -A -f /mnt`) and
+  record the fingerprints before the reboot, removing first-boot TOFU.
+  Keys live in /mnt/etc/ssh, never in the store. LOW (Architect;
+  SecSpec agrees).
 - Add mmc_block to boot.initrd.kernelModules for an explicit load (now
   only via availableKernelModules). Not in this install; may ride with
   the F-366 commit if the Architect agrees. Low (AD).
