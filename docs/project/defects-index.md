@@ -298,7 +298,7 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-316](defects/F-316.md) | low (security-specialist; not blocking) | open | Lab-only static route (US-156) hardcoded into the production image |
 | [F-317](defects/F-317.md) | medium (availability; security-specialist). Fix before the next gig. **Blocks the next release image** (architect + security, 2026-10-24). | open | RT throttle disabled (sched_rt_runtime_us=-1) with no configured watchdog backstop |
 | [F-318](defects/F-318.md) | high, rising to CRITICAL if the Pi test confirms the USBStreamer is the default sink (joint position of audio-engineer and security-specialist, 2026-10-24) | open — needs Pi evidence | Non-JACK streams may auto-link straight to the USBStreamer since D-065 |
-| [F-319](defects/F-319.md) | unknown (suspected, unverified) | open — needs verification (CM OBSERVE session) | level-bridge hw-in still targets ada8200-in, removed by F-295 (suspected) |
+| [F-319](defects/F-319.md) | unknown (suspected, unverified) | open — needs verification (CM OBSERVE session) | Dead capture consumers after F-295 — level-bridge hw-in and pcm-bridge capture-usb (suspected) |
 | [F-320](defects/F-320.md) | high (audio-engineer). Becomes a remote path when combined with F-037 (see F-037). | open — routed to architect for design. Sub-item E needs a... | D-063 gate state is not authoritative — gate can read CLOSED while audio is live |
 | [F-321](defects/F-321.md) | high, affects all venues (audio-engineer) | open | Venue `coefficients` field is not enforced at runtime — all venues share the last-deployed WAVs (dirac on a fresh image) |
 | [F-322](defects/F-322.md) | high (audio-engineer) | open | Per-speaker thermal / excursion limits are not enforced on runtime gain |
@@ -314,3 +314,4 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-332](defects/F-332.md) | low (misleading log message; behaviour is correct) | open | audio_mute.py logs "using 2-way defaults" when falling back to the 8-name list |
 | [F-333](defects/F-333.md) | high (process; Rule 13 gate unmeetable through CI) | open — owner decision O-26 | T3 (SD image build) not part of PR CI — no PR can meet "T1+T2+T3 green" |
 | [F-334](defects/F-334.md) | medium (mock-boundary divergence; F-318 cannot be reproduced locally) | open | local-demo still disables WirePlumber policy.standard — diverges from production (D-065) |
+| [F-335](defects/F-335.md) | critical (quality-engineer; team-lead filed it as high, QE raised it: blocks every merge) | open — architect diagnosing; fix needs a worker (O-8) | CI T1 fails on main before any test runs — test-all cannot cd into src/web-ui in the flake source |

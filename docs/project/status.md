@@ -21,6 +21,9 @@ directories. Their index files are generated from the per-item files
 > - Local main has an unpushed commit `95306f66` (PreCompact hook schema
 >   fix, 2026-10-24) made directly on main without a PR. It is waiting
 >   for an owner decision.
+> - Main's T1/T2 are not runnable (F-335). Branch `docs/safety-d063-gate`
+>   (technical-writer) is committed as `ae99459a`, not pushed. It merges
+>   after #41.
 > - No commits between 2026-04-19 and 2026-10-24. The state of the Pi
 >   after April is unknown.
 
@@ -74,15 +77,18 @@ safety.md carries the canonical wording (technical-writer, branch
 `docs/safety-d063-gate`).
 
 1. Close the gate before switching venues (F-314).
-2. Play nothing on the Pi except Mixxx, Reaper and the signal generator
-   (F-318).
+2. Play nothing on the Pi except Mixxx, Reaper and the signal generator,
+   and keep the amps off during any GraphManager restart (F-318).
 3. Don't open the gate on `foh-passthrough` (F-271, F-314).
-4. Don't run the CHN-50P rig until its 200 Hz filter files are verified on
-   the Pi (F-321, F-322).
-5. After a watchdog unlatch or any GraphManager restart, treat every
-   output as live. Press Close Gate before assuming silence (F-320).
-6. Never use UNMUTE. To recover from MUTE, press Close Gate, then Open Gate
-   (F-320).
+4. Before opening the gate, verify that the deployed filter files match
+   the active venue. The CHN-50P rig needs its 200 Hz filter files verified
+   on the Pi (F-321, F-322).
+5. A watchdog unlatch restores full gains instantly. Order: amps off and
+   IEMs out, then unlatch, then Close Gate and check the venue, then amps
+   on, then Open Gate. After any GraphManager restart, treat every output
+   as live and press Close Gate before assuming silence (F-320).
+6. Never use UNMUTE: it also goes live instantly. To recover from MUTE,
+   press Close Gate, then Open Gate (F-320).
 7. **Hard rule:** nothing else may reach the Pi. Keep it off shared or
    venue WiFi, or block port 8080 to every device except the engineer's
    (F-037).
@@ -166,6 +172,7 @@ line with this table on 2026-10-24 (owner directive).
 | O-25 | Authoritative state-format spec | `.claude/team/protocol/state-format.md` dropped the Phase column from the story table (l.91-93); the canonical `team-protocol/project-state/format.md` has it, and status.md uses it. TW recommends re-syncing the local copy. |
 | O-26 | T3 not in PR CI (F-333) | (a) manual T3 dispatch per PR; (b) T3 back in PR CI for `nix/`, `flake.*`, `configs/` PRs; (c) reword Rule 13 so T3 is a release gate. QE recommends (b), with (a) as the interim. Until decided, no PR can meet T1+T2+T3 green. |
 | O-27 | Gate ramp curve (F-315, D-063 amendment) | AE's 30 dB/s dB-linear slew (2 s full open) vs D-063's 3 s cosine implemented over real time. AE accepts either; minimum: wall-clock rate limit, per-tick cap, generation check, >= 2 s. |
+| O-28 | F-037 disclosure (security, low) | If the repo is public, F-037 documents an exploit path for a still-open vulnerability. Security: acceptable, but the owner should know. |
 
 ## Component Status
 
@@ -241,6 +248,7 @@ line with this table on 2026-10-24 (owner directive).
 | F-329 | Medium | CI keeps no durable test evidence (junit / -rs artifacts). |
 | F-330 | Medium | CI paths filter is an allowlist; unknown paths skip T1-T3 (O-22: a skip is not green). |
 | F-333 | High | T3 (SD image) not in PR CI; no PR can meet T1+T2+T3 green (O-26). |
+| **F-335** | **Critical** | CI T1 fails on main before any test runs (`src/web-ui` not found in flake source). Blocks every merge, incl. #41-#43 (O-22). |
 | F-334 | Medium | local-demo still disables WP policy.standard; diverges from production (D-065), F-318 untestable locally. |
 | F-331 | Low | 16k-tap dirac on ch 5-8 ~doubles convolver load; BM-2 rerun at 8ch first (architect). |
 | F-332 | Low | `audio_mute.py:46` misleading log message. |
@@ -289,7 +297,7 @@ line with this table on 2026-10-24 (owner directive).
 |--------|-------|
 | Commits on main since 2026-04-04 | 185 (first-parent: 27 PR merges, 10 direct commits 2026-04-04, 2 single-parent commits 2026-04-19, 1 unpushed local) |
 | Total stories filed | 158 (US-155/156 written retroactively, US-157/158 new, 2026-10-24) |
-| Total defects filed | F-334 highest. Gaps with no record: F-267–F-269, F-286, F-288, F-289, F-294, tracked as F-327 (plus older historical gaps). F-266 reconstructed from `32da863d` |
+| Total defects filed | F-335 highest. Gaps with no record: F-267–F-269, F-286, F-288, F-289, F-294, tracked as F-327 (plus older historical gaps). F-266 reconstructed from `32da863d` |
 | Total decisions | D-065 highest (D-065 reconstructed, needs owner confirmation; D-064 DRAFT) |
 | Active xfails | 6 (limit 5) |
 | PW convolver CPU (q1024 / q256) | 1.70% / 3.47% (PW 1.4.9 measurements; not re-measured on 1.6.2) |
@@ -362,6 +370,9 @@ through D-065). Most significant recent decisions:
   filed, US-109 kept (O-9), CI-evidence gap (F-329/F-330), T3 gap (F-333),
   local-demo WP divergence (F-334); owner rulings O-9, O-22, O-23 recorded;
   AE severity rulings F-291 (medium), F-295 (low), F-299 rationale.
+- Fourth commit: interim rules 2, 4, 5, 6 aligned with the AE safety.md
+  verdict; F-335 filed (T1 broken on main); F-319 scope extended; US-158
+  AC9 (QE Gate 2 soak); F-298/F-313 linked to the safety.md change; O-28.
 - Status lines updated with merge evidence: US-113, US-120, US-128,
   US-131, US-140, US-142–US-154, US-132, F-256, F-262, F-272, F-287,
   F-290.
@@ -375,8 +386,10 @@ through D-065). Most significant recent decisions:
   answer the F-328 Live-input question; F-331 analysis.
 - QE: fresh Gate 1 run on current main with `-rs -rx` output (F-256, F-272,
   US-142–151); needs a worker (O-8).
+- Architect: F-335 diagnosis; the fix needs a worker (O-8). QE's Gate 1
+  evidence run waits on it.
 - CM (Pi OBSERVE/CHANGE, amps OFF, needs O-2): F-318 evidence, F-316 boot
-  check, F-319, F-321, F-328.
+  check, F-319 (both suspected dead consumers), F-321, F-328.
 - Owner: decisions in "Owner Decisions Pending" above.
 
 ## Session 9 Summary (2026-04-02)
