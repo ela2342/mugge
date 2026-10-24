@@ -275,7 +275,7 @@
         # Body of `nix run .#test-all`. Kept separate from the app wrapper so
         # appSourceCheck can cover it without a dependency cycle.
         testAllScript = pkgs.writeShellScript "test-all-suites" ''
-          set -eo pipefail
+          set -euo pipefail
           export PI_AUDIO_MOCK=1
           echo "=== web-ui unit tests ==="
           cd ${repoSrc}/src/web-ui
@@ -484,7 +484,7 @@
           test-unit = {
             type = "app";
             program = "${pkgs.writeShellScript "test-unit" ''
-              set -eo pipefail
+              set -euo pipefail
               export PI_AUDIO_MOCK=1
               cd ${repoSrc}/src/web-ui
               exec ${testPython}/bin/python -m pytest tests/unit/ -v "$@"
@@ -494,7 +494,7 @@
           test-integration-browser = {
             type = "app";
             program = "${pkgs.writeShellScript "test-integration-browser" ''
-              set -eo pipefail
+              set -euo pipefail
               export PI_AUDIO_MOCK=1
               export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
               export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
@@ -509,7 +509,7 @@
           test-journey = {
             type = "app";
             program = "${pkgs.writeShellScript "test-journey" ''
-              set -eo pipefail
+              set -euo pipefail
               export PI_AUDIO_MOCK=1
               export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
               export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
@@ -521,7 +521,7 @@
           test-room-correction = {
             type = "app";
             program = "${pkgs.writeShellScript "test-room-correction" ''
-              set -eo pipefail
+              set -euo pipefail
               export PI_AUDIO_MOCK=1
               cd ${repoSrc}/src/room-correction
               exec ${testPython}/bin/python -m pytest tests/ -v "$@"
@@ -535,7 +535,7 @@
           test-room-sim-e2e = {
             type = "app";
             program = "${pkgs.writeShellScript "test-room-sim-e2e" ''
-              set -eo pipefail
+              set -euo pipefail
               REPO_DIR="${repoSrc}"
               TMPBASE="''${TMPDIR:-/tmp}/room-sim-e2e-$$"
               mkdir -p "$TMPBASE"
@@ -574,7 +574,7 @@
             # Interpolating appSourceCheck makes every `nix run .#test-all`
             # (CI T1 included) build the F-335 guard before any suite runs.
             program = "${pkgs.writeShellScript "test-all" ''
-              set -eo pipefail
+              set -euo pipefail
               echo "=== F-335 app source-path check: $(cat ${appSourceCheck}) ==="
               exec ${testAllScript} "$@"
             ''}";
@@ -585,7 +585,7 @@
           test-audio-common = {
             type = "app";
             program = "${pkgs.writeShellScript "test-audio-common" ''
-              set -eo pipefail
+              set -euo pipefail
               export HOME="''${HOME:-/tmp}"
               export CARGO_TARGET_DIR="''${HOME}/.cargo-target/pi4audio-ws"
               export PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.stdenv.cc}/bin:$PATH"
@@ -597,7 +597,7 @@
           test-graph-manager = {
             type = "app";
             program = "${pkgs.writeShellScript "test-graph-manager" ''
-              set -eo pipefail
+              set -euo pipefail
               export HOME="''${HOME:-/tmp}"
               export CARGO_TARGET_DIR="''${HOME}/.cargo-target/pi4audio-gm"
               export PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.stdenv.cc}/bin:$PATH"
@@ -609,7 +609,7 @@
           test-everything = {
             type = "app";
             program = "${pkgs.writeShellScript "test-everything" ''
-              set -eo pipefail
+              set -euo pipefail
               echo "========== test-all (unit + integration) =========="
               export PI_AUDIO_MOCK=1
               cd ${repoSrc}/src/web-ui
@@ -650,7 +650,7 @@
           test-level-bridge = {
             type = "app";
             program = "${pkgs.writeShellScript "test-level-bridge" ''
-              set -eo pipefail
+              set -euo pipefail
               export HOME="''${HOME:-/tmp}"
               export CARGO_TARGET_DIR="''${HOME}/.cargo-target/pi4audio-ws"
               export PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.pkg-config}/bin:${pkgs.stdenv.cc}/bin:$PATH"
@@ -665,7 +665,7 @@
           test-pcm-bridge = {
             type = "app";
             program = "${pkgs.writeShellScript "test-pcm-bridge" ''
-              set -eo pipefail
+              set -euo pipefail
               export HOME="''${HOME:-/tmp}"
               export CARGO_TARGET_DIR="''${HOME}/.cargo-target/pi4audio-ws"
               export PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.pkg-config}/bin:${pkgs.stdenv.cc}/bin:$PATH"
@@ -680,7 +680,7 @@
           test-signal-gen = {
             type = "app";
             program = "${pkgs.writeShellScript "test-signal-gen" ''
-              set -eo pipefail
+              set -euo pipefail
               export HOME="''${HOME:-/tmp}"
               export CARGO_TARGET_DIR="''${HOME}/.cargo-target/pi4audio-ws"
               export PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.pkg-config}/bin:${pkgs.stdenv.cc}/bin:$PATH"
@@ -696,7 +696,7 @@
           local-demo = {
             type = "app";
             program = "${pkgs.writeShellScript "local-demo" ''
-              set -eo pipefail
+              set -euo pipefail
               export LOCAL_DEMO_GM_BIN="${graph-manager}/bin/pi4audio-graph-manager"
               export LOCAL_DEMO_SG_BIN="${signal-gen}/bin/pi4audio-signal-gen"
               export LOCAL_DEMO_LB_BIN="${level-bridge}/bin/level-bridge"
@@ -716,7 +716,7 @@
           test-integration = {
             type = "app";
             program = "${pkgs.writeShellScript "test-integration" ''
-              set -eo pipefail
+              set -euo pipefail
               export LOCAL_DEMO_GM_BIN="${graph-manager}/bin/pi4audio-graph-manager"
               export LOCAL_DEMO_SG_BIN="${signal-gen}/bin/pi4audio-signal-gen"
               export LOCAL_DEMO_LB_BIN="${level-bridge}/bin/level-bridge"
@@ -738,7 +738,7 @@
           test-e2e = {
             type = "app";
             program = "${pkgs.writeShellScript "test-e2e" ''
-              set -eo pipefail
+              set -euo pipefail
               export LOCAL_DEMO_GM_BIN="${graph-manager}/bin/pi4audio-graph-manager"
               export LOCAL_DEMO_SG_BIN="${signal-gen}/bin/pi4audio-signal-gen"
               export LOCAL_DEMO_LB_BIN="${level-bridge}/bin/level-bridge"
@@ -762,7 +762,7 @@
           test-pi-loopback = {
             type = "app";
             program = "${pkgs.writeShellScript "test-pi-loopback" ''
-              set -eo pipefail
+              set -euo pipefail
               export PI_AUDIO_BACKEND=pi-loopback
               cd ${repoSrc}/src/web-ui
               exec ${e2ePython}/bin/python -m pytest tests/e2e/ -v -m "not needs_acoustic" --loopback-confirmed "$@"
@@ -773,7 +773,7 @@
           test-pi-full = {
             type = "app";
             program = "${pkgs.writeShellScript "test-pi-full" ''
-              set -eo pipefail
+              set -euo pipefail
               export PI_AUDIO_BACKEND=pi-full
               cd ${repoSrc}/src/web-ui
               exec ${e2ePython}/bin/python -m pytest tests/e2e/ -v --owner-confirmed --destructive "$@"
@@ -786,7 +786,7 @@
           capture-screenshot = {
             type = "app";
             program = "${pkgs.writeShellScript "capture-screenshot" ''
-              set -eo pipefail
+              set -euo pipefail
               export LOCAL_DEMO_GM_BIN="${graph-manager}/bin/pi4audio-graph-manager"
               export LOCAL_DEMO_SG_BIN="${signal-gen}/bin/pi4audio-signal-gen"
               export LOCAL_DEMO_LB_BIN="${level-bridge}/bin/level-bridge"
