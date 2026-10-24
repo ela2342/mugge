@@ -399,9 +399,10 @@ confirmation.
 
 The Config tab shows per-channel gain sliders for the eight PipeWire
 filter-chain `linear` builtin gain nodes (D-063: one per USBStreamer output,
-channels 1-8). The sliders read the live values. These are the same gain
-nodes used by the panic MUTE button (F-040, below), the universal audio gate
-(Section 10), and the measurement pipeline.
+channels 1-8). The sliders show the values read when the Config tab was
+opened; they do not update on their own (re-open the tab to refresh). These
+are the same gain nodes used by the panic MUTE button (F-040, below), the
+universal audio gate (Section 10), and the measurement pipeline.
 
 **Interim (until US-159): the Config tab gain sliders are read-only in
 practice.** Do not use Config tab gain Apply. It writes the gain nodes
@@ -821,9 +822,11 @@ ramp (F-320-F).
     - Never use Config tab gain Apply.
     - To make the outputs safe, turn the amps off; do not rely on CLOSE
       GATE alone.
-    - If Apply was used, or the thermal limiter was ENGAGED at any point
-      since the last open, treat the outputs as live and pass pre-flight
-      check #10 (Section 5) before the amps go on.
+    - After any gate close, pass pre-flight check #10 (Section 5) before
+      the amps go on, whether or not Apply was used or the dashboard
+      thermal panel showed LIMIT or a LIM badge. The panel shows only the
+      current state, keeps no history, and a short limiter engagement can
+      fall between polls.
 
 Watchdog mute, gain-integrity mute, and the standby transition all close the
 gate. Watchdog unlatch and UNMUTE are **not** safe recovery paths.
