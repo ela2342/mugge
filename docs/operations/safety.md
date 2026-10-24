@@ -30,12 +30,15 @@ risk from `systemctl restart camilladsp` no longer applies. All audio
 processing is now within PipeWire's filter-chain — the only transient risk
 is from PipeWire restarts or USB interruptions.
 
-**Hardware watchdog reboot:** The BCM2835 hardware watchdog is currently not
-fed, so it never reboots the Pi (F-317, F-325). If it is configured, a
-watchdog reboot after a lockup is an unannounced reboot: the USBStreamer
-stream drops with no chance to warn the owner or turn off the amps. Whether
-to enable it (automatic recovery vs an unannounced transient) is an owner
-decision (O-24).
+**Hardware watchdog reboot:** The BCM2835 hardware watchdog is not
+configured in the NixOS image (F-317, F-325; from the Nix config, not
+verified on the Pi). If it is configured, a watchdog reboot after a lockup
+is an unannounced reboot: the USBStreamer stream drops with no chance to
+warn the owner or turn off the amps. After the reboot all gains load as
+`Mult = 0.0` and the gate is closed (D-063, Section 10), so the reboot
+transient is the only acoustic risk; nothing plays until the operator
+reopens the gate. Whether to enable the watchdog (automatic recovery vs an
+unannounced transient) is an owner decision (O-24).
 
 ### Required Procedure
 
@@ -256,8 +259,20 @@ constraints discovered during system testing, updated for D-040 architecture
 | 5 | Correct PipeWire quantum for measurement mode | `pw-metadata -n settings \| grep quantum` | Quantum affects convolver processing latency and CPU load. Measurement typically uses quantum 256 (live mode). |
 | 6 | Signal-gen hard cap is -20 dBFS | `echo '{"cmd":"status"}' \| nc -q1 127.0.0.1 4001` -- check `max_level_dbfs` in response | Safety cap incorrect or missing. The -20 dBFS cap is immutable after startup but verify at pre-flight to confirm correct startup flag. |
 | 7 | Signal-gen ports visible in PipeWire graph | `pw-cli ls Node \| grep signal-gen` | Signal-gen not registered as PW node. In managed mode, GraphManager creates links -- if ports are missing, no audio can flow. |
-| 8 | ADA8200 capture adapter absent (if not needed) | `pw-cli ls Node \| grep ada8200` | F-015: USB bandwidth contention between capture and playback streams on USBStreamer. The NixOS image no longer deploys the capture adapter (`20-usbstreamer.conf`, F-295), so `ada8200-in` should be absent unless someone started it by hand. Consequence: Live-mode mic input on the ADA8200 is currently not configured (F-323). |
+| 8 | No USBStreamer capture stream active (unless needed) | `pw-cli ls Node \| grep -iE 'ada8200\|USBStreamer.*input'` returns nothing (no output = pass), and no pcm-bridge or level-bridge capture is attached to a USBStreamer node | F-015: USB bandwidth contention between capture and playback streams on the USBStreamer. This applies to any capture on the USBStreamer, not only the `ada8200-in` adapter. No capture-plus-playback stability run has been done since D-040. |
 | 9 | Owner confirmed amp level safe | Verbal/written confirmation | Transient/excursion damage risk |
+| 10 | All 8 gains read 0.0 in PipeWire before amps on | After every boot and after any PipeWire or GraphManager restart: read the gain params from PipeWire itself (`pw-cli enum-params <pi4audio-convolver id> Props`, or `pw-dump`). Pass: exactly 8 `gain_*:Mult` values, all exactly 0.0, and all `Add` values 0.0. Do NOT use the web UI gate indicator (F-320) | Gains live with the gate showing CLOSED. No automated test covers gate-closed-at-boot (F-298, F-313). Fewer than 8 values found, or any non-zero value: amps stay off |
+
+**Notes on check #8:** The NixOS image no longer deploys the ADA8200
+capture adapter (`20-usbstreamer.conf`, F-295), so `ada8200-in` should be
+absent unless someone started it by hand. As a result, Live-mode mic input
+on the ADA8200 is currently not configured (F-323). The image does define a
+`capture-usb` pcm-bridge that targets
+`alsa_input.usb-MiniDSP_USBStreamer-00.pro-input-0` directly
+(`production.nix`). It is suspected dead, but that is not verified (F-319).
+
+**Check #10 applies beyond measurement:** run it before powering the amps
+for any session, not only measurements (Section 10).
 
 **Note:** The old check #9 (ALSA Loopback buffer adequate, F-028) has been
 removed. D-040 eliminates the ALSA Loopback from the signal path -- PipeWire
@@ -520,7 +535,8 @@ reconciler cleanup. `node.autoconnect = false` on a sink only stops that
 node from linking itself: if a sink is the default sink, WirePlumber's
 default policy is expected to auto-link other streams to it. That is
 expected from WirePlumber's default policy but not yet confirmed on the Pi
-(F-318, amps-off test pending).
+(F-318, amps-off test pending). Such a link bypasses the filter-chain and
+the gate. Interim operator rule: Section 10, Rule 9.
 
 ### Layer 4: Filter-Chain Watchdog (T-044-4)
 
@@ -665,19 +681,56 @@ ramp (F-320-F).
    Live mode, the singer's earpieces must be out or the IEM pack volume must
    be at minimum. Bring the IEM level up from minimum with the singer
    present and agreeing.
-5. **After a watchdog unlatch, treat all outputs as live at venue levels**
-   (interim, F-320-D). Press Close Gate (which zeroes all gains), then
-   re-open through the gate.
+5. **Watchdog unlatch: amps off first** (interim, F-320-D). Unlatch
+   restores the venue gains instantly, so the outputs are live at full venue
+   level from that moment, even though the indicator still reads CLOSED.
+   Closing the gate afterwards is too late. Order:
+   1. Amps off (or amp gains down), and IEM earpieces out or the IEM pack at
+      minimum.
+   2. Unlatch the watchdog. There is no web UI control for this yet
+      (CLEAR WATCHDOG arrives with US-159). It is the GraphManager RPC
+      `watchdog_unlatch` on `127.0.0.1:4002`, so it needs a shell on the Pi:
+      the owner over SSH, or a team member in a CHANGE session granted by the
+      Change Manager.
+   3. Press Close Gate.
+   4. Verify the venue (Rule 1) and run pre-flight check #10 (Section 5).
+   5. Amps back on, then open the gate per Rules 1-4.
 6. **After any GraphManager restart** (crash, redeploy, service restart),
-   **press Close Gate before assuming the outputs are silent** (interim,
-   F-320-E).
-7. **Recover from MUTE with Close Gate, then Open Gate. Do not use UNMUTE**
-   (interim, F-320-F).
+   **treat every output as live** (interim, F-320-E). Keep the amps off
+   during the restart (Rule 9), press Close Gate, and run pre-flight check
+   #10 (Section 5) before assuming the outputs are silent.
+7. **Never use UNMUTE** (interim, F-320-F). UNMUTE restores the pre-mute
+   gains instantly, whatever the gate state. To recover from MUTE, press
+   Close Gate, then Open Gate. If someone has already pressed UNMUTE, treat
+   the outputs as live immediately.
 8. **No amps on a shared network (interim, F-037).** The web UI has no
    authentication: anyone on the network can open the gate, select
    `foh-passthrough` and raise gains. Until F-037 is fixed, do not power the
    amps while the Pi is on a network other people can join, or restrict
    port 8080 to the engineer's device.
+9. **With amps on, run no other audio on the Pi** (interim, F-318). Only
+   Mixxx or Reaper via `pw-jack`, the signal generator and the measurement
+   tools. No browser audio, no desktop sounds, no PulseAudio or ALSA-plugin
+   applications. WirePlumber may link such a stream straight to the
+   USBStreamer, with no crossover, no D-031 protection, no gate and no gain
+   stage (Section 9, Layer 3). Keep the amps off while GraphManager restarts,
+   because its link audit is not running then.
+10. **Confirm the coefficient files match the venue before opening the gate
+    with amps on** (interim, F-321). GraphManager does not load a venue's
+    `coefficients` on a venue switch; it changes gains only. Several venues
+    use the same filenames (`combined_*.wav`), and the image seeds those
+    files as Dirac copies when no venue-specific files are present. So the FIR filters actually running may not be
+    the ones the venue was designed for. For example,
+    `markaudio-ultimax-200hz` on 80 Hz or Dirac filters puts bass into the
+    7 W CHN-50P. The check needs a shell on the Pi (the owner over SSH, or a
+    team member in an OBSERVE session granted by the Change Manager):
+    - Compare `sha256sum /etc/pi4audio/coeffs/*.wav`. If any
+      `combined_*.wav` matches `dirac.wav`, there is no crossover or driver
+      protection on that channel: amps stay off.
+    - Otherwise, compare the checksums against those recorded when the
+      venue's filter set was generated (for the Markaudio rig, US-155 AC4).
+    - No such record exists yet. If you cannot confirm the set, keep the
+      amps off.
 
 Watchdog mute, gain-integrity mute, and the standby transition all close the
 gate. Watchdog unlatch and UNMUTE are **not** safe recovery paths.
@@ -717,11 +770,15 @@ in `docs/project/status.md`).
 | Hot venue switch | Venue change with gate open applies new gains instantly | Rule 3: close gate before venue change | F-314 |
 | No D-031 protection in `foh-passthrough` | Full-range signal on mains and subs once gate is open | Rule 2: amps off or protected venue | F-271 |
 | Unlatch leaves gate CLOSED with gains live | Indicator reads CLOSED while audio flows | Rule 5 | F-320-D |
-| GraphManager restart does not write gains | Indicator reads CLOSED while PipeWire keeps venue gains | Rule 6 | F-320-E |
+| GraphManager restart does not write gains | Indicator reads CLOSED while PipeWire keeps venue gains | Rule 6 | F-320-E (no automated test, F-313) |
 | MUTE/UNMUTE independent of the gate | Gains re-applied while MUTE shows active; UNMUTE bypasses gate | Rule 7 | F-320-F |
 | No persisted gate state | D-063's `active.yml` `audio_enabled` field is not implemented; the gate exists only in GraphManager memory | Rules 5-6 | F-320-G |
 | Web UI has no authentication | Anyone on the network can open the gate, change venue and raise gains | Rule 8 | F-037 (Critical) |
 | HP/IEM chain not measured | No SPL limit can be stated for channels 5-8 | HP/IEM rules above | O-11 |
+| Gate-closed-at-boot not verified by automated tests | A conf change or first-boot regression that leaves gains non-zero would pass CI | Pre-flight check #10 (Section 5) after every boot, before amps on | F-298, F-313 |
+| WirePlumber may auto-link non-JACK streams to the USBStreamer (D-065) | Unfiltered, ungated full-scale signal into the amps | Rule 9 | F-318 |
+| Venue coefficients not loaded on venue switch | Running FIR may not match the venue (e.g. no crossover into the CHN-50P) | Rule 10 | F-321 |
+| Per-speaker thermal and excursion ceilings not enforced | Nothing stops a venue gain above a speaker's safe limit (the CHN-50P is rated 7 W, -18.1 dB re 450 W) | With the CHN-50P, use only AE-reviewed venues and never `foh-passthrough` (Rule 2) | F-322 |
 
 ### Cross-References
 
@@ -735,6 +792,11 @@ in `docs/project/status.md`).
 - F-315: Gate-open cosine ramp collapses to an instant step
 - F-320: Gate state not authoritative (D: unlatch, E: GM restart, F: MUTE/UNMUTE, G: `audio_enabled`)
 - F-037: Web UI has no authentication
+- F-298: D-063 gate test integrity (gate-closed E2E test swallows its assertion)
+- F-313: Orphaned gate conf test and unwired GraphManager restart test
+- F-318: WirePlumber default-sink auto-linking (D-065)
+- F-321: Venue coefficients not loaded on venue switch
+- F-322: Per-speaker thermal and excursion limits not enforced
 - `src/web-ui/app/audio_mute.py`: MUTE/UNMUTE (independent of the gate)
 - `configs/venues/`: Venue gain configs
 - `src/graph-manager/src/main.rs`: Gate open/close and venue handling
