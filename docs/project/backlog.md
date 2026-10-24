@@ -135,9 +135,12 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
   status.md l.445 F-357 says High, should be Medium; US-169 AC5 citation
   separator.
 - Architect N1-N3 on #48 (CM PR comment).
-- US-163 follow-ups (worker-1): installer has no configurationRevision;
-  wayvnc still in the deploy config with 5900 closed (removal touches
-  display.nix, shared with the Pi 4).
+- US-163 follow-ups (worker-1): installer has no configurationRevision.
+  (wayvnc on the Pi 5: DONE in 433e16f7, VNC left out.)
+- mugge remote-builder address: Mac LAN IP moved 192.168.178.26 to .36;
+  mugge config still points at .26 (linux-builder VM, port 31022, works
+  again per owner 2026-10-24). Fix: update to .36, or a fixed IP for the
+  Mac from the router. Architect decides whether it touches US-163.
 - AE-F6 (routing.rs:423): check whether tracked; file if not.
 - US-170: Pi 4 allowlist and configurationRevision (AC1); Pi 4 WP ALSA
   rule; drvPath pin removal.
