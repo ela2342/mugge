@@ -31,10 +31,6 @@ in
   # overlays into its own DTB copy.
   hardware.deviceTree.overlays = lib.mkForce [ ];
 
-  # /boot/firmware is written on every switch (bootloader.nix), so it must
-  # be mounted at boot (F-289). No noauto.
-  fileSystems."/boot/firmware".options = lib.mkForce [ "nofail" ];
-
   # Wired network: systemd-networkd, DHCP on the NIC matched by type and
   # driver. Wi-Fi is not configured.
   networking.useNetworkd = true;

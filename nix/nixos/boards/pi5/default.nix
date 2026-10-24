@@ -33,6 +33,10 @@
   # Addresses are set per host in the flake configuration.
   mugge.firewall.uiAllowlist.enable = true;
 
+  # /boot/firmware is written on every switch (bootloader.nix), so it must
+  # be mounted at boot (F-289). No noauto.
+  fileSystems."/boot/firmware".options = lib.mkForce [ "nofail" ];
+
   # Key-only, declarative accounts (security ruling, AC8). ela has no
   # password at all; sudo stays passwordless (accepted risk).
   users.mutableUsers = false;

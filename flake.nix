@@ -329,6 +329,13 @@
         # Checks — sandboxed test derivations for `nix flake check`
         # -----------------------------------------------------------------
         checks = {
+          # US-163: eval-only structural assertions over all NixOS configs.
+          board-guard = import ./nix/checks/board-guard.nix {
+            inherit pkgs;
+            inherit (self) nixosConfigurations;
+            cachedKernel = (import nixpkgs { system = "aarch64-linux"; }).linuxPackages_rpi4.kernel;
+          };
+
           test-web-ui = pkgs.runCommand "test-web-ui" {
             nativeBuildInputs = [ testPython ];
             PI_AUDIO_MOCK = "1";
@@ -852,6 +859,13 @@
               ./nix/nixos/base.nix
               { mugge.board.kernel.variant = "rpi-cached"; }
             ] ++ pi5Modules;
+          };
+
+          # Pi 5 RAM installer for the tryboot install path (US-163).
+          # Usage: nix build .#nixosConfigurations.pi5-installer.config.system.build.pi5TrybootBundle
+          pi5-installer = nixpkgs.lib.nixosSystem {
+            inherit system;
+            modules = [ ./nix/nixos/boards/pi5/installer.nix ];
           };
 
           # Pi 5 full system: audio stack and the PREEMPT_RT kernel (D-013),
