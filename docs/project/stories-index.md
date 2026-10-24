@@ -173,3 +173,5 @@ Generated from the per-item files in `stories/` (the source of truth). Do NOT ru
 | [US-163](stories/US-163.md) | draft (owner directive 2026-10-24; filed by PM from PO's ... | Bootstrap NixOS on the Raspberry Pi 5 via nixos-anywhere |
 | [US-164](stories/US-164.md) | draft (PO, 2026-10-24; architect's 163c, accepted by the ... | Pi 5 RT and audio re-baseline |
 | [US-165](stories/US-165.md) | draft (PO, 2026-10-24; accepted by the architect) | Minimal kernel config for bcm2712 |
+| [US-169](stories/US-169.md) | draft (PO, 2026-10-24, from AE's verdict on #40's D-066 t... | D-066 on main: per-identity sealed-sub HPF exemption, quantified and enforced |
+| [US-170](stories/US-170.md) | draft (PO, 2026-10-24, from worker-1) | Pi 4 config hardening parity |
