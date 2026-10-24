@@ -272,39 +272,6 @@
           fi
         '';
 
-        # Body of `nix run .#test-all`. Kept separate from the app wrapper so
-        # appSourceCheck can cover it without a dependency cycle.
-        testAllScript = pkgs.writeShellScript "test-all-suites" ''
-          set -euo pipefail
-          export PI_AUDIO_MOCK=1
-          echo "=== web-ui unit tests ==="
-          cd ${repoSrc}/src/web-ui
-          ${testPython}/bin/python -m pytest tests/ -v --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --tb=short
-          echo ""
-          echo "=== room-correction tests ==="
-          cd ${repoSrc}/src/room-correction
-          ${testPython}/bin/python -m pytest tests/ -v --tb=short
-          echo ""
-          echo "=== midi tests ==="
-          cd ${repoSrc}/src/midi
-          ${testPython}/bin/python -m pytest tests/ -v --tb=short
-          echo ""
-          echo "=== drivers tests ==="
-          cd ${repoSrc}/scripts/drivers
-          ${testPython}/bin/python -m pytest tests/ -v --tb=short
-          echo ""
-          echo "=== audio-common tests ==="
-          cd ${repoSrc}/src
-          HOME="''${HOME:-/tmp}" CARGO_TARGET_DIR="''${HOME:-/tmp}/.cargo-target/pi4audio-ws" PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.stdenv.cc}/bin:$PATH" ${cargoTestNonEmpty} cargo test --locked -p audio-common 2>&1
-          echo ""
-          echo "=== graph-manager tests ==="
-          cd ${repoSrc}/src/graph-manager
-          HOME="''${HOME:-/tmp}" CARGO_TARGET_DIR="''${HOME:-/tmp}/.cargo-target/pi4audio-gm" PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.stdenv.cc}/bin:$PATH" ${cargoTestNonEmpty} cargo test --locked --no-default-features --release 2>&1
-          echo ""
-          echo "All test suites passed."
-          echo "(pcm-bridge and signal-gen: run nix run .#test-pcm-bridge / .#test-signal-gen on Linux)"
-        '';
-
         # F-335 regression guard. App scripts must refer to the repo tree as
         # `repoSrc`: a path stringified without string context is never copied
         # into the store under Nix >= 2.35 (lazy trees), so the script `cd`s
@@ -312,11 +279,11 @@
         # named in an app script is missing from that script's runtime
         # closure, independent of Nix version or sandboxing. It also rejects
         # context-dropping stringification of the flake root in any .nix file.
+        # CI builds it as its own T1 step; it is deliberately not a dependency
+        # of test-all, since it pulls in every app's closure (browsers too).
         appSourceCheck =
           let
-            scripts = pkgs.lib.mapAttrs (_: app: app.program)
-              (builtins.removeAttrs self.apps.${system} [ "test-all" ])
-              // { test-all-suites = testAllScript; };
+            scripts = pkgs.lib.mapAttrs (_: app: app.program) self.apps.${system};
           in
           pkgs.runCommand "app-source-paths" { } ''
             set -euo pipefail
@@ -571,12 +538,35 @@
 
           test-all = {
             type = "app";
-            # Interpolating appSourceCheck makes every `nix run .#test-all`
-            # (CI T1 included) build the F-335 guard before any suite runs.
             program = "${pkgs.writeShellScript "test-all" ''
               set -euo pipefail
-              echo "=== F-335 app source-path check: $(cat ${appSourceCheck}) ==="
-              exec ${testAllScript} "$@"
+              export PI_AUDIO_MOCK=1
+              echo "=== web-ui unit tests ==="
+              cd ${repoSrc}/src/web-ui
+              ${testPython}/bin/python -m pytest tests/ -v --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --tb=short
+              echo ""
+              echo "=== room-correction tests ==="
+              cd ${repoSrc}/src/room-correction
+              ${testPython}/bin/python -m pytest tests/ -v --tb=short
+              echo ""
+              echo "=== midi tests ==="
+              cd ${repoSrc}/src/midi
+              ${testPython}/bin/python -m pytest tests/ -v --tb=short
+              echo ""
+              echo "=== drivers tests ==="
+              cd ${repoSrc}/scripts/drivers
+              ${testPython}/bin/python -m pytest tests/ -v --tb=short
+              echo ""
+              echo "=== audio-common tests ==="
+              cd ${repoSrc}/src
+              HOME="''${HOME:-/tmp}" CARGO_TARGET_DIR="''${HOME:-/tmp}/.cargo-target/pi4audio-ws" PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.stdenv.cc}/bin:$PATH" ${cargoTestNonEmpty} cargo test --locked -p audio-common 2>&1
+              echo ""
+              echo "=== graph-manager tests ==="
+              cd ${repoSrc}/src/graph-manager
+              HOME="''${HOME:-/tmp}" CARGO_TARGET_DIR="''${HOME:-/tmp}/.cargo-target/pi4audio-gm" PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.stdenv.cc}/bin:$PATH" ${cargoTestNonEmpty} cargo test --locked --no-default-features --release 2>&1
+              echo ""
+              echo "All test suites passed."
+              echo "(pcm-bridge and signal-gen: run nix run .#test-pcm-bridge / .#test-signal-gen on Linux)"
             ''}";
           };
 
