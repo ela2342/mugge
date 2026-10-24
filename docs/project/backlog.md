@@ -8,8 +8,8 @@ land here. Maintained by the PM; the CM commits changes.
 ## Reserved IDs
 
 Taken (not yet filed as records): F-361, F-362, F-363, F-364 (below);
-D-068 (T57 gate dropped, below); T65 = US-159 G16 reconciler test.
-Next free: F-365, US-172, D-069, T66.
+F-365; D-068 (T57 gate dropped); T65 = US-159 G16 reconciler test.
+Next free: F-366, US-172, D-069, T66.
 
 ## US-163 text updates (critical path; one tracking batch before the PR)
 
@@ -20,6 +20,16 @@ Next free: F-365, US-172, D-069, T66.
   far kept. The suites run after the install (installed NixOS or the
   Mac VM) under the US-163 PR's Rule 13 review; Rule 13 unchanged.
   Amend AC22/T57 accordingly.
+- QE post-install test plan (2026-10-24; P1-P3 complete is QE's
+  precondition for Rule 13 approval of the US-163 PR):
+  - P0: salvage the partial T57 evidence off .88 before the wipe.
+  - P1: the installed configurationRevision is the test SHA; T48-T53
+    on the bootstrap.
+  - P2: code suites at that SHA, VM preferred; e2e and
+    integration-browser VM-only (AC22 exception does not cover the
+    NixOS image); Nix < 2.35 or stop; known non-blocking items listed.
+  - P3: after the announced deploy switch: T54/T55, AC13, T53 on
+    deploy, T51 deriver.
 
 - Rename `mugge-pi5` to `mugge-pi5-deploy` in story and AC text
   (worker-1, 4de6cee0).
@@ -184,11 +194,13 @@ Next free: F-365, US-172, D-069, T66.
   (SecSpec)
 - Mac disk nearly full (6.0 GiB free on 2026-10-24, falling slowly,
   CM). Clean up Nix store / old worktrees before heavy local builds.
-- Hermetic nix checks broken in the sandbox (pre-existing; found in
+- **F-365** Hermetic nix checks broken in the sandbox (pre-existing; found in
   T57 by worker-1; CI never builds checks.*): checks.<sys>.test-midi
   (../../../configs resolves to /), test-room-correction (cp
   Permission denied on test_camilladsp.yml), test-web-ui (speaker
-  YAMLs missing, graph_manager_client not importable). Owner QE.
+  YAMLs missing, graph_manager_client not importable). Owner QE;
+  filed by worker-1, pending the drvPath-vs-main proof that it is
+  pre-existing.
 - Architect N1-N3 on #48 (CM PR comment).
 - US-163 follow-ups (worker-1): installer has no configurationRevision.
   (wayvnc on the Pi 5: DONE in 433e16f7, VNC left out.)
@@ -213,9 +225,10 @@ bases on it. Branch protection requires up-to-date with main, so each
 merge needs update-branch and 7 reconfirmations at the new head.
 
 - #42 (team docs paths): 7/7 at 10c3938b. Owner answered A7 ("Yes,
-  docs-only" for .claude/team/protocol/*.md). Held on owner Q2 only:
-  its dispatch run 40099078614 FAILED (F-335 artefact); does a failed
-  job block a docs-only PR? Then update-branch and 7 reconfirmations.
+  docs-only" for .claude/team/protocol/*.md). Owner answered Q2: a
+  failed job still blocks. Its dispatch run 40099078614 FAILED (F-335
+  artefact), so #42 needs a run with no failed job (after #49 or a
+  re-run), then update-branch and 7 reconfirmations.
 - #49 F-335 fix: new head b959e5c9 pending push voids verdicts; needs a
   fresh round and green T1-T3. Off the US-163 path.
 - #43, #45, #44: need #49 on main and real green CI; #45 before #44.
