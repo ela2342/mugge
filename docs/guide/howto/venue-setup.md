@@ -40,6 +40,14 @@ These steps happen before the Pi is powered on.
 6. Power on the Pi. Wait for the boot sequence to complete (approximately 30
    seconds). The web UI auto-starts as a systemd service.
 
+   **Network:** the web UI has no authentication (F-037). Anyone on the
+   same network can open the gate, select `foh-passthrough` and raise
+   gains, even while the amps are off; the change takes effect when the amps
+   come on. Do not connect the Pi to venue or other shared WiFi/LAN at any
+   time during setup or the show; use a network only the engineer's device
+   is on, or restrict port 8080 to that device
+   ([safety.md](../../operations/safety.md), Section 10, Rule 8).
+
 7. Open a browser and go to `https://mugge.local:8080`. You should see the
    Dashboard tab with level meters and the spectrum analyzer. Confirm the
    status bar at the top shows PipeWire running and the DSP load indicator

@@ -20,8 +20,9 @@ port 8080 has no authentication mechanism.
 (D-032) provides encryption but not authentication. Since D-063 an
 unauthenticated client can also open the audio gate, select
 `foh-passthrough` and raise gains, so security and audio-engineer re-rated it
-Critical (2026-10-24). Interim rule: no amps on a shared network, or restrict
-port 8080 to the engineer's device (safety.md §10 rule 8). The web UI service file
+Critical (2026-10-24). Interim rule: the Pi never joins a shared network during setup or the show
+(changes made while the amps are off persist), or port 8080 is restricted to
+the engineer's device (safety.md §10 rule 8). The web UI service file
 (`configs/systemd/user/pi4-audio-webui.service`) binds `0.0.0.0:8080` --
 network-facing. Recommended fix: HTTP Basic Auth over TLS. This is HIGH
 severity because the signal generator can produce audio output through the PA

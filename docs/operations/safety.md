@@ -271,6 +271,9 @@ and look like a pass. Copy the commands from this block:
 
 ```sh
 # 3 and 6: signal generator status (6: check max_level_dbfs)
+# Not yet verified on the NixOS image: nc may be missing, and -q1 is a
+# Debian netcat option. If it fails, use:
+#   bash -c 'exec 3<>/dev/tcp/127.0.0.1/4001; echo "{\"cmd\":\"status\"}" >&3; head -n1 <&3'
 echo '{"cmd":"status"}' | nc -q1 127.0.0.1 4001
 
 # 5: PipeWire quantum
@@ -716,15 +719,23 @@ ramp (F-320-F).
       (CLEAR WATCHDOG arrives with US-159). It is the GraphManager RPC
       `watchdog_unlatch` on `127.0.0.1:4002`, so it needs a shell on the Pi:
       the owner over SSH, or a team member in a CHANGE session granted by the
-      Change Manager. The command is
-      `echo '{"cmd":"watchdog_unlatch"}' | nc -q1 127.0.0.1 4002`.
+      Change Manager. Not yet verified on the NixOS image (`nc` may be
+      missing, and `-q1` is a Debian netcat option): try
+      `echo '{"cmd":"watchdog_unlatch"}' | nc -q1 127.0.0.1 4002`, and if
+      that fails, the bash-only form (same caveat)
+      `bash -c 'exec 3<>/dev/tcp/127.0.0.1/4002; echo "{\"cmd\":\"watchdog_unlatch\"}" >&3; head -n1 <&3'`.
+      Success is a reply containing `"ok":true`. If both fail, the
+      watchdog stays latched and the outputs stay muted. That is the safe
+      state: do not improvise, leave the amps off and fix it later.
    3. Close the gate. The web UI CLOSE GATE button does not work here: it is
       greyed out while the indicator reads CLOSED, which is the case after an
-      unlatch. Press panic MUTE in the status bar, then close the gate with
+      unlatch (F-338). Press panic MUTE in the status bar, then close the gate with
       `POST /api/v1/venue/gate/close` from the engineer's device
-      (`curl -k -X POST https://<pi>:8080/api/v1/venue/gate/close`), or with
-      `echo '{"cmd":"close_gate"}' | nc -q1 127.0.0.1 4002` in the same
-      shell. MUTE stores the live gains as "pre-mute", so a later UNMUTE
+      (`curl -k -X POST https://<pi>:8080/api/v1/venue/gate/close`). This
+      is the primary path. In a shell on the Pi, the GraphManager RPC
+      `echo '{"cmd":"close_gate"}' | nc -q1 127.0.0.1 4002` also works if
+      `nc` is present (not yet verified on the NixOS image); if it fails,
+      use the curl command. MUTE stores the live gains as "pre-mute", so a later UNMUTE
       brings them back (Rule 7).
    4. Verify the venue (Rule 1) and run pre-flight check #10 (Section 5).
    5. Amps back on, then open the gate per Rules 1-4.
@@ -741,11 +752,17 @@ ramp (F-320-F).
    pre-flight check #10, then amps on and open the gate per Rules 1-4. If
    someone has already pressed UNMUTE, treat the outputs as live
    immediately.
-8. **No amps on a shared network (interim, F-037).** The web UI has no
+8. **No shared network at any time (interim, F-037).** The web UI has no
    authentication: anyone on the network can open the gate, select
-   `foh-passthrough` and raise gains. Until F-037 is fixed, do not power the
-   amps while the Pi is on a network other people can join, or restrict
-   port 8080 to the engineer's device.
+   `foh-passthrough` and raise gains. This works while the amps are off
+   too: the state persists, and the outputs go live when the amps come on.
+   Until F-037 is fixed, do not connect the Pi to a network other people
+   can join at any time during setup or the show; use a network only the
+   engineer's device is on, or restrict port 8080 to that device. If the Pi
+   has been on such a network, treat every output as live: amps off, close
+   the gate as in Rule 5 step 3, check the active venue (Rule 1) and its
+   coefficient files (Rule 10), since a venue switch survives closing the
+   gate, and run pre-flight check #10 before the amps go on.
 9. **With amps on, run no other audio on the Pi** (interim, F-318). Only
    Mixxx or Reaper via `pw-jack`, the signal generator and the measurement
    tools. No browser audio, no desktop sounds, no PulseAudio or ALSA-plugin
@@ -812,6 +829,8 @@ in `docs/project/status.md`).
 | Unlatch leaves gate CLOSED with gains live | Indicator reads CLOSED while audio flows | Rule 5 | F-320-D |
 | GraphManager restart does not write gains | Indicator reads CLOSED while PipeWire keeps venue gains | Rule 6 | F-320-E (no automated test, F-313) |
 | MUTE/UNMUTE independent of the gate | Gains re-applied while MUTE shows active; UNMUTE bypasses gate | Rule 7 | F-320-F |
+| CLOSE GATE button disabled while the gate reads CLOSED | The UI cannot close the gate in the F-320 states, where it matters most | Rules 5-7: panic MUTE, then REST or RPC close | F-338 |
+| Close reports success without proof | `close_gate` returns ok without reading back the zeroed gains | Rules 5-7 end with pre-flight check #10 | F-339 |
 | No persisted gate state | D-063's `active.yml` `audio_enabled` field is not implemented; the gate exists only in GraphManager memory | Rules 5-6 | F-320-G |
 | Web UI has no authentication | Anyone on the network can open the gate, change venue and raise gains | Rule 8 | F-037 (Critical) |
 | HP/IEM chain not measured | No SPL limit can be stated for channels 5-8 | HP/IEM rules above | O-11 |
@@ -837,6 +856,8 @@ in `docs/project/status.md`).
 - F-318: WirePlumber default-sink auto-linking (D-065)
 - F-321: Venue coefficients not loaded on venue switch
 - F-322: Per-speaker thermal and excursion limits not enforced
+- F-338: CLOSE GATE button disabled while the gate reads CLOSED
+- F-339: Gate close reports success without verifying the gains
 - `src/web-ui/app/audio_mute.py`: MUTE/UNMUTE (independent of the gate)
 - `configs/venues/`: Venue gain configs
 - `src/graph-manager/src/main.rs`: Gate open/close and venue handling
