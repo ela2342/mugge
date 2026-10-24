@@ -119,6 +119,15 @@ Next free: F-366, US-172, D-069, T66.
   installed system get (installer came up on .89, not .88). CM decided
   C7 option (a): both deviations accepted; rebooted back to Raspbian.
 
+- Install link-loss gates (Architect, after the 20:13 eth0 drop):
+  (1) a pre-chosen recovery path (USB stick vs SD re-flash) -- WAIVED.
+  Owner 2026-10-24, verbatim, relayed by team-lead via CM: "We'll see
+  once we are there." The owner accepts the risk of an erased,
+  unbootable SD and decides recovery only if the link drops
+  mid-install. (2) Installer link pre-check before disko -- stands.
+  (3) On link loss: STOP, no retry, situation to the owner -- stands.
+  Record in the US-163 lab note.
+
 ## P1
 
 - **F-361** Link audit protects only ports named playback_AUX0..7
