@@ -49,16 +49,21 @@ These steps happen before the Pi is powered on.
    For DJ mode set it to 1024 (press the 1024 button and Apply). For live
    vocal mode set it to 256.
 
-9. Check the gain values. The Config tab shows per-channel gain sliders for
-   the four speaker channels (left, right, sub 1, sub 2). Production defaults
-   are deep attenuation (around -60 dB for mains, -64 dB for subs). Do not
-   change these until measurement is complete.
+9. Check the gain values. The Config tab shows gain sliders for the four
+   speaker channels (left, right, sub 1, sub 2). These are the production
+   venue's gains, applied when the gate opens: deep attenuation (around
+   -60 dB for mains, -64 dB for subs). The filter-chain has 8 gain nodes in
+   total, all at 0.0 while the gate is closed. Do not change these until
+   measurement is complete.
 
-10. Turn on the amplifier. After boot the audio gate is closed and all gain
-    nodes are at 0.0 (D-063), and no audio application is running, so the
-    speakers are silent. This is the safe moment to power the amp. The web UI
-    gate indicator is not authoritative (F-320); the authoritative check is
-    pre-flight check #10 in `docs/operations/safety.md` Section 5.
+10. Turn on the amplifier. After boot the audio gate should be closed and
+    all gain nodes at 0.0 (D-063), and no audio application is running, so
+    the speakers should be silent. The web UI gate indicator is not
+    authoritative (F-320). Before turning on the amplifier, run pre-flight
+    check #10 (`docs/operations/safety.md` Section 5): all 8 gains read 0.0
+    from PipeWire. It needs a shell on the Pi (the owner over SSH, or a team
+    member in an OBSERVE session granted by the Change Manager). If it fails,
+    leave the amp off.
 
     **Live mode:** before turning on the amplifier, the singer's IEM
     earpieces must be out or the IEM pack at minimum, and stay that way until
