@@ -149,18 +149,20 @@ Generated from the per-item files in `stories/` (the source of truth). Do NOT ru
 | [US-139](stories/US-139.md) | draft | Driver Database Quality Model — Raw vs. Curated |
 | [US-140](stories/US-140.md) | REVIEW — PR #27 merged to main 2026-04-06. Rule 13 approv... | Deterministic Reconciler Settlement |
 | [US-141](stories/US-141.md) | draft | Parameterized Deploy and Bootstrap Flake Commands |
-| [US-142](stories/US-142.md) | TEST — browser E2E tests on main (`9b6b6ebe`/`c8a21bdc`/`... | Browser E2E for Spectrum Display |
-| [US-143](stories/US-143.md) | TEST — browser E2E tests on main (`9b6b6ebe`/`c8a21bdc`/`... | Browser E2E for VU Meters |
-| [US-144](stories/US-144.md) | TEST — browser E2E tests on main (`9b6b6ebe`/`c8a21bdc`/`... | Browser E2E for Panic Button Click |
-| [US-145](stories/US-145.md) | TEST — browser E2E tests on main (`9b6b6ebe`/`c8a21bdc`/`... | Browser E2E for Config Tab -- Gain Display, Adjustment, Quantum |
-| [US-146](stories/US-146.md) | TEST — browser E2E tests on main (`9b6b6ebe`/`c8a21bdc`/`... | Browser E2E for Venue Select + Gate Open/Close |
-| [US-147](stories/US-147.md) | TEST — browser E2E tests on main (`9b6b6ebe`/`c8a21bdc`/`... | WebSocket Smoke Test -- All 5 WS Endpoints Connect and Stream in Browser |
-| [US-148](stories/US-148.md) | TEST — browser E2E tests on main (`9b6b6ebe`/`c8a21bdc`/`... | Browser E2E for Status Bar -- Connection, Panic Button, Mode Dropdown |
-| [US-149](stories/US-149.md) | TEST — browser E2E tests on main (`9b6b6ebe`/`c8a21bdc`/`... | Browser E2E for Mode Switch via Dropdown |
-| [US-150](stories/US-150.md) | TEST — browser E2E tests on main (`9b6b6ebe`/`c8a21bdc`/`... | Browser E2E for Gate Banner Cross-Tab Visibility |
-| [US-151](stories/US-151.md) | TEST — browser E2E tests on main (`9b6b6ebe`/`c8a21bdc`/`... | Browser E2E for Gate Starts Closed -- No Audio Flows (Safety) |
-| [US-152](stories/US-152.md) | TEST — browser E2E tests on main (`9b6b6ebe`/`c8a21bdc`/`... | Browser E2E for Watchdog Latch/Unlatch Cycle (Safety) |
-| [US-153](stories/US-153.md) | TEST — browser E2E tests on main (`9b6b6ebe`/`c8a21bdc`/`... | Browser E2E for D-009 Gain Ceiling Runtime Enforcement (Safety) |
-| [US-154](stories/US-154.md) | draft — possibly delivered by `cda8f959` (F-284 test recl... | Reclassify 57 Mislabeled E2E Tests to service-integration |
-| [US-155](stories/US-155.md) | IMPLEMENT (code on main, commit `c34f7da7`, 2026-04-19, P... | Markaudio CHN-50P + Ultimax UMII18-22 Venue Configuration |
-| [US-156](stories/US-156.md) | IMPLEMENT (code on main, commit `991ff456`, 2026-04-19, P... | Static Route from Pi to VM Subnet |
+| [US-142](stories/US-142.md) | TEST — browser E2E tests on main (landed with PR #30 per ... | Browser E2E for Spectrum Display |
+| [US-143](stories/US-143.md) | TEST — browser E2E tests on main (landed with PR #30 per ... | Browser E2E for VU Meters |
+| [US-144](stories/US-144.md) | TEST — browser E2E tests on main (landed with PR #30 per ... | Browser E2E for Panic Button Click |
+| [US-145](stories/US-145.md) | TEST — browser E2E tests on main (landed with PR #30 per ... | Browser E2E for Config Tab -- Gain Display, Adjustment, Quantum |
+| [US-146](stories/US-146.md) | TEST — browser E2E tests on main (landed with PR #30 per ... | Browser E2E for Venue Select + Gate Open/Close |
+| [US-147](stories/US-147.md) | TEST — browser E2E tests on main (landed with PR #30 per ... | WebSocket Smoke Test -- All 5 WS Endpoints Connect and Stream in Browser |
+| [US-148](stories/US-148.md) | TEST — browser E2E tests on main (landed with PR #30 per ... | Browser E2E for Status Bar -- Connection, Panic Button, Mode Dropdown |
+| [US-149](stories/US-149.md) | TEST — browser E2E tests on main (landed with PR #30 per ... | Browser E2E for Mode Switch via Dropdown |
+| [US-150](stories/US-150.md) | TEST — browser E2E tests on main (landed with PR #30 per ... | Browser E2E for Gate Banner Cross-Tab Visibility |
+| [US-151](stories/US-151.md) | TEST — browser E2E tests on main (landed with PR #30 per ... | Browser E2E for Gate Starts Closed -- No Audio Flows (Safety) |
+| [US-152](stories/US-152.md) | IMPLEMENT — NOT STARTED per QE 2026-10-24: no test trigge... | Browser E2E for Watchdog Latch/Unlatch Cycle (Safety) |
+| [US-153](stories/US-153.md) | IMPLEMENT — NOT STARTED per QE 2026-10-24: no test tries ... | Browser E2E for D-009 Gain Ceiling Runtime Enforcement (Safety) |
+| [US-154](stories/US-154.md) | IMPLEMENT — partly delivered by F-284 (`cda8f959`, PR #30... | Reclassify 57 Mislabeled E2E Tests to service-integration |
+| [US-155](stories/US-155.md) | in-review (retroactive; code on main since `c34f7da7`, 20... | Markaudio CHN-50P + Ultimax UMII18-22 Venue Configuration |
+| [US-156](stories/US-156.md) | in-review (retroactive; code on main since `991ff456`, 20... | Static Route from Pi to Lab VM Subnet |
+| [US-157](stories/US-157.md) | draft (architect ruling 2026-10-24; PO to review AC wording) | Mechanical Test Anti-Pattern Lint in test-unit |
+| [US-158](stories/US-158.md) | draft. Owner to confirm intent and priority (PO recommend... | Live-Mode Mic Input Capture (F-295 follow-up) |

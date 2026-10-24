@@ -241,7 +241,7 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-253](defects/F-253.md) | Low | RESOLVED (fix in CI restructure commit — actions/checkout... | Node.js 20 deprecation in actions/checkout@v4 |
 | [F-254](defects/F-254.md) | Low | RESOLVED | Driver YAML Qts consistency check failures |
 | [F-255](defects/F-255.md) | Low | RESOLVED | Transient fidelity pre-ringing comparison numerically unstable |
-| [F-256](defects/F-256.md) | Low | fixed — PR #5 merged 2026-04-05 (`d32f6f1b`). QE verifica... | Rust venue test fails — persist_and_load_venue_name returns None |
+| [F-256](defects/F-256.md) | Low | fixed, awaiting verification — PR #5 merged 2026-04-05 (`... | Rust venue test fails — persist_and_load_venue_name returns None |
 | [F-257](defects/F-257.md) | Low | OPEN | CI flake.nix nixConfig warnings — untrusted substituters ignored |
 | [F-258](defects/F-258.md) | Medium | OPEN | level-bridge Rust tests missing from CI and worker pre-push |
 | [F-259](defects/F-259.md) | Low | OPEN | Measurement Python tests not in CI — no flake app or check target |
@@ -250,10 +250,10 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-262](defects/F-262.md) | Medium | FIX IN PROGRESS — 2 xfails remain (`service-integration/t... | E2E measurement session fails non-deterministically on filter verification |
 | [F-263](defects/F-263.md) | Medium | RESOLVED | GM reconciler timing — rapid DJ->live switch link count drops |
 | [F-264](defects/F-264.md) | Medium | RESOLVED | Mode badge/switching browser tests fail — WebSocket relay timeout |
-| [F-265](defects/F-265.md) | Major (blocks manual testing workflow) | FIX IN PROGRESS (rework per owner feedback) |  |
+| [F-265](defects/F-265.md) | Major (blocks manual testing workflow) | FIX IN PROGRESS (rework per owner feedback) | UMIK-1 sim shows no signal in test tab during measurement mode |
 | [F-270](defects/F-270.md) | Medium (feature non-functional in dev/test environment) | Resolved/Fixed (PR #21) | Transfer Function tab broken in local-demo (RESOLVED) |
 | [F-271](defects/F-271.md) | High (safety — driver damage risk) | OPEN | Generate D-031 protection filter WAVs for foh-passthrough.yml |
-| [F-272](defects/F-272.md) | Medium | OPEN — PR #34 merged 2026-04-07 (xfail reclassification, ... | GM reconciler settlement relies on sleep-based polling |
+| [F-272](defects/F-272.md) | Medium | RESOLVED — PR #27 (await_settled) + PR #34 (xfail removal... | GM reconciler settlement relies on sleep-based polling |
 | [F-273](defects/F-273.md) | Critical | RESOLVED | nixos-rebuild switch fails -- disko.nix and sd-image.nix produce incompatible partition layouts |
 | [F-274](defects/F-274.md) | Medium | OPEN | Channel gain UI not updated after audio gate open |
 | [F-275](defects/F-275.md) | High (user-visible regression) | RESOLVED | Spectrum display gone after US-131 merge -- PCM bridge monitor connection refused |
@@ -267,7 +267,7 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-283](defects/F-283.md) | Medium (test infrastructure) | OPEN | test_production.py partially mislabeled -- 14/27 tests API-only |
 | [F-284](defects/F-284.md) | Medium (test infrastructure) | RESOLVED | test_measurement_workflow.py mislabeled as E2E -- PI_AUDIO_MOCK=1 scope too large |
 | [F-285](defects/F-285.md) | Medium (test infrastructure) | RESOLVED | measurement session E2E -- browser START does not transition from IDLE |
-| [F-287](defects/F-287.md) | high | fixed — PR #32 merged 2026-04-07 (`58a9d289`). QE verific... | Local-demo capture-usb pcm-bridge violates mock boundary (D-057) |
+| [F-287](defects/F-287.md) | high | fixed, awaiting verification — PR #32 merged 2026-04-07 (... | Local-demo capture-usb pcm-bridge violates mock boundary (D-057) |
 | [F-290](defects/F-290.md) | Low | OPEN — root cause corrected in `01da88fe` but xfail still... | E2E link-count assertion incorrect — DJ has more links than live |
 | [F-291](defects/F-291.md) | high (reconstructed — confirm with audio-engineer) | fixed (commit `991ff456`, 2026-04-19, PR status unknown) ... | PipeWire RT thread throttled — xruns under sustained load |
 | [F-292](defects/F-292.md) | high (reconstructed — confirm with architect) | fixed (commit `991ff456`, 2026-04-19, via D-065) — Pi ver... | WirePlumber policy.standard=disabled prevents node activation and port creation |
@@ -275,3 +275,25 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-295](defects/F-295.md) | medium (reconstructed — confirm with audio-engineer) | fixed (commit `991ff456`, 2026-04-19, PR status unknown) ... | Mixxx audio clicks — JACK client threads not RT; dormant ada8200-in driver node |
 | [F-296](defects/F-296.md) | medium | open | Tests that need audio stimulus have no stimulus source in local-demo |
 | [F-297](defects/F-297.md) | medium (tracking data loss) | open | scripts/split-monoliths.py would overwrite newer per-item tracking files |
+| [F-298](defects/F-298.md) | high (test defect guarding a safety contract; no known safety defect) | open | D-063 gate-closed E2E test cannot fail — gate-open regression would show green |
+| [F-299](defects/F-299.md) | medium (D-009 compliance gap; no damage risk today: overshoots are fractions of a dB and the gain nodes attenuate by 60-64 dB downstream) | open | D-009 compliance not guaranteed between bins or below 20 Hz (generator and verifier) |
+| [F-300](defects/F-300.md) | low | open | Minimum-phase verifier is a heuristic proxy (90% energy / 10% peak) |
+| [F-301](defects/F-301.md) | high | open | test_full_user_journey swallows filter-generation and D-009 failures as skips |
+| [F-302](defects/F-302.md) | high | open | Mute browser E2E skips when the mute API is unavailable |
+| [F-303](defects/F-303.md) | medium | open | E2E tests skip when GM is not connected (HTTP 502) |
+| [F-304](defects/F-304.md) | medium | open | Gain display E2E skips when there are no gain rows; weak count assertion |
+| [F-305](defects/F-305.md) | medium | open | Gate/venue E2E skips; gate events possibly not propagated over WebSocket |
+| [F-306](defects/F-306.md) | medium | open | Graph E2E skips when the convolver node or internal topology is missing |
+| [F-307](defects/F-307.md) | medium | open | Calibration E2E skips on test-isolation conflict and signal-gen 503 |
+| [F-308](defects/F-308.md) | medium | open | Measurement service-integration tests are order-dependent and cascade-skip from F-262 |
+| [F-309](defects/F-309.md) | medium | open | Filter deploy test skips when the deploy step fails |
+| [F-310](defects/F-310.md) | medium | open | Convolver reload test skips when there are no coefficient WAVs |
+| [F-311](defects/F-311.md) | medium (X1 is the biggest silent-coverage risk; priority) | open | Dead skip guards can only hide regressions (conditions always false in repo) |
+| [F-312](defects/F-312.md) | high (CI gate integrity) | open | No central stack-availability guard — CI can go green with the real stack down |
+| [F-313](defects/F-313.md) | high (a test contradicting a safety decision stays silently "green") | open | Orphaned test suites not executed by any runner (one contradicts D-063) |
+| [F-314](defects/F-314.md) | CRITICAL (speaker damage risk; audio-engineer) | open — escalated to owner by audio-engineer via team-lead... | Hot venue switch with gate open applies new gains instantly, without confirmation |
+| [F-315](defects/F-315.md) | medium (audio-engineer) | open | D-063 gate-open cosine ramp collapses to an instant step |
+| [F-316](defects/F-316.md) | low (security-specialist; not blocking) | open | Lab-only static route (US-156) hardcoded into the production image |
+| [F-317](defects/F-317.md) | medium (availability; security-specialist). Fix before the next gig. | open | RT throttle disabled (sched_rt_runtime_us=-1) with no configured watchdog backstop |
+| [F-318](defects/F-318.md) | high (integrity / audio safety; security-specialist), pending evidence | open — needs Pi evidence | Non-JACK streams may auto-link straight to the USBStreamer since D-065 |
+| [F-319](defects/F-319.md) | unknown (suspected, unverified) | open — needs verification (CM OBSERVE session) | level-bridge hw-in still targets ada8200-in, removed by F-295 (suspected) |

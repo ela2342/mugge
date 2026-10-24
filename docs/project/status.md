@@ -26,11 +26,31 @@ PipeWire 1.6.2 is on main (US-128, PR #2). Pi deployment of 1.6.2 is not
 recorded.
 
 Session 15 focus, pending owner direction:
-1. Reconcile tracking with 6 months of history (this update).
-2. Bring the xfail budget back within the limit (6 active xfails, limit 5),
-   per the architect ruling: F-290, then F-296, then F-262.
-3. Retroactive review/acceptance of work that landed without a recorded
-   review: PRs #2–#35, plus `991ff456` and `c34f7da7`.
+1. **Safety: F-314 (CRITICAL)** — venue switch with gate open applies
+   +60/+64 dB instantly. Escalated to owner. Interim rule: never change venue
+   with the gate open. AE veto on gate/venue/first-boot PRs until fixed.
+2. Reconcile tracking with 6 months of history (this update).
+3. Test integrity and xfail budget (6 active, limit 5). Work order below.
+4. Retroactive review/acceptance of work that landed without a recorded
+   review: PRs #2–#35, plus `991ff456` and `c34f7da7` (AE, security in
+   progress).
+
+### Proposed work order (2026-10-24; worker spawning is the owner's call)
+
+1. **F-314** (critical safety; fix in GM, architect picks mechanism). Note
+   it touches gate/venue logic, so it must carry **F-298 Part A** with it
+   or follow it (AE merge condition).
+2. **F-298 Part A** (A1–A7) — D-063 gate test integrity. Unblocks US-113
+   and US-151 acceptance. A7 replaces the orphaned conf test (F-313).
+3. **F-315** (gate ramp is a step) — gate logic, after F-298 Part A.
+4. **F-290** (xfail → budget back to 5).
+5. **F-296** (stimulus fixture; unblocks F-298 Part B, F-301-adjacent work).
+6. **F-262 diagnosis** (AE + architect spec; covers F-299, F-308).
+7. **F-298 Part B**.
+8. **F-312** (REQUIRE_STACK guard) + **F-301/F-302** (high skip defects),
+   then F-303–F-311, then **US-157** lint. F-313 orphan wiring alongside.
+9. Pi evidence via CM sessions (amps OFF): **F-318** (WP auto-link), F-316
+   boot check, F-319 level-bridge, F-317 watchdog.
 
 ## Active Work
 
@@ -41,10 +61,14 @@ Session 15 focus, pending owner direction:
 | US-128 | REVIEW | Upgrade PipeWire to 1.6.2 | PR #2 merged 2026-04-04. Pi deploy + acceptance unrecorded. US-112 patch regen status unknown. |
 | US-131 | REVIEW | Parallel local-demo instances | PR #13 merged 2026-04-05. Approvals/acceptance unrecorded. |
 | US-140 | REVIEW | Deterministic reconciler settlement | PR #27 merged 2026-04-06. Approvals/acceptance unrecorded. |
-| US-142–US-153 | TEST | Browser E2E stories (12) | Tests on main (landed with PR #30 per log order). Story files said draft. QE to confirm coverage per AC. |
-| US-154 | draft? | Reclassify 57 mislabeled E2E tests | Possibly delivered by F-284 (`cda8f959`). QE to confirm. |
-| US-155 | IMPLEMENT (reconstructed) | Markaudio CHN-50P + Ultimax venue config | Code on main (`c34f7da7`), no story, AC or review. PO to write the story. AE review needed. |
-| US-156 | IMPLEMENT (reconstructed) | Static route Pi → VM subnet | Code on main (`991ff456`), no story, AC or review. PO to write the story. Security review needed. |
+| US-142, 143, 145, 147, 148, 149 | TEST | Browser E2E stories | Tests exist but skip if stack down. Accept after F-312 + CI log showing passed (QE). |
+| US-144, 146, 150, 151 | TEST (blocked) | Mute / venue-gate / banner / gate-closed E2E | Blocked by F-302, F-305, F-305, F-298 Part A. |
+| US-152, US-153 | IMPLEMENT (not started) | Watchdog latch E2E; D-009 ceiling E2E | No test exists (QE). |
+| US-154 | IMPLEMENT (partial) | Reclassify mislabeled E2E tests | F-284 moved files; 34 API-only tests remain in e2e/ (calibration, hardware). |
+| US-155 | in-review (retroactive) | Markaudio CHN-50P + Ultimax venue config | Story/AC by PO. AE review in progress. AC3 needs owner decision (sub D-031 exception). |
+| US-156 | in-review (retroactive) | Static route Pi → lab VM subnet | Story/AC by PO. Security: LOW, move to dev-only module (F-316). |
+| US-157 | draft | Test anti-pattern AST lint | After F-298/F-301/F-303–F-310. PO to review AC. |
+| US-158 | draft | Live-mode mic input capture | F-295 follow-up; PO recommends high. Owner to confirm. |
 | US-132 | draft (epic) | Network management | DRIFT: release workflow committed without decomposition (`5279649e`, `26d77f2c`). |
 | US-072 | IMPLEMENT (HW validated) | NixOS reproducible build | Unchanged since session 9. |
 | US-112 | REVIEW (Rule 13 passed) | PW convolver hot-reload patch | AD-R13-003/004 open. Patch regen for PW 1.6.2 status unknown. |
@@ -80,7 +104,11 @@ the files are changed.
 | `95306f66` unpushed direct-to-main commit | Owner decision: push, PR, or drop |
 | `gh` authentication for github.com | Owner re-auth (blocks PR verification + opening PRs) |
 | Retroactive Rule 13 / acceptance for PRs #2–#35, `991ff456`, `c34f7da7` | Owner to decide scope (accept as-is vs retroactive review) |
-| D-065 (reconstructed) | Owner confirms the decision was taken |
+| D-065 (reconstructed) | Owner confirms the decision was taken. Security: HIGH residual risk (F-318) pending Pi evidence |
+| **F-314 hot venue switch (CRITICAL)** | Escalated by AE; owner to prioritise fix. Interim: never change venue with gate open |
+| HP/IEM chain (ch 5-8, unity gain) | Owner decision after measurement: per-channel soft cap or limiter (AE). Interim procedural rules in safety.md (TW) |
+| US-155 AC3 sub D-031 exception | Owner confirms "owner directive" (then file decision) or require subsonic HPF |
+| US-158 priority | Owner confirms intent/priority (PO recommends high) |
 | US-090/092–097 re-acceptance | Owner (pending since session 9) |
 | US-088, US-084, US-044, US-077, US-063 Pi work | Owner Pi session |
 | US-079–082 re-validation | Owner local-demo test |
@@ -136,15 +164,25 @@ the files are changed.
 
 | ID | Severity | Summary |
 |----|----------|---------|
+| **F-314** | **Critical** | Venue switch with gate open: instant +60/+64 dB, no ramp/confirmation. Exists on main (US-113). AE veto on gate/venue/first-boot PRs. |
 | F-187 | Critical | Noise on 4 channels + broken spectrum after multiple PW restarts. Blocked — needs Pi at venue. |
 | F-271 | High | D-031 protection WAVs for ch 1-4 missing (blocks US-113 acceptance). |
-| F-287 | High | Fixed by PR #32. QE verification not recorded. |
-| F-291 | High (reconstructed) | PW RT throttle / FIFO not applied. Fixed on main (`991ff456`), Pi verification unrecorded. |
+| F-298 | High | D-063 gate-closed test cannot fail. Part A is AE merge condition; blocks US-113/US-151 acceptance. |
+| F-318 | High | Since D-065, non-JACK streams may auto-link straight to USBStreamer (security). Needs Pi evidence. |
+| F-313 | High | Orphaned test suites; one contradicts D-063. Architect ruling: wire/migrate/port. |
+| F-312 | High | No central REQUIRE_STACK guard; CI can go green with stack down. |
+| F-301, F-302 | High | Skips swallow D-009 / mute failures. |
+| F-287 | High | Fixed by PR #32. Two gaps before VERIFIED (node name ruling, pinning test). |
+| F-291 | High (reconstructed) | PW RT throttle / FIFO not applied. Fixed on main (`991ff456`), Pi verification unrecorded. Claimed security approval NOT confirmed; retroactive review: LOW + F-317. |
 | F-292 | High (reconstructed) | WP policy.standard=disabled broke node activation. Fixed via D-065, Pi verification unrecorded. |
+| F-315 | Medium | D-063 gate-open ramp collapses to an instant step. |
+| F-317 | Medium | RT throttle off with no configured watchdog. Fix before next gig. |
+| F-299 | Medium | D-009 not guaranteed between bins / below 20 Hz (generator + verifier). Joint fix with F-262. |
+| F-303–F-311 | Medium | Skip-audit groups and dead skip guards. |
 | F-262 | Medium | 2 xfails. Possible real min-phase filter-gen bug (architect ruling). Highest product risk among the xfails. |
 | F-296 | Medium | No audio stimulus in local-demo; 3 xfails misattributed to F-270. |
 | F-297 | Medium | `split-monoliths.py` would overwrite newer tracking files. Do not run. |
-| F-272 | Medium | PR #34 merged; RESOLVED only after xfails pass CI. |
+| F-272 | Medium | RESOLVED (PRs #27, #34). VERIFIED pending CI log. |
 | F-290 | Low | Test assertion bug, xfail still present (architect priority 1). |
 | F-037 | High | Web UI no auth — converted to US-110 (ready, blocked on D-060 implementation) |
 | F-222 | High | Zombie process accumulation in container dev environment (PID 1 = sleep infinity) |
@@ -175,17 +213,16 @@ the files are changed.
 - Architect ruling: fix F-290 first (brings the count to 5), then F-296
   (opt-in signal-gen stimulus fixture), then the F-262 diagnosis with AE
   review. Deterministic xfails must be `strict=True`.
-- Many `pytest.skip()` calls carry no defect ID (testing-process.md Sec 9.2
-  counts these as dismissals). Full audit scheduled with QE, findings
-  report only, after the three items above.
+- Skip audit done by QE (2026-10-24): F-298, F-301–F-312 filed. Orphaned
+  test suites with no runner: F-313. Mechanical lint: US-157.
 
 ## Key Metrics
 
 | Metric | Value |
 |--------|-------|
 | Commits on main since 2026-04-04 | 185 (first-parent: 27 PR merges, 10 direct commits 2026-04-04, 2 single-parent commits 2026-04-19, 1 unpushed local) |
-| Total stories filed | 156 (US-155, US-156 reconstructed 2026-10-24) |
-| Total defects filed | F-297 highest. Gaps with no record: F-266–F-269, F-286, F-288, F-289, F-294 (plus older historical gaps) |
+| Total stories filed | 158 (US-155/156 written retroactively, US-157/158 new, 2026-10-24) |
+| Total defects filed | F-319 highest. Gaps with no record: F-266–F-269, F-286, F-288, F-289, F-294 (plus older historical gaps) |
 | Total decisions | D-065 highest (D-065 reconstructed, needs owner confirmation; D-064 DRAFT) |
 | Active xfails | 6 (limit 5) |
 | PW convolver CPU (q1024 / q256) | 1.70% / 3.47% (PW 1.4.9 measurements; not re-measured on 1.6.2) |
@@ -239,6 +276,13 @@ through D-065). Most significant recent decisions:
   F-292, F-293, F-295, US-155, US-156, D-065. Each is marked
   "reconstructed" and needs confirmation from the named role.
 - New defects: F-296 (QE/architect xfail audit) and F-297 (PM).
+- Second commit: F-298–F-319 (test integrity, D-009, gate safety,
+  retroactive security review), US-155/156 rewritten by PO, US-157, US-158.
+  F-262/F-290/F-296/US-113 updated with review conditions and AC. US-142–154,
+  F-256, F-272, F-287 updated from QE confirmations. Security review recorded
+  on F-291, F-292, F-293, D-065: claimed F-291/F-293 approvals are NOT
+  confirmed (F-293 approved retroactively today).
+- ID gap F-294 confirmed: no record anywhere.
 - Status lines updated with merge evidence: US-113, US-120, US-128,
   US-131, US-140, US-142–US-154, US-132, F-256, F-262, F-272, F-287,
   F-290.
@@ -246,14 +290,13 @@ through D-065). Most significant recent decisions:
 
 ### Open follow-ups
 
-- PO: write stories and AC for US-155 and US-156. Decide whether the Live-mode
-  mic input re-enable (F-295 side effect) needs a story.
-- Security: review US-156 static route, D-065 anti-bypass reduction, and
-  record the F-291/F-293 approvals that code comments claim.
-- AE: confirm severity of F-291/F-295. Review D-065 and US-155. Review the
-  F-262 diagnosis.
-- Architect: decide the F-297 fix. Confirm whether F-295 is one defect or two.
-- QE: confirm US-142–154 coverage, verify F-256/F-287, and run the skip audit.
+- PO: review US-157 AC.
+- AE: retroactive reviews of US-155 (first), F-291, F-295, D-065; F-318
+  assessment.
+- Architect: decide the F-297 fix. Confirm whether F-295 is one defect or
+  two. Rule on F-287 node name (D-057). Pick the F-314 mechanism.
+- QE: CI-log evidence for US-142–149, F-256, F-272 (needs CM).
+- CM (Pi OBSERVE/CHANGE, amps OFF): F-318 evidence, F-316 boot check, F-319.
 - Owner: `gh` re-auth, `95306f66`, retroactive review scope, D-065.
 
 ## Session 9 Summary (2026-04-02)
