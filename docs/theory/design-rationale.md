@@ -89,9 +89,11 @@ monitor channels (4-7) also route through the filter-chain, using an identity
 (Dirac) filter and a gain node. In the intended routing every output passes
 a gain node, so one audio gate covers every channel. See
 `docs/operations/safety.md` Sections 9 and 10 for the known gaps (F-318,
-F-320). The IEM routing is pending owner confirmation (O-10), and 3-way
-layouts get no IEM links because channels 9-10 do not fit the 8-channel
-convolver (`routing.rs`). The identity filter adds no latency (theoretical: it
+F-320). The monitor routing follows D-063 (owner decision 2026-03-30; owner
+reconfirmation pending, O-10). 3-way profiles are DJ/standby only (D-054
+`mode_constraints`): the 8-channel convolver has no room for IEM channels, and
+in Live routing the headphone feed would land on ch 7-8 (the IEM outputs).
+GraphManager currently does not enforce this constraint (F-342). The identity filter adds no latency (theoretical: it
 runs in the same graph cycle; not yet measured end-to-end), but each Dirac
 channel still costs a full convolver channel of CPU (F-331).
 

@@ -272,8 +272,8 @@ room, computes correction filters, and deploys them -- all from the web UI.
     identity (Dirac) filter, so they get no room correction. In the intended
     routing they are behind the same audio gate as the PA (D-063), so the
     singer hears nothing until the gate is open (a stray direct link to the
-    USBStreamer would bypass the gate, F-318; IEM routing through the
-    filter-chain is pending owner confirmation, O-10). The earpieces have
+    USBStreamer would bypass the gate, F-318; D-063, owner decision
+    2026-03-30; owner reconfirmation pending, O-10). The earpieces have
     been out or the pack at minimum since step 10: bring the IEM level up
     from minimum with the singer present and agreeing. The singer
     should hear the backing track without room correction artifacts. Confirm
