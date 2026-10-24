@@ -44,6 +44,9 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
   clients are on local-demo's remote; any link to the USBStreamer or
   HiFiBerry means stop and report to AE. Not for the NixOS image, not a
   general rule. Lapses if anything is connected to a Pi output.
+  USED 2026-10-24: T57 runs on .88 as CM-T57-88-1 at fb7d557e (QE
+  ruling; the Mac linux-builder VM has no user shell). Venue label:
+  "aarch64 Raspbian .88, interim; CI F-335 broken".
 - Installer root login (item "(a)", owner approved 2026-10-24: "Allow
   it explicitly"): nixos-anywhere 1.13.0 needs root@ for
   `--phases disko,install`. RAM installer only: PermitRootLogin
@@ -174,7 +177,9 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
   again per owner 2026-10-24). Fix: update to .36, or a fixed IP for the
   Mac from the router. Architect (2026-10-24): does not affect US-163;
   the stale address is the US-156 VM-subnet route via .26 in main's
-  Pi 4 config. P3.
+  Pi 4 config. P3. Also: enable a non-root shell into the Mac
+  linux-builder VM (its builder key is root-only), via an owner-config
+  key for the builder user or another owner-provided route. Low (CM).
 - AE-F6 (routing.rs:423): check whether tracked; file if not.
 - US-170: Pi 4 allowlist and configurationRevision (AC1); Pi 4 WP ALSA
   rule; drvPath pin removal.
