@@ -22,19 +22,29 @@ directories. Their index files are generated from the per-item files
 >   fix, 2026-10-24) made directly on main without a PR. It is waiting
 >   for an owner decision.
 > - Main's T1/T2 are not runnable (F-335). Branch `docs/safety-d063-gate`
->   (technical-writer) is PR #45, head `d605b5c1` (CM; `0424dfd9` was an
->   intermediate commit, never a head). At `d605b5c1`: TW (author
->   conflict of interest declared), UX, AD, AE, architect and QE (content
->   only) approved; SecSpec no concerns, withheld until CI is green. Still
+>   (technical-writer) is PR #45, head `76b61347` when written (CM;
+>   `e0056596` -> `7faee7b0` -> `0c55d806` -> `76b61347`; it moves as TW
+>   folds fixes in, so see the PR). `76b61347` carries the architect's C1
+>   (pre-flight #10 reads the gains with pw-cli, as pw-dump prints NaN,
+>   subnormal and -Inf as 0.000000), AE's "only 0.000000 passes" rule,
+>   SecSpec's F-037 text, AD L2 and UX note 2. TW and UX approve at
+>   `76b61347`; re-review requested from the other five; all earlier
+>   verdicts are superseded (CM, issuecomment-6385980773). CI at
+>   `0c55d806` (run 40106622105) failed with F-335. Still
 >   blocking: CI (F-335; runs 40101792484 and 40101792756 ran zero tests;
 >   T3 waits on O-26) and owner acceptance, including explicit acceptance
 >   of the CLAUDE.md change in #45 (CM).
 >   Non-blocking follow-ups: F-343.
 >   Both #44 and #45 edit venue-setup.md (merge-conflict risk, CM aware).
 >   The `nc -q1` commands are still unverified on the Pi (CM OBSERVE, waits
->   on O-2; F-341). Merge order (CM, per TW): #41, the follow-up tracking PR
->   (with batch 7: #45 cites F-342, F-344 and F-345), this branch, then
->   PR #44 (`docs/test-strategy-drift`; UX condition, AD B1).
+>   on O-2; F-341). Merge order (CM, per TW): #41, PR #46 (the follow-up
+>   tracking PR, `chore/tracking-followup`, head `0161e41a`, stacked on
+>   #41's branch; batches 6-7, which #45 cites: F-342, F-344, F-345;
+>   workflow_dispatch CI run 40105627665, F-335 expected). #46 was pushed
+>   and opened on team-lead's mistaken instruction, not an owner ruling
+>   (the owner said only "commit away"); whether it stays open is
+>   the owner's decision (O-34). Then this branch,
+>   then PR #44 (`docs/test-strategy-drift`; UX condition, AD B1).
 > - No commits between 2026-04-19 and 2026-10-24. The state of the Pi
 >   after April is unknown.
 
@@ -81,15 +91,17 @@ Session 15 focus, pending owner direction:
     test.
 12. **F-323 / US-158** (Live-mode mic). Needed before any Live gig.
 - **Gig blockers, independent of the order above:** F-037/US-110 (on
-  any shared network), F-314, F-320, F-325 and F-321/F-322 (CHN-50P rig).
+  any shared network), F-314, F-320, F-325, F-321/F-322 (CHN-50P rig) and
+  F-349 (interim rule 12 until fixed).
 - **Owner action:** F-326 (invalid GITHUB_TOKEN).
 
 ### Interim operating rules (2026-10-24; pending owner acceptance)
 
 These apply while the amps are on, until the referenced defects are fixed.
 safety.md §10 carries the canonical wording (technical-writer, branch
-`docs/safety-d063-gate`, PR #45, `93237884`). Its rule
-numbers are given in brackets; if the two differ, safety.md wins.
+`docs/safety-d063-gate`, PR #45, `76b61347`). Its rule
+numbers are given in brackets. Where a status.md rule is stricter or not
+yet in safety.md (rules 9-12), the stricter rule applies (AD).
 
 1. Close the gate before switching venues (F-314) [Rule 3].
 2. Play nothing on the Pi except Mixxx, Reaper and the signal generator,
@@ -104,7 +116,8 @@ numbers are given in brackets; if the two differ, safety.md wins.
 5. A watchdog unlatch restores full gains instantly. Order: amps off and
    IEMs out, then unlatch (GM RPC `watchdog_unlatch` via SSH or a CM CHANGE
    session; the web UI has no unlatch control until US-159 U2), then Close
-   Gate and check the venue, then amps on, then Open Gate (F-320) [Rule 5].
+   Gate and check the venue, then pre-flight #10, then amps on, then Open
+   Gate (F-320) [Rule 5].
    After any GraphManager restart, treat every output as live and press
    Close Gate before assuming silence (F-320) [Rule 6].
 6. Never use UNMUTE: it also goes live instantly. To recover from MUTE,
@@ -136,6 +149,24 @@ numbers are given in brackets; if the two differ, safety.md wins.
     before headphones or IEM go back in, and confirm that exactly one
     pi4audio-convolver node is present (AE: #10 can pass on one clean
     convolver while a second exists) (F-348).
+11. (Proposed by AE, owner to adopt, O-32.) Until US-159 makes GM the sole
+    Mult writer (F-344, F-345): the gate showing CLOSED does not guarantee
+    silence. Besides UNMUTE (rule 6), Config tab gain Apply and the web UI
+    thermal limiter write Mult without GM. Never use Config tab gain
+    Apply. To make the outputs safe, turn the amps off; do not rely on
+    Close Gate alone. After any gate close, pass pre-flight #10 before the
+    amps go on, whatever the gate indicator shows [Rule 11].
+12. (Proposed by AE, owner to adopt, O-32.) Until F-349 is fixed:
+    (a) no Reaper plugin chain on the live path that the owner has not
+    vetted, and no LV2 effects in Mixxx unless the owner has vetted them
+    (Mixxx built-in effects are acceptable); (b) after any suspected
+    non-finite event (plugin glitch, application crash mid-stream,
+    signal-gen anomaly) do not reopen the gate: clear the convolvers by
+    a PipeWire restart per Rule 9 (warn the owner first; amps,
+    headphones and IEM off), then Rules 1 and 10 and pre-flight check
+    #10; (c) the gate fade-in is not a guarantee: a NaN or Inf stored in
+    a convolver may come out as a full-scale step the instant the gate
+    opens, on any channel including headphones and IEM (F-349) [AE].
 
 Where these rules say "press Close Gate": the button is disabled while
 the indicator reads CLOSED (F-338). Then: amps off, panic MUTE, REST
@@ -149,8 +180,8 @@ at minimum. Levels come up only with the singer's agreement. No gain
 increase on ch 5-8 without owner confirmation (S-012).
 
 safety.md §5 pre-flight #10: after every boot or PW/GM restart, before
-amps on, all 8 `gain_*:Mult` read 0.0 from PipeWire, not from the UI
-indicator (F-298, F-313).
+amps on, all 8 `gain_*:Mult` read 0.0 (and `Add` 0.0) from PipeWire, not
+from the UI indicator (F-298, F-313).
 
 ## Active Work
 
@@ -199,7 +230,7 @@ line with this table on 2026-10-24 (owner directive).
 
 | # | Decision | Context / recommendation |
 |---|----------|--------------------------|
-| O-1 | Accept interim operating rules 1–8 (above; rule 8 added 2026-10-24, F-342) | AE/security. Canonical text in safety.md (TW branch `docs/safety-d063-gate`). |
+| O-1 | Accept interim operating rules 1–8 (above; rule 8 added 2026-10-24, F-342) | AE/security. Canonical text in safety.md (TW branch `docs/safety-d063-gate`). Rules 9-12 are under O-32 (AD). |
 | O-2 | Approve read-only Pi check (CM OBSERVE, amps OFF) | Would cover: which gate/venue code is deployed, the WP default sink (F-318), the hw-in level-bridge (F-319), which coefficient files are on the Pi (F-321), the route boot behaviour (F-316), and whether the safety.md `nc -q1` commands work (F-341). F-318 needs GM stopped plus a test stream, so it needs a CHANGE session. |
 | O-3 | GitHub auth route (F-326) | `gh` works again for change-manager (2026-10-24; PRs #41-#43 opened). Agent sessions still get 401 from the invalid `GITHUB_TOKEN` (AE, AD). Owner: remove/refresh the variable, or accept CM-supplied diffs as the review route. |
 | O-4 | `95306f66` (unpushed direct commit to main) | Branch + PR, or drop. |
@@ -230,8 +261,10 @@ line with this table on 2026-10-24 (owner directive).
 | O-29 | Split US-159 (PO proposal) | US-159 core (G1-G11 incl. G8b, T1-T5, T7, T8, T10, T11), US-159b WP default-sink bypass (B1, B2, T6; different files, needs a Pi CHANGE session, can run in parallel), US-159c web UI (U1-U7, T9, DOC1; depends on the core gate-state API). The AE veto lift then requires core + 159b. Owner decides. |
 | O-30 | First boot under US-159 G8b (AE ruling; PO to route) | G8b refuses `open()` on `foh-passthrough.yml` until F-271 protection WAVs exist (no passthrough exemption; AE, architect agree). Q1: accept no first-boot audio until F-271 ships, with F-271 prioritised alongside US-159 (AE: yes; PO: make F-271 a US-159 dependency). Q2: is a real FoH-feed use case wanted (ch 1-4 as line level into a house processor)? If so, an explicit "external processing / line-out" output type in the speaker profile: G8b (i) still applies, (ii) skipped only for channels declared external; never the first-boot default; operator confirmation on every open; UI shows the unprotected state while open (AE conditions). Q3 (UX): a deliberate "monitors only" open (ch 5-8, ch 1-4 held at 0 and verified by G11 read-back)? AE: no safety objection. Architect: a per-channel-group gate is out of US-159 scope. |
 | O-31 | Thermal limiter heartbeat loss mid-show (US-159 L2/R1) | AE recommends a time-bounded hold: at once GM holds the last factor, refuses any raise and the UI shows "THERMAL PROTECTION LOST"; if the heartbeat is not back within 60 s, GM ramps down (at the G2 rate or faster) to -6 dB relative to the held value and keeps that cap until the limiter returns or the operator closes the gate; on return, normal control resumes with slewed raises (L1). Reason: fail closed at once is a show failure; an unbounded hold leaves voice-coil heating unprotected (time constants of seconds to tens of seconds). Pure fail-closed is also safe; AE refuses only an unbounded hold. Architect preferred hold plus alarm. Owner to choose. |
-| O-32 | Interim rules for the web-ui gate bypasses (F-344, F-345) and the coefficient reload (F-346) | AE sent the F-344/F-345 rule text to team-lead for the owner (amps off, don't rely on CLOSE GATE, until US-159 D1 removes the web-ui writers). If it is not adopted and recorded here before the next amps-on session, F-345 becomes Critical (AE). F-346: proposed interim rule 9 (above; no reload, PW restart instead; supersedes AE's first wording); F-346 becomes Critical if the room-correction pipeline is run with the amps on before the fix. F-348: proposed interim rule 10 (architect, AE: no web-UI profile activation; no non-2-way profile with the amps on, in any mode, superseding rule 8's DJ allowance; around any PW restart, the user conf must not exist and exactly one convolver node after); rule 9 amended so HP/IEM go back in only after #10 (AE). |
+| O-32 | Interim rules for the web-ui gate bypasses (F-344, F-345) and the coefficient reload (F-346) | AE sent the F-344/F-345 rule text to team-lead for the owner (amps off, don't rely on CLOSE GATE, until US-159 D1 removes the web-ui writers); now status.md interim rule 11 (safety.md §10 Rule 11 in #45; AE, TW, AD). If it is not adopted and recorded here before the next amps-on session, F-345 becomes Critical (AE). F-346: proposed interim rule 9 (above; no reload, PW restart instead; supersedes AE's first wording); F-346 becomes Critical if the room-correction pipeline is run with the amps on before the fix. F-348: proposed interim rule 10 (architect, AE: no web-UI profile activation; no non-2-way profile with the amps on, in any mode, superseding rule 8's DJ allowance; around any PW restart, the user conf must not exist and exactly one convolver node after); rule 9 amended so HP/IEM go back in only after #10 (AE). |
 | O-33 | Coefficient reload while the gate is Open (US-159 G8c, F-346) | Architect ruling R-b, AE (RF4) and AD: reload only while the gate is confirmed Closed. Not a policy preference but a correctness requirement with the current patch: each swap is a hard discontinuity with no crossfade, and the 8 channels swap in different cycles. Reload while Open could only be reconsidered once the patch provides a synchronized, crossfaded all-channel swap. Owner to confirm. |
+| O-34 | PR #46 (tracking follow-up, `0161e41a`) pushed and opened without owner approval | team-lead read "commit away" as covering push and PR, then withdrew it; change-manager had already pushed by SHA and opened #46. Not undone. #46 stays open with its review paused (CM; team-lead concurs) until the owner chooses: (a) resume, (b) convert to draft, or (c) close it and delete the branch. Verdicts at `0161e41a` stay on record: architect, QE (content only) and UX approve; SecSpec no concerns, approval withheld until CI is green; AE, TW and AD request changes (one issue: interim rule 11; plus AE S1, TW B2, AD M1). The fixes are batch 8, held until the owner rules; committing them moves #46's head and voids every verdict. AE: put batch 8 into #46; a later PR is acceptable only if #46 doesn't merge first. |
+| O-35 | New Critical F-349 (non-finite audio drives full-scale output; fires at gate open) | AE rated it Critical (likelihood low; worst case rated because the sink mapping is undefined) and asked for it to go to the owner via team-lead. It blocks nothing not already blocked (AE's veto on gate code covers US-159). Owner: acknowledge, adopt interim rule 12 (a)-(c) (O-32), and decide whether the fix is a US-159 AC or a sibling story (architect and PM to propose). |
 
 ## Component Status
 
@@ -312,17 +345,18 @@ line with this table on 2026-10-24 (owner directive).
 | F-331 | Low | 16k-tap dirac on ch 5-8 ~doubles convolver load; BM-2 rerun at 8ch first (architect). |
 | F-332 | Low | `audio_mute.py:46` misleading log message. |
 | F-348 | High (AE, architect; Critical if a generated conf or a non-D-063 node is active on the Pi) | Every web-UI profile activation (2-way too) writes a generated conf under the D-063 conf's filename, with profile-gain Mult defaults and no ch 5-8: after a PW restart the outputs come up live while GM shows CLOSED. GM's fixed list can't close N-way gains, close returns Ok (F-339), and integrity misses > 0 dB. Fix: US-159 G12/G13, G8c R-g4, T32-T37; interim rule 10; OBSERVE AC7 on hold (O-2). |
+| F-349 | **Critical** (AE; likelihood low) | Non-finite audio drives full-scale output: a NaN latched in the convolver while Closed fires as a full-scale step at gate open, bypassing the fade-in, HP/IEM included; sink mapping undefined (`-Ofast` converter), worst case rated. Fix: post-gain bit-pattern finite check plus a confirmed convolver reset before every open (AE). Interim rule 12; O-35. |
 | F-347 | Medium (AE) | Config tab iterates a fixed 2-way `GAIN_NODES` list with a 0.001 fallback: under a generated N-way config it shows phantom enabled -60 dB sliders and hides the real gains (QE, static evidence). |
 | F-346 | High (AE, architect; Critical if room correction runs with amps on before the fix) | `POST /reload-pw` hot-swaps coefficients with no gate check, G8b or auth; probably reloads only `conv_left_hp` and reports success silently; no crossfade; unlocked fallback swap; stalls the PW main loop. No test checks the param names (QE). Fix: US-159 G8c, T22-T26, patch changes, AC13 tests; interim rule 9. |
 | F-345 | High (AE; Critical if the interim rule is not adopted before the next amps-on session) | Thermal limiter (`thermal_limiter.py:356-437`) writes `base_mult * factor` via pw-cli with no gate check, so recovery or an override restores Mult while Closed. Its tests are mock-only. Fix in US-159 (T13). |
 | F-344 | High (QE, AE) | Config tab gain Apply (`POST /api/v1/config/gain`, `config_routes.py:176-215`) writes Mult via pw-cli with no gate check, so the channel is live while the indicator reads CLOSED. Fix in US-159 (T12). |
-| F-343 | Low | PR #45 non-blocking follow-ups: Rule 8 step 1 vs REST close (UX); §1 gate-closed-after-reboot claim unhedged (AD L1); 2-way channel-map sentence if not in #45 (architect). |
+| F-343 | Low | PR #45 non-blocking follow-ups. AC2 (§1 hedge), AC3 (2-way scope) and AC7 present in #45 `d605b5c1`; AC1 (Rule 8 step 1 vs REST close) partly, no shell-on-Pi fallback yet (TW, AD). |
 | F-342 | Medium (AE; High once a 3-way profile is used at a gig/rehearsal or with an IEM) | GM does not enforce D-054 `mode_constraints` on set_mode; Live on a 3-way profile puts the HP feed on IEM ch 7-8 (AD; architect confirmed: GM must refuse). |
 | F-341 | Medium | safety.md pre-flight `nc -q1` commands unverified on NixOS (no netcat in `nix/`; `-q` is Debian-only). Needs CM OBSERVE (O-2). AE to rate. |
 | F-340 | Low | PR #44 non-blocking docs follow-ups (architect 1-3, UX, AD L1-L5); later docs pass (TW). |
 | F-338 | High | Web UI CLOSE GATE disabled while the gate reads CLOSED; interim rules 5-7 not performable from the UI (AE confirmed High). Standalone fix ahead of US-159. |
 | F-339 | High | GM CloseGate returns Ok when the convolver is missing and nothing was zeroed (AE; architect confirmed in code). Likelier trigger: gain param name mismatch (AE). Fix: US-159 G11/T10. |
-| F-336 | Medium | Real-Pi browser tests unusable: wizard T4 ignores PI_AUDIO_URL; monitor suite always skipped in CI (QE to confirm severity). |
+| F-336 | Medium | Real-Pi browser tests unusable: wizard T4 ignores PI_AUDIO_URL; monitor suite always skipped in CI (severity confirmed by QE). |
 | F-337 | Low | development.md Gate 2/3 contradict testing-process.md §8 (authoritative, QE); `test-drivers` is not an app. Fixed in PR #44 (`docs/test-strategy-drift`), head `8318e930` (CM). At `8318e930`: TW (author conflict of interest declared), UX, AD, AE, architect and QE (content only) approved; SecSpec no concerns, withheld until CI is green. Still blocking: CI (F-335: runs 40101792484 and 40101792756 ran zero tests; T1+T2 must really run after the fix and a rebase; T3 waits on O-26) and owner acceptance (CM). Non-blocking follow-ups: F-340 (AC16 is must-fix, UX). |
 | F-299 | Medium | D-009 not guaranteed between bins / below 20 Hz (generator + verifier). Joint fix with F-262. |
 | F-303–F-311 | Medium | Skip-audit groups and dead skip guards. |
@@ -484,9 +518,9 @@ through D-065). Most significant recent decisions:
   AD patch findings; O-33); F-347 (Config tab fixed gain list, QE; AE
   Medium); F-348 (generated confs drop the boot gate, N-way gains not
   closable; AE and architect, merged; High), US-159 G12/G13, interim rule
-  10; G8c R-f (content known, `object.serial`, re-arm value) and R-g1 to
-  R-g4 (architect, AD, AE), T24-T37; F-346 AC13 (QE test gaps) and AC14;
-  final-head tallies and CI runs;
+  10; G8c R-f (content known, `object.serial`), R-h (re-arm value) and
+  R-g1 to R-g4 (architect, AD, AE), T24-T37; F-346 AC13 (QE test gaps)
+  and AC14; final-head tallies and CI runs;
   F-342 (D-054 mode_constraints not enforced on set_mode;
   AD, architect confirmed); F-340 progress (#44 `4e70c481`) and AC10; F-341
   AC4 (remove "not yet verified" labels); F-335 #44 CI evidence and QE
@@ -498,6 +532,31 @@ through D-065). Most significant recent decisions:
   rules 5-7 update, UX); F-343 (#45 follow-ups); F-342 3-way DJ scope note
   and HP-output logging AC (AD); PR heads per CM (#44 `8318e930`,
   #45 `d605b5c1`); O-31 AE recommendation.
+  Eighth batch: PR #46 (tracking follow-up) and O-34; #46 review notes:
+  interim rule 11 and rule 5 #10 step (AE), pre-flight #10 `Add`, US-159
+  G8b (a)/G11 (c)/G12 wording and F-346 status (architect), US-159 U6
+  wording and U8, F-347 AC1/2, US-160 AC2 (UX); #46 round complete (AE,
+  TW, AD changes requested; O-34 review paused); rule 11 in AE's text;
+  precedence clause (AD M1); F-337, F-336, F-343, F-345, F-340, F-271,
+  F-335, F-347 and US-159 R-g1/T18/T19/T22/T32/T33/T35 (TW, AD, QE);
+  US-159 R-i and N1/N2 (architect, AE), G14, U8 (UX), T38-T45, DOC3;
+  F-346 AC15; F-343 AC13; F-349 filed (architect, AE to rate); #45 head
+  `e0056596` (CM); O-1 points to O-32 for rules 9-12 (AD). #45 round at
+  `e0056596` (QE changes requested; TW fix `98ffb751` held); F-349 rated
+  High (AE) and interim rule 12; US-159 G13 duplicate nodes and T46
+  (architect), T38-T45 confirmed (QE); F-348 AC7 shadowing, AC10
+  rollback, AC11; F-346 AC16; F-343 AC14-AC18 (SecSpec, architect, AD, UX);
+  F-349 scope and ACs (AE) with the PW 1.6.2 source facts (architect); #45
+  head `98ffb751`.
+  Ninth batch: F-349 re-rated Critical (AE) and rewritten: AE's required
+  fixes, bit-pattern finite check, the architect's `-Ofast` and pw-dump
+  findings, QE's T47 plan; interim rule 12 (a)-(c) (AE); O-35; F-349 in
+  the gig blockers; #45 head `76b61347` (CM; TW and UX approve);
+  F-348 AC12 deploy paths (TW, architect; wizard claim withdrawn);
+  F-343 AC13, AC19 and AC21 in #45, AC22-24 (QE, UX); F-346 AC17; US-159
+  G11 (f) raw-float read-back and R-i N1 (a) bit test (AE); F-350
+  filed (stale reload comments); F-351 filed (pw-dump gain readers,
+  TW, unverified).
 - Status lines updated with merge evidence: US-113, US-120, US-128,
   US-131, US-140, US-142–US-154, US-132, F-256, F-262, F-272, F-287,
   F-290.
