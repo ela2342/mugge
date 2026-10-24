@@ -406,7 +406,7 @@ Pi: `ela@192.168.178.185` (hostname: mugge), key-based auth, passwordless sudo.
 - **Mode switching:** Whole-gig for starters, quick switch future nice-to-have
 - **Singer IEM:** Engineer controls for MVP, singer self-control future bonus
 - **Singer needs:** Extra track for vocal cues (Reaper provides)
-- **IEM signal path:** Reaper → PipeWire filter-chain (identity `dirac.wav` filter + gain node, behind the D-063 audio gate) → USBStreamer ch 7-8 (engineer headphones are ch 5-6). Since D-063, all 8 channels route through the filter-chain; the IEM no longer bypasses it. The dirac filter adds no latency.
+- **IEM signal path:** Reaper → PipeWire filter-chain (identity `dirac.wav` filter + gain node, behind the D-063 audio gate) → USBStreamer ch 7-8 (engineer headphones are ch 5-6). Since D-063 (owner decision 2026-03-30; owner reconfirmation pending, O-10), all 8 channels route through the filter-chain; the IEM no longer bypasses it (`routing.rs`: "D-063: Reaper singer IEM → convolver (no bypass)"). The dirac filter adds no latency (theoretical), but each dirac channel costs a full convolver channel of CPU (F-331).
 
 ### Safety Rules (2026-03-10)
 
@@ -520,8 +520,9 @@ convolver processes within the same graph cycle, adding no buffering latency.
 - DJ/PA mode: quantum 1024 (~21ms PA path) — efficient convolution, saves CPU for Mixxx
 - Live mode: quantum 256 (~5.3ms PA path) — prevents singer hearing slapback echo from PA
 
-Since D-063, ch 5-8 (HP/IEM) route through the filter-chain with an identity (dirac)
-filter and a gain node, which adds no latency. IEM path ≈ 5.3ms at quantum 256
+Since D-063 (owner decision 2026-03-30; owner reconfirmation pending, O-10), ch 5-8
+(HP/IEM) route through the filter-chain with an identity (dirac) filter and a gain node,
+which adds no latency (theoretical; it costs convolver CPU, F-331). IEM path ≈ 5.3ms at quantum 256
 (theoretical; neither path has been measured end-to-end since D-040). The IEM path is
 gated (D-063) like the PA path. The singer also hears the PA acoustically. At quantum
 256, total PA path is ~5.3ms — far below the ~25ms slapback threshold. This is a dramatic improvement over the previous

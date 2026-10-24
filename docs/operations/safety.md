@@ -648,8 +648,9 @@ watchdog's mute path meets its <21ms deadline even under CPU contention.
 
 **No signal reaches any USBStreamer output until the operator explicitly
 opens the audio gate.** This applies to every venue and every mode. Since
-D-063, all eight output channels (mains, subs, engineer headphones, singer
-IEM) pass through the filter-chain convolver and its eight gain nodes
+D-063 (owner decision 2026-03-30; owner reconfirmation pending, O-10), all
+eight output channels (mains, subs, engineer headphones, singer IEM) pass
+through the filter-chain convolver and its eight gain nodes
 (Section 8). Channels 5-8 use Dirac (identity) coefficients. The gate
 controls all eight.
 
@@ -759,10 +760,22 @@ ramp (F-320-F).
    Until F-037 is fixed, do not connect the Pi to a network other people
    can join at any time during setup or the show; use a network only the
    engineer's device is on, or restrict port 8080 to that device. If the Pi
-   has been on such a network, treat every output as live: amps off, close
-   the gate as in Rule 5 step 3, check the active venue (Rule 1) and its
-   coefficient files (Rule 10), since a venue switch survives closing the
-   gate, and run pre-flight check #10 before the amps go on.
+   has been on such a network, treat every output as live and recover in
+   this order:
+   1. Disconnect the Pi from that network, or apply the port 8080
+      restriction. Otherwise someone can undo the recovery right after it.
+   2. Amps off, then close the gate as in Rule 5 step 3.
+   3. Verify the venue (Rule 1) and run the coefficient check (Rule 10). A
+      venue switch survives closing the gate, and the next open applies it.
+   4. Check that no measurement or signal-gen playback is running or
+      queued (signal-gen status, command #3 in Section 5: not playing). It
+      would play into the amps when they come on; the -20 dBFS cap still
+      allows a loud signal on 450 W amps.
+   5. Run pre-flight check #10, then amps on, then open the gate per
+      Rules 1-4.
+
+   Never press UNMUTE during this recovery (Rule 7): if someone pressed
+   MUTE at raised gains, those gains are stored as pre-mute.
 9. **With amps on, run no other audio on the Pi** (interim, F-318). Only
    Mixxx or Reaper via `pw-jack`, the signal generator and the measurement
    tools. No browser audio, no desktop sounds, no PulseAudio or ALSA-plugin
