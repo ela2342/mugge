@@ -26,6 +26,12 @@ let
     && c.networking.interfaces.end0.ipv4.routes != [ ];
   tcpPorts = c: c.networking.firewall.allowedTCPPorts;
   ssh = c: c.services.openssh.settings;
+  configTxt = c: c.system.build.pi5ConfigTxt;
+  hasVc4 = c: lib.hasInfix "dtoverlay=vc4-kms-v3d-pi5" (configTxt c);
+  # Audio, display and remote-desktop units the bootstrap must not have.
+  audioUnitRe = ".*(pipewire|wireplumber|filter-chain|level-bridge|pcm-bridge|pi4audio|pi4-audio|wayvnc|labwc).*";
+  audioUnits = c: builtins.filter (n: builtins.match audioUnitRe n != null)
+    (builtins.attrNames c.systemd.services ++ builtins.attrNames c.systemd.user.services);
   hasCardBlock = c: builtins.any (p: lib.hasInfix "wireplumber-block-cards" p.name)
     c.services.pipewire.wireplumber.configPackages;
 
@@ -56,6 +62,8 @@ let
     { name = "5900/8080 not in allowedTCPPorts"; ok = !(builtins.elem 8080 (tcpPorts c)) && !(builtins.elem 5900 (tcpPorts c)); }
     { name = "HiFiBerry codec blacklisted"; ok = builtins.elem "snd_soc_pcm512x" c.boot.blacklistedKernelModules; }
     { name = "immutable users"; ok = !c.users.mutableUsers; }
+    { name = "nftables firewall"; ok = c.networking.nftables.enable && c.networking.firewall.enable; }
+    { name = "disable-bt-pi5 in config.txt"; ok = lib.hasInfix "dtoverlay=disable-bt-pi5" (configTxt c); }
     { name = "no root authorized_keys"; ok = c.users.users.root.openssh.authorizedKeys.keys == [ ]; }
     { name = "PermitRootLogin no"; ok = (ssh c).PermitRootLogin == "no"; }
     { name = "no password authentication"; ok = !(ssh c).PasswordAuthentication; }
@@ -65,12 +73,17 @@ let
   pi5Bootstrap = conf:
     let c = cfg conf; in map (a: check conf a.name a.ok) (pi5Common conf c ++ [
       { name = "cached nixpkgs kernel"; ok = c.boot.kernelPackages.kernel.outPath == cachedKernel.outPath; }
+      { name = "bootstrap.minimal set"; ok = c.mugge.bootstrap.minimal; }
       { name = "no audio stack"; ok = !c.services.pipewire.enable; }
+      { name = "no audio/display units"; ok = audioUnits c == [ ]; }
+      { name = "no vc4-kms overlay"; ok = !hasVc4 c; }
     ]);
 
   pi5Full = conf:
     let c = cfg conf; in map (a: check conf a.name a.ok) (pi5Common conf c ++ [
       { name = "PREEMPT_RT kernel variant"; ok = c.mugge.board.kernel.variant == "rt"; }
+      { name = "bootstrap.minimal unset"; ok = !c.mugge.bootstrap.minimal; }
+      { name = "vc4-kms overlay with noaudio"; ok = lib.hasInfix "dtoverlay=vc4-kms-v3d-pi5,noaudio" (configTxt c); }
       { name = "PipeWire enabled"; ok = c.services.pipewire.enable; }
       { name = "WirePlumber disables other ALSA cards"; ok = hasCardBlock c; }
     ]);
@@ -93,7 +106,7 @@ let
     ];
 
   results = pi4 "mugge" ++ pi4 "mugge-deploy"
-    ++ pi5Bootstrap "mugge-pi5-bootstrap" ++ pi5Full "mugge-pi5"
+    ++ pi5Bootstrap "mugge-pi5-bootstrap" ++ pi5Full "mugge-pi5-deploy"
     ++ installer "pi5-installer";
 in
 pkgs.writeText "board-guard" (lib.concatStringsSep "\n" results + "\n")

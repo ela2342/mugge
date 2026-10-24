@@ -857,7 +857,10 @@
             inherit system;
             modules = [
               ./nix/nixos/base.nix
-              { mugge.board.kernel.variant = "rpi-cached"; }
+              {
+                mugge.bootstrap.minimal = true;
+                mugge.board.kernel.variant = "rpi-cached";
+              }
             ] ++ pi5Modules;
           };
 
@@ -870,8 +873,8 @@
 
           # Pi 5 full system: audio stack and the PREEMPT_RT kernel (D-013),
           # built natively on the Pi after the bootstrap.
-          # Usage (on the Pi): nixos-rebuild switch --flake .#mugge-pi5
-          mugge-pi5 = nixpkgs.lib.nixosSystem {
+          # Usage (on the Pi): nixos-rebuild switch --flake .#mugge-pi5-deploy
+          mugge-pi5-deploy = nixpkgs.lib.nixosSystem {
             inherit system;
             specialArgs = sharedSpecialArgs;
             modules = [ ./nix/nixos/configuration.nix ] ++ pi5Modules;

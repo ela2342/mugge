@@ -3,8 +3,24 @@
 # The Pi 5 EEPROM bootloader reads config.txt from the FAT partition. There
 # is no U-Boot and no extlinux: every NixOS generation that may be booted
 # gets its own directory on the FAT, and config.txt's os_prefix= points the
-# firmware at one of them. The firmware applies os_prefix to the kernel,
-# initramfs, cmdline.txt, DTB and overlays.
+# firmware at one of them.
+#
+# os_prefix semantics (Raspberry Pi documentation, config.txt, "os_prefix",
+# https://www.raspberrypi.com/documentation/computers/config_txt.html):
+#   - "Any value in os_prefix is prepended to the name of any operating
+#     system files loaded by the firmware, where 'operating system files'
+#     is defined to mean kernels, initramfs, cmdline.txt, .dtbs and
+#     overlays." So kernel, initrd and cmdline.txt (which carries
+#     init=<toplevel>/init) always switch together with the pointer.
+#   - "unless the expected kernel and .dtb can be found at the new
+#     location/name, the prefix is ignored (set to "")". A missing or
+#     partial generation directory therefore makes the firmware look for
+#     /Image at the FAT root, which does not exist: no boot. Hence the
+#     explicit .complete check before the pointer is written.
+#   - Overlays "will only be loaded from ${os_prefix}${overlay_prefix} ...
+#     if ${os_prefix}${overlay_prefix}README exists, otherwise it ignores
+#     os_prefix and treats overlays as shared." The kernel's overlays/ has
+#     no README, so the hook writes one into every generation.
 #
 #   /boot/firmware/config.txt            pointer (os_prefix=gens/<id>/)
 #   /boot/firmware/gens/<id>/            Image, initrd, cmdline.txt,
@@ -17,8 +33,8 @@
 #   1. Build the generation in gens/<id>.tmp, fsync, rename to gens/<id>,
 #      then write the .complete marker. A directory without .complete is
 #      rebuilt on the next run.
-#   2. Write config.txt.new, fsync, rename over config.txt, fsync the FAT
-#      root directory.
+#   2. Check that gens/<id>/.complete exists, then write config.txt.new,
+#      fsync, rename over config.txt, fsync the FAT root directory.
 #   3. Only then prune: keep the new generation, the one the previous
 #      config.txt pointed to, and the booted one. Remove all others and
 #      any stale .tmp directories.
@@ -29,6 +45,14 @@
 # and copy a config.txt that points to an existing gens/<id>/ (MAP.txt
 # lists them). Steps 1 and 3 never touch the generation that the old
 # config.txt points to, so that generation is always intact.
+#
+# config.txt is rendered from the generation being activated, so a
+# rollback also rolls back config.txt. The bootstrap system
+# (mugge.bootstrap.minimal) has no desktop and gets no vc4-kms overlay.
+#
+# nixos-install (chroot, no /run/booted-system): the generation install and
+# the pointer write run as always; only the "keep the booted generation"
+# rule has nothing to keep.
 #
 # Device tree: the firmware applies the dtoverlay= lines below to the DTB
 # it loads. NixOS does not merge overlays on the Pi 5 (hardware.nix).
@@ -50,9 +74,11 @@ let
   '' + lib.optionalString board.hat.blockHifiberry ''
     # HiFiBerry block, layer (a): do not apply the HAT EEPROM overlay.
     force_eeprom_read=0
-  '' + ''
-    # HDMI audio off: the USBStreamer is the only audio device.
+  '' + lib.optionalString (!config.mugge.bootstrap.minimal) ''
+    # KMS display (D-022) with HDMI audio off: the USBStreamer is the only
+    # audio output.
     dtoverlay=vc4-kms-v3d-pi5,noaudio
+  '' + ''
     dtparam=audio=off
     dtoverlay=disable-bt-pi5
     kernel=Image
@@ -71,8 +97,10 @@ let
     die() { echo "install-pi5-bootloader: $*" >&2; exit 1; }
 
     # Never write the generation tree into the root filesystem by mistake.
-    mountpoint -q "$fw" || die "$fw is not mounted"
-    [ "$(stat -f -c %T "$fw")" = msdos ] || die "$fw is not a vfat filesystem"
+    # Inside the nixos-install chroot the target's /mnt/boot/firmware
+    # appears as /boot/firmware, so the same check covers the install.
+    fstype=$(findmnt -n -o FSTYPE --mountpoint "$fw" || true)
+    [ "$fstype" = vfat ] || die "$fw is not a mounted vfat filesystem (got '$fstype')"
 
     toplevel=$(readlink -f "$top")
     id=$(basename "$toplevel" | cut -c1-32)
@@ -97,13 +125,16 @@ let
         cp -L --no-preserve=mode "$kdir/dtbs/broadcom/$dtb" "$gen.tmp/$dtb"
       done
       cp -rL --no-preserve=mode "$kdir/dtbs/overlays" "$gen.tmp/overlays"
+      # The firmware only uses a prefixed overlays/ if it has a README.
+      echo "Overlays for NixOS generation $toplevel" > "$gen.tmp/overlays/README"
       sync -f "$gen.tmp"
       mv "$gen.tmp" "$gen"
       touch "$gen/.complete"
       sync "$gen/.complete" "$gens"
     fi
 
-    # 2. Pointer.
+    # 2. Pointer. Never point at an incomplete generation.
+    [ -e "$gen/.complete" ] || die "$gen is incomplete; config.txt not changed"
     prev=""
     if [ -f "$fw/config.txt" ]; then
       prev=$(sed -n 's|^os_prefix=gens/\([^/]*\)/$|\1|p' "$fw/config.txt")
@@ -152,4 +183,6 @@ in
   };
   # Keep nixpkgs' generic-extlinux-compatible off: nothing reads extlinux.
   boot.loader.generic-extlinux-compatible.enable = lib.mkForce false;
+  # Exposed for board-guard; the hook replaces @ID@.
+  system.build.pi5ConfigTxt = configTxt "@ID@";
 }

@@ -6,6 +6,16 @@
 { lib, ... }:
 
 {
+  options.mugge.bootstrap.minimal = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = ''
+      First-install system without display or audio stack (Pi 5
+      bootstrap). Set per flake configuration, never by editing it in git,
+      so the bootstrap system stays rebuildable from any commit.
+    '';
+  };
+
   options.mugge.board = {
     name = lib.mkOption {
       type = lib.types.enum [ "pi4" "pi5" ];

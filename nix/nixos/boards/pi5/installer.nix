@@ -116,6 +116,9 @@ in
       cp ${kernelDir}/dtbs/broadcom/$dtb $d/$dtb
     done
     cp -r ${kernelDir}/dtbs/overlays $d/overlays
+    chmod u+w $d/overlays
+    # The firmware only uses a prefixed overlays/ if it has a README.
+    echo "Overlays for the Pi 5 NixOS installer" > $d/overlays/README
     cp ${tryboot} $out/tryboot.txt
     (cd $out && find . -type f | sort | xargs sha256sum) > $out/SHA256SUMS
   '';
