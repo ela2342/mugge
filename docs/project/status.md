@@ -156,7 +156,7 @@ line with this table on 2026-10-24 (owner directive).
 | O-9 | ~~Scope of the playwright MCP removal (PR #43, AD-43-1)~~ **RESOLVED 2026-10-24:** owner: "playwright: just the broken one in this project". `.mcp.json` only; the settings.json entry, wrapper and devShell package stay (US-109 kept). | #43 removes the `.mcp.json` entry only. `.claude/settings.json` `mcpServers.playwright`, `scripts/playwright-mcp.sh` and the `flake.nix:287` devShell package remain. Remove those too, or keep? Confirm the user-level playwright MCP as US-109's replacement. (The owner's local `.mcp.json` edit was moved onto #43 as `e7a728af` at team-lead's request; disclosed to the owner by change-manager. Main is clean.) |
 | O-10 | IEM routing: through the gate/convolver, or bypassing it | US-115 AC #4 and D-063 route HP/IEM through the convolver and gate. CLAUDE.md says IEM bypasses the convolver. The two conflict. |
 | O-11 | HP/IEM level limit (ch 5-8, unity gain) | Measure the ADA8200 → IEM transmitter → earpieces chain first, then decide on a per-channel soft cap or limiter (AE). |
-| O-12 | GM restart behaviour (F-320 E) | Zero gains on start (safe, but a crash silences the show), or adopt state (read back the Mults and report OPEN if any is above 0). AE first recommended adopting; the agreed US-159 design (G5/G5a, architect + AE + UX) zeroes on start. Owner to confirm. |
+| O-12 | GM restart behaviour (F-320 E) | Zero gains on start (safe, but a crash silences the show), or adopt state (read back the Mults and report OPEN if any is above 0). The agreed US-159 design (G5/G5a, architect + AE + UX) zeroes on start. AE position (2026-10-24, corrects the earlier "adopt" recommendation): under either option the gate never reads CLOSED while any Mult is above 0. AE recommends zero on start (simpler, fully verifiable; matches US-159 G5/T5). Adopt is an acceptable owner option for show continuity only if the adopted values pass G3 validation (finite, at most 1.0, at most the per-speaker ceiling) and the graph passes the G4 health check; otherwise GM falls back to zero. If the owner chooses adopt, T5 asserts the invariant plus that validation. Owner to decide. |
 | O-13 | PO Q1: Ultimax sub D-031 exception (US-155 AC3) | AE checked it numerically: ~12 mm against 28 mm Xmax at full PA4504 output. If confirmed, file a D-031 amendment. Otherwise add a subsonic HPF. |
 | O-14 | PO Q2: is the CHN-50P + Ultimax rig a real gig setup, and should it get full Rule 13 now? | PO recommends yes (7 W driver). |
 | O-15 | PO Q3: purpose and consumers of the US-156 route; production or dev-only? | PO and security recommend dev-only (F-316). |
@@ -373,6 +373,8 @@ through D-065). Most significant recent decisions:
 - Fourth commit: interim rules 2, 4, 5, 6 aligned with the AE safety.md
   verdict; F-335 filed (T1 broken on main); F-319 scope extended; US-158
   AC9 (QE Gate 2 soak); F-298/F-313 linked to the safety.md change; O-28.
+- Fifth commit: AE nits (F-315 heading, O-12/F-320 E position, US-159 T2),
+  F-335 root cause and full ACs (architect + QE), US-158 AC3 cross-reference (QE).
 - Status lines updated with merge evidence: US-113, US-120, US-128,
   US-131, US-140, US-142–US-154, US-132, F-256, F-262, F-272, F-287,
   F-290.
@@ -386,8 +388,8 @@ through D-065). Most significant recent decisions:
   answer the F-328 Live-input question; F-331 analysis.
 - QE: fresh Gate 1 run on current main with `-rs -rx` output (F-256, F-272,
   US-142–151); needs a worker (O-8).
-- Architect: F-335 diagnosis; the fix needs a worker (O-8). QE's Gate 1
-  evidence run waits on it.
+- F-335 fix (`${self}` + Nix pin/log, architect) needs a worker (O-8). QE's
+  Gate 1 evidence run waits on it.
 - CM (Pi OBSERVE/CHANGE, amps OFF, needs O-2): F-318 evidence, F-316 boot
   check, F-319 (both suspected dead consumers), F-321, F-328.
 - Owner: decisions in "Owner Decisions Pending" above.
