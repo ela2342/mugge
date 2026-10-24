@@ -78,11 +78,18 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6 (= v6.1.0)
 
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b  # v31 (2026-10-24, after v31.11.2; ships Nix 2.35.4)
+        with:
+          install_url: https://releases.nixos.org/nix/nix-2.35.4/install
 
-      - uses: cachix/cachix-action@v17
+      - name: Verify Nix version
+        run: |
+          nix --version
+          test "$(nix --version)" = "nix (Nix) 2.35.4"
+
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866  # v17
         with:
           name: mugge
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
