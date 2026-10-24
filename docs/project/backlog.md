@@ -30,6 +30,8 @@ Next free: F-366, US-172, D-069, T66.
     NixOS image); Nix < 2.35 or stop; known non-blocking items listed.
   - P3: after the announced deploy switch: T54/T55, AC13, T53 on
     deploy, T51 deriver.
+  - Deploy verb (Architect + QE, final): `nixos-rebuild boot
+    --target-host` plus an announced reboot (not `switch`).
 
 - Rename `mugge-pi5` to `mugge-pi5-deploy` in story and AC text
   (worker-1, 4de6cee0).
@@ -218,10 +220,13 @@ Next free: F-366, US-172, D-069, T66.
   linux-builder VM (its builder key is root-only), via an owner-config
   key for the builder user or another owner-provided route. Low (CM).
 - After US-163: Pi self-rebuild via the Mac builder VM. Needs
-  nix.buildMachines + known_hosts entry in the Pi config, a builder@
-  key on the Pi (a secret), and a fixed Mac IP (.26 moved to .36; VM
-  on :31022). SecSpec to rule on the new trust path (builder is a
-  trusted-user on the VM). P3 (Architect).
+  nix.buildMachines + distributedBuilds + known_hosts entry in the Pi
+  config, a builder@ key on the Pi (a secret), and a stable Mac IP
+  (.26 moved to .36; fixed IP or DHCP reservation; VM on :31022).
+  SecSpec: MEDIUM -- builder is a trusted-user on the VM, so a
+  compromised Pi could poison the store the Mac builds from, and the
+  VM's SSH would likely need LAN exposure. Rule 13 code change, not in
+  US-163 unless the owner asks. P3 (Architect).
 - AE-F6 (routing.rs:423): check whether tracked; file if not.
 - US-170: Pi 4 allowlist and configurationRevision (AC1); Pi 4 WP ALSA
   rule; drvPath pin removal.
