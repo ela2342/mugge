@@ -166,6 +166,14 @@ Next free: F-366, US-172, D-069, T66.
   pre-flight #10.
 - AE R-88a recorded alongside the owner's "nothing is connected"; .88
   rated High as found.
+- Pi 5 eth0 NO-CARRIER at 20:13:12 on 2026-10-24 is Pi-side, not
+  physical. Owner: "Cable and switch port were fine. It needed a power
+  cycle." Suspects: macb / BCM54213PE NIC, PHY, driver or firmware
+  (seen under Raspbian 6.12.47; wlan0 .87 stayed up). Wired networking
+  at gigs depends on it: check for recurrence under NixOS, and capture
+  dmesg/ethtool if it does. P2 (worker-1, CM); Architect assessing the
+  risk to the US-163 install -- re-rate if that ruling makes it
+  blocking.
 
 ## P3
 
@@ -230,11 +238,6 @@ Next free: F-366, US-172, D-069, T66.
   VM's SSH would likely need LAN exposure. Rule 13 code change, not in
   US-163 unless the owner asks. P3 (Architect).
 - AE-F6 (routing.rs:423): check whether tracked; file if not.
-- Pi 5 eth0 dropped to NO-CARRIER at 20:13:12 on 2026-10-24 (kernel
-  "Link is Down"; wlan0 .87 stayed up; blocked the tryboot). Find out
-  whether it was physical or a macb/switch flake; if it recurs,
-  investigate before relying on wired networking at gigs. P3
-  (worker-1).
 - Lowest: Pi 5 deploy eval warns that disko's legacy "table" type is
   deprecated (migrate per disko's table-to-gpt guide). Check whether
   MBR is intentional for the Pi 5 FAT/firmware, else migrate.
