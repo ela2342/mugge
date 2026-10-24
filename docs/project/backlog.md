@@ -104,6 +104,11 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
   `output_ports_unresolved`; if ports vanish while Open, reduce-only
   close, read-back, stay Closed. Fix after US-160, before US-159, before
   any amps-on use. (AE, architect)
+- local-demo.sh's isolated WirePlumber keeps the ALSA monitor on, so on
+  hardware with sound cards it creates real alsa_* nodes and GM's prefix
+  match could link the real USBStreamer. Fix: disable monitor.alsa in
+  local-demo. Medium latent (AE; found by worker-1). Not blocking
+  US-163: T57 namespace isolation covers it.
 - **F-362** Silent ImportError module skips: test_filter_routes.py (85
   tests) plus four more modules. High; QE ACs 1-5. (worker-2)
 
