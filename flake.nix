@@ -797,9 +797,11 @@
           };
 
           # Shared modules for both configurations.
+          # US-163: board-specific modules live in nix/nixos/boards/<board>/.
           sharedModules = [
             nixos-hardware.nixosModules.raspberry-pi-4
             ./nix/nixos/configuration.nix
+            ./nix/nixos/boards/pi4
           ];
         in
         {
@@ -812,7 +814,7 @@
             inherit system;
             specialArgs = sharedSpecialArgs;
             modules = sharedModules ++ [
-              ./nix/nixos/repart-image.nix
+              ./nix/nixos/boards/pi4/repart-image.nix
             ];
           };
 
@@ -825,7 +827,7 @@
             specialArgs = sharedSpecialArgs;
             modules = sharedModules ++ [
               disko.nixosModules.disko
-              ./nix/nixos/disko.nix
+              ./nix/nixos/boards/pi4/disko.nix
             ];
           };
         };

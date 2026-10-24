@@ -1,9 +1,10 @@
 # configuration.nix — top-level NixOS configuration for the Pi 4 Audio Workstation
 #
-# Imports all modules EXCEPT the deployment method (repart-image.nix or disko.nix).
-# The deployment method is added at the flake level:
-#   - nixosConfigurations.mugge: adds repart-image.nix for GPT image builds
-#   - nixosConfigurations.mugge-deploy: adds disko.nix for nixos-anywhere
+# Imports all board-independent modules. The board directory
+# (boards/pi4 or boards/pi5) and the deployment method (repart-image.nix or
+# disko.nix) are added at the flake level (US-163):
+#   - nixosConfigurations.mugge: boards/pi4 + repart-image.nix for image builds
+#   - nixosConfigurations.mugge-deploy: boards/pi4 + disko.nix for nixos-anywhere
 #
 # The nixos-hardware.nixosModules.raspberry-pi-4 import is handled
 # at the flake level, not here.
@@ -15,8 +16,6 @@
 
 {
   imports = [
-    ./hardware.nix
-    ./firmware.nix
     ./users.nix
     ./network.nix
     # Phase 2: PipeWire + audio stack
@@ -96,28 +95,7 @@
   # Pi 4 has no SATA, NVMe, or PCI storage controllers.
   boot.initrd.includeDefaultModules = false;
 
-  # Pi 4B initrd modules — only what's needed to mount root from SD/USB.
-  # Most are built-in (=y) in our kernel but listed for documentation and
-  # safety (availableKernelModules silently skips missing .ko files).
-  # Only mmc_block (=m) is strictly required; the rest are =y built-ins.
-  boot.initrd.availableKernelModules = lib.mkForce [
-    # SD card boot
-    "mmc_block"          # SD/MMC block layer (=m, critical)
-    # USB storage (for USB boot or recovery)
-    "sd_mod"             # SCSI disk — USB storage presents as SCSI (=y)
-    "usb_storage"        # USB mass storage class (=y)
-    "uas"                # USB Attached SCSI — USB 3.0 fast path (=y)
-    # Pi 4 USB host controllers
-    "xhci_hcd"           # USB 3.0 HCD (=y)
-    "xhci_pci"           # PCI glue for VL805 USB 3.0 chip (=y)
-    "pcie_brcmstb"       # Pi 4 PCIe bridge — VL805 sits on PCIe (=y)
-    "reset_raspberrypi"  # VL805 firmware loader via VideoCore mailbox (=y)
-    # Emergency console
-    "usbhid"             # USB keyboard (=y)
-    "hid_generic"        # Generic HID fallback (=y)
-    # Filesystem (=y built-in, but mkForce kills auto-add from ext.nix)
-    "ext4"
-  ];
+  # Board-specific initrd modules: see boards/<board>/default.nix.
 
   # No LVM or device-mapper on this system.
   boot.initrd.kernelModules = lib.mkForce [];
