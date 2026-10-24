@@ -89,7 +89,7 @@ jobs:
   # -----------------------------------------------------------
   nixos-eval:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
 
@@ -112,6 +112,10 @@ jobs:
         run: |
           drv=$(nix eval .#nixosConfigurations.mugge.config.system.build.toplevel.drvPath)
           echo "NixOS toplevel derivation: $drv"
+
+      # US-163: structural assertions over all Pi 4 and Pi 5 configurations.
+      - name: Board guard (eval-only)
+        run: cat "$(nix build --no-link --print-out-paths .#checks.x86_64-linux.board-guard)"
 
   # -----------------------------------------------------------
   # T1 + T2 — Tests (single ARM runner)
