@@ -24,9 +24,11 @@ directories. Their index files are generated from the per-item files
 > - Main's T1/T2 are not runnable (F-335). Branch `docs/safety-d063-gate`
 >   (technical-writer) is at `1616dd61` (AE approved; more TW edits pending,
 >   final head recorded when its PR opens), not pushed. TW holds it until the
->   `nc -q1` commands are verified on the Pi (CM OBSERVE, waits on O-2).
->   PR #44 (`docs/test-strategy-drift`) must merge after it (UX condition). It merges
->   after #41.
+>   `nc -q1` commands are verified on the Pi (CM OBSERVE, waits on O-2;
+>   F-341). AE asked for three Rule 8 (F-037) recovery additions in TW's next
+>   commit and re-confirms at the PR. Merge order (CM): #41, the follow-up
+>   tracking PR, this branch, then PR #44 (`docs/test-strategy-drift`; UX
+>   condition, AD B1).
 > - No commits between 2026-04-19 and 2026-10-24. The state of the Pi
 >   after April is unknown.
 
@@ -168,7 +170,7 @@ line with this table on 2026-10-24 (owner directive).
 | # | Decision | Context / recommendation |
 |---|----------|--------------------------|
 | O-1 | Accept interim operating rules 1–7 (above) | AE/security. Canonical text in safety.md (TW branch `docs/safety-d063-gate`). |
-| O-2 | Approve read-only Pi check (CM OBSERVE, amps OFF) | Would cover: which gate/venue code is deployed, the WP default sink (F-318), the hw-in level-bridge (F-319), which coefficient files are on the Pi (F-321), and the route boot behaviour (F-316). F-318 needs GM stopped plus a test stream, so it needs a CHANGE session. |
+| O-2 | Approve read-only Pi check (CM OBSERVE, amps OFF) | Would cover: which gate/venue code is deployed, the WP default sink (F-318), the hw-in level-bridge (F-319), which coefficient files are on the Pi (F-321), the route boot behaviour (F-316), and whether the safety.md `nc -q1` commands work (F-341). F-318 needs GM stopped plus a test stream, so it needs a CHANGE session. |
 | O-3 | GitHub auth route (F-326) | `gh` works again for change-manager (2026-10-24; PRs #41-#43 opened). Agent sessions still get 401 from the invalid `GITHUB_TOKEN` (AE, AD). Owner: remove/refresh the variable, or accept CM-supplied diffs as the review route. |
 | O-4 | `95306f66` (unpushed direct commit to main) | Branch + PR, or drop. |
 | O-5 | Retroactive review of `991ff456` and `c34f7da7` | AE and security reviews done 2026-10-24 (F-316–F-318, F-320–F-325). The full Rule 13 set is not done. |
@@ -176,7 +178,7 @@ line with this table on 2026-10-24 (owner directive).
 | O-7 | D-065: confirm the decision was taken | Joint AE + security: HIGH, CRITICAL if the USBStreamer is the default sink (F-318). |
 | O-8 | Worker spawning | Proposed start: F-314 via US-159 (gate module), with F-298 Part A (work order above). Also needed for QE's fresh Gate 1 run on main. |
 | O-9 | ~~Scope of the playwright MCP removal (PR #43, AD-43-1)~~ **RESOLVED 2026-10-24:** owner: "playwright: just the broken one in this project". `.mcp.json` only; the settings.json entry, wrapper and devShell package stay (US-109 kept). | #43 removes the `.mcp.json` entry only. `.claude/settings.json` `mcpServers.playwright`, `scripts/playwright-mcp.sh` and the `flake.nix:287` devShell package remain. Remove those too, or keep? Confirm the user-level playwright MCP as US-109's replacement. (The owner's local `.mcp.json` edit was moved onto #43 as `e7a728af` at team-lead's request; disclosed to the owner by change-manager. Main is clean.) |
-| O-10 | IEM routing: through the gate/convolver, or bypassing it | US-115 AC #4 and D-063 route HP/IEM through the convolver and gate. CLAUDE.md says IEM bypasses the convolver. The two conflict. TW: resolvable once `docs/safety-d063-gate` merges. PR #44 also describes IEM through the filter-chain behind the gate (matches code); CLAUDE.md needs syncing once O-10 is decided (UX). |
+| O-10 | IEM routing: confirm D-063 supersedes the CLAUDE.md IEM-bypass note | Confirm that D-063 (IEM/HP through convolver and gate) supersedes the 2026-03-08 CLAUDE.md IEM-bypass note. If confirmed, correct CLAUDE.md (owner-approved edit) (architect). D-063 (2026-03-30) is an explicit owner decision ("8 channels passthrough from app to output"), implemented in `routing.rs` l.602-616; US-115 AC #4 agrees. The CLAUDE.md line predates it. `docs/safety-d063-gate` (TW) and PR #44 already describe IEM through the gate; CLAUDE.md sync follows the owner's answer (UX). |
 | O-11 | HP/IEM level limit (ch 5-8, unity gain) | Measure the ADA8200 → IEM transmitter → earpieces chain first, then decide on a per-channel soft cap or limiter (AE). |
 | O-12 | GM restart behaviour (F-320 E) | Zero gains on start (safe, but a crash silences the show), or adopt state (read back the Mults and report OPEN if any is above 0). The agreed US-159 design (G5/G5a, architect + AE + UX) zeroes on start. Architect: zero on start (adopting a previous Open state after a crash restores audio with no operator action). AE position (2026-10-24, corrects the earlier "adopt" recommendation): under either option the gate never reads CLOSED while any Mult is above 0. AE recommends zero on start (simpler, fully verifiable; matches US-159 G5/T5). Adopt is an acceptable owner option for show continuity only if the adopted values pass G3 validation (finite, at most 1.0, at most the per-speaker ceiling) and the graph passes the G4 health check; otherwise GM falls back to zero. If the owner chooses adopt, T5 asserts the invariant plus that validation. Owner to decide. |
 | O-13 | PO Q1: Ultimax sub D-031 exception (US-155 AC3) | AE checked it numerically: ~12 mm against 28 mm Xmax at full PA4504 output. If confirmed, file a D-031 amendment. Otherwise add a subsonic HPF. |
@@ -276,10 +278,12 @@ line with this table on 2026-10-24 (owner directive).
 | F-334 | Medium | local-demo still disables WP policy.standard; diverges from production (D-065), F-318 untestable locally. |
 | F-331 | Low | 16k-tap dirac on ch 5-8 ~doubles convolver load; BM-2 rerun at 8ch first (architect). |
 | F-332 | Low | `audio_mute.py:46` misleading log message. |
+| F-341 | Medium | safety.md pre-flight `nc -q1` commands unverified on NixOS (no netcat in `nix/`; `-q` is Debian-only). Needs CM OBSERVE (O-2). AE to rate. |
+| F-340 | Low | PR #44 non-blocking docs follow-ups (architect 1-3, UX, AD L1-L5); later docs pass (TW). |
 | F-338 | High | Web UI CLOSE GATE disabled while the gate reads CLOSED; interim rules 5-7 not performable from the UI (AE confirmed High). Standalone fix ahead of US-159. |
 | F-339 | High | GM CloseGate returns Ok when the convolver is missing and nothing was zeroed (AE; architect confirmed in code). Likelier trigger: gain param name mismatch (AE). Fix: US-159 G11/T10. |
 | F-336 | Medium | Real-Pi browser tests unusable: wizard T4 ignores PI_AUDIO_URL; monitor suite always skipped in CI (QE to confirm severity). |
-| F-337 | Low | development.md Gate 2/3 contradict testing-process.md §8 (authoritative, QE); `test-drivers` is not an app. Fixed in PR #44 (`docs/test-strategy-drift`, `76c897a5`): AE and UX approved; UX condition: merge after `docs/safety-d063-gate` (user-journeys.md step 3a cites pre-flight #10, which only exists there). |
+| F-337 | Low | development.md Gate 2/3 contradict testing-process.md §8 (authoritative, QE); `test-drivers` is not an app. Fixed in PR #44 (`docs/test-strategy-drift`, `76c897a5`): AE, architect, TW (author, declared conflict), QE and UX (merge-order condition) approved; security withheld pending CI; AD changes requested (B1 merge order; B2 earpiece warning before first audio). Merge order: #41, follow-up tracking PR, `docs/safety-d063-gate`, #44 (user-journeys.md step 3a cites pre-flight #10, which only exists on the safety branch). Non-blocking follow-ups: F-340. |
 | F-299 | Medium | D-009 not guaranteed between bins / below 20 Hz (generator + verifier). Joint fix with F-262. |
 | F-303–F-311 | Medium | Skip-audit groups and dead skip guards. |
 | F-262 | Medium | 2 xfails. Possible real min-phase filter-gen bug (architect ruling). Highest product risk among the xfails. |
@@ -325,7 +329,7 @@ line with this table on 2026-10-24 (owner directive).
 |--------|-------|
 | Commits on main since 2026-04-04 | 185 (first-parent: 27 PR merges, 10 direct commits 2026-04-04, 2 single-parent commits 2026-04-19, 1 unpushed local) |
 | Total stories filed | 158 (US-155/156 written retroactively, US-157/158 new, 2026-10-24) |
-| Total defects filed | F-339 highest. Gaps with no record: F-267–F-269, F-286, F-288, F-289, F-294, tracked as F-327 (plus older historical gaps). F-266 reconstructed from `32da863d` |
+| Total defects filed | F-341 highest. Gaps with no record: F-267–F-269, F-286, F-288, F-289, F-294, tracked as F-327 (plus older historical gaps). F-266 reconstructed from `32da863d` |
 | Total decisions | D-065 highest (D-065 reconstructed, needs owner confirmation; D-064 DRAFT) |
 | Active xfails | 6 (limit 5) |
 | PW convolver CPU (q1024 / q256) | 1.70% / 3.47% (PW 1.4.9 measurements; not re-measured on 1.6.2) |
@@ -427,6 +431,9 @@ through D-065). Most significant recent decisions:
   F-338/F-339 ratings confirmed, F-339 name-mismatch trigger; US-161 ACs
   (AE); safety branch `1616dd61` approved; PR #44 (`76c897a5`) AE + UX
   approved with merge-order condition; O-10 CLAUDE.md sync note (UX).
+  Sixth batch: PR #44 AD changes requested (B1, B2) recorded; F-340 (#44
+  non-blocking follow-ups) and F-341 (`nc -q1` unverified on NixOS) filed;
+  #44 verdict tally per CM; merge order recorded; O-10 reworded (architect).
 - Status lines updated with merge evidence: US-113, US-120, US-128,
   US-131, US-140, US-142–US-154, US-132, F-256, F-262, F-272, F-287,
   F-290.
