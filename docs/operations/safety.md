@@ -815,18 +815,18 @@ ramp (F-320-F).
     - No such record exists yet. If you cannot confirm the set, keep the
       amps off.
 11. **Gate bypass** (interim, until GraphManager is the sole Mult writer,
-    US-159; F-344, F-345). CLOSED does not guarantee silence. Two web UI paths
-    write non-zero Mult without GraphManager: Config tab gain Apply, and the
-    thermal limiter, which restores gain toward the profile gain as the
-    coil cools if it was limiting when the gate closed.
+    US-159; F-344, F-345). CLOSED does not guarantee silence. Besides
+    UNMUTE (Rule 7), two web UI paths write non-zero Mult without
+    GraphManager: Config tab gain Apply, and the thermal limiter, which
+    restores gain toward the profile gain as the coil cools if it was
+    limiting when the gate closed.
     - Never use Config tab gain Apply.
     - To make the outputs safe, turn the amps off; do not rely on CLOSE
       GATE alone.
-    - After any gate close, pass pre-flight check #10 (Section 5) before
-      the amps go on, whether or not Apply was used or the dashboard
-      thermal panel showed LIMIT or a LIM badge. The panel shows only the
-      current state, keeps no history, and a short limiter engagement can
-      fall between polls.
+    - Until US-159, after any gate close, pass pre-flight check #10
+      (Section 5) before the amps go on, whatever the gate indicator shows
+      and whether or not you used Config tab gain Apply or saw the thermal
+      limiter active (dashboard LIMIT, WARN or a LIM x.x dB badge).
 
 Watchdog mute, gain-integrity mute, and the standby transition all close the
 gate. Watchdog unlatch and UNMUTE are **not** safe recovery paths.
