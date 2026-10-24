@@ -172,7 +172,17 @@ Next free: F-367, US-172, D-069, T66.
   kernel 6.12.47. CM ruling: target identity is host key + MAC, not
   IP; the deploy verb uses the current IP. Open owner question (not
   blocking): fixed router lease? Then update .88 references (team
-  config, docs, memories, deploy verb). First-boot checks running.
+  config, docs, memories, deploy verb).
+- First-boot records on the bootstrap all green (CM; file
+  ~/mugge-pi5-prewipe-20261024/firstboot-p9mzphhy.txt): T48 rev
+  fb7d557e, current = booted = p9mzphhy; T49 running, 0 failed units;
+  T50 54.6C, no throttle, end0 0 errors; T51 bootstrap part 6.12.47
+  non-RT as designed, PAGESIZE 4096; AC9b FAT clean; T53
+  permitrootlogin no, root no keys, ela 4 owner keys; firewall 22,
+  5353, DHCP only; watchdog devices present, RuntimeWatchdogUSec=0;
+  PipeWire absent, ALSA sees APC mini + USBStreamer, nothing opened.
+  T52 and AE check #10 are deploy-image only. SecSpec verdict on
+  T48-T53/AC9b pending on the raw output.
 
 ## P1
 
@@ -261,7 +271,18 @@ Next free: F-367, US-172, D-069, T66.
   interfaces); the firewall drops them (only 22 reachable). Set
   services.resolved.llmnr = "false" on the final Pi 5 systems (LOW,
   SecSpec; T48 after first boot shows whether present); optionally in
-  the installer too (worker-1).
+  the installer too (worker-1). Confirmed on first boot: LLMNR on 5355
+  (firewalled); avahi also warns about a second mDNS stack (resolved +
+  avahi) -- pick one.
+- systemd RebootWatchdogUSec=10min (default) arms the watchdog during
+  reboots. Does O-24 cover it? Architect/AE to rule. P3 (worker-1).
+- sshd AllowAgentForwarding yes (default) on the Pi 5. LOW, SecSpec to
+  decide (worker-1).
+- Pi 5 WiFi/BT firmware missing (brcmfmac, BCM4345C0). Note: wlan0 was
+  the fallback path during the 20:13 eth0 drop (P2 item), so NixOS
+  currently has no wireless fallback. P3 (worker-1).
+- No vcgencmd on the Pi 5 image, so no get_throttled evidence for T50
+  and gig thermal checks. P3 (worker-1).
 - Nix on the installer is nixpkgs 2.31.2, below the 2026-10-13
   advisory fixes (2.34.9/2.35.3). If the final systems ship it too:
   bump nix.package or nixpkgs. LOW for now (local nix-daemon only, ela
