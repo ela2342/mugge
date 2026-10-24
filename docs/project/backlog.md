@@ -141,6 +141,8 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
   `-p no:cacheprovider`, 0444 seeds.
 - Docs: CLAUDE.md IEM text (ch 7-8 via convolver since D-063) with the
   O-10 wording; #47 memory item 8 (sshd drop-ins first-value-wins);
+  pi5-bootstrap.md HAT topic: add clk_hifiberry_dacpro (4th module)
+  and HDMI audio on the vc4hdmi cards (AE, optional);
   status.md l.445 F-357 says High, should be Medium; US-169 AC5 citation
   separator.
 - Architect N1-N3 on #48 (CM PR comment).
@@ -159,11 +161,13 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
 ## Open PRs (2026-10-24, per CM)
 
 Merged on owner consent "docs-only can be merged": #41 (6b30ca54), #46
-(0c34fe82), #48 (17eb76a9). main is at 17eb76a9; the pre-PR US-163
-tracking batch bases on it.
+(0c34fe82), #48 (17eb76a9); #47 (289390bf, 7/7 at 20a11758 after
+update-branch). main is at 289390bf; the pre-PR US-163 tracking batch
+bases on it. Branch protection requires up-to-date with main, so each
+merge needs update-branch and 7 reconfirmations at the new head.
 
-- #47 (memory notes) and #42 (team docs paths): 7/7, held on owner Q1
-  (does .claude/memories / .claude/team count as docs-only).
+- #42 (team docs paths): 7/7 at 10c3938b, held on owner Q1/A7 (does
+  .claude/team count as docs-only); needs update-branch on merge.
 - #49 F-335 fix: new head b959e5c9 pending push voids verdicts; needs a
   fresh round and green T1-T3. Off the US-163 path.
 - #43, #45, #44: need #49 on main and real green CI; #45 before #44.
