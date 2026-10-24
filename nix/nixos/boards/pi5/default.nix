@@ -29,8 +29,9 @@
     hat.blockHifiberry = true;
   };
 
-  # Fail-closed allowlist for the web UI and wayvnc (security ruling).
-  # Addresses are set per host in the flake configuration.
+  # Fail-closed allowlist for wayvnc (security ruling); the list is empty,
+  # so 5900 is closed (owner: VNC not needed for now). The web UI (8080)
+  # is open on the LAN (owner ruling 2026-10-24, F-037).
   mugge.firewall.uiAllowlist.enable = true;
 
   # /boot/firmware is written on every switch (bootloader.nix), so it must

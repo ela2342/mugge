@@ -55,5 +55,8 @@ in
     "snd_soc_hifiberry_dacplus"
     "snd_soc_pcm512x_i2c"
     "snd_soc_pcm512x"
+    # DAC+ Pro clock; only bound through the HAT overlay (AE: defence in
+    # depth).
+    "clk_hifiberry_dacpro"
   ];
 }

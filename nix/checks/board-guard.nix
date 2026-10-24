@@ -40,7 +40,7 @@ let
     u.password != null || u.initialPassword != null || u.initialHashedPassword != null
     || u.hashedPasswordFile != null
     || (u.hashedPassword != null && u.hashedPassword != "!")) c.users.users;
-  hifiberryModules = [ "snd_soc_hifiberry_dacplus" "snd_soc_pcm512x_i2c" "snd_soc_pcm512x" ];
+  hifiberryModules = [ "snd_soc_hifiberry_dacplus" "snd_soc_pcm512x_i2c" "snd_soc_pcm512x" "clk_hifiberry_dacpro" ];
   ssh = c: c.services.openssh.settings;
   configTxt = c: c.system.build.pi5ConfigTxt;
   txtLines = c: lib.splitString "\n" (configTxt c);
@@ -84,7 +84,9 @@ let
     { name = "no US-156 lab route"; ok = !hasUs156Route c; }
     { name = "networkd DHCP matched on driver"; ok = c.systemd.network.networks."10-wired".matchConfig.Driver == "macb"; }
     { name = "UI allowlist enabled"; ok = c.mugge.firewall.uiAllowlist.enable; }
-    { name = "5900/8080 not opened by any port list or range"; ok = !(tcpOpen c 8080) && !(tcpOpen c 5900); }
+    { name = "5900 not opened by any port list or range"; ok = !(tcpOpen c 5900); }
+    { name = "8080 open on the LAN (owner ruling, F-037)"; ok = builtins.elem 8080 (tcpPorts c); }
+    { name = "allowlist rules never mention 8080"; ok = !(lib.hasInfix "8080" (fw c).extraInputRules); }
     { name = "HiFiBerry modules blacklisted"; ok = lib.all (m: builtins.elem m c.boot.blacklistedKernelModules) hifiberryModules; }
     { name = "config.txt force_eeprom_read=0"; ok = builtins.elem "force_eeprom_read=0" (txtLines c); }
     { name = "config.txt has no HiFiBerry overlay"; ok = !builtins.any (l: builtins.match "dtoverlay=.*(hifiberry|pcm512).*" l != null) (txtLines c); }
