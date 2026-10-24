@@ -22,7 +22,8 @@ directories. Their index files are generated from the per-item files
 >   fix, 2026-10-24) made directly on main without a PR. It is waiting
 >   for an owner decision.
 > - Main's T1/T2 are not runnable (F-335). Branch `docs/safety-d063-gate`
->   (technical-writer) is committed as `ae99459a`, not pushed. It merges
+>   (technical-writer) is committed as `a85473df`, not pushed; AE requests
+>   changes on C1 only (TW). It merges
 >   after #41.
 > - No commits between 2026-04-19 and 2026-10-24. The state of the Pi
 >   after April is unknown.
@@ -45,6 +46,9 @@ Session 15 focus, pending owner direction:
 
 ### Proposed work order (2026-10-24; worker spawning is the owner's call)
 
+0. **F-338** (CLOSE GATE always enabled). AE + architect: ships ahead of
+   US-159 as a small standalone fix, UX tier A. PO: bundle with US-160
+   (interim UNMUTE, high).
 1. **F-314 via US-159** (critical; GM gate module, design agreed by architect, AE, UX). It
    touches gate/venue logic, so it must carry **F-298 Part A** with it or
    follow it (AE merge condition). Part B must not delay it.
@@ -74,7 +78,7 @@ Session 15 focus, pending owner direction:
 
 These apply while the amps are on, until the referenced defects are fixed.
 safety.md §10 carries the canonical wording (technical-writer, branch
-`docs/safety-d063-gate`, `a85473df`, pending AE re-review). Its rule
+`docs/safety-d063-gate`, `a85473df`, AE change request on C1). Its rule
 numbers are given in brackets; if the two differ, safety.md wins.
 
 1. Close the gate before switching venues (F-314) [Rule 3].
@@ -170,7 +174,7 @@ line with this table on 2026-10-24 (owner directive).
 | O-7 | D-065: confirm the decision was taken | Joint AE + security: HIGH, CRITICAL if the USBStreamer is the default sink (F-318). |
 | O-8 | Worker spawning | Proposed start: F-314 via US-159 (gate module), with F-298 Part A (work order above). Also needed for QE's fresh Gate 1 run on main. |
 | O-9 | ~~Scope of the playwright MCP removal (PR #43, AD-43-1)~~ **RESOLVED 2026-10-24:** owner: "playwright: just the broken one in this project". `.mcp.json` only; the settings.json entry, wrapper and devShell package stay (US-109 kept). | #43 removes the `.mcp.json` entry only. `.claude/settings.json` `mcpServers.playwright`, `scripts/playwright-mcp.sh` and the `flake.nix:287` devShell package remain. Remove those too, or keep? Confirm the user-level playwright MCP as US-109's replacement. (The owner's local `.mcp.json` edit was moved onto #43 as `e7a728af` at team-lead's request; disclosed to the owner by change-manager. Main is clean.) |
-| O-10 | IEM routing: through the gate/convolver, or bypassing it | US-115 AC #4 and D-063 route HP/IEM through the convolver and gate. CLAUDE.md says IEM bypasses the convolver. The two conflict. |
+| O-10 | IEM routing: through the gate/convolver, or bypassing it | US-115 AC #4 and D-063 route HP/IEM through the convolver and gate. CLAUDE.md says IEM bypasses the convolver. The two conflict. TW: resolvable once `docs/safety-d063-gate` merges. |
 | O-11 | HP/IEM level limit (ch 5-8, unity gain) | Measure the ADA8200 → IEM transmitter → earpieces chain first, then decide on a per-channel soft cap or limiter (AE). |
 | O-12 | GM restart behaviour (F-320 E) | Zero gains on start (safe, but a crash silences the show), or adopt state (read back the Mults and report OPEN if any is above 0). The agreed US-159 design (G5/G5a, architect + AE + UX) zeroes on start. Architect: zero on start (adopting a previous Open state after a crash restores audio with no operator action). AE position (2026-10-24, corrects the earlier "adopt" recommendation): under either option the gate never reads CLOSED while any Mult is above 0. AE recommends zero on start (simpler, fully verifiable; matches US-159 G5/T5). Adopt is an acceptable owner option for show continuity only if the adopted values pass G3 validation (finite, at most 1.0, at most the per-speaker ceiling) and the graph passes the G4 health check; otherwise GM falls back to zero. If the owner chooses adopt, T5 asserts the invariant plus that validation. Owner to decide. |
 | O-13 | PO Q1: Ultimax sub D-031 exception (US-155 AC3) | AE checked it numerically: ~12 mm against 28 mm Xmax at full PA4504 output. If confirmed, file a D-031 amendment. Otherwise add a subsonic HPF. |
@@ -189,7 +193,7 @@ line with this table on 2026-10-24 (owner directive).
 | O-26 | T3 not in PR CI (F-333) | (a) manual T3 dispatch per PR; (b) T3 back in PR CI for `nix/`, `flake.*`, `configs/` PRs; (c) reword Rule 13 so T3 is a release gate. QE recommends (b), with (a) as the interim. Until decided, no PR can meet T1+T2+T3 green. |
 | O-27 | Gate ramp curve (F-315, D-063 amendment) | AE's 30 dB/s dB-linear slew (2 s full open) vs D-063's 3 s cosine implemented over real time. AE accepts either; minimum: wall-clock rate limit, per-tick cap, generation check, >= 2 s. |
 | O-28 | F-037 disclosure (security, low) | If the repo is public, F-037 documents an exploit path for a still-open vulnerability. Security: acceptable, but the owner should know. |
-| O-29 | Split US-159 (PO proposal) | US-159 core (G1-G10, T1-T5, T7, T8), US-159b WP default-sink bypass (B1, B2, T6; different files, needs a Pi CHANGE session, can run in parallel), US-159c web UI (U1-U7, T9, DOC1; depends on the core gate-state API). The AE veto lift then requires core + 159b. Owner decides. |
+| O-29 | Split US-159 (PO proposal) | US-159 core (G1-G11 incl. G8b, T1-T5, T7, T8, T10, T11), US-159b WP default-sink bypass (B1, B2, T6; different files, needs a Pi CHANGE session, can run in parallel), US-159c web UI (U1-U7, T9, DOC1; depends on the core gate-state API). The AE veto lift then requires core + 159b. Owner decides. |
 
 ## Component Status
 
@@ -269,10 +273,10 @@ line with this table on 2026-10-24 (owner directive).
 | F-334 | Medium | local-demo still disables WP policy.standard; diverges from production (D-065), F-318 untestable locally. |
 | F-331 | Low | 16k-tap dirac on ch 5-8 ~doubles convolver load; BM-2 rerun at 8ch first (architect). |
 | F-332 | Low | `audio_mute.py:46` misleading log message. |
-| F-338 | High | Web UI CLOSE GATE disabled while the gate reads CLOSED; interim rules 5-7 not performable from the UI (AE to rate). |
-| F-339 | High | GM CloseGate returns Ok when the convolver is missing and nothing was zeroed (AE; architect to confirm). |
+| F-338 | High | Web UI CLOSE GATE disabled while the gate reads CLOSED; interim rules 5-7 not performable from the UI (AE to rate). Standalone fix ahead of US-159. |
+| F-339 | High | GM CloseGate returns Ok when the convolver is missing and nothing was zeroed (AE; architect confirmed in code). Fix: US-159 G11/T10. |
 | F-336 | Medium | Real-Pi browser tests unusable: wizard T4 ignores PI_AUDIO_URL; monitor suite always skipped in CI (QE to confirm severity). |
-| F-337 | Low | development.md Gate 2/3 contradict testing-process.md §8 (authoritative, QE); `test-drivers` is not an app. |
+| F-337 | Low | development.md Gate 2/3 contradict testing-process.md §8 (authoritative, QE); `test-drivers` is not an app. Fixed on `docs/test-strategy-drift` (`263e9d32`), in review. |
 | F-299 | Medium | D-009 not guaranteed between bins / below 20 Hz (generator + verifier). Joint fix with F-262. |
 | F-303–F-311 | Medium | Skip-audit groups and dead skip guards. |
 | F-262 | Medium | 2 xfails. Possible real min-phase filter-gen bug (architect ruling). Highest product risk among the xfails. |
@@ -408,6 +412,12 @@ through D-065). Most significant recent decisions:
   (CloseGate false success, AE) filed with the interim close procedure;
   PO review of US-159 applied; US-160 (interim UNMUTE), US-161 (chain
   calibration), US-162 (dynamic limiter) filed; A35 registered; O-29.
+  Fourth batch: US-159 G11 confirmed close with CloseFailed (architect,
+  AE A1-A4), U4 state list and U6 CLOSE FAILED (UX), T10; G8b
+  coefficient validation with T11 (AE); B2 bound and fail-closed rule, T6
+  under DJ load (AE); F-338 standalone ahead of US-159 (AE + architect);
+  F-339 confirmed (architect); F-337 fixed on branch; PO priorities on
+  US-160-162; safety branch now `a85473df`; O-10 note (TW).
 - Status lines updated with merge evidence: US-113, US-120, US-128,
   US-131, US-140, US-142–US-154, US-132, F-256, F-262, F-272, F-287,
   F-290.
