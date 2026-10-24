@@ -30,8 +30,37 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
   - AC21: drop the allowlist runbook part.
   - T53: negative case is "5900 refused (v4 and v6)".
   - The allowlist fail-closed + IPv6 AC moves to the backlog with F-037.
-- T57: builder Nix pinned to 2.34.x; record `nix --version`; every Rust
-  crate shows a non-zero test count.
+- T57: builder Nix pinned to 2.34.9 (2.34.8 has five Nix advisories of
+  2026-10-13; SecSpec, CM-CHG-.88-2); record `nix --version`; every
+  Rust crate shows a non-zero test count.
+- AC22 exception (PO, 2026-10-24, AE no veto): test-e2e may run once on
+  .88 under Raspbian with the USBStreamer attached, because the owner
+  states nothing is connected to any Pi output. Conditions: local-demo
+  is isolated; `pw-link -l` runs before and after, against local-demo's
+  PW and against Raspbian's own session PW, and confirms all test
+  clients are on local-demo's remote; any link to the USBStreamer or
+  HiFiBerry means stop and report to AE. Not for the NixOS image, not a
+  general rule. Lapses if anything is connected to a Pi output.
+- AD install challenges (2026-10-24; C1-C3 required before the erase):
+  - C1 (bug): installer.nix SHA256SUMS lists itself, so `sha256sum -c`
+    always fails. Exclude it or write outside $out; verify staged files
+    on the Pi with `sha256sum -c`.
+  - C2: in the installer, before disko, confirm MMC_SDHCI_BRCMSTB,
+    EXT4_FS and MMC_BLOCK are =y (initrd mkForce list relies on it).
+  - C3: `nixos-anywhere --phases disko,install`, no chained reboot;
+    check /mnt/boot/firmware (config.txt, os_prefix gen with .complete,
+    Image, initrd, cmdline init=, bcm2712 DTBs, overlays/README),
+    /mnt/etc/ssh and keys, nftables allows 22; then reboot manually.
+  - C4: full-card image from the installer (dd | zstd to persistent dev
+    storage, sha256), or the minimum OBSERVE tar/list set; find UMIK cal
+    files by pattern, not the Pi 4 path.
+  - C5: record BOOT_ORDER, bootloader version, RAM, initrd size.
+  - C6: lsblk size/serial check before disko; no USB storage attached;
+    never leave a same-label fallback stick in at first boot.
+  - C7: prove the tryboot abort path once (installer up with network,
+    reboot, Raspbian untouched) before the real run.
+  - C8: pause unattended-upgrades and apt timers between staging and
+    the erase.
 - T57 (PO OK): Pi 4 `mugge` and `images.sd-card` builds move to T55; the
   eval-only pi4-noop drvPath check stays before the PR.
 - T57 (PO OK): test-e2e may run on .88 under Raspbian in a CM session.
