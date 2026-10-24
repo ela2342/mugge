@@ -68,3 +68,4 @@ Generated from the per-item files in `decisions/` (the source of truth). Do NOT 
 | [D-063](decisions/D-063.md) | 2026-03-30 | 8-Channel Filter-Chain Convolver with Universal Audio Gate |
 | [D-064](decisions/D-064.md) | 2026-04-04 | NixOS VM Test Framework for CI Smoke Testing |
 | [D-065](decisions/D-065.md) | 2026-04-19 | Remove WirePlumber 90-no-auto-link.conf |
+| [D-067](decisions/D-067.md) | 2026-10-24 | Documentation-only PRs are exempt from the Rule 13 CI requirement |

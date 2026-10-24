@@ -40,7 +40,7 @@ directories. Their index files are generated from the per-item files
 >   The `nc -q1` commands are still unverified on the Pi (F-341; O-2 moot,
 >   now post-bootstrap verification on the Pi 5). Merge order (CM,
 >   2026-10-24): the F-335 fix PR (worker-2), #41, #46 (follow-up
->   tracking, `chore/tracking-followup`, head `9e9dce9b`, stacked on
+>   tracking, `chore/tracking-followup`, head `d8296415`, stacked on
 >   #41, retargeted to main after it; O-34 resolved, round restarted),
 >   #45, #44 (rebased over #45 for venue-setup.md), #42, #43. #40 and
 >   #36 wait for owner direction; #40 overlaps #41/#46 and #42, and
@@ -129,7 +129,10 @@ safety.md §10 carries the canonical wording (technical-writer, branch
 numbers are given in brackets. Where a status.md rule is stricter or not
 yet in safety.md (rules 9-12), the stricter rule applies (AD).
 
-1. Close the gate before switching venues (F-314) [Rule 3].
+1. Close the gate before switching venues (F-314) [Rule 3], and before
+   every mode change (F-359; PO, AE; not yet in safety.md). If the web
+   UI restarts or becomes unreachable during a measurement: amps off
+   and HP/IEM off first (F-360; AE, PO).
 2. Play nothing on the Pi except Mixxx, Reaper and the signal generator,
    and keep the amps off during any GraphManager restart (F-318) [Rule 9].
 3. Don't open the gate on `foh-passthrough` (F-271, F-314) [Rule 2].
@@ -205,7 +208,8 @@ yet in safety.md (rules 9-12), the stricter rule applies (AD).
     (Mixxx built-in effects are acceptable); (b) after any suspected
     non-finite event (plugin glitch, application crash mid-stream,
     signal-gen anomaly), first turn the amps off, take headphones off
-    and IEMs out, even while the gate is Open; do not reopen the gate;
+    and IEMs out and turn the HP/IEM amps off, even while the gate is
+    Open; do not reopen the gate;
     then clear the convolvers by a PipeWire restart per Rule 9 (warn
     the owner first), then Rules 1 and 10 and pre-flight check #10.
     Nothing visible detects the event (F-349), so (a) is the only real
@@ -233,9 +237,10 @@ increase on ch 5-8 without owner confirmation (S-012).
 
 safety.md §5 pre-flight #10 (as in #45 `76b61347`): after every boot or
 PW/GM restart, before amps on: pw-dump shows exactly one
-`pi4audio-convolver` and one `pi4audio-convolver-out` node; that node
-has exactly the 8 named `gain_*:Mult`, each exactly `0.000000`, and all
-`Add` the same, read with `pw-cli enum-params` only (pw-dump prints
+`pi4audio-convolver` and one `pi4audio-convolver-out` node;
+`pi4audio-convolver` has exactly the 8 named `gain_*:Mult`, each
+exactly `0.000000`, and each `Add` exactly `0.000000`, read with
+`pw-cli enum-params` only (pw-dump prints
 NaN, -Inf and subnormals as 0.000000). Any `nan`, `inf`, `-0.000000`,
 other name, missing value or second node: amps stay off. Never the UI
 indicator (F-298, F-313, F-348).
@@ -283,6 +288,29 @@ indicator (F-298, F-313, F-348).
 Story files US-115, US-119, US-123, US-125 and US-126 were brought in
 line with this table on 2026-10-24 (owner directive).
 
+### ID collision register (#40)
+
+#40 (`sprint/session-16` @ `c1832030`, owner-held) reuses IDs that main
+and the active work (#41, #45, #46, the US-163 branch) already use. PO
+ruling (2026-10-24): main plus the active PRs are canonical; nothing
+changes today. If #40 is revived, its US-157..165, F-296 (and any
+T-IDs) must be renumbered in its rebase, from the next free IDs at
+that time (currently US-172, F-361, D-068). US-166..168 exist only on
+#40 and keep their IDs; nothing new is allocated in US-166..168
+(TW, AD L1).
+
+- F-292: not a collision. The same defect; merged into one record (PM).
+- US-155, US-156, D-065, F-291, F-293, F-295: the same items, but #40
+  holds the original records and ours are reconstructions. The
+  differences are noted in each record; reconciliation is pending PO.
+  Three of #40's fixes are missing on main (F-358).
+- D-066: on #40 only, and its text is defective (AE). It lands on main
+  in amended form through US-169; never cherry-pick #40's text.
+- F-288, F-289 (#40 only): relevant to US-163 (GPT vs MBR; the
+  `/boot/firmware` mount). worker-1's `disko.nix` move conflicts with
+  #40's F-289 edit; rename-aware resolution whichever merges second.
+- F-294, US-166..168 (#40 only): no conflict; keep their IDs.
+
 ### Owner Decisions Pending (recorded 2026-10-24 so they survive the session)
 
 Standing permissions (owner, 2026-10-24): "You do not need my
@@ -317,7 +345,7 @@ connected).
 | O-19 | US-088, US-084, US-044, US-077, US-063 Pi work | Owner Pi session; now on the Pi 5 after US-163 (old Pis unreachable). |
 | O-20 | US-079–082 re-validation; US-089 acceptance; US-099–104 prioritization | Unchanged since session 9. |
 | O-21 | Direct pushes and untracked PRs | `c34f7da7` and `991ff456` reached main without a PR (Rule 13 bypass). PRs #40 (sprint/session-16) and #36 (F-270) are open and untracked: review, merge path, or close? |
-| O-22 | ~~Does a CI paths-filter skip count as Rule 13 green?~~ **RESOLVED 2026-10-24:** owner: "Reviews as per team orchestration protocol". A skip is NOT green; T1-T3 must actually run on each PR head (CM + QE arranging runs). No author exemption: the TW gives an explicit verdict on their own PR #42. | T1-T3 were skipped on PRs #41-#43. QE: yes, only if QE confirms per PR (with grep evidence) that no changed file is a build or test input. AD: prefers the real fix, F-330 (denylist). If accepted, update CLAUDE.md Rule 13 and testing-process.md. |
+| O-22 | ~~Does a CI paths-filter skip count as Rule 13 green?~~ **Superseded for docs-only PRs by D-067** (owner, 2026-10-24: "documentation-only PRs are exempt"); scope questions Q1-Q3 pending. **RESOLVED 2026-10-24:** owner: "Reviews as per team orchestration protocol". For all other PRs a skip is NOT green; T1-T3 must actually run on each PR head (CM + QE arranging runs). No author exemption: the TW gives an explicit verdict on their own PR #42. | T1-T3 were skipped on PRs #41-#43. QE: yes, only if QE confirms per PR (with grep evidence) that no changed file is a build or test input. AD: prefers the real fix, F-330 (denylist). If accepted, update CLAUDE.md Rule 13 and testing-process.md. |
 | O-23 | Dev disk full | **RESOLVED 2026-10-24:** owner cleared caches, ~6.1 GB free. |
 | O-24 | Hardware watchdog (F-325, F-317) | AE: not a speaker-safety backstop; a watchdog reboot resets USB and causes a transient with amps on. Worth it for availability (gate closed on boot). Owner to accept the tradeoff knowingly. |
 | O-25 | Authoritative state-format spec | `.claude/team/protocol/state-format.md` dropped the Phase column from the story table (l.91-93); the canonical `team-protocol/project-state/format.md` has it, and status.md uses it. TW recommends re-syncing the local copy. |
@@ -327,11 +355,11 @@ connected).
 | O-29 | Split US-159 (PO proposal) | US-159 core (G1-G11 incl. G8b, T1-T5, T7, T8, T10, T11), US-159b WP default-sink bypass (B1, B2, T6; different files, needs a Pi CHANGE session, can run in parallel), US-159c web UI (U1-U7, T9, DOC1; depends on the core gate-state API). The AE veto lift then requires core + 159b. Owner decides. |
 | O-30 | First boot under US-159 G8b (AE ruling; PO to route) | G8b refuses `open()` on `foh-passthrough.yml` until F-271 protection WAVs exist (no passthrough exemption; AE, architect agree). Q1: accept no first-boot audio until F-271 ships, with F-271 prioritised alongside US-159 (AE: yes; PO: make F-271 a US-159 dependency). Q2: is a real FoH-feed use case wanted (ch 1-4 as line level into a house processor)? If so, an explicit "external processing / line-out" output type in the speaker profile: G8b (i) still applies, (ii) skipped only for channels declared external; never the first-boot default; operator confirmation on every open; UI shows the unprotected state while open (AE conditions). Q3 (UX): a deliberate "monitors only" open (ch 5-8, ch 1-4 held at 0 and verified by G11 read-back)? AE: no safety objection. Architect: a per-channel-group gate is out of US-159 scope. |
 | O-31 | Thermal limiter heartbeat loss mid-show (US-159 L2/R1) | AE recommends a time-bounded hold: at once GM holds the last factor, refuses any raise and the UI shows "THERMAL PROTECTION LOST"; if the heartbeat is not back within 60 s, GM ramps down (at the G2 rate or faster) to -6 dB relative to the held value and keeps that cap until the limiter returns or the operator closes the gate; on return, normal control resumes with slewed raises (L1). Reason: fail closed at once is a show failure; an unbounded hold leaves voice-coil heating unprotected (time constants of seconds to tens of seconds). Pure fail-closed is also safe; AE refuses only an unbounded hold. Architect preferred hold plus alarm. Owner to choose. |
-| O-32 | Adopt the proposed interim safety rules 9-12 and the rule 7 tightening (above) | Until the fixes land, these keep the amps-on risk down: no convolver reload, use a PipeWire restart instead (rule 9, F-346); no speaker-profile activation from the web UI and only 2-way profiles with the amps on (rule 10, F-348; also keeps the F-355 limiter unconfigured); never use Config tab gain Apply or the web UI thermal limiter, and turn the amps off rather than trust Close Gate (rule 11, F-344, F-345); no unvetted plugins and no gate reopen after a suspected NaN (rule 12, F-349); and restrict port 8080 to the engineer's device with a firewall rule, or use a truly engineer-only network (rule 7 tightening, security, F-352, F-354). AE's proposed rule 13 is withdrawn (covered by Rule 8 and rule 11), so it is not part of this decision. If rule 11 is not adopted before the next amps-on session, F-345 becomes Critical; F-346 becomes Critical if the room-correction pipeline runs with the amps on before its fix (AE). Owner: adopt all, or say which not. |
+| O-32 | Adopt the proposed interim safety rules 9-12 and the rule 7 tightening (above) | Until the fixes land, these keep the amps-on risk down: no convolver reload, use a PipeWire restart instead (rule 9, F-346); no speaker-profile activation from the web UI and only 2-way profiles with the amps on (rule 10, F-348; also keeps the F-355 limiter unconfigured); never use Config tab gain Apply or the web UI thermal limiter, and turn the amps off, headphones off and IEMs out, and the headphone/IEM amps off, rather than trust Close Gate (rule 11, F-344, F-345); no unvetted plugins and no gate reopen after a suspected NaN (rule 12, F-349); and restrict port 8080 to the engineer's device with a firewall rule, or use a truly engineer-only network (rule 7 tightening, security, F-352, F-354). AE's proposed rule 13 is withdrawn (covered by Rule 8 and rule 11), so it is not part of this decision. If rule 11 is not adopted before the next amps-on session, F-345 becomes Critical; F-346 becomes Critical if the room-correction pipeline runs with the amps on before its fix (AE). Owner: adopt all, or say which not. |
 | O-33 | Coefficient reload while the gate is Open (US-159 G8c, F-346) | Architect ruling R-b, AE (RF4) and AD: reload only while the gate is confirmed Closed. Not a policy preference but a correctness requirement with the current patch: each swap is a hard discontinuity with no crossfade, and the 8 channels swap in different cycles. Reload while Open could only be reconsidered once the patch provides a synchronized, crossfaded all-channel swap. Owner to confirm. |
 | O-34 | ~~PR #46 pushed and opened without owner approval~~ | **RESOLVED 2026-10-24:** owner: "Pushes to PRs are always fine." #46 stays open; CM pushes the held fixes (batches 8-12) and a fresh 7-reviewer round runs on the new head (verdicts at `0161e41a` are void). |
 | O-35 | New Critical F-349: corrupted audio (NaN or Inf) can come out at full scale when the gate opens | Rare, but a single bad sample from a plugin or app can be stored in the filters and released as a full-scale step on any channel, including headphones and IEM (AE: Critical). It blocks nothing new (AE's veto on gate code already covers US-159). Owner: acknowledge, adopt interim rule 12 (O-32), and choose whether the fix goes into US-159 or a sibling story (architect and PM to propose). |
-| O-36 | Confirm the Raspbian wipe on the Pi 5 | Install path (architect, PO; US-163 AC6): a NixOS RAM installer booted once via tryboot, then nixos-anywhere erases the SD card and installs. Staging and the tryboot boot are reversible (a power cycle brings Raspbian back); the erase is the wipe, irreversible. Done first (worker-1, US-163 P1/P3): inventory; backup at `mugge-backups/pi5-raspbian-88-2026-10-24`. There is no UMIK-1 calibration and no measurement data on this Pi. The Wi-Fi PSK and ela's password hash in cloud-init were not copied and are destroyed by the wipe. Owner: anything else to keep? Then confirm the wipe (PO and security: the "free hand" does not replace this confirmation). |
+| O-36 | Confirm the Raspbian wipe on the Pi 5 | Install path (architect, PO; US-163 AC6): a NixOS RAM installer booted once via tryboot, then nixos-anywhere erases the SD card and installs. Staging and the tryboot boot are reversible (a power cycle brings Raspbian back); the erase is the wipe, irreversible. Done first (worker-1, US-163 P1/P3): inventory; backup at `mugge-backups/pi5-raspbian-88-2026-10-24`. There is no UMIK-1 calibration and no measurement data on this Pi. The Wi-Fi PSK and ela's password hash in cloud-init were not copied and are destroyed by the wipe. Owner: anything else to keep? Then confirm the wipe. Security: no objection to the wipe; the confirmation is the owner's as data owner (PO: the "free hand" does not replace it). |
 | O-37 | ~~Install from the story branch before the Rule 13 merge~~ | **RESOLVED 2026-10-24:** owner: "For now, you have free hand to use the Pi on the .88." Installing from the US-163 branch is allowed; after the merge the Pi is redeployed from main (US-163 AC19). Warn the owner before every reboot. |
 | O-38 | Three new Criticals that let the web UI set any output to up to +20 dB, past the gate (F-352, F-354, F-355) | (1) A hand-made request with a NaN gain, which an upstream PipeWire bug turns into a random gain (F-352). (2) A hand-made request with a crafted gain name, a fixed gain up to +20 dB, still possible once login exists (F-354). (3) The web UI thermal limiter, after one bad audio sample, keeps sending random gains every 0.5 s and overrides Close Gate and MUTE (F-355; today blocked because rule 10(a) leaves the limiter unconfigured). Rated Critical by AE, the architect and security. The interim rule 7 tightening is under O-32. Owner: (a) acknowledge; (b) may the architect report the PipeWire `filter-graph.c:671` bug upstream? That is outward-facing (AE and security support it). |
 | O-39 | Pi 5 hardware and network questions from the US-163 inventory | worker-1's inventory of `.88` (relayed by team-lead): (a) a HiFiBerry DAC+ HAT is fitted. US-163 keeps it disabled (AE); is anything wired to its outputs? (b) There is no fan or cooler. The no-audio bootstrap can go ahead, but US-164 (load and RT tests) needs an active cooler fitted first (PO, architect). (c) Wi-Fi is up on `.87` as well as Ethernet on `.88`: keep Wi-Fi in the NixOS image, or Ethernet only? (d) The IPs of the dev machine and the engineer's device, for the 8080 allowlist (US-163 AC10). (e) Confirm that no headphones or IEM are attached to ch 5-8 during the install (AC7). |
@@ -411,6 +439,9 @@ connected).
 | F-330 | Medium | CI paths filter is an allowlist; unknown paths skip T1-T3 (O-22: a skip is not green). |
 | F-333 | High | T3 (SD image) not in PR CI; no PR can meet T1+T2+T3 green (O-26). |
 | **F-335** | **Critical** | CI T1 fails on main before any test runs (`src/web-ui` not found in flake source). Blocks every merge, incl. #41-#43 (O-22). |
+| F-360 | High (PO, AE) | Web UI crash mid-measurement leaves measurement mode with the gate Open. Fix US-171 (GM measurement lease); interim rule 1. |
+| F-359 | High (AE) | GM `set_mode` re-links mid-stream with the gate Open: step discontinuities into the amps, a different IEM feed at level (F-342). Fix US-160 (G-a/G-b); interim rule 1. |
+| F-358 | Medium (architect, AE; High if US-163 AC13 fails) | Three fixes in #40's original records are missing on main. RT fix: measure in AC13, then a separate port PR; `period-num` 5: US-164; `node.always-process`: rejected for now. Blocks gig-capable images (security). |
 | F-357 | High (QE) | A skipped `test-and-build` counts as CI green: every green run since 2026-04-20 was docs-only, so main has had no real T1 since. Either a skip satisfies branch protection or the job is not required (worker-2 to state). |
 | F-334 | Medium | local-demo still disables WP policy.standard; diverges from production (D-065), F-318 untestable locally. |
 | F-331 | Low | 16k-tap dirac on ch 5-8 ~doubles convolver load; BM-2 rerun at 8ch first (architect). |
@@ -425,7 +456,7 @@ connected).
 | F-346 | High (AE, architect; Critical if room correction runs with amps on before the fix) | `POST /reload-pw` hot-swaps coefficients with no gate check, G8b or auth; probably reloads only `conv_left_hp` and reports success silently; no crossfade; unlocked fallback swap; stalls the PW main loop. No test checks the param names (QE). Fix: US-159 G8c, T22-T26, patch changes, AC13 tests; interim rule 9. |
 | F-345 | High (AE; Critical if the interim rule is not adopted before the next amps-on session) | Thermal limiter (`thermal_limiter.py:356-437`) writes `base_mult * factor` via pw-cli with no gate check, so recovery or an override restores Mult while Closed. Its tests are mock-only. Fix in US-159 (T13). |
 | F-344 | High (QE, AE) | Config tab gain Apply (`POST /api/v1/config/gain`, `config_routes.py:176-215`) writes Mult via pw-cli with no gate check, so the channel is live while the indicator reads CLOSED. Fix in US-159 (T12). |
-| F-343 | Low | PR #45 non-blocking follow-ups. AC2 (§1 hedge), AC3 (2-way scope) and AC7 present in #45 `d605b5c1`; AC1 (Rule 8 step 1 vs REST close) partly, no shell-on-Pi fallback yet (TW, AD). |
+| F-343 | Low | PR #45 non-blocking follow-ups. AC2 (§1 hedge), AC3 (2-way scope) and AC7 present in #45 `d605b5c1` and later (`76b61347`); AC1 (Rule 8 step 1 vs REST close) partly, no shell-on-Pi fallback yet (TW, AD). |
 | F-342 | Medium (AE; High once a 3-way profile is used at a gig/rehearsal or with an IEM) | GM does not enforce D-054 `mode_constraints` on set_mode; Live on a 3-way profile puts the HP feed on IEM ch 7-8 (AD; architect confirmed: GM must refuse). |
 | F-341 | Medium | safety.md pre-flight `nc -q1` commands unverified on NixOS (no netcat in `nix/`; `-q` is Debian-only). AC3 on the Pi 5 after US-163 T52 (QE). AE to rate. |
 | F-340 | Low | PR #44 non-blocking docs follow-ups (architect 1-3, UX, AD L1-L5); later docs pass (TW). |
@@ -665,7 +696,34 @@ through D-065). Most significant recent decisions:
   summary and F-343 to #45 `76b61347` (TW); F-348 AC7 split
   (architect); F-335 37 sites; F-357 filed (QE); US-163 AC1a, AC2,
   AC2a, AC4, AC6, AC12a, P1/P3 results; US-164 cooler prerequisite;
-  O-36, O-38 reworded, O-39 new; local commit `d0065a54` (CM).
+  O-36, O-38 reworded, O-39 new; pushed with batch 13 as #46 head
+  `d8296415` (CM).
+  Fifteenth batch (#46 round 2 and the d8296415 lows): US-163 AC9
+  (TOFU), AC9a, AC9b, AC10 5900, fail-closed and IPv6 (security),
+  AC12a (f)-(g), AC13 cold boot, implementation notes, two-attribute
+  plan (architect N5), AC12a scope (architect N6, AD L4), AC7 tryboot
+  (UX, AD L2); F-292 merged with #40's original; #40 originals noted
+  on F-291, F-293, F-295, D-065, US-155, US-156; F-358, US-169 (D-066
+  on main), US-170 (Pi 4 parity) filed; collision register; D-067
+  (owner: docs-only PRs exempt from CI) and F-357 rescoped; O-32 and
+  rule 12(b) HP/IEM amps (AE); O-36 wording (security); F-355 (g)
+  answered (AE); O-8 staleness (QE); #10 summary (UX, AD L3);
+  merge-order head; #47 follow-ups; provenance closed (CM); F-358
+  rated and decided per item (architect, AE, security); F-359 filed
+  with US-159 G15 and T58-T60 (AE, PO); rule 1 mode changes; F-349
+  AC12 monitor detection; MBR ruling in US-163 (architect). PR #48
+  at `26f7fd1e` (CM).
+  Sixteenth batch (#48 follow-up): G-mode and the measurement/TF
+  restore paths in US-160 AC5-AC15 and T58-T64 (PO; architect R1-R6
+  with AE A1-A3 and M1; AD M5; UX), US-159 G11/G15 delivered there;
+  F-360 (High) and US-171 (measurement lease; AE M2-M5); unified
+  CloseFailed banner; collision register US-157..165, next free
+  US-172/F-361 (TW, AD L1); US-163 T-order (QE), AC12a strict form
+  (architect, AE), AC13 single PID, AD M4 and L2-L6, AE N2/N5, QE
+  N4, Bluetooth, runbook (UX); US-169 (AE, AD M3, UX); D-067 Q1/Q3
+  notes and per-head classification (architect, security, AD); F-330
+  filter list (QE); F-357 medium, AC5, AC6 (QE, AD M2); O-8 wording
+  (QE); #40 provenance wording and Found-by (TW).
 - Status lines updated with merge evidence: US-113, US-120, US-128,
   US-131, US-140, US-142–US-154, US-132, F-256, F-262, F-272, F-287,
   F-290.
@@ -678,7 +736,7 @@ through D-065). Most significant recent decisions:
 - Architect: rule on F-287 node name (D-057); F-321 vs F-271 relation;
   answer the F-328 Live-input question; F-331 analysis.
 - QE: fresh Gate 1 run on current main with `-rs -rx` output (F-256, F-272,
-  US-142–153); needs a worker (O-8).
+  US-142–153); worker to be assigned (O-8 resolved).
 - F-335 fix (`${self}` + Nix pin/log, architect): `worker-2`. Pin and
   log in the same PR, a separate commit (CM). T3 is a local aarch64
   sd-card build, not a release dispatch; without a builder it is NOT
@@ -696,20 +754,59 @@ through D-065). Most significant recent decisions:
   display; #10 missing/duplicate `-out` FAIL case; §10 Rule 8 text
   (security + AE: devices too, any deployment target, 8080 allowlist
   preferred); §1 "amps off" includes HP/IEM (AE, F-343).
-- AE to rate UX's note: rule 11's "turn the amps off" does not
-  silence HP/IEM; must-fix only if AE says so.
 - UX follow-up after O-35: US-159 U8 states for the F-349 alarm, G13
-  duplicate nodes, G14 codes, the F-351 UNKNOWN display.
-- AE F-355 (g): is the `levels_sw` tap before or after the gain?
-  Needed before the fix PR.
-- Story IDs on #46 collide with #40 (CM, 2026-10-24: US-157..163,
-  F-292, F-296; US-164/165 too). PO ruled that #46 renumbers from
-  US-169 / F-358; PM sent PO the cost (about 300 references on #46,
-  84 on #41, 7 in #45's safety.md, the US-163 branch) and is waiting.
-  D-066 (on #40 only) must reach main: main's US-155 venue config
-  depends on it (PO).
-- CM: confirm that worker-1's kexec and page-size readings come from
-  a CM-logged OBSERVE session; otherwise mark them unverified (AD).
+  duplicate nodes, G14 codes, the F-351 UNKNOWN display, the F-352
+  AC3 visible fault and the F-355 latched-limiter alarm (THERMAL
+  PROTECTION LOST, overrides MUTE); alarm and banner priority (UX).
+- Before any amps-on Pi 5 story, the web UI hides or disables
+  ACTIVATE, DEPLOY TO PI, the wizard and Config Apply (US-159/US-160);
+  in US-163 AC16 holds by procedure only (UX).
+- #45/safety.md follow-up (architect N7): `pw-cli` prints anything
+  below 5e-7 as 0.000000 (the G11(f) residual), so pre-flight #10's
+  `0.000000` does not prove an exact zero.
+- F-356: #45 covers AC1 only in part; TW covers the rest in a docs
+  follow-up.
+- D-067 follow-up (TW): Rule 13 in CLAUDE.md (owner's file, so a PR
+  for owner acceptance) and the protocol copy get the docs-only
+  exemption; owner to answer D-067 questions 1-3 (CM via team-lead).
+- TW: does "close the gate before every mode change" (rule 1, F-359)
+  go into safety.md? Through a follow-up, so #45's approvals stay
+  intact (PO). Also (PO): Standby is refused while the gate is open,
+  and the operator's "off" action is closing the gate, not MUTE
+  (F-355). The UX add-on is decided: US-160 AC14.
+- Owner questions via team-lead (PO): whether D-065's
+  `node.always-process = true` was the owner's decision (architect
+  and AE: reject for now, F-358 item 3); which US-156 route was
+  intended (default gateway, #40, or VM subnet via `.26`, main).
+- PO, then the owner: Bluetooth is off on the Pi 5 (`disable-bt-pi5`);
+  before DJ use there, verify the Hercules over USB-MIDI or bring
+  Bluetooth back (architect; US-163 note).
+- Architect, informational: once the PW 1.6.2 source is readable,
+  check whether the convolver clears its history on suspend/resume
+  (F-358 AC5; F-349 AC2 stays mandatory).
+- TW N4 (#48): re-check the #45 `d605b5c1` citations in F-343 and
+  F-345 against #45's current head (TW, with the CM).
+- PO: US-160's title ("hide or relabel UNMUTE") no longer covers its
+  scope (G-mode, restore paths, G11); retitle if wanted.
+- UX: review `docs/project/stories/US-160.md` and US-171 once #48
+  carries them (PO).
+- #40 IDs: see the collision register (PO: no renumbering today).
+  F-291, F-293 and F-295 are ruled inside F-358; D-065's flag and
+  US-156's route are with the owner (PO).
+- #47 follow-ups for `.claude/memories/pi5-bootstrap.md` (TW, after
+  #47 merges): (1) AE: the RT/FIFO 88/xrun behaviour of our build on
+  Pi 5 hardware (RP1 USB) is unverified; (2) AE, optional: "confirm
+  nothing is wired to the HAT's outputs"; (3) architect N2: only the
+  RT variant comes from the pinned commit; the bootstrap uses cached
+  nixpkgs linux_rpi4 6.12.47 (non-RT); (4) architect N3: hedge or drop
+  "nixos-anywhere uses kexec_load", keep checking both symbols; (5)
+  architect N1, deferred: add the tryboot route to the kexec topic only
+  once it has worked on the Pi; (6) QE, AD L3: say how
+  RP1/MACB/PCIe/DTB support was verified (built config and DTBs, not
+  booted); (7) AD L4: the HAT topic cites F-318 and D-065.
+- Done: worker-1's kexec and page-size readings come from the logged
+  session CM-OBS-.88-1, released with nothing changed (CM). The
+  kexec_load inference stays marked unverified in the #47 memory.
 - Owner: decisions in "Owner Decisions Pending" above.
 
 ## Session 9 Summary (2026-04-02)
