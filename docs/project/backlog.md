@@ -51,9 +51,9 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
     check /mnt/boot/firmware (config.txt, os_prefix gen with .complete,
     Image, initrd, cmdline init=, bcm2712 DTBs, overlays/README),
     /mnt/etc/ssh and keys, nftables allows 22; then reboot manually.
-  - C4: full-card image from the installer (dd | zstd to persistent dev
-    storage, sha256), or the minimum OBSERVE tar/list set; find UMIK cal
-    files by pattern, not the Pi 4 path.
+  - C4: WAIVED by the owner (2026-10-24, via team-lead): "No need to
+    take a backup of the existing SD card." The pre-wipe copy-off
+    (critical path step 5) is waived with it.
   - C5: record BOOT_ORDER, bootloader version, RAM, initrd size.
   - C6: lsblk size/serial check before disko; no USB storage attached;
     never leave a same-label fallback stick in at first boot.
