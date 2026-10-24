@@ -249,6 +249,94 @@
             "-isystem ${pkgs.glibc.dev}/include"
           ];
         };
+
+        # Repo tree that app scripts `cd` into. Must carry string context:
+        # calling toString on the flake root drops it, and Nix >= 2.35 (lazy
+        # trees) then never copies the source into the store, so the path
+        # does not exist (F-335). `${self}` copies it once and makes it a
+        # runtime dependency.
+        repoSrc = "${self}";
+
+        # Runs `cargo test ...` (its arguments) and fails if no test ran.
+        # cargo exits 0 when it runs zero tests, which would hide a broken
+        # source filter or path (F-335 AC5). pytest needs no wrapper: it
+        # exits 5 when it collects nothing.
+        cargoTestNonEmpty = pkgs.writeShellScript "cargo-test-nonempty" ''
+          set -euo pipefail
+          log=$(mktemp)
+          trap 'rm -f "$log"' EXIT
+          "$@" 2>&1 | tee "$log"
+          if ! grep -qE '^test result: ok\. [1-9][0-9]* passed' "$log"; then
+            echo "FAIL: no Rust tests ran for: $*" >&2
+            exit 1
+          fi
+        '';
+
+        # Body of `nix run .#test-all`. Kept separate from the app wrapper so
+        # appSourceCheck can cover it without a dependency cycle.
+        testAllScript = pkgs.writeShellScript "test-all-suites" ''
+          set -eo pipefail
+          export PI_AUDIO_MOCK=1
+          echo "=== web-ui unit tests ==="
+          cd ${repoSrc}/src/web-ui
+          ${testPython}/bin/python -m pytest tests/ -v --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --tb=short
+          echo ""
+          echo "=== room-correction tests ==="
+          cd ${repoSrc}/src/room-correction
+          ${testPython}/bin/python -m pytest tests/ -v --tb=short
+          echo ""
+          echo "=== midi tests ==="
+          cd ${repoSrc}/src/midi
+          ${testPython}/bin/python -m pytest tests/ -v --tb=short
+          echo ""
+          echo "=== drivers tests ==="
+          cd ${repoSrc}/scripts/drivers
+          ${testPython}/bin/python -m pytest tests/ -v --tb=short
+          echo ""
+          echo "=== audio-common tests ==="
+          cd ${repoSrc}/src
+          HOME="''${HOME:-/tmp}" CARGO_TARGET_DIR="''${HOME:-/tmp}/.cargo-target/pi4audio-ws" PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.stdenv.cc}/bin:$PATH" ${cargoTestNonEmpty} cargo test --locked -p audio-common 2>&1
+          echo ""
+          echo "=== graph-manager tests ==="
+          cd ${repoSrc}/src/graph-manager
+          HOME="''${HOME:-/tmp}" CARGO_TARGET_DIR="''${HOME:-/tmp}/.cargo-target/pi4audio-gm" PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.stdenv.cc}/bin:$PATH" ${cargoTestNonEmpty} cargo test --locked --no-default-features --release 2>&1
+          echo ""
+          echo "All test suites passed."
+          echo "(pcm-bridge and signal-gen: run nix run .#test-pcm-bridge / .#test-signal-gen on Linux)"
+        '';
+
+        # F-335 regression guard. App scripts must refer to the repo tree as
+        # `repoSrc`: a path stringified without string context is never copied
+        # into the store under Nix >= 2.35 (lazy trees), so the script `cd`s
+        # into a store path that does not exist. This fails if any store path
+        # named in an app script is missing from that script's runtime
+        # closure, independent of Nix version or sandboxing. It also rejects
+        # context-dropping stringification of the flake root in any .nix file.
+        appSourceCheck =
+          let
+            scripts = pkgs.lib.mapAttrs (_: app: app.program)
+              (builtins.removeAttrs self.apps.${system} [ "test-all" ])
+              // { test-all-suites = testAllScript; };
+          in
+          pkgs.runCommand "app-source-paths" { } ''
+            set -euo pipefail
+            fail=0
+            if grep -rnE --include='*.nix' 'toString (\./\.|self)' ${repoSrc}; then
+              echo "FAIL: the flake root is stringified without context; use repoSrc"
+              fail=1
+            fi
+            ${pkgs.lib.concatStrings (pkgs.lib.mapAttrsToList (name: script: ''
+              closure=${pkgs.writeClosure [ script ]}
+              for p in $(grep -oE '/nix/store/[a-z0-9]{32}-[a-zA-Z0-9+._?=-]+' ${script} | sort -u); do
+                if ! grep -qxF "$p" "$closure"; then
+                  echo "FAIL: app ${name} references $p outside its runtime closure"
+                  fail=1
+                fi
+              done
+            '') scripts)}
+            [ "$fail" = 0 ]
+            echo "Checked ${toString (builtins.length (builtins.attrNames scripts))} app scripts" > $out
+          '';
       in
       {
         packages = {
@@ -329,6 +417,8 @@
         # Checks — sandboxed test derivations for `nix flake check`
         # -----------------------------------------------------------------
         checks = {
+          app-source-paths = appSourceCheck;
+
           test-web-ui = pkgs.runCommand "test-web-ui" {
             nativeBuildInputs = [ testPython ];
             PI_AUDIO_MOCK = "1";
@@ -394,8 +484,9 @@
           test-unit = {
             type = "app";
             program = "${pkgs.writeShellScript "test-unit" ''
+              set -eo pipefail
               export PI_AUDIO_MOCK=1
-              cd ${toString ./.}/src/web-ui
+              cd ${repoSrc}/src/web-ui
               exec ${testPython}/bin/python -m pytest tests/unit/ -v "$@"
             ''}";
           };
@@ -403,10 +494,11 @@
           test-integration-browser = {
             type = "app";
             program = "${pkgs.writeShellScript "test-integration-browser" ''
+              set -eo pipefail
               export PI_AUDIO_MOCK=1
               export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
               export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-              cd ${toString ./.}/src/web-ui
+              cd ${repoSrc}/src/web-ui
               exec ${e2ePython}/bin/python -m pytest tests/integration/ -v "$@"
             ''}";
           };
@@ -417,10 +509,11 @@
           test-journey = {
             type = "app";
             program = "${pkgs.writeShellScript "test-journey" ''
+              set -eo pipefail
               export PI_AUDIO_MOCK=1
               export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
               export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-              cd ${toString ./.}/src/web-ui
+              cd ${repoSrc}/src/web-ui
               exec ${e2ePython}/bin/python -m pytest tests/integration/test_full_user_journey.py -v "$@"
             ''}";
           };
@@ -428,8 +521,9 @@
           test-room-correction = {
             type = "app";
             program = "${pkgs.writeShellScript "test-room-correction" ''
+              set -eo pipefail
               export PI_AUDIO_MOCK=1
-              cd ${toString ./.}/src/room-correction
+              cd ${repoSrc}/src/room-correction
               exec ${testPython}/bin/python -m pytest tests/ -v "$@"
             ''}";
           };
@@ -441,8 +535,8 @@
           test-room-sim-e2e = {
             type = "app";
             program = "${pkgs.writeShellScript "test-room-sim-e2e" ''
-              set -euo pipefail
-              REPO_DIR="${toString ./.}"
+              set -eo pipefail
+              REPO_DIR="${repoSrc}"
               TMPBASE="''${TMPDIR:-/tmp}/room-sim-e2e-$$"
               mkdir -p "$TMPBASE"
               export XDG_RUNTIME_DIR="$TMPBASE/runtime"
@@ -477,35 +571,12 @@
 
           test-all = {
             type = "app";
+            # Interpolating appSourceCheck makes every `nix run .#test-all`
+            # (CI T1 included) build the F-335 guard before any suite runs.
             program = "${pkgs.writeShellScript "test-all" ''
-              export PI_AUDIO_MOCK=1
-              set -e
-              echo "=== web-ui unit tests ==="
-              cd ${toString ./.}/src/web-ui
-              ${testPython}/bin/python -m pytest tests/ -v --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --tb=short
-              echo ""
-              echo "=== room-correction tests ==="
-              cd ${toString ./.}/src/room-correction
-              ${testPython}/bin/python -m pytest tests/ -v --tb=short
-              echo ""
-              echo "=== midi tests ==="
-              cd ${toString ./.}/src/midi
-              ${testPython}/bin/python -m pytest tests/ -v --tb=short
-              echo ""
-              echo "=== drivers tests ==="
-              cd ${toString ./.}/scripts/drivers
-              ${testPython}/bin/python -m pytest tests/ -v --tb=short
-              echo ""
-              echo "=== audio-common tests ==="
-              cd ${toString ./.}/src
-              HOME="''${HOME:-/tmp}" CARGO_TARGET_DIR="''${HOME:-/tmp}/.cargo-target/pi4audio-ws" PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.stdenv.cc}/bin:$PATH" cargo test --locked -p audio-common 2>&1
-              echo ""
-              echo "=== graph-manager tests ==="
-              cd ${toString ./.}/src/graph-manager
-              HOME="''${HOME:-/tmp}" CARGO_TARGET_DIR="''${HOME:-/tmp}/.cargo-target/pi4audio-gm" PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.stdenv.cc}/bin:$PATH" cargo test --locked --no-default-features --release 2>&1
-              echo ""
-              echo "All test suites passed."
-              echo "(pcm-bridge and signal-gen: run nix run .#test-pcm-bridge / .#test-signal-gen on Linux)"
+              set -eo pipefail
+              echo "=== F-335 app source-path check: $(cat ${appSourceCheck}) ==="
+              exec ${testAllScript} "$@"
             ''}";
           };
 
@@ -514,58 +585,60 @@
           test-audio-common = {
             type = "app";
             program = "${pkgs.writeShellScript "test-audio-common" ''
+              set -eo pipefail
               export HOME="''${HOME:-/tmp}"
               export CARGO_TARGET_DIR="''${HOME}/.cargo-target/pi4audio-ws"
               export PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.stdenv.cc}/bin:$PATH"
-              cd ${toString ./.}/src
-              exec cargo test --locked -p audio-common "$@"
+              cd ${repoSrc}/src
+              exec ${cargoTestNonEmpty} cargo test --locked -p audio-common "$@"
             ''}";
           };
 
           test-graph-manager = {
             type = "app";
             program = "${pkgs.writeShellScript "test-graph-manager" ''
+              set -eo pipefail
               export HOME="''${HOME:-/tmp}"
               export CARGO_TARGET_DIR="''${HOME}/.cargo-target/pi4audio-gm"
               export PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.stdenv.cc}/bin:$PATH"
-              cd ${toString ./.}/src/graph-manager
-              exec cargo test --locked --no-default-features "$@"
+              cd ${repoSrc}/src/graph-manager
+              exec ${cargoTestNonEmpty} cargo test --locked --no-default-features "$@"
             ''}";
           };
 
           test-everything = {
             type = "app";
             program = "${pkgs.writeShellScript "test-everything" ''
-              set -e
+              set -eo pipefail
               echo "========== test-all (unit + integration) =========="
               export PI_AUDIO_MOCK=1
-              cd ${toString ./.}/src/web-ui
+              cd ${repoSrc}/src/web-ui
               ${testPython}/bin/python -m pytest tests/ -v --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --tb=short
               echo ""
               echo "=== room-correction tests ==="
-              cd ${toString ./.}/src/room-correction
+              cd ${repoSrc}/src/room-correction
               ${testPython}/bin/python -m pytest tests/ -v --tb=short
               echo ""
               echo "=== midi tests ==="
-              cd ${toString ./.}/src/midi
+              cd ${repoSrc}/src/midi
               ${testPython}/bin/python -m pytest tests/ -v --tb=short
               echo ""
               echo "=== drivers tests ==="
-              cd ${toString ./.}/scripts/drivers
+              cd ${repoSrc}/scripts/drivers
               ${testPython}/bin/python -m pytest tests/ -v --tb=short
               echo ""
               echo "=== audio-common tests ==="
-              cd ${toString ./.}/src
-              HOME="''${HOME:-/tmp}" CARGO_TARGET_DIR="''${HOME:-/tmp}/.cargo-target/pi4audio-ws" PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.stdenv.cc}/bin:$PATH" cargo test --locked -p audio-common 2>&1
+              cd ${repoSrc}/src
+              HOME="''${HOME:-/tmp}" CARGO_TARGET_DIR="''${HOME:-/tmp}/.cargo-target/pi4audio-ws" PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.stdenv.cc}/bin:$PATH" ${cargoTestNonEmpty} cargo test --locked -p audio-common 2>&1
               echo ""
               echo "=== graph-manager tests ==="
-              cd ${toString ./.}/src/graph-manager
-              HOME="''${HOME:-/tmp}" CARGO_TARGET_DIR="''${HOME:-/tmp}/.cargo-target/pi4audio-gm" PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.stdenv.cc}/bin:$PATH" cargo test --locked --no-default-features --release 2>&1
+              cd ${repoSrc}/src/graph-manager
+              HOME="''${HOME:-/tmp}" CARGO_TARGET_DIR="''${HOME:-/tmp}/.cargo-target/pi4audio-gm" PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.stdenv.cc}/bin:$PATH" ${cargoTestNonEmpty} cargo test --locked --no-default-features --release 2>&1
               echo ""
               echo "========== test-integration-browser (browser tests) =========="
               export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
               export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-              cd ${toString ./.}/src/web-ui
+              cd ${repoSrc}/src/web-ui
               ${e2ePython}/bin/python -m pytest tests/integration/ -v --tb=short
               echo ""
               echo "All test suites passed (unit + integration + integration-browser)."
@@ -577,42 +650,45 @@
           test-level-bridge = {
             type = "app";
             program = "${pkgs.writeShellScript "test-level-bridge" ''
+              set -eo pipefail
               export HOME="''${HOME:-/tmp}"
               export CARGO_TARGET_DIR="''${HOME}/.cargo-target/pi4audio-ws"
               export PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.pkg-config}/bin:${pkgs.stdenv.cc}/bin:$PATH"
               export PKG_CONFIG_PATH="${pkgs.pipewire.dev}/lib/pkgconfig''${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
               export LIBCLANG_PATH="${pkgs.llvmPackages.libclang.lib}/lib"
               export BINDGEN_EXTRA_CLANG_ARGS="-isystem ${pkgs.llvmPackages.libclang.lib}/lib/clang/${pkgs.llvmPackages.libclang.version}/include -isystem ${pkgs.glibc.dev}/include"
-              cd ${toString ./.}/src
-              exec cargo test --locked -p level-bridge "$@"
+              cd ${repoSrc}/src
+              exec ${cargoTestNonEmpty} cargo test --locked -p level-bridge "$@"
             ''}";
           };
 
           test-pcm-bridge = {
             type = "app";
             program = "${pkgs.writeShellScript "test-pcm-bridge" ''
+              set -eo pipefail
               export HOME="''${HOME:-/tmp}"
               export CARGO_TARGET_DIR="''${HOME}/.cargo-target/pi4audio-ws"
               export PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.pkg-config}/bin:${pkgs.stdenv.cc}/bin:$PATH"
               export PKG_CONFIG_PATH="${pkgs.pipewire.dev}/lib/pkgconfig''${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
               export LIBCLANG_PATH="${pkgs.llvmPackages.libclang.lib}/lib"
               export BINDGEN_EXTRA_CLANG_ARGS="-isystem ${pkgs.llvmPackages.libclang.lib}/lib/clang/${pkgs.llvmPackages.libclang.version}/include -isystem ${pkgs.glibc.dev}/include"
-              cd ${toString ./.}/src
-              exec cargo test --locked -p pcm-bridge "$@"
+              cd ${repoSrc}/src
+              exec ${cargoTestNonEmpty} cargo test --locked -p pcm-bridge "$@"
             ''}";
           };
 
           test-signal-gen = {
             type = "app";
             program = "${pkgs.writeShellScript "test-signal-gen" ''
+              set -eo pipefail
               export HOME="''${HOME:-/tmp}"
               export CARGO_TARGET_DIR="''${HOME}/.cargo-target/pi4audio-ws"
               export PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.pkg-config}/bin:${pkgs.stdenv.cc}/bin:$PATH"
               export PKG_CONFIG_PATH="${pkgs.pipewire.dev}/lib/pkgconfig''${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
               export LIBCLANG_PATH="${pkgs.llvmPackages.libclang.lib}/lib"
               export BINDGEN_EXTRA_CLANG_ARGS="-isystem ${pkgs.llvmPackages.libclang.lib}/lib/clang/${pkgs.llvmPackages.libclang.version}/include -isystem ${pkgs.glibc.dev}/include"
-              cd ${toString ./.}/src
-              exec cargo test --locked -p pi4audio-signal-gen "$@"
+              cd ${repoSrc}/src
+              exec ${cargoTestNonEmpty} cargo test --locked -p pi4audio-signal-gen "$@"
             ''}";
           };
 
@@ -620,13 +696,14 @@
           local-demo = {
             type = "app";
             program = "${pkgs.writeShellScript "local-demo" ''
+              set -eo pipefail
               export LOCAL_DEMO_GM_BIN="${graph-manager}/bin/pi4audio-graph-manager"
               export LOCAL_DEMO_SG_BIN="${signal-gen}/bin/pi4audio-signal-gen"
               export LOCAL_DEMO_LB_BIN="${level-bridge}/bin/level-bridge"
               export LOCAL_DEMO_PCM_BIN="${pcm-bridge}/bin/pcm-bridge"
               export LOCAL_DEMO_PYTHON="${testPython}/bin/python"
               export LOCAL_DEMO_PW_JACK="${pipewire-patched.jack}/bin/pw-jack"
-              export LOCAL_DEMO_REPO_DIR="${toString ./.}"
+              export LOCAL_DEMO_REPO_DIR="${repoSrc}"
               export PW_STORE="${pipewire-patched}"
               export PATH="${pkgs.ffmpeg-headless}/bin:${testPython}/bin:$PATH"
               exec ${pkgs.bash}/bin/bash ${./scripts/local-demo.sh} "$@"
@@ -639,13 +716,14 @@
           test-integration = {
             type = "app";
             program = "${pkgs.writeShellScript "test-integration" ''
+              set -eo pipefail
               export LOCAL_DEMO_GM_BIN="${graph-manager}/bin/pi4audio-graph-manager"
               export LOCAL_DEMO_SG_BIN="${signal-gen}/bin/pi4audio-signal-gen"
               export LOCAL_DEMO_LB_BIN="${level-bridge}/bin/level-bridge"
               export LOCAL_DEMO_PCM_BIN="${pcm-bridge}/bin/pcm-bridge"
               export LOCAL_DEMO_PYTHON="${testPython}/bin/python"
               export LOCAL_DEMO_PW_JACK="${pipewire-patched.jack}/bin/pw-jack"
-              export LOCAL_DEMO_REPO_DIR="${toString ./.}"
+              export LOCAL_DEMO_REPO_DIR="${repoSrc}"
               export LOCAL_DEMO_SH="${./scripts/local-demo.sh}"
               export LOCAL_DEMO_BASH="${pkgs.bash}/bin/bash"
               export PW_STORE="${pipewire-patched}"
@@ -660,6 +738,7 @@
           test-e2e = {
             type = "app";
             program = "${pkgs.writeShellScript "test-e2e" ''
+              set -eo pipefail
               export LOCAL_DEMO_GM_BIN="${graph-manager}/bin/pi4audio-graph-manager"
               export LOCAL_DEMO_SG_BIN="${signal-gen}/bin/pi4audio-signal-gen"
               export LOCAL_DEMO_LB_BIN="${level-bridge}/bin/level-bridge"
@@ -667,7 +746,7 @@
               export LOCAL_DEMO_PYTHON="${testPython}/bin/python"
               export LOCAL_DEMO_E2E_PYTHON="${e2ePython}/bin/python"
               export LOCAL_DEMO_PW_JACK="${pipewire-patched.jack}/bin/pw-jack"
-              export LOCAL_DEMO_REPO_DIR="${toString ./.}"
+              export LOCAL_DEMO_REPO_DIR="${repoSrc}"
               export LOCAL_DEMO_SH="${./scripts/local-demo.sh}"
               export LOCAL_DEMO_BASH="${pkgs.bash}/bin/bash"
               export PW_STORE="${pipewire-patched}"
@@ -683,8 +762,9 @@
           test-pi-loopback = {
             type = "app";
             program = "${pkgs.writeShellScript "test-pi-loopback" ''
+              set -eo pipefail
               export PI_AUDIO_BACKEND=pi-loopback
-              cd ${toString ./.}/src/web-ui
+              cd ${repoSrc}/src/web-ui
               exec ${e2ePython}/bin/python -m pytest tests/e2e/ -v -m "not needs_acoustic" --loopback-confirmed "$@"
             ''}";
           };
@@ -693,8 +773,9 @@
           test-pi-full = {
             type = "app";
             program = "${pkgs.writeShellScript "test-pi-full" ''
+              set -eo pipefail
               export PI_AUDIO_BACKEND=pi-full
-              cd ${toString ./.}/src/web-ui
+              cd ${repoSrc}/src/web-ui
               exec ${e2ePython}/bin/python -m pytest tests/e2e/ -v --owner-confirmed --destructive "$@"
             ''}";
           };
@@ -705,13 +786,14 @@
           capture-screenshot = {
             type = "app";
             program = "${pkgs.writeShellScript "capture-screenshot" ''
+              set -eo pipefail
               export LOCAL_DEMO_GM_BIN="${graph-manager}/bin/pi4audio-graph-manager"
               export LOCAL_DEMO_SG_BIN="${signal-gen}/bin/pi4audio-signal-gen"
               export LOCAL_DEMO_LB_BIN="${level-bridge}/bin/level-bridge"
               export LOCAL_DEMO_PCM_BIN="${pcm-bridge}/bin/pcm-bridge"
               export LOCAL_DEMO_PYTHON="${testPython}/bin/python"
               export LOCAL_DEMO_E2E_PYTHON="${e2ePython}/bin/python"
-              export LOCAL_DEMO_REPO_DIR="${toString ./.}"
+              export LOCAL_DEMO_REPO_DIR="${repoSrc}"
               export PW_STORE="${pipewire-patched}"
               export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
               export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
