@@ -137,8 +137,10 @@ Next free: F-367, US-172, D-069, T66.
   (FC/TCP/TARGET), strip local only when !keepNvme, plus a board-guard
   assert on the evaluated config values on all boards. Rejected:
   dropping keepNvme, TLS=m. AE verdict pending on worker-1's diff
-  against fb7d557e (/tmp/us163-nvme-fix-<sha>.diff), written after
-  the install.
+  /tmp/us163-nvme-fix-fb7d557e.diff (sha256 7d3630b4...b463; scratch
+  worktree only). board-guard 102 PASS, mutation tests FAIL as
+  intended; Pi 4 kernel drv unchanged; Pi 5 deploy configfile builds
+  via Mac offload.
 - 2026-10-24 20:28:03: Pi 5 restart CONFIRMED as the owner's power
   cycle ("It needed a power cycle", ~20:29, via team-lead). C8
   regressed on that boot (apt timers re-armed); re-stop granted as
@@ -287,8 +289,9 @@ Next free: F-367, US-172, D-069, T66.
   the F-366 commit if the Architect agrees. Low (AD).
 - Lowest: Pi 5 deploy eval warns that disko's legacy "table" type is
   deprecated (migrate per disko's table-to-gpt guide). Check whether
-  MBR is intentional for the Pi 5 FAT/firmware, else migrate.
-  (worker-1)
+  MBR is intentional for the Pi 5 FAT/firmware, else migrate before
+  upstream removes the legacy type. Predates F-366; the install was
+  not affected. (worker-1, re-reported via CM)
 - US-170: Pi 4 allowlist and configurationRevision (AC1); Pi 4 WP ALSA
   rule; drvPath pin removal.
 
