@@ -49,12 +49,17 @@ These steps happen before the Pi is powered on.
    For DJ mode set it to 1024 (press the 1024 button and Apply). For live
    vocal mode set it to 256.
 
-9. Check the gain values. The Config tab shows gain sliders for the four
-   speaker channels (left, right, sub 1, sub 2). These are the production
-   venue's gains, applied when the gate opens: deep attenuation (around
-   -60 dB for mains, -64 dB for subs). The filter-chain has 8 gain nodes in
-   total, all at 0.0 while the gate is closed. Do not change these until
-   measurement is complete.
+9. Check the active venue (`docs/operations/safety.md` Section 10, Rule 1).
+   On first boot, with no saved venue, it is `foh-passthrough` (unity gain
+   on all 8 channels, no crossover). Keep the amps off while
+   `foh-passthrough` is active, and select the correct venue before the gate
+   is ever opened. The Config tab gain sliders show the live gain-node
+   values, which read 0.0 (-inf dB) while the gate is closed. If any slider
+   reads non-zero while the gate shows CLOSED, the outputs are live: keep the
+   amps off and do not proceed. Do not use the Config tab gain Apply: it
+   writes the gain nodes directly and bypasses the gate (F-344). The gate
+   indicator alone does not guarantee silence; see
+   `docs/operations/safety.md` Section 10 (Rule 11, gate bypass).
 
 10. Turn on the amplifier. After boot the audio gate should be closed and
     all gain nodes at 0.0 (D-063), and no audio application is running, so
