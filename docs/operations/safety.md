@@ -34,10 +34,12 @@ is from PipeWire restarts or USB interruptions.
 configured in the NixOS image (F-317, F-325; from the Nix config, not
 verified on the Pi). If it is configured, a watchdog reboot after a lockup
 is an unannounced reboot: the USBStreamer stream drops with no chance to
-warn the owner or turn off the amps. After the reboot all gains load as
-`Mult = 0.0` and the gate is closed (D-063, Section 10), so the reboot
-transient is the only acoustic risk; nothing plays until the operator
-reopens the gate. Whether to enable the watchdog (automatic recovery vs an
+warn the owner or turn off the amps. By design, after the reboot all gains
+load as `Mult = 0.0` and the gate is closed (D-063, Section 10), so the
+reboot transient would be the only acoustic risk and nothing would play
+until the operator reopens the gate. Gate-closed-at-boot is not verified by
+any test (F-298, F-313): run pre-flight check #10 (Section 5) before the
+amps go back on. Whether to enable the watchdog (automatic recovery vs an
 unannounced transient) is an owner decision (O-24).
 
 ### Required Procedure
@@ -825,6 +827,13 @@ channels: unity is within the cap.
    owner confirmation, and for IEM also the singer's confirmation.
 2. The IEM-at-minimum rule in "Rules for Opening the Gate" applies every
    time the gate is opened in Live mode.
+3. **With a 3-way speaker profile active: no Live mode, and nothing
+   connected to ADA8200 outputs 7-8 except engineer headphones** (interim,
+   F-342). 3-way profiles use six speaker channels, so the 8-channel
+   convolver has no room for IEM channels. On 3-way, DJ mode routes the
+   headphone feed to outputs 7-8 by design, and in Live mode the headphone
+   feed would land on the IEM outputs. The profiles allow DJ and standby
+   only (D-054 `mode_constraints`), but GraphManager does not enforce this.
 
 **Open item:** The headphone and IEM chain (ADA8200 output → IEM
 transmitter → earpieces) has not been measured. No SPL or dBFS limit can be
@@ -843,6 +852,7 @@ in `docs/project/status.md`).
 | GraphManager restart does not write gains | Indicator reads CLOSED while PipeWire keeps venue gains | Rule 6 | F-320-E (no automated test, F-313) |
 | MUTE/UNMUTE independent of the gate | Gains re-applied while MUTE shows active; UNMUTE bypasses gate | Rule 7 | F-320-F |
 | CLOSE GATE button disabled while the gate reads CLOSED | The UI cannot close the gate in the F-320 states, where it matters most | Rules 5-7: panic MUTE, then REST or RPC close | F-338 |
+| 3-way profile mode constraint not enforced | Live mode on a 3-way profile sends the headphone feed to the IEM outputs 7-8 | HP/IEM Rule 3 | F-342 |
 | Close reports success without proof | `close_gate` returns ok without reading back the zeroed gains | Rules 5-7 end with pre-flight check #10 | F-339 |
 | No persisted gate state | D-063's `active.yml` `audio_enabled` field is not implemented; the gate exists only in GraphManager memory | Rules 5-6 | F-320-G |
 | Web UI has no authentication | Anyone on the network can open the gate, change venue and raise gains | Rule 8 | F-037 (Critical) |
@@ -871,6 +881,7 @@ in `docs/project/status.md`).
 - F-322: Per-speaker thermal and excursion limits not enforced
 - F-338: CLOSE GATE button disabled while the gate reads CLOSED
 - F-339: Gate close reports success without verifying the gains
+- F-342: GraphManager does not enforce D-054 `mode_constraints` on `set_mode`
 - `src/web-ui/app/audio_mute.py`: MUTE/UNMUTE (independent of the gate)
 - `configs/venues/`: Venue gain configs
 - `src/graph-manager/src/main.rs`: Gate open/close and venue handling

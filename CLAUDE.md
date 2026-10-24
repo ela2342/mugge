@@ -429,8 +429,10 @@ pre-flight checklists, and PREEMPT_RT as a safety requirement (D-013).
   silent until the operator opens it (`docs/operations/safety.md` Section 10).
   Opening the gate applies the active venue's gains (production venue: 0.001 =
   -60 dB mains, 0.000631 = -64 dB subs, unity on headphone/IEM ch 5-8).
-  Runtime `pw-cli` changes are session-only and revert to `Mult = 0.0` on PW
-  restart (C-009 verified). The old `config.gain` approach is
+  Runtime `pw-cli` changes are session-only and revert to the `.conf` default
+  on PW restart (mechanism verified in C-009 with the pre-D-063 defaults; the
+  0.0 default is not yet verified by test, F-298; use pre-flight check #10 in
+  `docs/operations/safety.md` Section 5). The old `config.gain` approach is
   silently ignored by PW 1.4.9+ (TK-237).
 
 ## Key Documents
