@@ -166,9 +166,13 @@ The project uses a three-gate testing process (owner-approved, 2026-03-22):
 
 | Gate | When | What | Who |
 |------|------|------|-----|
-| **Gate 1** | Every task | `nix run .#test-<suite>` (targeted suite for changed code) | Worker |
-| **Gate 2** | Pre-merge / story-closing commits | `nix run .#test-all` (full suite including E2E) | Worker or CI |
-| **Gate 3** | REVIEW phase | Pi acceptance testing | Owner |
+| **Gate 1** | Every task | `nix run .#test-<suite>` (targeted suite for changed code); CI green on the PR head | Worker, CI |
+| **Gate 2** | Story-closing and batched fix commits that deploy to the Pi | Pi hardware validation, criteria written by the QE | Worker under a CM DEPLOY session; QE signs off |
+| **Gate 3** | REVIEW phase | Owner acceptance | Owner |
+
+`docs/project/testing-process.md` Section 8 is authoritative for the gates.
+`nix run .#test-all` does not include browser or E2E tests; use
+`nix run .#test-everything` for test-all plus the browser suite.
 
 **`nix run .#test-*` is the sole QA gate.** `nix flake check` is build
 validation only. `nix develop` is for interactive exploration, not QA.

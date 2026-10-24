@@ -261,10 +261,15 @@ room, computes correction filters, and deploys them -- all from the web UI.
     replaces the previous correction filters.
 
 29. If you are in live mode, check the singer's in-ear monitors. The IEM
-    channels bypass the convolver entirely (direct PipeWire link to
-    USBStreamer channels 7-8). The singer should hear the backing track
-    without room correction artifacts. Confirm the PA path delay is
-    acceptable -- at quantum 256, the PA path is approximately 5.3 ms.
+    channels (USBStreamer channels 7-8) pass through the filter-chain with an
+    identity (Dirac) filter, so they get no room correction. In the intended
+    routing they are behind the same audio gate as the PA (D-063), so the
+    singer hears nothing until the gate is open (a stray direct link to the
+    USBStreamer would bypass the gate, F-318). Before opening the gate, the
+    singer's earpieces must be out or the IEM pack at minimum. The singer
+    should hear the backing track without room correction artifacts. Confirm
+    the PA path delay is acceptable -- at quantum 256, the PA path is
+    approximately 5.3 ms (theoretical, not yet measured end-to-end).
 
 ---
 

@@ -765,7 +765,7 @@ files changed (impure, runs against working tree).
 | pcm-bridge Rust (`src/pcm-bridge/`) | `test-pcm-bridge` |
 | signal-gen Rust (`src/signal-gen/`) | `test-signal-gen` |
 | MIDI daemon (`src/midi/`) | `test-all` (includes midi suite) |
-| Driver YAMLs (`configs/drivers/`) | `test-drivers` |
+| Driver YAMLs (`configs/drivers/`) | `test-all` (includes the drivers suite). `test-drivers` is a flake check, not an app: `nix build .#checks.<system>.test-drivers` |
 | PipeWire/WP configs (`configs/pipewire/`, `configs/wireplumber/`) | No local test — mark "requires Pi validation" |
 | systemd units (`configs/systemd/`) | No local test — mark "requires Pi validation" |
 | udev rules (`configs/udev/`) | No local test — mark "requires Pi validation" |
@@ -868,9 +868,15 @@ of story acceptance. This is the final gate before a story moves to DONE.
 - **Worker** executes the checklist and provides evidence
 - **Owner** performs final hands-on verification at Gate 3
 
-### 8.4 Future: GitHub Actions CI (Gate 1b)
+### 8.4 GitHub Actions CI (Gate 1b)
 
-The owner has approved GitHub Actions with a self-hosted runner as a future
+**Current state (2026-10-24):** CI exists (`.github/workflows/ci.yml`). It
+runs on GitHub-hosted runners, including `ubuntu-24.04-arm` for the test
+suites, not on a self-hosted runner. A `test-and-build` job skipped by the
+paths filter does not count as green (owner ruling O-22). The rest of this
+section is the original plan, kept for its design concerns.
+
+The owner approved GitHub Actions with a self-hosted runner as a future
 enhancement. When implemented, CI will:
 
 - Run ALL `nix run .#test-*` suites on push/PR against committed code

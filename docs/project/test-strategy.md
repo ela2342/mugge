@@ -5,16 +5,22 @@
 **Scope:** All testing for the measurement daemon (D-036) and measurement UI
 **Related:** D-036 (central daemon), TK-162 (architect breakdown), TK-172 (WP-H integration tests)
 
+**Note (2026-10-24):** Most of this draft predates NixOS and D-040, so its
+CamillaDSP references are historical. Sections 1 (tier table), 5.4, 6 and 7
+have been updated to match the current Nix test targets and CI. Other
+sections are not updated; for example §5.3/5.5 plan 34 screenshots, while
+`test_measurement_wizard.py` currently captures 8.
+
 ---
 
 ## 1. Test Tiers
 
 | Tier | Name | Where it runs | Requires hardware | Blocks deployment |
 |------|------|--------------|-------------------|-------------------|
-| T1 | Unit tests | macOS + Pi | No | Yes |
-| T2 | Integration tests (mock backend) | macOS + Pi | No | Yes |
-| T3 | End-to-end on real hardware | Pi only | Yes (PipeWire, CamillaDSP, USBStreamer, UMIK-1) | Yes |
-| T4 | UX acceptance with screenshots | macOS (Playwright) + Pi (Playwright) | No (mock) + Yes (real) | Yes (owner sign-off) |
+| T1 | Unit tests | macOS + CI (ARM, `ubuntu-24.04-arm`) | No | Yes |
+| T2 | Integration tests (mock backend) | macOS + CI (ARM) | No | Yes |
+| T3 | End-to-end on real hardware | Pi only | Yes (PipeWire filter-chain, USBStreamer, UMIK-1) | Yes |
+| T4 | UX acceptance with screenshots | macOS (Playwright); against the Pi not yet runnable (Section 5.4) | No (mock) + Yes (real) | Yes (owner sign-off) |
 
 ---
 
@@ -272,17 +278,22 @@ baseline.
 ### 5.4 Execution
 
 ```bash
-# Create baseline screenshots (mock mode, macOS):
-cd src/web-ui
-pytest tests/integration/test_measurement_wizard.py --update-snapshots --headed
+# Regression check (mock backend; also runs in CI as part of this suite):
+nix run .#test-integration-browser
 
-# Regression check (CI or local):
-pytest tests/integration/test_measurement_wizard.py
-
-# Against real Pi:
-PI_AUDIO_URL=https://192.168.178.185:8080 \
-  pytest tests/integration/test_measurement_wizard.py --headed
+# Wizard screenshots only, interactively (inside `nix develop`):
+cd src/web-ui && python -m pytest tests/integration/test_measurement_wizard.py --headed
 ```
+
+The wizard test writes its screenshots to `/tmp/pi4audio-e2e-screenshots/`
+(the source tree is read-only inside Nix). `--update-snapshots` applies only to
+the reference images of `test_visual_regression.py`, and it must run inside
+`nix develop`, not `nix run`, because it writes to the source tree.
+
+**Against the real Pi: not available.** `test_measurement_wizard.py` always
+uses the session-scoped mock server. `PI_AUDIO_URL` (the `pi_url` fixture) is
+used only by `test_monitor_e2e.py`. The T4 "real" row in Section 6 is
+therefore a gap (F-336), not a runnable step.
 
 ### 5.5 Pass/Fail Criteria
 
@@ -297,46 +308,64 @@ PI_AUDIO_URL=https://192.168.178.185:8080 \
 
 ## 6. Test Matrix
 
-| Test suite | macOS dev | Pi hardware | CI (future) | Trigger |
+| Test suite | macOS dev | Pi hardware | CI | Trigger |
 |-----------|-----------|------------|-------------|---------|
-| T1: Unit tests (room-correction) | Yes (needs numpy) | Yes | Yes | Every commit |
-| T1: Unit tests (web-ui) | Yes | Yes | Yes | Every commit |
-| T1: Unit tests (midi) | Yes | Yes | Yes | Every commit |
-| T1: Unit tests (drivers) | Yes | Yes | Yes | Every commit |
-| T1: Unit tests (daemon, new) | Yes | Yes | Yes | Every commit |
-| T2: Integration (mock) | Yes | Yes | Yes | Every commit touching measurement/ |
+| T1: Unit tests (room-correction) | Yes | No (CI on ARM) | Yes | Every commit |
+| T1: Unit tests (web-ui) | Yes | No (CI on ARM) | Yes | Every commit |
+| T1: Unit tests (midi) | Yes | No (CI on ARM) | Yes | Every commit |
+| T1: Unit tests (drivers) | Yes | No (CI on ARM) | Yes | Every commit |
+| T1: Unit tests (daemon, new) | Yes | No (CI on ARM) | Yes | Every commit |
+| T2: Integration (mock) | Yes | No (CI on ARM) | Yes | Every commit touching measurement/ |
 | T3: E2E hardware | No | Yes | No | Every DEPLOY session |
-| T4: UX screenshots (mock) | Yes (Playwright) | No | Yes | Every commit touching measure.js |
-| T4: UX screenshots (real) | No | Yes (Playwright) | No | Before owner UAT |
+| T4: UX screenshots (mock) | Yes (Playwright) | No | Yes | Every PR that changes code (CI paths filter) |
+| T4: UX screenshots (real) | No | Not runnable (Section 5.4) | No | Before owner UAT |
 
 ### 6.1 Local Development Workflow
 
+Use the `nix run .#test-*` targets. They are the QA gate (Gate 1, see
+`docs/guide/howto/development.md` Section 1.1 and `testing-process.md`
+Section 8). Bare `python3 -m pytest` outside Nix is not supported.
+
 ```bash
-# Quick check (T1 only, ~30s):
-cd src/room-correction && python3 -m pytest tests/ -x -q
-cd src/web-ui && python3 -m pytest tests/ -x -q
+# T1 + T2 (the T2 mock integration test lives in tests/unit/):
+nix run .#test-unit               # Web UI tests under tests/unit/ (PI_AUDIO_MOCK=1)
+nix run .#test-room-correction    # Room correction DSP tests
 
-# Full check (T1 + T2, ~3 min):
-PI_AUDIO_MOCK=1 python3 -m pytest tests/ -x -q --timeout=60
+# T4 (mock), Playwright browser tests:
+nix run .#test-integration-browser
 
-# Visual check (T4, ~2 min):
-cd src/web-ui && pytest tests/integration/test_measurement_wizard.py --headed
+# Python suites (web-ui except integration/e2e/service-integration,
+# room-correction, midi, drivers) + cargo tests for audio-common and
+# graph-manager. No browser tests, no pcm-bridge/signal-gen/level-bridge:
+nix run .#test-all
+
+# test-all plus test-integration-browser:
+nix run .#test-everything
 ```
+
+pcm-bridge, signal-gen and level-bridge have their own targets
+(`nix run .#test-pcm-bridge`, `.#test-signal-gen`, `.#test-level-bridge`).
 
 ### 6.2 Pi Deployment Workflow
 
-```bash
-# Pre-deploy (T1 + T2 on Pi):
-ssh ela@192.168.178.185 "cd /home/ela/mugge/src/room-correction && \
-  source /home/ela/venv/bin/activate && python3 -m pytest tests/ -x -q"
+**Before deploy:** no tests run on the Pi. Pass Gate 1 locally (Section 6.1)
+and make sure CI is green on the PR head. CI runs the suites on ARM
+(`ubuntu-24.04-arm`) with the same `flake.lock`-pinned dependencies as the
+Pi. The Nix tool itself is not pinned in CI (F-335).
 
-# Post-deploy (T3):
-# Run E-01 through E-08 per Section 4.4 protocol.
+"Green" means real T1-T3 runs on the PR head (owner ruling O-22). A
+`test-and-build` job skipped by the CI paths filter is **not** green, even
+though the `ci-gate` job reports success for it (`.github/workflows/ci.yml`).
 
-# UX acceptance (T4 on Pi):
-PI_AUDIO_URL=https://192.168.178.185:8080 \
-  pytest tests/integration/test_measurement_wizard.py --headed
-```
+**After deploy (T3):** this is Gate 2, Pi hardware validation
+(`testing-process.md` Section 8). The QE writes the validation criteria,
+including E-01 to E-08 per Section 4.4. A worker runs them under a DEPLOY
+session granted by the Change Manager, and the QE signs off.
+
+**UX acceptance (T4 on Pi): unverified, currently not runnable.** It would
+run from the dev machine inside `nix develop` against
+`https://192.168.178.185:8080`, but the wizard test has no real-Pi mode
+(Section 5.4, F-336).
 
 ---
 
@@ -344,7 +373,7 @@ PI_AUDIO_URL=https://192.168.178.185:8080 \
 
 | WP | TK | Produces tests | Tier | Estimated tests |
 |----|-----|---------------|------|----------------|
-| WP-A (mock backend) | TK-165 | MockSoundDevice, MockCamillaClient | Foundation | (test infrastructure, not test cases) |
+| WP-A (mock backend) | TK-165 | MockSoundDevice, MockCamillaClient¹ | Foundation | (test infrastructure, not test cases) |
 | WP-C (mode manager) | TK-167 | `test_mode_manager.py` | T1 | ~20 |
 | WP-D (session) | TK-168 | `test_session.py` | T1 | ~35 |
 | WP-E (routes) | TK-169 | `test_measurement_routes.py` | T1 | ~25 |
@@ -353,6 +382,10 @@ PI_AUDIO_URL=https://192.168.178.185:8080 \
 | WP-H (integration) | TK-172 | `test_measurement_integration.py` | T2 | 12 scenarios |
 | (existing) | TK-173 | Fixture fixes | T1 | 2 fixes |
 | (new) | TBD | T3 hardware scripts | T3 | 8 scenarios |
+
+¹ Historical. CamillaDSP was abandoned in D-040. `MockCamillaClient`
+(`src/room-correction/mock/mock_camilladsp.py`) is still used by the
+room-correction tests, but it no longer mirrors a production component.
 
 ---
 
