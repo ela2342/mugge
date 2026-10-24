@@ -89,7 +89,8 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
 
 - C7 passed 2026-10-24: Pi 5 booted the RAM installer, all functional
   checks OK. Record in the lab note the IP the installer and the
-  installed system get (installer came up on .89, not .88).
+  installed system get (installer came up on .89, not .88). CM decided
+  C7 option (a): both deviations accepted; rebooted back to Raspbian.
 
 ## P1
 
@@ -163,6 +164,8 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
   bump nix.package or nixpkgs. LOW for now (local nix-daemon only, ela
   is root-equivalent); revisit before multi-user or amps-on use.
   (SecSpec)
+- Mac disk nearly full (6.0 GiB free on 2026-10-24, falling slowly,
+  CM). Clean up Nix store / old worktrees before heavy local builds.
 - Architect N1-N3 on #48 (CM PR comment).
 - US-163 follow-ups (worker-1): installer has no configurationRevision.
   (wayvnc on the Pi 5: DONE in 433e16f7, VNC left out.)
