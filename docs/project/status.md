@@ -73,30 +73,46 @@ Session 15 focus, pending owner direction:
 ### Interim operating rules (2026-10-24; pending owner acceptance)
 
 These apply while the amps are on, until the referenced defects are fixed.
-safety.md carries the canonical wording (technical-writer, branch
-`docs/safety-d063-gate`).
+safety.md §10 carries the canonical wording (technical-writer, branch
+`docs/safety-d063-gate`, `a85473df`, pending AE re-review). Its rule
+numbers are given in brackets; if the two differ, safety.md wins.
 
-1. Close the gate before switching venues (F-314).
+1. Close the gate before switching venues (F-314) [Rule 3].
 2. Play nothing on the Pi except Mixxx, Reaper and the signal generator,
-   and keep the amps off during any GraphManager restart (F-318).
-3. Don't open the gate on `foh-passthrough` (F-271, F-314).
-4. Before opening the gate, verify that the deployed filter files match
-   the active venue. The CHN-50P rig needs its 200 Hz filter files verified
-   on the Pi (F-321, F-322).
+   and keep the amps off during any GraphManager restart (F-318) [Rule 9].
+3. Don't open the gate on `foh-passthrough` (F-271, F-314) [Rule 2].
+4. Before opening the gate, verify on the Pi (CM session, not the web UI)
+   that the deployed filter files match the active venue, using the
+   sha256sum check in safety.md §10 Rule 10. Until that check passes, the
+   CHN-50P amp channels stay OFF. This rule relies on rule 1 (gate closed
+   before any venue switch). The CHN-50P rig needs its 200 Hz filter files
+   verified (F-321, F-322; AE) [Rule 10].
 5. A watchdog unlatch restores full gains instantly. Order: amps off and
-   IEMs out, then unlatch, then Close Gate and check the venue, then amps
-   on, then Open Gate. After any GraphManager restart, treat every output
-   as live and press Close Gate before assuming silence (F-320).
+   IEMs out, then unlatch (GM RPC `watchdog_unlatch` via SSH or a CM CHANGE
+   session; the web UI has no unlatch control until US-159 U2), then Close
+   Gate and check the venue, then amps on, then Open Gate (F-320) [Rule 5].
+   After any GraphManager restart, treat every output as live and press
+   Close Gate before assuming silence (F-320) [Rule 6].
 6. Never use UNMUTE: it also goes live instantly. To recover from MUTE,
-   press Close Gate, then Open Gate (F-320).
+   press Close Gate, then Open Gate (F-320) [Rule 7].
 7. **Hard rule:** nothing else may reach the Pi. Keep it off shared or
    venue WiFi, or block port 8080 to every device except the engineer's
-   (F-037).
+   (F-037) [Rule 8].
+
+Where these rules say "press Close Gate": the button is disabled while
+the indicator reads CLOSED (F-338). Then: amps off, panic MUTE, REST
+`POST /api/v1/venue/gate/close`, then pre-flight #10 (AE). GM can also
+report closed without zeroing anything if the convolver is missing
+(F-339), so pre-flight #10 is the only proof.
 
 Also in safety.md (AE, for HP/IEM, until a level limit exists): before the
 gate opens in Live mode, the singer's earpieces are out or the IEM pack is
 at minimum. Levels come up only with the singer's agreement. No gain
 increase on ch 5-8 without owner confirmation (S-012).
+
+safety.md §5 pre-flight #10: after every boot or PW/GM restart, before
+amps on, all 8 `gain_*:Mult` read 0.0 from PipeWire, not from the UI
+indicator (F-298, F-313).
 
 ## Active Work
 
@@ -173,6 +189,7 @@ line with this table on 2026-10-24 (owner directive).
 | O-26 | T3 not in PR CI (F-333) | (a) manual T3 dispatch per PR; (b) T3 back in PR CI for `nix/`, `flake.*`, `configs/` PRs; (c) reword Rule 13 so T3 is a release gate. QE recommends (b), with (a) as the interim. Until decided, no PR can meet T1+T2+T3 green. |
 | O-27 | Gate ramp curve (F-315, D-063 amendment) | AE's 30 dB/s dB-linear slew (2 s full open) vs D-063's 3 s cosine implemented over real time. AE accepts either; minimum: wall-clock rate limit, per-tick cap, generation check, >= 2 s. |
 | O-28 | F-037 disclosure (security, low) | If the repo is public, F-037 documents an exploit path for a still-open vulnerability. Security: acceptable, but the owner should know. |
+| O-29 | Split US-159 (PO proposal) | US-159 core (G1-G10, T1-T5, T7, T8), US-159b WP default-sink bypass (B1, B2, T6; different files, needs a Pi CHANGE session, can run in parallel), US-159c web UI (U1-U7, T9, DOC1; depends on the core gate-state API). The AE veto lift then requires core + 159b. Owner decides. |
 
 ## Component Status
 
@@ -252,8 +269,10 @@ line with this table on 2026-10-24 (owner directive).
 | F-334 | Medium | local-demo still disables WP policy.standard; diverges from production (D-065), F-318 untestable locally. |
 | F-331 | Low | 16k-tap dirac on ch 5-8 ~doubles convolver load; BM-2 rerun at 8ch first (architect). |
 | F-332 | Low | `audio_mute.py:46` misleading log message. |
-| F-336 | Medium | Measurement-wizard T4 cannot run against the Pi; PI_AUDIO_URL ignored (QE to confirm). |
-| F-337 | Low | Gate 2/3 definitions differ between development.md and testing-process.md; `test-drivers` is not an app (QE to rule). |
+| F-338 | High | Web UI CLOSE GATE disabled while the gate reads CLOSED; interim rules 5-7 not performable from the UI (AE to rate). |
+| F-339 | High | GM CloseGate returns Ok when the convolver is missing and nothing was zeroed (AE; architect to confirm). |
+| F-336 | Medium | Real-Pi browser tests unusable: wizard T4 ignores PI_AUDIO_URL; monitor suite always skipped in CI (QE to confirm severity). |
+| F-337 | Low | development.md Gate 2/3 contradict testing-process.md §8 (authoritative, QE); `test-drivers` is not an app. |
 | F-299 | Medium | D-009 not guaranteed between bins / below 20 Hz (generator + verifier). Joint fix with F-262. |
 | F-303–F-311 | Medium | Skip-audit groups and dead skip guards. |
 | F-262 | Medium | 2 xfails. Possible real min-phase filter-gen bug (architect ruling). Highest product risk among the xfails. |
@@ -299,7 +318,7 @@ line with this table on 2026-10-24 (owner directive).
 |--------|-------|
 | Commits on main since 2026-04-04 | 185 (first-parent: 27 PR merges, 10 direct commits 2026-04-04, 2 single-parent commits 2026-04-19, 1 unpushed local) |
 | Total stories filed | 158 (US-155/156 written retroactively, US-157/158 new, 2026-10-24) |
-| Total defects filed | F-337 highest. Gaps with no record: F-267–F-269, F-286, F-288, F-289, F-294, tracked as F-327 (plus older historical gaps). F-266 reconstructed from `32da863d` |
+| Total defects filed | F-339 highest. Gaps with no record: F-267–F-269, F-286, F-288, F-289, F-294, tracked as F-327 (plus older historical gaps). F-266 reconstructed from `32da863d` |
 | Total decisions | D-065 highest (D-065 reconstructed, needs owner confirmation; D-064 DRAFT) |
 | Active xfails | 6 (limit 5) |
 | PW convolver CPU (q1024 / q256) | 1.70% / 3.47% (PW 1.4.9 measurements; not re-measured on 1.6.2) |
@@ -382,7 +401,13 @@ through D-065). Most significant recent decisions:
   restated, B2 reuses link_audit.rs; architect O-12 position; AD leftovers
   (D-049 date, F-323 link, F-112 status, F-319 links, Gate 1 scope,
   F-335 "probable"); F-335 SHA-pin security note; US-159 GM-restart close
-  reason (UX); F-336, F-337 filed.
+  reason (UX); F-336, F-337 filed. Second batch: interim rules cite safety.md
+  §10 numbers, rule 4 tightened (AE), rule 5 names the unlatch route (UX),
+  pre-flight #10; F-335 AC4 E2E stack; F-336 widened; F-337 QE ruling.
+  Third batch: AE rule 4 text; F-338 (CLOSE GATE disabled, UX) and F-339
+  (CloseGate false success, AE) filed with the interim close procedure;
+  PO review of US-159 applied; US-160 (interim UNMUTE), US-161 (chain
+  calibration), US-162 (dynamic limiter) filed; A35 registered; O-29.
 - Status lines updated with merge evidence: US-113, US-120, US-128,
   US-131, US-140, US-142–US-154, US-132, F-256, F-262, F-272, F-287,
   F-290.

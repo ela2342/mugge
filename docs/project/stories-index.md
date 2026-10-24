@@ -167,3 +167,6 @@ Generated from the per-item files in `stories/` (the source of truth). Do NOT ru
 | [US-157](stories/US-157.md) | draft (architect ruling 2026-10-24; AC reworded by PO, AC... | Mechanical Test Anti-Pattern Lint in test-unit |
 | [US-158](stories/US-158.md) | draft. Owner to confirm intent and priority (PO recommend... | Live-Mode Mic Input Capture (F-295 follow-up) |
 | [US-159](stories/US-159.md) | draft. Design agreed by architect, audio-engineer and UX ... | GraphManager Gate Module — Single Owner of All Gain Writes |
+| [US-160](stories/US-160.md) | draft. PO proposal (2026-10-24), recommended high priorit... | Interim — hide or relabel web UI UNMUTE to match interim rule 6 |
+| [US-161](stories/US-161.md) | draft (orphan from US-159 G9, filed by PM at PO request 2... | Amplifier chain calibration (validate "Mult 1.0 = 450 W") |
+| [US-162](stories/US-162.md) | draft (orphan from US-159 G9, filed by PM at PO request 2... | Dynamic per-speaker limiter |
