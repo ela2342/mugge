@@ -49,17 +49,22 @@ These steps happen before the Pi is powered on.
    For DJ mode set it to 1024 (press the 1024 button and Apply). For live
    vocal mode set it to 256.
 
-9. Check the active venue (`docs/operations/safety.md` Section 10, Rule 1).
+9. Check the active venue (`docs/operations/safety.md` Section 10, Rules 1-2).
    On first boot, with no saved venue, it is `foh-passthrough` (unity gain
    on all 8 channels, no crossover). Keep the amps off while
    `foh-passthrough` is active, and select the correct venue before the gate
-   is ever opened. Open (or re-open) the Config tab: its gain sliders show
-   the gain-node values read when the tab was opened, which are 0.0 (-inf dB)
-   while the gate is closed. If any slider reads non-zero while the gate
-   shows CLOSED, the outputs are live: keep the amps off and do not proceed. Do not use the Config tab gain Apply: it
-   writes the gain nodes directly and bypasses the gate (F-344). The gate
-   indicator alone does not guarantee silence; see
-   `docs/operations/safety.md` Section 10 (Rule 11, gate bypass).
+   is ever opened. Open (or reopen) the Config tab. The sliders show the
+   gain values read from PipeWire when the Config tab was opened; they do
+   not update on their own (reopen the tab to re-read). A slider reading
+   -INF does not prove silence: the value may be stale, or the parameter may
+   be missing (shown as a greyed-out row). A non-zero slider while the gate
+   shows CLOSED means the outputs were live when the tab was opened: keep
+   the amps off and do not proceed. Pre-flight check #10
+   (`docs/operations/safety.md` Section 5) is the authoritative check. Do
+   not use the Config tab gain Apply: it writes the gain nodes directly and
+   bypasses the gate (F-344). The gate indicator alone does not guarantee
+   silence; see `docs/operations/safety.md` Section 10 (Rule 11, gate
+   bypass).
 
 10. Turn on the amplifier. After boot the audio gate should be closed and
     all gain nodes at 0.0 (D-063), and no audio application is running, so
