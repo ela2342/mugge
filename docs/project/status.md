@@ -159,7 +159,10 @@ yet in safety.md (rules 9-12), the stricter rule applies (AD).
    (connection refused or dropped). An isolated network is acceptable
    only if it really is engineer-only (a dedicated AP or a direct
    cable); a home LAN with phones, smart devices or guests counts as
-   shared. This replaces AE's proposed rule 13, now withdrawn.
+   shared. AE's proposed rule 13 is withdrawn, so it is not an owner
+   decision: 13(a) is covered by Rule 8 as worded in #45 (security),
+   with a wording fix queued for TW ("people or devices"; applies to
+   the current target Pi); 13(b) is covered by rule 11.
 8. With a 3-way speaker profile active: no Live mode, and nothing
    connected to ADA8200 outputs 7-8 except engineer headphones (F-342; AE)
    [HP/IEM Rule 3].
@@ -190,8 +193,9 @@ yet in safety.md (rules 9-12), the stricter rule applies (AD).
     Mult writer (F-344, F-345): the gate showing CLOSED does not guarantee
     silence. Besides UNMUTE (rule 6), Config tab gain Apply and the web UI
     thermal limiter write Mult without GM. Never use Config tab gain
-    Apply. To make the outputs safe, turn the amps off; do not rely on
-    Close Gate alone. After any gate close, pass pre-flight #10 before the
+    Apply. To make the outputs safe, turn the amps off, take headphones
+    off and IEMs out, and turn the headphone/IEM amps off; do not rely
+    on Close Gate alone. After any gate close, pass pre-flight #10 before the
     amps go on, whatever the gate indicator shows [Rule 11].
     If gains behave erratically: amps and HP/IEM off first; MUTE and
     Close Gate can be overwritten by the web UI limiter (F-355; AE).
@@ -200,10 +204,13 @@ yet in safety.md (rules 9-12), the stricter rule applies (AD).
     vetted, and no LV2 effects in Mixxx unless the owner has vetted them
     (Mixxx built-in effects are acceptable); (b) after any suspected
     non-finite event (plugin glitch, application crash mid-stream,
-    signal-gen anomaly) do not reopen the gate: clear the convolvers by
-    a PipeWire restart per Rule 9 (warn the owner first; amps,
-    headphones and IEM off), then Rules 1 and 10 and pre-flight check
-    #10; (c) the gate fade-in is not a guarantee: a NaN or Inf stored in
+    signal-gen anomaly), first turn the amps off, take headphones off
+    and IEMs out, even while the gate is Open; do not reopen the gate;
+    then clear the convolvers by a PipeWire restart per Rule 9 (warn
+    the owner first), then Rules 1 and 10 and pre-flight check #10.
+    Nothing visible detects the event (F-349), so (a) is the only real
+    interim protection (AD);
+    (c) the gate fade-in is not a guarantee: a NaN or Inf stored in
     a convolver may come out as a full-scale step the instant the gate
     opens, on any channel including headphones and IEM (F-349) [AE].
 
@@ -224,9 +231,14 @@ gate opens in Live mode, the singer's earpieces are out or the IEM pack is
 at minimum. Levels come up only with the singer's agreement. No gain
 increase on ch 5-8 without owner confirmation (S-012).
 
-safety.md §5 pre-flight #10: after every boot or PW/GM restart, before
-amps on, all 8 `gain_*:Mult` read 0.0 (and `Add` 0.0) from PipeWire, not
-from the UI indicator (F-298, F-313).
+safety.md §5 pre-flight #10 (as in #45 `76b61347`): after every boot or
+PW/GM restart, before amps on: pw-dump shows exactly one
+`pi4audio-convolver` and one `pi4audio-convolver-out` node; that node
+has exactly the 8 named `gain_*:Mult`, each exactly `0.000000`, and all
+`Add` the same, read with `pw-cli enum-params` only (pw-dump prints
+NaN, -Inf and subnormals as 0.000000). Any `nan`, `inf`, `-0.000000`,
+other name, missing value or second node: amps stay off. Never the UI
+indicator (F-298, F-313, F-348).
 
 ## Active Work
 
@@ -315,13 +327,14 @@ connected).
 | O-29 | Split US-159 (PO proposal) | US-159 core (G1-G11 incl. G8b, T1-T5, T7, T8, T10, T11), US-159b WP default-sink bypass (B1, B2, T6; different files, needs a Pi CHANGE session, can run in parallel), US-159c web UI (U1-U7, T9, DOC1; depends on the core gate-state API). The AE veto lift then requires core + 159b. Owner decides. |
 | O-30 | First boot under US-159 G8b (AE ruling; PO to route) | G8b refuses `open()` on `foh-passthrough.yml` until F-271 protection WAVs exist (no passthrough exemption; AE, architect agree). Q1: accept no first-boot audio until F-271 ships, with F-271 prioritised alongside US-159 (AE: yes; PO: make F-271 a US-159 dependency). Q2: is a real FoH-feed use case wanted (ch 1-4 as line level into a house processor)? If so, an explicit "external processing / line-out" output type in the speaker profile: G8b (i) still applies, (ii) skipped only for channels declared external; never the first-boot default; operator confirmation on every open; UI shows the unprotected state while open (AE conditions). Q3 (UX): a deliberate "monitors only" open (ch 5-8, ch 1-4 held at 0 and verified by G11 read-back)? AE: no safety objection. Architect: a per-channel-group gate is out of US-159 scope. |
 | O-31 | Thermal limiter heartbeat loss mid-show (US-159 L2/R1) | AE recommends a time-bounded hold: at once GM holds the last factor, refuses any raise and the UI shows "THERMAL PROTECTION LOST"; if the heartbeat is not back within 60 s, GM ramps down (at the G2 rate or faster) to -6 dB relative to the held value and keeps that cap until the limiter returns or the operator closes the gate; on return, normal control resumes with slewed raises (L1). Reason: fail closed at once is a show failure; an unbounded hold leaves voice-coil heating unprotected (time constants of seconds to tens of seconds). Pure fail-closed is also safe; AE refuses only an unbounded hold. Architect preferred hold plus alarm. Owner to choose. |
-| O-32 | Adopt the proposed interim safety rules 9-12 and the rule 7 tightening (above) | Until the fixes land, these keep the amps-on risk down: no convolver reload, use a PipeWire restart instead (rule 9, F-346); no speaker-profile activation from the web UI and only 2-way profiles with the amps on (rule 10, F-348; also keeps the F-355 limiter unconfigured); never use Config tab gain Apply or the web UI thermal limiter, and turn the amps off rather than trust Close Gate (rule 11, F-344, F-345); no unvetted plugins and no gate reopen after a suspected NaN (rule 12, F-349); and restrict port 8080 to the engineer's device with a firewall rule, or use a truly engineer-only network (rule 7 tightening, security, F-352, F-354). AE withdrew the proposed rule 13 in favour of the tightening. If rule 11 is not adopted before the next amps-on session, F-345 becomes Critical; F-346 becomes Critical if the room-correction pipeline runs with the amps on before its fix (AE). Owner: adopt all, or say which not. |
+| O-32 | Adopt the proposed interim safety rules 9-12 and the rule 7 tightening (above) | Until the fixes land, these keep the amps-on risk down: no convolver reload, use a PipeWire restart instead (rule 9, F-346); no speaker-profile activation from the web UI and only 2-way profiles with the amps on (rule 10, F-348; also keeps the F-355 limiter unconfigured); never use Config tab gain Apply or the web UI thermal limiter, and turn the amps off rather than trust Close Gate (rule 11, F-344, F-345); no unvetted plugins and no gate reopen after a suspected NaN (rule 12, F-349); and restrict port 8080 to the engineer's device with a firewall rule, or use a truly engineer-only network (rule 7 tightening, security, F-352, F-354). AE's proposed rule 13 is withdrawn (covered by Rule 8 and rule 11), so it is not part of this decision. If rule 11 is not adopted before the next amps-on session, F-345 becomes Critical; F-346 becomes Critical if the room-correction pipeline runs with the amps on before its fix (AE). Owner: adopt all, or say which not. |
 | O-33 | Coefficient reload while the gate is Open (US-159 G8c, F-346) | Architect ruling R-b, AE (RF4) and AD: reload only while the gate is confirmed Closed. Not a policy preference but a correctness requirement with the current patch: each swap is a hard discontinuity with no crossfade, and the 8 channels swap in different cycles. Reload while Open could only be reconsidered once the patch provides a synchronized, crossfaded all-channel swap. Owner to confirm. |
 | O-34 | ~~PR #46 pushed and opened without owner approval~~ | **RESOLVED 2026-10-24:** owner: "Pushes to PRs are always fine." #46 stays open; CM pushes the held fixes (batches 8-12) and a fresh 7-reviewer round runs on the new head (verdicts at `0161e41a` are void). |
 | O-35 | New Critical F-349: corrupted audio (NaN or Inf) can come out at full scale when the gate opens | Rare, but a single bad sample from a plugin or app can be stored in the filters and released as a full-scale step on any channel, including headphones and IEM (AE: Critical). It blocks nothing new (AE's veto on gate code already covers US-159). Owner: acknowledge, adopt interim rule 12 (O-32), and choose whether the fix goes into US-159 or a sibling story (architect and PM to propose). |
-| O-36 | Anything to keep on the Pi 5's Raspbian before the wipe? | nixos-anywhere erases the disk of `192.168.178.88`, irreversibly. worker-1 first takes an inventory and a default backup (UMIK-1 calibration, measurement data, a home-dir listing) and lists any SSH keys trusted elsewhere for revocation (US-163 P1, P3). Then the owner confirms the wipe (team-lead; PO and security: the "free hand" does not replace this confirmation). |
+| O-36 | Confirm the Raspbian wipe on the Pi 5 | Install path (architect, PO; US-163 AC6): a NixOS RAM installer booted once via tryboot, then nixos-anywhere erases the SD card and installs. Staging and the tryboot boot are reversible (a power cycle brings Raspbian back); the erase is the wipe, irreversible. Done first (worker-1, US-163 P1/P3): inventory; backup at `mugge-backups/pi5-raspbian-88-2026-10-24`. There is no UMIK-1 calibration and no measurement data on this Pi. The Wi-Fi PSK and ela's password hash in cloud-init were not copied and are destroyed by the wipe. Owner: anything else to keep? Then confirm the wipe (PO and security: the "free hand" does not replace this confirmation). |
 | O-37 | ~~Install from the story branch before the Rule 13 merge~~ | **RESOLVED 2026-10-24:** owner: "For now, you have free hand to use the Pi on the .88." Installing from the US-163 branch is allowed; after the merge the Pi is redeployed from main (US-163 AC19). Warn the owner before every reboot. |
-| O-38 | Three new Criticals that let the web UI set any output to up to +20 dB, past the gate (F-352, F-354, F-355) | (1) A hand-made request with a NaN gain, which an upstream PipeWire bug turns into a random gain (F-352). (2) A hand-made request with a crafted gain name, a fixed gain up to +20 dB, still possible once login exists (F-354). (3) The web UI thermal limiter, after one bad audio sample, keeps sending random gains every 0.5 s and overrides Close Gate and MUTE (F-355; today blocked because rule 10(a) leaves the limiter unconfigured). Rated Critical by AE, the architect and security. Owner: (a) acknowledge; (b) adopt the rule 7 tightening (O-32); (c) may the architect report the PipeWire `filter-graph.c:671` bug upstream? That is outward-facing (AE and security support it). |
+| O-38 | Three new Criticals that let the web UI set any output to up to +20 dB, past the gate (F-352, F-354, F-355) | (1) A hand-made request with a NaN gain, which an upstream PipeWire bug turns into a random gain (F-352). (2) A hand-made request with a crafted gain name, a fixed gain up to +20 dB, still possible once login exists (F-354). (3) The web UI thermal limiter, after one bad audio sample, keeps sending random gains every 0.5 s and overrides Close Gate and MUTE (F-355; today blocked because rule 10(a) leaves the limiter unconfigured). Rated Critical by AE, the architect and security. The interim rule 7 tightening is under O-32. Owner: (a) acknowledge; (b) may the architect report the PipeWire `filter-graph.c:671` bug upstream? That is outward-facing (AE and security support it). |
+| O-39 | Pi 5 hardware and network questions from the US-163 inventory | worker-1's inventory of `.88` (relayed by team-lead): (a) a HiFiBerry DAC+ HAT is fitted. US-163 keeps it disabled (AE); is anything wired to its outputs? (b) There is no fan or cooler. The no-audio bootstrap can go ahead, but US-164 (load and RT tests) needs an active cooler fitted first (PO, architect). (c) Wi-Fi is up on `.87` as well as Ethernet on `.88`: keep Wi-Fi in the NixOS image, or Ethernet only? (d) The IPs of the dev machine and the engineer's device, for the 8080 allowlist (US-163 AC10). (e) Confirm that no headphones or IEM are attached to ch 5-8 during the install (AC7). |
 
 ## Component Status
 
@@ -372,7 +385,7 @@ connected).
 
 | ID | Severity | Summary |
 |----|----------|---------|
-| **F-320** | High | Gate can read CLOSED while audio is live (watchdog unlatch, GM restart, UI UNMUTE). |
+| **F-320** | High | Gate can read CLOSED while audio is live (watchdog unlatch, GM restart, UI UNMUTE). D amended: unlatch writes a hardcoded gain table past the gate (architect, AE High). |
 | **F-321** | High | Venue coefficients not enforced; dirac on a fresh image; shared filenames across venues. |
 | **F-322** | High | No per-speaker power/excursion limit on runtime gain (7 W CHN-50P can get 450 W). |
 | **F-323** | High (readiness) | No vocal-mic capture in Live mode. Fix: US-158. |
@@ -398,6 +411,7 @@ connected).
 | F-330 | Medium | CI paths filter is an allowlist; unknown paths skip T1-T3 (O-22: a skip is not green). |
 | F-333 | High | T3 (SD image) not in PR CI; no PR can meet T1+T2+T3 green (O-26). |
 | **F-335** | **Critical** | CI T1 fails on main before any test runs (`src/web-ui` not found in flake source). Blocks every merge, incl. #41-#43 (O-22). |
+| F-357 | High (QE) | A skipped `test-and-build` counts as CI green: every green run since 2026-04-20 was docs-only, so main has had no real T1 since. Either a skip satisfies branch protection or the job is not required (worker-2 to state). |
 | F-334 | Medium | local-demo still disables WP policy.standard; diverges from production (D-065), F-318 untestable locally. |
 | F-331 | Low | 16k-tap dirac on ch 5-8 ~doubles convolver load; BM-2 rerun at 8ch first (architect). |
 | F-332 | Low | `audio_mute.py:46` misleading log message. |
@@ -413,7 +427,7 @@ connected).
 | F-344 | High (QE, AE) | Config tab gain Apply (`POST /api/v1/config/gain`, `config_routes.py:176-215`) writes Mult via pw-cli with no gate check, so the channel is live while the indicator reads CLOSED. Fix in US-159 (T12). |
 | F-343 | Low | PR #45 non-blocking follow-ups. AC2 (§1 hedge), AC3 (2-way scope) and AC7 present in #45 `d605b5c1`; AC1 (Rule 8 step 1 vs REST close) partly, no shell-on-Pi fallback yet (TW, AD). |
 | F-342 | Medium (AE; High once a 3-way profile is used at a gig/rehearsal or with an IEM) | GM does not enforce D-054 `mode_constraints` on set_mode; Live on a 3-way profile puts the HP feed on IEM ch 7-8 (AD; architect confirmed: GM must refuse). |
-| F-341 | Medium | safety.md pre-flight `nc -q1` commands unverified on NixOS (no netcat in `nix/`; `-q` is Debian-only). Needs CM OBSERVE (O-2). AE to rate. |
+| F-341 | Medium | safety.md pre-flight `nc -q1` commands unverified on NixOS (no netcat in `nix/`; `-q` is Debian-only). AC3 on the Pi 5 after US-163 T52 (QE). AE to rate. |
 | F-340 | Low | PR #44 non-blocking docs follow-ups (architect 1-3, UX, AD L1-L5); later docs pass (TW). |
 | F-338 | High | Web UI CLOSE GATE disabled while the gate reads CLOSED; interim rules 5-7 not performable from the UI (AE confirmed High). Standalone fix ahead of US-159. |
 | F-339 | High | GM CloseGate returns Ok when the convolver is missing and nothing was zeroed (AE; architect confirmed in code). Likelier trigger: gain param name mismatch (AE). Fix: US-159 G11/T10. |
@@ -643,6 +657,15 @@ through D-065). Most significant recent decisions:
   in "amps off"; F-341 AC3, F-346 AC7, F-348 AC7 re-scoped; owner
   standing permissions; O-8, O-34, O-37 resolved; O-38 new; O-4, O-32,
   O-35, O-36 reworded; merge order (CM); local commit `9e9dce9b` (CM).
+  Fourteenth batch (#46 must-fixes at `9e9dce9b`): rule 11 HP/IEM
+  wording (AE B3); pw-cli value oracles in US-159 U4, T38-T45 and
+  F-298 (QE M1, M3; architect N1), raw-bits reader for `== 0` (AE
+  N1), T46 alarm (QE N2); rule 13 withdrawal recorded; rule 12(b)
+  immediate action (AD L2); F-353 AC5 (AD L3); pre-flight #10
+  summary and F-343 to #45 `76b61347` (TW); F-348 AC7 split
+  (architect); F-335 37 sites; F-357 filed (QE); US-163 AC1a, AC2,
+  AC2a, AC4, AC6, AC12a, P1/P3 results; US-164 cooler prerequisite;
+  O-36, O-38 reworded, O-39 new; local commit `d0065a54` (CM).
 - Status lines updated with merge evidence: US-113, US-120, US-128,
   US-131, US-140, US-142–US-154, US-132, F-256, F-262, F-272, F-287,
   F-290.
@@ -656,12 +679,17 @@ through D-065). Most significant recent decisions:
   answer the F-328 Live-input question; F-331 analysis.
 - QE: fresh Gate 1 run on current main with `-rs -rx` output (F-256, F-272,
   US-142–153); needs a worker (O-8).
-- F-335 fix (`${self}` + Nix pin/log, architect) needs a worker (O-8). QE's
-  Gate 1 evidence run waits on it.
+- F-335 fix (`${self}` + Nix pin/log, architect): `worker-2`. Pin and
+  log in the same PR, a separate commit (CM). T3 is a local aarch64
+  sd-card build, not a release dispatch; without a builder it is NOT
+  RUN, a merge blocker (O-26). QE's Gate 1 run waits on it.
 - Pi checks after the US-163 bootstrap: F-341 AC3 and US-159 T47 on
   the Pi 5 after T52 (QE); F-348 AC7 is US-163 AC14 (AE); F-346 AC7
   dropped (AE). Still to re-scope by their owners: F-318, F-316,
-  F-319, F-321, F-328.
+  F-319; F-321 and F-328 to AE (architect's view: drop F-321's
+  historic part, as US-159 G8/G8b fix the code path, and add a
+  post-bootstrap OBSERVE inventory of `/etc/pi4audio/coeffs` with
+  hashes against the repo).
 - Pi 4B references in CLAUDE.md, config.md and the benchmarks (F-353);
   CLAUDE.md boot-gain text (F-356).
 - safety.md follow-up branch (TW, not #45): after-Apply slider
@@ -674,6 +702,14 @@ through D-065). Most significant recent decisions:
   duplicate nodes, G14 codes, the F-351 UNKNOWN display.
 - AE F-355 (g): is the `levels_sw` tap before or after the gain?
   Needed before the fix PR.
+- Story IDs on #46 collide with #40 (CM, 2026-10-24: US-157..163,
+  F-292, F-296; US-164/165 too). PO ruled that #46 renumbers from
+  US-169 / F-358; PM sent PO the cost (about 300 references on #46,
+  84 on #41, 7 in #45's safety.md, the US-163 branch) and is waiting.
+  D-066 (on #40 only) must reach main: main's US-155 venue config
+  depends on it (PO).
+- CM: confirm that worker-1's kexec and page-size readings come from
+  a CM-logged OBSERVE session; otherwise mark them unverified (AD).
 - Owner: decisions in "Owner Decisions Pending" above.
 
 ## Session 9 Summary (2026-04-02)
