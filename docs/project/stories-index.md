@@ -170,3 +170,6 @@ Generated from the per-item files in `stories/` (the source of truth). Do NOT ru
 | [US-160](stories/US-160.md) | draft. PO proposal (2026-10-24), recommended high priorit... | Interim — hide or relabel web UI UNMUTE to match interim rule 6 |
 | [US-161](stories/US-161.md) | draft (orphan from US-159 G9, filed by PM at PO request 2... | Amplifier chain calibration (validate "Mult 1.0 = 450 W") |
 | [US-162](stories/US-162.md) | draft (orphan from US-159 G9, filed by PM at PO request 2... | Dynamic per-speaker limiter |
+| [US-163](stories/US-163.md) | draft (owner directive 2026-10-24; filed by PM from PO's ... | Bootstrap NixOS on the Raspberry Pi 5 via nixos-anywhere |
+| [US-164](stories/US-164.md) | draft (PO, 2026-10-24; architect's 163c, accepted by the ... | Pi 5 RT and audio re-baseline |
+| [US-165](stories/US-165.md) | draft (PO, 2026-10-24; accepted by the architect) | Minimal kernel config for bcm2712 |
