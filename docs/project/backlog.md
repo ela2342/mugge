@@ -140,7 +140,9 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
 - mugge remote-builder address: Mac LAN IP moved 192.168.178.26 to .36;
   mugge config still points at .26 (linux-builder VM, port 31022, works
   again per owner 2026-10-24). Fix: update to .36, or a fixed IP for the
-  Mac from the router. Architect decides whether it touches US-163.
+  Mac from the router. Architect (2026-10-24): does not affect US-163;
+  the stale address is the US-156 VM-subnet route via .26 in main's
+  Pi 4 config. P3.
 - AE-F6 (routing.rs:423): check whether tracked; file if not.
 - US-170: Pi 4 allowlist and configurationRevision (AC1); Pi 4 WP ALSA
   rule; drvPath pin removal.
