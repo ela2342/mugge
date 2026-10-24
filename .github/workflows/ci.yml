@@ -115,7 +115,10 @@ jobs:
 
       # US-163: structural assertions over all Pi 4 and Pi 5 configurations.
       - name: Board guard (eval-only)
-        run: cat "$(nix build --no-link --print-out-paths .#checks.x86_64-linux.board-guard)"
+        run: |
+          set -euo pipefail
+          out=$(nix build --no-link --print-out-paths .#checks.x86_64-linux.board-guard)
+          cat "$out"
 
   # -----------------------------------------------------------
   # T1 + T2 — Tests (single ARM runner)

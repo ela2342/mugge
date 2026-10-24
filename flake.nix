@@ -852,7 +852,9 @@
           # on the nixpkgs linux_rpi4 kernel substituted from cache.nixos.org,
           # so nixos-anywhere can install it without a local kernel build.
           # Usage: nixos-anywhere --phases disko,install,reboot \
-          #          --flake .#mugge-pi5-bootstrap root@<installer-host>
+          #          --flake .#mugge-pi5-bootstrap ela@<installer-host>
+          # (The installer has PermitRootLogin no; nixos-anywhere uses ela's
+          # passwordless sudo.)
           mugge-pi5-bootstrap = nixpkgs.lib.nixosSystem {
             inherit system;
             modules = [

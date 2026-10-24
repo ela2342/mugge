@@ -24,21 +24,46 @@ let
   hasNoauto = c: builtins.elem "noauto" c.fileSystems."/boot/firmware".options;
   hasUs156Route = c: c.networking.interfaces ? end0
     && c.networking.interfaces.end0.ipv4.routes != [ ];
-  tcpPorts = c: c.networking.firewall.allowedTCPPorts;
+  fw = c: c.networking.firewall;
+  tcpPorts = c: (fw c).allowedTCPPorts;
+  # Every way a TCP port can be opened: global and per-interface lists and
+  # ranges.
+  ifaceFw = c: builtins.attrValues (fw c).interfaces;
+  allTcpPorts = c: tcpPorts c ++ lib.concatMap (i: i.allowedTCPPorts) (ifaceFw c);
+  allTcpRanges = c: (fw c).allowedTCPPortRanges ++ lib.concatMap (i: i.allowedTCPPortRanges) (ifaceFw c);
+  allUdp = c: (fw c).allowedUDPPorts ++ (fw c).allowedUDPPortRanges
+    ++ lib.concatMap (i: i.allowedUDPPorts ++ i.allowedUDPPortRanges) (ifaceFw c);
+  tcpOpen = c: port: builtins.elem port (allTcpPorts c)
+    || builtins.any (r: r.from <= port && port <= r.to) (allTcpRanges c);
+  firewalled = c: (fw c).enable && c.networking.nftables.enable;
+  withPassword = c: lib.filterAttrs (_: u:
+    u.password != null || u.initialPassword != null || u.initialHashedPassword != null
+    || u.hashedPasswordFile != null
+    || (u.hashedPassword != null && u.hashedPassword != "!")) c.users.users;
+  hifiberryModules = [ "snd_soc_hifiberry_dacplus" "snd_soc_pcm512x_i2c" "snd_soc_pcm512x" ];
   ssh = c: c.services.openssh.settings;
   configTxt = c: c.system.build.pi5ConfigTxt;
+  txtLines = c: lib.splitString "\n" (configTxt c);
   hasVc4 = c: lib.hasInfix "dtoverlay=vc4-kms-v3d-pi5" (configTxt c);
   # Audio, display and remote-desktop units the bootstrap must not have.
   audioUnitRe = ".*(pipewire|wireplumber|filter-chain|level-bridge|pcm-bridge|pi4audio|pi4-audio|wayvnc|labwc).*";
   audioUnits = c: builtins.filter (n: builtins.match audioUnitRe n != null)
     (builtins.attrNames c.systemd.services ++ builtins.attrNames c.systemd.user.services);
+  # Matches the package name only; the rule content is reviewed in
+  # configs/wireplumber/54-disable-other-alsa-cards.conf.
   hasCardBlock = c: builtins.any (p: lib.hasInfix "wireplumber-block-cards" p.name)
     c.services.pipewire.wireplumber.configPackages;
+
+  # Real kernel attributes, not only our option (eval-only: no build).
+  kernel = c: c.boot.kernelPackages.kernel;
+  isRtKernel = c: (kernel c).modDirVersion == "6.12.62"
+    && ((kernel c).structuredExtraConfig.PREEMPT_RT.tristate or null) == "y";
 
   pi4 = conf:
     let c = cfg conf; in map (a: check conf a.name a.ok) [
       { name = "board is pi4"; ok = c.mugge.board.name == "pi4"; }
       { name = "PREEMPT_RT kernel variant"; ok = c.mugge.board.kernel.variant == "rt"; }
+      { name = "kernel 6.12.62 with PREEMPT_RT=y"; ok = isRtKernel c; }
       { name = "NVMe stripped (US-114)"; ok = !c.mugge.board.kernel.keepNvme; }
       { name = "U-Boot/extlinux boot"; ok = c.boot.loader.generic-extlinux-compatible.enable; }
       { name = "no external bootloader hook"; ok = !c.boot.loader.external.enable; }
@@ -59,20 +84,24 @@ let
     { name = "no US-156 lab route"; ok = !hasUs156Route c; }
     { name = "networkd DHCP matched on driver"; ok = c.systemd.network.networks."10-wired".matchConfig.Driver == "macb"; }
     { name = "UI allowlist enabled"; ok = c.mugge.firewall.uiAllowlist.enable; }
-    { name = "5900/8080 not in allowedTCPPorts"; ok = !(builtins.elem 8080 (tcpPorts c)) && !(builtins.elem 5900 (tcpPorts c)); }
-    { name = "HiFiBerry codec blacklisted"; ok = builtins.elem "snd_soc_pcm512x" c.boot.blacklistedKernelModules; }
+    { name = "5900/8080 not opened by any port list or range"; ok = !(tcpOpen c 8080) && !(tcpOpen c 5900); }
+    { name = "HiFiBerry modules blacklisted"; ok = lib.all (m: builtins.elem m c.boot.blacklistedKernelModules) hifiberryModules; }
+    { name = "config.txt force_eeprom_read=0"; ok = builtins.elem "force_eeprom_read=0" (txtLines c); }
+    { name = "config.txt has no HiFiBerry overlay"; ok = !builtins.any (l: builtins.match "dtoverlay=.*(hifiberry|pcm512).*" l != null) (txtLines c); }
     { name = "immutable users"; ok = !c.users.mutableUsers; }
-    { name = "nftables firewall"; ok = c.networking.nftables.enable && c.networking.firewall.enable; }
+    { name = "no account with a password"; ok = withPassword c == { }; }
+    { name = "firewall and nftables enabled"; ok = firewalled c; }
     { name = "disable-bt-pi5 in config.txt"; ok = lib.hasInfix "dtoverlay=disable-bt-pi5" (configTxt c); }
     { name = "no root authorized_keys"; ok = c.users.users.root.openssh.authorizedKeys.keys == [ ]; }
     { name = "PermitRootLogin no"; ok = (ssh c).PermitRootLogin == "no"; }
     { name = "no password authentication"; ok = !(ssh c).PasswordAuthentication; }
+    { name = "no keyboard-interactive authentication"; ok = !(ssh c).KbdInteractiveAuthentication; }
     { name = "configurationRevision set"; ok = c.system.configurationRevision != null; }
   ];
 
   pi5Bootstrap = conf:
     let c = cfg conf; in map (a: check conf a.name a.ok) (pi5Common conf c ++ [
-      { name = "cached nixpkgs kernel"; ok = c.boot.kernelPackages.kernel.outPath == cachedKernel.outPath; }
+      { name = "cached nixpkgs kernel"; ok = (kernel c).outPath == cachedKernel.outPath; }
       { name = "bootstrap.minimal set"; ok = c.mugge.bootstrap.minimal; }
       { name = "no audio stack"; ok = !c.services.pipewire.enable; }
       { name = "no audio/display units"; ok = audioUnits c == [ ]; }
@@ -82,6 +111,7 @@ let
   pi5Full = conf:
     let c = cfg conf; in map (a: check conf a.name a.ok) (pi5Common conf c ++ [
       { name = "PREEMPT_RT kernel variant"; ok = c.mugge.board.kernel.variant == "rt"; }
+      { name = "kernel 6.12.62 with PREEMPT_RT=y"; ok = isRtKernel c; }
       { name = "bootstrap.minimal unset"; ok = !c.mugge.bootstrap.minimal; }
       { name = "vc4-kms overlay with noaudio"; ok = lib.hasInfix "dtoverlay=vc4-kms-v3d-pi5,noaudio" (configTxt c); }
       { name = "PipeWire enabled"; ok = c.services.pipewire.enable; }
@@ -89,19 +119,16 @@ let
     ]);
 
   installer = conf:
-    let
-      c = cfg conf;
-      withPassword = lib.filterAttrs (_: u:
-        u.password != null || u.initialPassword != null || u.initialHashedPassword != null
-        || (u.hashedPassword != null && u.hashedPassword != "!")) c.users.users;
-    in map (a: check conf a.name a.ok) [
+    let c = cfg conf; in map (a: check conf a.name a.ok) [
       { name = "board is pi5"; ok = c.mugge.board.name == "pi5"; }
       { name = "PermitRootLogin no"; ok = (ssh c).PermitRootLogin == "no"; }
       { name = "no password authentication"; ok = !(ssh c).PasswordAuthentication; }
       { name = "no keyboard-interactive authentication"; ok = !(ssh c).KbdInteractiveAuthentication; }
       { name = "no root authorized_keys"; ok = c.users.users.root.openssh.authorizedKeys.keys == [ ]; }
-      { name = "no account with a password"; ok = withPassword == { }; }
-      { name = "only SSH inbound"; ok = tcpPorts c == [ 22 ]; }
+      { name = "no account with a password"; ok = withPassword c == { }; }
+      { name = "firewall enabled"; ok = (fw c).enable; }
+      { name = "only SSH inbound (TCP)"; ok = allTcpPorts c == [ 22 ] && allTcpRanges c == [ ]; }
+      { name = "no UDP inbound"; ok = allUdp c == [ ]; }
       { name = "no audio stack"; ok = !c.services.pipewire.enable; }
     ];
 
