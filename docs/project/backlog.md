@@ -186,13 +186,14 @@ Next free: F-367, US-172, D-069, T66.
   after the deploy step (bookkeeping, not blocking): then one docs
   batch on the story branch (TW docs + CLAUDE.md, worker-1 the
   pi5/default.nix comment, CM routes .claude/team).
-- Host key: the Architect's pre-reboot record of the installed host key
-  from /mnt was not done; first boot used TOFU (the accepted plan).
-  Architect + SecSpec deciding whether TOFU key a5kILUyr stands or
-  needs an extra check (e.g. on the HDMI console). Future reinstalls:
-  see the P3 pre-generation item.
-  Pending: Architect reconsidering DHCP ClientIdentifier="mac"
-  hardening; if accepted, a separate commit after F-366.
+- Host key a5kILUyr ACCEPTED as is (joint Architect + SecSpec): TOFU
+  on a MAC-verified LAN host, current-system p9mzphhy and revision
+  fb7d557e matching. No extra check; HDMI console comparison only if
+  the owner happens to be there (not asked). The Architect's /mnt
+  pre-reboot record instruction is withdrawn (stale state). Future
+  reinstalls: see the P3 pre-generation item.
+  DHCP ClientIdentifier="mac" hardening DROPPED (Architect; the lease
+  is pinned to the MAC); SecSpec's client-id item closed with it.
 - First-boot records on the bootstrap all green (CM; file
   ~/mugge-pi5-prewipe-20261024/firstboot-p9mzphhy.txt): T48 rev
   fb7d557e, current = booted = p9mzphhy; T49 running, 0 failed units;
