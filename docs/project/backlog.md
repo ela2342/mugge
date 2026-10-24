@@ -1,8 +1,9 @@
 # Backlog
 
 Owner directive (2026-10-24): one active priority, US-163 (Pi 5 NixOS
-bootstrap on .88). Everything below is parked. Nobody works on a backlog
-item unless it blocks US-163. New findings go to the PM as one-liners and
+bootstrap; was Raspbian .88, now NixOS at 192.168.178.89). Everything
+below is parked. Nobody works on a backlog item unless it blocks US-163.
+New findings go to the PM as one-liners and
 land here. Maintained by the PM; the CM commits changes.
 
 ## Reserved IDs
@@ -33,9 +34,8 @@ Next free: F-367, US-172, D-069, T66.
     deploy, T51 deriver.
   - Deploy verb (Architect + QE, final; owner 2026-10-24: "boot is
     fine."): from the Mac, `nixos-rebuild boot --flake
-    .#mugge-pi5-deploy --target-host ela@<current IP> --sudo` (now
-    .89; see first-boot entry), then an announced reboot (not
-    `switch`).
+    .#mugge-pi5-deploy --target-host ela@192.168.178.89 --sudo`,
+    then an announced reboot (not `switch`).
 
 - Rename `mugge-pi5` to `mugge-pi5-deploy` in story and AC text
   (worker-1, 4de6cee0).
@@ -175,13 +175,16 @@ Next free: F-367, US-172, D-069, T66.
   There's also always a DNS entry being generated,
   mugge.lab.andreas.org". CM verified read-only: the name resolves to
   .89 via LAN DNS 192.168.178.1 (not via the Mac's default resolvers);
-  MAC and host key at .89 match. SecSpec ruling: the pinned IP is
-  canonical, not the DNS name; any use of the name must match the same
-  known_hosts entry (HostKeyAlias), never a fresh accept-new. HOLD on
-  address updates: the owner later wrote "yes, pinned to 99" while the
-  Pi is verified at .89; team-lead is asking whether that is a typo or
-  a .99 pin (the Pi would move on its next lease). No .88/.89/.185
-  reference changes until answered (file list with the CM).
+  MAC and host key at .89 match. SETTLED (do not re-open): address is
+  192.168.178.89, pinned to the MAC (owner verbatim: "Erm, 89." and
+  "It's pinned to the MAC.", correcting an earlier "pinned to 99").
+  Architect + SecSpec: the pinned IP is canonical; mugge.lab.andreas.org
+  is an alias only (not resolvable via the Mac's default/VPN
+  resolvers); any use of the name must match the same known_hosts
+  entry (HostKeyAlias), never a fresh accept-new; identity is host key
+  + MAC. Reference updates (.88/.185 -> .89) are GO, routed via CM.
+  Pending: Architect reconsidering DHCP ClientIdentifier="mac"
+  hardening; if accepted, a separate commit after F-366.
 - First-boot records on the bootstrap all green (CM; file
   ~/mugge-pi5-prewipe-20261024/firstboot-p9mzphhy.txt): T48 rev
   fb7d557e, current = booted = p9mzphhy; T49 running, 0 failed units;
@@ -190,10 +193,10 @@ Next free: F-367, US-172, D-069, T66.
   permitrootlogin no, root no keys, ela 4 owner keys; firewall 22,
   5353, DHCP only; watchdog devices present, RuntimeWatchdogUSec=0;
   PipeWire absent, ALSA sees APC mini + USBStreamer, nothing opened.
-  T52 and AE check #10 are deploy-image only. SecSpec: T48-T53 and
-  AC9b PASS. SecSpec's nmap and @temp-ports checks are deferred to the
-  US-163 PR Rule 13 review (owner: "I don't know why you do the
-  portscan now?").
+  T52 and AE check #10 are deploy-image only. SecSpec: AC9b full
+  PASS; T48-T53 host-side PASS only -- the external nmap scan and
+  @temp-ports are deferred to the US-163 PR Rule 13 review (owner: "I
+  don't know why you do the portscan now?"), so not a full PASS yet.
 
 ## P1
 
@@ -266,7 +269,7 @@ Next free: F-367, US-172, D-069, T66.
   install_url has no hash check.
 - ela is root-equivalent on the NixOS image: nix trusted-users
   (base.nix:33) plus NOPASSWD sudo (users.nix:14). Kept for the lab, so
-  VM/Mac-built paths copy to .88 as ela unsigned and SecSpec's
+  VM/Mac-built paths copy to the Pi 5 as ela unsigned and SecSpec's
   VM-signing conditions lapse. Revisit with the sudo policy before any
   multi-user or gig use. LOW (SecSpec).
 - #49 follow-ups: M6/M7, L7-L9, TW docs items a-d,
