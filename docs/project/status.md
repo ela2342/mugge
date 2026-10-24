@@ -27,10 +27,11 @@ directories. Their index files are generated from the per-item files
 >   folds fixes in, so see the PR). `76b61347` carries the architect's C1
 >   (pre-flight #10 reads the gains with pw-cli, as pw-dump prints NaN,
 >   subnormal and -Inf as 0.000000), AE's "only 0.000000 passes" rule,
->   SecSpec's F-037 text, AD L2 and UX note 2. TW and UX approve at
->   `76b61347`; re-review requested from the other five; all earlier
->   verdicts are superseded (CM, issuecomment-6385980773). CI at
->   `0c55d806` (run 40106622105) failed with F-335. Still
+>   SecSpec's F-037 text, AD L2 and UX note 2. At `76b61347` all six content
+>   reviewers approve (AE, architect, TW, UX, AD, QE content); SecSpec has
+>   no concerns and withholds until CI is green; all earlier verdicts are
+>   superseded (CM, issuecomment-6386005093). CI at `76b61347` (run
+>   40106812306) failed with F-335. Still
 >   blocking: CI (F-335; runs 40101792484 and 40101792756 ran zero tests;
 >   T3 waits on O-26) and owner acceptance, including explicit acceptance
 >   of the CLAUDE.md change in #45 (CM).
@@ -346,6 +347,7 @@ line with this table on 2026-10-24 (owner directive).
 | F-332 | Low | `audio_mute.py:46` misleading log message. |
 | F-348 | High (AE, architect; Critical if a generated conf or a non-D-063 node is active on the Pi) | Every web-UI profile activation (2-way too) writes a generated conf under the D-063 conf's filename, with profile-gain Mult defaults and no ch 5-8: after a PW restart the outputs come up live while GM shows CLOSED. GM's fixed list can't close N-way gains, close returns Ok (F-339), and integrity misses > 0 dB. Fix: US-159 G12/G13, G8c R-g4, T32-T37; interim rule 10; OBSERVE AC7 on hold (O-2). |
 | F-349 | **Critical** (AE; likelihood low) | Non-finite audio drives full-scale output: a NaN latched in the convolver while Closed fires as a full-scale step at gate open, bypassing the fade-in, HP/IEM included; sink mapping undefined (`-Ofast` converter), worst case rated. Fix: post-gain bit-pattern finite check plus a confirmed convolver reset before every open (AE). Interim rule 12; O-35. |
+| F-351 | AE to rate (architect: confirmed statically) | GM gain integrity and the web UI (mute, thermal limiter, Config tab) read gains from pw-dump text, which prints NaN and -Inf as 0, and `NaN > 1.0` is false, so a NaN gain passes; the pw-cli fallback maps unparseable to 0.0. Fix: one native raw-f32 Props reader in GM shared with US-159 G11 (f); web UI takes gain state from GM. |
 | F-347 | Medium (AE) | Config tab iterates a fixed 2-way `GAIN_NODES` list with a 0.001 fallback: under a generated N-way config it shows phantom enabled -60 dB sliders and hides the real gains (QE, static evidence). |
 | F-346 | High (AE, architect; Critical if room correction runs with amps on before the fix) | `POST /reload-pw` hot-swaps coefficients with no gate check, G8b or auth; probably reloads only `conv_left_hp` and reports success silently; no crossfade; unlocked fallback swap; stalls the PW main loop. No test checks the param names (QE). Fix: US-159 G8c, T22-T26, patch changes, AC13 tests; interim rule 9. |
 | F-345 | High (AE; Critical if the interim rule is not adopted before the next amps-on session) | Thermal limiter (`thermal_limiter.py:356-437`) writes `base_mult * factor` via pw-cli with no gate check, so recovery or an override restores Mult while Closed. Its tests are mock-only. Fix in US-159 (T13). |
@@ -557,6 +559,13 @@ through D-065). Most significant recent decisions:
   G11 (f) raw-float read-back and R-i N1 (a) bit test (AE); F-350
   filed (stale reload comments); F-351 filed (pw-dump gain readers,
   TW, unverified).
+  Tenth batch: value oracles read Mult/Add with pw-cli or a raw pod read,
+  pw-dump for topology only (QE; US-159 test criteria and T8-T22, F-338,
+  F-339, F-344, F-345, F-348); T47 case (5) NaN Mult (QE); F-343 AC19
+  residual clause (AD L2) and AE #10 note; F-341 AC3 (c) (QE); F-348
+  AC12 deploy ban accepted (AE); F-351 confirmed and rewritten with
+  ACs, status row (architect); interim strict pw-cli oracle; #45 at
+  `76b61347`: all six content reviewers approve, SecSpec withheld (CM).
 - Status lines updated with merge evidence: US-113, US-120, US-128,
   US-131, US-140, US-142–US-154, US-132, F-256, F-262, F-272, F-287,
   F-290.
