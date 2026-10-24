@@ -851,10 +851,11 @@
           # Pi 5 first system (US-163): base system only, no audio stack,
           # on the nixpkgs linux_rpi4 kernel substituted from cache.nixos.org,
           # so nixos-anywhere can install it without a local kernel build.
-          # Usage: nixos-anywhere --phases disko,install,reboot \
-          #          --flake .#mugge-pi5-bootstrap ela@<installer-host>
-          # (The installer has PermitRootLogin no; nixos-anywhere uses ela's
-          # passwordless sudo.)
+          # Usage: nixos-anywhere --build-on remote --phases disko,install \
+          #          --flake .#mugge-pi5-bootstrap root@<installer-host>
+          # (Without the kexec phase nixos-anywhere connects as root@; the
+          # installer allows root with the users.nix keys only. The first
+          # reboot is a separate, announced step.)
           mugge-pi5-bootstrap = nixpkgs.lib.nixosSystem {
             inherit system;
             modules = [

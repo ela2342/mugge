@@ -42,6 +42,7 @@ let
     || (u.hashedPassword != null && u.hashedPassword != "!")) c.users.users;
   hifiberryModules = [ "snd_soc_hifiberry_dacplus" "snd_soc_pcm512x_i2c" "snd_soc_pcm512x" "clk_hifiberry_dacpro" ];
   ssh = c: c.services.openssh.settings;
+  rootKeys = c: c.users.users.root.openssh.authorizedKeys.keys;
   configTxt = c: c.system.build.pi5ConfigTxt;
   txtLines = c: lib.splitString "\n" (configTxt c);
   hasVc4 = c: lib.hasInfix "dtoverlay=vc4-kms-v3d-pi5" (configTxt c);
@@ -98,7 +99,7 @@ let
     { name = "no account with a password"; ok = withPassword c == { }; }
     { name = "firewall and nftables enabled"; ok = firewalled c; }
     { name = "disable-bt-pi5 in config.txt"; ok = lib.hasInfix "dtoverlay=disable-bt-pi5" (configTxt c); }
-    { name = "no root authorized_keys"; ok = c.users.users.root.openssh.authorizedKeys.keys == [ ]; }
+    { name = "no root authorized_keys"; ok = rootKeys c == [ ] && c.users.users.root.openssh.authorizedKeys.keyFiles == [ ]; }
     { name = "PermitRootLogin no"; ok = (ssh c).PermitRootLogin == "no"; }
     { name = "no password authentication"; ok = !(ssh c).PasswordAuthentication; }
     { name = "no keyboard-interactive authentication"; ok = !(ssh c).KbdInteractiveAuthentication; }
@@ -113,6 +114,7 @@ let
       { name = "no audio/display units"; ok = audioUnits c == [ ]; }
       { name = "no vc4-kms overlay"; ok = !hasVc4 c; }
       { name = "8080 not opened (no web UI)"; ok = !(tcpOpen c 8080); }
+      { name = "TCP inbound exactly [22]"; ok = allTcpPorts c == [ 22 ] && allTcpRanges c == [ ]; }
     ]);
 
   pi5Full = conf:
@@ -124,15 +126,19 @@ let
       { name = "PipeWire enabled"; ok = c.services.pipewire.enable; }
       { name = "WirePlumber disables other ALSA cards"; ok = hasCardBlock c; }
       { name = "8080 open on the LAN (owner ruling, F-037)"; ok = builtins.elem 8080 (tcpPorts c); }
+      { name = "TCP inbound exactly [22 8080]"; ok = lib.sort lib.lessThan (allTcpPorts c) == [ 22 8080 ] && allTcpRanges c == [ ]; }
     ]);
 
   installer = conf:
     let c = cfg conf; in map (a: check conf a.name a.ok) [
       { name = "board is pi5"; ok = c.mugge.board.name == "pi5"; }
-      { name = "PermitRootLogin no"; ok = (ssh c).PermitRootLogin == "no"; }
+      # Without the kexec phase nixos-anywhere connects as root@ (installer.nix).
+      { name = "PermitRootLogin prohibit-password"; ok = (ssh c).PermitRootLogin == "prohibit-password"; }
+      { name = "root keys are exactly the ela keys"; ok = rootKeys c == c.users.users.ela.openssh.authorizedKeys.keys
+          && rootKeys c != [ ] && c.users.users.root.openssh.authorizedKeys.keyFiles == [ ]; }
+      { name = "root locked for passwords"; ok = c.users.users.root.hashedPassword == "!"; }
       { name = "no password authentication"; ok = !(ssh c).PasswordAuthentication; }
       { name = "no keyboard-interactive authentication"; ok = !(ssh c).KbdInteractiveAuthentication; }
-      { name = "no root authorized_keys"; ok = c.users.users.root.openssh.authorizedKeys.keys == [ ]; }
       { name = "no account with a password"; ok = withPassword c == { }; }
       { name = "firewall enabled"; ok = (fw c).enable; }
       { name = "only SSH inbound (TCP)"; ok = allTcpPorts c == [ 22 ] && allTcpRanges c == [ ]; }

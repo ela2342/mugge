@@ -13,12 +13,18 @@
 #      Raspbian back.
 #   3. The installer runs entirely from RAM (netboot layout: squashfs store
 #      inside the initrd, tmpfs root), so the SD card stays unmounted and
-#      nixos-anywhere --phases disko,install,reboot can repartition it.
+#      nixos-anywhere --build-on remote --phases disko,install can
+#      repartition it. The first reboot is a separate step.
 #
-# SSH (security ruling): only the users.nix keys, for ela (sudo). No
-# password authentication, no root login, no account with a password or an
-# empty password. Host keys are generated on each boot; the installer hop
-# is the only place where host-key checking may be relaxed.
+# SSH (security ruling, owner approval 2026-10-24): only the users.nix keys,
+# for ela (sudo) and for root. Without the kexec phase nixos-anywhere
+# connects as root@ and runs disko and nixos-install without sudo
+# (nixos-anywhere 1.13.0: "If kexec phase is not present ... change the user
+# to root@"), so root logs in with those keys only (prohibit-password). This
+# applies to the RAM installer only; the installed systems have no root keys
+# and PermitRootLogin no. No password authentication, no account with a
+# password or an empty password. Host keys are generated on each boot; the
+# installer hop is the only place where host-key checking may be relaxed.
 { config, lib, pkgs, modulesPath, ... }:
 
 let
@@ -63,16 +69,18 @@ in
   boot.initrd.availableKernelModules = lib.mkForce [ "squashfs" "overlay" "loop" ];
   netboot.squashfsCompression = "zstd -Xcompression-level 6";
 
-  # Accounts: ela with the users.nix keys only. root stays locked.
+  # Accounts: ela and root with the users.nix keys only (referenced, so the
+  # lists cannot drift). root stays locked for passwords.
   users.mutableUsers = false;
   users.users.root.hashedPassword = "!";
+  users.users.root.openssh.authorizedKeys.keys = config.users.users.ela.openssh.authorizedKeys.keys;
 
   services.openssh = {
     enable = true;
     settings = {
       PasswordAuthentication = false;
       KbdInteractiveAuthentication = false;
-      PermitRootLogin = "no";
+      PermitRootLogin = "prohibit-password";
     };
   };
 
