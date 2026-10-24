@@ -27,7 +27,7 @@ nix run .#test-graph-manager    # GraphManager Rust tests (pure logic)
 nix run .#test-integration-browser  # Playwright browser integration tests
 nix run .#test-integration      # PipeWire integration test (Linux only, US-075)
 nix run .#test-e2e              # Real E2E: full stack + browser (Linux only)
-nix run .#test-all              # All suites sequentially
+nix run .#test-all              # Combined suites, no browser tests (see 2.7)
 nix run .#local-demo            # Local dev stack (PipeWire + GM + web UI, Linux only)
 ```
 
@@ -124,7 +124,7 @@ skipped in automated E2E runs. Run them manually with explicit opt-in only.
 Located in `src/midi/tests/` and `scripts/drivers/tests/` respectively.
 These do not have individual `nix run` targets. They are included in:
 
-- `nix run .#test-all` (runs all suites sequentially)
+- `nix run .#test-all` (the combined suites, see 2.7)
 
 ### 2.5 GraphManager Rust Tests
 

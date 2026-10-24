@@ -54,9 +54,16 @@ These steps happen before the Pi is powered on.
    are deep attenuation (around -60 dB for mains, -64 dB for subs). Do not
    change these until measurement is complete.
 
-10. Turn on the amplifier. Because the gain nodes are at deep attenuation and
-    no audio application is running, the speakers are silent. This is the safe
-    moment to power the amp.
+10. Turn on the amplifier. After boot the audio gate is closed and all gain
+    nodes are at 0.0 (D-063), and no audio application is running, so the
+    speakers are silent. This is the safe moment to power the amp. The web UI
+    gate indicator is not authoritative (F-320); the authoritative check is
+    pre-flight check #10 in `docs/operations/safety.md` Section 5.
+
+    **Live mode:** before turning on the amplifier, the singer's IEM
+    earpieces must be out or the IEM pack at minimum, and stay that way until
+    step 29. The measurement signals (steps 18-24) and the test track
+    (step 27) can reach the IEM channels.
 
 ---
 
@@ -265,8 +272,10 @@ room, computes correction filters, and deploys them -- all from the web UI.
     identity (Dirac) filter, so they get no room correction. In the intended
     routing they are behind the same audio gate as the PA (D-063), so the
     singer hears nothing until the gate is open (a stray direct link to the
-    USBStreamer would bypass the gate, F-318). Before opening the gate, the
-    singer's earpieces must be out or the IEM pack at minimum. The singer
+    USBStreamer would bypass the gate, F-318; IEM routing through the
+    filter-chain is pending owner confirmation, O-10). The earpieces have
+    been out or the pack at minimum since step 10: bring the IEM level up
+    from minimum with the singer present and agreeing. The singer
     should hear the backing track without room correction artifacts. Confirm
     the PA path delay is acceptable -- at quantum 256, the PA path is
     approximately 5.3 ms (theoretical, not yet measured end-to-end).
