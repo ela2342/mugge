@@ -188,8 +188,8 @@ Next free: F-367, US-172, D-069, T66.
   pi5/default.nix comment, CM routes .claude/team).
 - Host key a5kILUyr ACCEPTED as is (joint Architect + SecSpec): TOFU
   on a MAC-verified LAN host, current-system p9mzphhy and revision
-  fb7d557e matching. No extra check; HDMI console comparison only if
-  the owner happens to be there (not asked). The Architect's /mnt
+  fb7d557e matching. CLOSED, do not re-open. No extra check for
+  US-163; console comparison is a P3 item (not asked). The Architect's /mnt
   pre-reboot record instruction is withdrawn (stale state). Future
   reinstalls: see the P3 pre-generation item.
   DHCP ClientIdentifier="mac" hardening DROPPED (Architect; the lease
@@ -341,6 +341,9 @@ Next free: F-367, US-172, D-069, T66.
   VM's SSH would likely need LAN exposure. Rule 13 code change, not in
   US-163 unless the owner asks. P3 (Architect).
 - AE-F6 (routing.rs:423): check whether tracked; file if not.
+- Compare the Pi 5 host key fingerprint (a5kILUyr) on the HDMI/serial
+  console. Optional, only if the owner is at the Pi anyway (never
+  asked); MANDATORY before any gig or amps-on use. LOW (SecSpec).
 - Future Pi reinstalls: pre-generate the installed system's host keys
   inside the verified installer session (`ssh-keygen -A -f /mnt`) and
   record the fingerprints before the reboot, removing first-boot TOFU.
