@@ -38,9 +38,11 @@ warn the owner or turn off the amps. By design, after the reboot all gains
 load as `Mult = 0.0` and the gate is closed (D-063, Section 10), so the
 reboot transient would be the only acoustic risk and nothing would play
 until the operator reopens the gate. Gate-closed-at-boot is not verified by
-any test (F-298, F-313): run pre-flight check #10 (Section 5) before the
-amps go back on. Whether to enable the watchdog (automatic recovery vs an
-unannounced transient) is an owner decision (O-24).
+any test (F-298, F-313), and after any web UI speaker-profile activation
+the boot config has non-zero gains (F-348, Section 10 Known Gaps): run
+pre-flight check #10 (Section 5) before the amps go back on. Whether to
+enable the watchdog (automatic recovery vs an unannounced transient) is an
+owner decision (O-24).
 
 ### Required Procedure
 
@@ -668,12 +670,12 @@ watchdog's mute path meets its <21ms deadline even under CPU contention.
 ## 10. Universal Audio Gate (D-063, US-113)
 
 **No signal reaches any USBStreamer output until the operator explicitly
-opens the audio gate.** This applies to every venue and every mode. Since
-D-063 (owner decision 2026-03-30; owner reconfirmation pending, O-10), all
-eight output channels (mains, subs, engineer headphones, singer IEM) pass
-through the filter-chain convolver and its eight gain nodes
-(Section 8). Channels 5-8 use Dirac (identity) coefficients. The gate
-controls all eight.
+opens the audio gate** (by design; see Known Gaps, F-298, F-348). This
+applies to every venue and every mode. Since D-063 (owner decision
+2026-03-30; owner reconfirmation pending, O-10), all eight output channels
+(mains, subs, engineer headphones, singer IEM) pass through the
+filter-chain convolver and its eight gain nodes (Section 8). Channels 5-8
+use Dirac (identity) coefficients. The gate controls all eight.
 
 ### How the Gate Works
 
