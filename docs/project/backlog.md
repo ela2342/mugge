@@ -174,6 +174,11 @@ Next free: F-366, US-172, D-069, T66.
   softprops/action-gh-release, actions/upload-artifact by SHA (MEDIUM,
   before next release); top-level `permissions: contents: read`;
   install_url has no hash check.
+- ela is root-equivalent on the NixOS image: nix trusted-users
+  (base.nix:33) plus NOPASSWD sudo (users.nix:14). Kept for the lab, so
+  VM/Mac-built paths copy to .88 as ela unsigned and SecSpec's
+  VM-signing conditions lapse. Revisit with the sudo policy before any
+  multi-user or gig use. LOW (SecSpec).
 - #49 follow-ups: M6/M7, L7-L9, TW docs items a-d,
   `-p no:cacheprovider`, 0444 seeds.
 - Docs: CLAUDE.md IEM text (ch 7-8 via convolver since D-063) with the
