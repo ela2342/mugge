@@ -153,9 +153,16 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
   and HDMI audio on the vc4hdmi cards (AE, optional);
   status.md l.445 F-357 says High, should be Medium; US-169 AC5 citation
   separator.
-- Installer: systemd-resolved listens on LLMNR 5355 tcp/udp and mDNS
-  5353; the firewall drops them (only 22 reachable). Optionally disable
-  LLMNR in the installer. (worker-1)
+- systemd-resolved listens on LLMNR 5355 tcp/udp and mDNS 5353 (all
+  interfaces); the firewall drops them (only 22 reachable). Set
+  services.resolved.llmnr = "false" on the final Pi 5 systems (LOW,
+  SecSpec; T48 after first boot shows whether present); optionally in
+  the installer too (worker-1).
+- Nix on the installer is nixpkgs 2.31.2, below the 2026-10-13
+  advisory fixes (2.34.9/2.35.3). If the final systems ship it too:
+  bump nix.package or nixpkgs. LOW for now (local nix-daemon only, ela
+  is root-equivalent); revisit before multi-user or amps-on use.
+  (SecSpec)
 - Architect N1-N3 on #48 (CM PR comment).
 - US-163 follow-ups (worker-1): installer has no configurationRevision.
   (wayvnc on the Pi 5: DONE in 433e16f7, VNC left out.)
