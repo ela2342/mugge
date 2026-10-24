@@ -35,7 +35,7 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-034](defects/F-034.md) | High (service cannot start without workaround) | Resolved (`33b5577` — `=` syntax in service file + `allow... | Signal generator --max-level-dbfs negative value fails clap parsing in systemd service (RESOLVED) |
 | [F-035](defects/F-035.md) | High | Resolved (`33b5577` — SEC-PW-CLIENT standardized profile ... | Seccomp SystemCallFilter kills signal generator on PipeWire client init (RESOLVED) |
 | [F-036](defects/F-036.md) | Medium (becomes High when US-018 guest devices are deployed) | Open | VNC RFB password auth insufficient for guest device access (OPEN) |
-| [F-037](defects/F-037.md) | High | Converted to US-110 (2026-03-29) | Web UI on port 8080 has no authentication (CONVERTED) |
+| [F-037](defects/F-037.md) | CRITICAL (joint security-specialist + audio-engineer, 2026-10-24; was High) | Converted to US-110 (2026-03-29). **Gig blocker (2026-10-... | Web UI on port 8080 has no authentication (CONVERTED to US-110; CRITICAL gig blocker) |
 | [F-038](defects/F-038.md) | Medium (UI confusion, no audio impact) | RESOLVED (2026-03-27 — commits `72def21` + `afc8528`, wor... | Dashboard tab has duplicate status bar — not consolidated into persistent bar (RESOLVED) |
 | [F-039](defects/F-039.md) | Medium (cosmetic — gauge shows green/0% instead of actual load) | DEFERRED (2026-03-27 — no UI consumer for processing_load... | DSP load gauge shows 0% — FilterChainCollector hardcodes processing_load (DEFERRED) |
 | [F-040](defects/F-040.md) | High (safety-related — panic mute button silently fails) | Resolved (committed `4c80c23` 2026-03-21). Backend `audio... | Panic MUTE/UNMUTE backend endpoints missing — button silently fails (RESOLVED) |
@@ -149,7 +149,7 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-157](defects/F-157.md) | High (deployment blocker — worker had to improvise during #53 deployment) | RESOLVED (task #162 — full deploy.sh rewrite for D-040, a... | deploy.sh stale — still references CamillaDSP, missing D-040 configs and Rust binaries (RESOLVED) |
 | [F-158](defects/F-158.md) | High (deployment blocker) | RESOLVED (task #163 completed — Section 6b added to deplo... | No repeatable Rust binary deployment process (RESOLVED) |
 | [F-159](defects/F-159.md) | High (blocks owner demo validation of measurement pipeline) | RESOLVED (2026-03-27) | Measurement session fails to start in local-demo (RESOLVED) |
-| [F-160](defects/F-160.md) | High (operational — owner gets stuck in wrong mode with Mixxx still running) | VERIFIED (commits `47feb22` + `4b21c51`, 2026-03-29). QE ... | Mode restore bug — Test/Measure tabs restore Monitoring instead of previous mode (OPEN) |
+| [F-160](defects/F-160.md) | High (operational — owner gets stuck in wrong mode with Mixxx still running) | VERIFIED (commits `47feb22` + `4b21c51`, 2026-03-29). QE ... | Mode restore bug — Test/Measure tabs restore Monitoring instead of previous mode |
 | [F-161](defects/F-161.md) | Medium (usability — no recovery path without CLI knowledge) | OPEN | No mode switcher in web UI — stuck mode requires CLI workaround (OPEN) |
 | [F-162](defects/F-162.md) | Low (cosmetic — confusing but not blocking) | RESOLVED (worker-2, 2026-03-28) | Config tab quantum shows 256 preselected but actual quantum is 1024 (RESOLVED) |
 | [F-163](defects/F-163.md) | High (blocks venue workflow on Pi) | RESOLVED (worker-3 deploy.sh path fix, 2026-03-28). Root ... | Speaker/venue config empty — profiles not loaded despite YAML files deployed (RESOLVED) |
@@ -183,7 +183,7 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-194](defects/F-194.md) | Medium (operator confusion during diagnostics) | OPEN | No UI distinction between bridge disconnected and channel silent (OPEN) |
 | [F-195](defects/F-195.md) | High (wrong gain values for midrange/tweeter in 3-way configs) | RESOLVED — fix committed `6c0ea95`, Gate 1 passed (1151/1... | pw_config_generator gain staging lookup fails for 3-way roles (RESOLVED) |
 | [F-196](defects/F-196.md) | High (crashes filter generation for 3-way profiles) | RESOLVED — fix committed `6c0ea95`, Gate 1 passed (1151/1... | generate_bose_filters crashes on frequency_hz list input (RESOLVED) |
-| [F-197](defects/F-197.md) | High (wrong ramp-up target gains for 3-way — safety-critical path) | VERIFIED (commit `fa94ee5`, 2026-03-29). QE verified 2026... | speaker_routes.py _compute_target_gains wrong for 3-way profiles (OPEN) |
+| [F-197](defects/F-197.md) | High (wrong ramp-up target gains for 3-way — safety-critical path) | VERIFIED (commit `fa94ee5`, 2026-03-29). QE verified 2026... | speaker_routes.py _compute_target_gains wrong for 3-way profiles |
 | [F-198](defects/F-198.md) | Medium (3-way profiles created via UI may be treated as 2-way by pipeline) | OPEN | Profile crossover data model mismatch — UI save vs pipeline load for N-way (OPEN) |
 | [F-199](defects/F-199.md) | Low (test coverage gap — no functional regression observed) | OPEN | No E2E test for 3-way (bandpass) filter generation pipeline (OPEN) |
 | [F-200](defects/F-200.md) | Low (test coverage gap — no functional regression observed) | OPEN | No E2E test for profile activation (PW config write + target gains) (OPEN) |
@@ -191,10 +191,10 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-202](defects/F-202.md) | High (architectural gap — owner directive) | CLOSED (2026-03-28) — resolved by removal. Owner directiv... | Local demo (`nix run .#serve`) uses mock PCM bridge instead of real pcm-bridge binary (CLOSED) |
 | [F-203](defects/F-203.md) | Medium (resource leak, confuses process inspection, may exhaust PID space on long sessions) | RESOLVED (2026-03-29, commit `0c38e59` — zombie cleanup +... | local-demo.sh zombie process accumulation (~70 zombies per session) (RESOLVED) |
 | [F-204](defects/F-204.md) | Medium (gap vs owner intent: "use it like the real thing") | OPEN | Local-demo only supports measurement mode — no DJ/Live mode switching (OPEN) |
-| [F-205](defects/F-205.md) | Low (2 test failures, cosmetic) | RESOLVED (pending commit) | test_server.py title assertions outdated after branding rename (OPEN) |
+| [F-205](defects/F-205.md) | Low (2 test failures, cosmetic) | RESOLVED per original record ("pending commit"); fixing c... | test_server.py title assertions outdated after branding rename |
 | [F-206](defects/F-206.md) | Medium (2 tests dead in full suite, test-vs-implementation mismatch) | OPEN | test_measurement_integration.py — 2 GM enter-measurement tests fail (OPEN) |
 | [F-207](defects/F-207.md) | Low (systemic gap, all 5 service modules affected) | OPEN | No NixOS module integration tests (nixosTest) for any service module (OPEN) |
-| [F-208](defects/F-208.md) | Medium (safety-adjacent — headroom validation silently skipped for mid/HF channels in 3-way profiles) | RESOLVED (pending commit) | D-029 gain staging validator maps midrange/tweeter to "satellite" — skips role-specific headroom checks (OPEN) |
+| [F-208](defects/F-208.md) | Medium (safety-adjacent — headroom validation silently skipped for mid/HF channels in 3-way profiles) | RESOLVED per original record ("pending commit"); fixing c... | D-029 gain staging validator maps midrange/tweeter to "satellite" — skips role-specific headroom checks |
 | [F-209](defects/F-209.md) | P1 / High (safety-critical — both safety modules silently non-functional) | VERIFIED (2026-03-29, Worker-1) | US-044 watchdog + gain integrity assume gain builtins are separate PW nodes — both non-functional on real hardware (VERIFIED) |
 | [F-210](defects/F-210.md) | P1 / High (US-075 local-demo unusable for owner testing) | VERIFIED FIXED (2026-03-29 — QE exploratory: 18/18 pass, ... | PipeWire crashes ~20s after local-demo startup under normal web UI usage (VERIFIED FIXED) |
 | [F-211](defects/F-211.md) | High (contributes to F-210 PW crash, excessive log noise, resource waste) | VERIFIED FIXED (2026-03-29 — QE exploratory: 18/18 pass, ... | Reconciler pathological retry storm — 278 warnings in 2 seconds, no backoff (VERIFIED FIXED) |
@@ -217,6 +217,7 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-228](defects/F-228.md) | Low | RESOLVED (session 6, commit `00ff2f9` — default mode chan... | Default gm_mode hardcoded to "dj" in fallback paths — should be "standby" (RESOLVED) |
 | [F-229](defects/F-229.md) | Low | Open | "camilladsp" key name ghost in ws_monitoring.py (OPEN) |
 | [F-230](defects/F-230.md) | Medium | RESOLVED (session 6, commit `00ff2f9` — quantum change ad... | No quantum change on mode switch — DJ should be 1024 (RESOLVED) |
+| [F-231](defects/F-231.md) | — | DUPLICATE of F-226 | Duplicate of F-226 (not filed separately) |
 | [F-232](defects/F-232.md) | High (core monitoring data unreliable) | RESOLVED (session 6, commit `8962aab` — skip GM push even... | Topology endpoint returns stale/empty GM data (RESOLVED) |
 | [F-233](defects/F-233.md) | High (monitoring data goes stale without warning) | RESOLVED (session 6, commit `8962aab` — skip GM push even... | FilterChainCollector poll loop silently stops updating — push event desync (RESOLVED) |
 | [F-234](defects/F-234.md) | Medium | Open | Only 35/39 DJ links coming up in local-demo (OPEN) |
@@ -251,6 +252,7 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-263](defects/F-263.md) | Medium | RESOLVED | GM reconciler timing — rapid DJ->live switch link count drops |
 | [F-264](defects/F-264.md) | Medium | RESOLVED | Mode badge/switching browser tests fail — WebSocket relay timeout |
 | [F-265](defects/F-265.md) | Major (blocks manual testing workflow) | FIX IN PROGRESS (rework per owner feedback) | UMIK-1 sim shows no signal in test tab during measurement mode |
+| [F-266](defects/F-266.md) | unknown (reconstructed) | fixed (commit `32da863d`, 2026-04-04; landed via PR #5 gr... | /boot/firmware not marked neededForBoot in disko config |
 | [F-270](defects/F-270.md) | Medium (feature non-functional in dev/test environment) | Resolved/Fixed (PR #21) | Transfer Function tab broken in local-demo (RESOLVED) |
 | [F-271](defects/F-271.md) | High (safety — driver damage risk) | OPEN | Generate D-031 protection filter WAVs for foh-passthrough.yml |
 | [F-272](defects/F-272.md) | Medium | RESOLVED — PR #27 (await_settled) + PR #34 (xfail removal... | GM reconciler settlement relies on sleep-based polling |
@@ -269,14 +271,14 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-285](defects/F-285.md) | Medium (test infrastructure) | RESOLVED | measurement session E2E -- browser START does not transition from IDLE |
 | [F-287](defects/F-287.md) | high | fixed, awaiting verification — PR #32 merged 2026-04-07 (... | Local-demo capture-usb pcm-bridge violates mock boundary (D-057) |
 | [F-290](defects/F-290.md) | Low | OPEN — root cause corrected in `01da88fe` but xfail still... | E2E link-count assertion incorrect — DJ has more links than live |
-| [F-291](defects/F-291.md) | high (reconstructed — confirm with audio-engineer) | fixed (commit `991ff456`, 2026-04-19, PR status unknown) ... | PipeWire RT thread throttled — xruns under sustained load |
+| [F-291](defects/F-291.md) | medium (audio-engineer ruling 2026-10-24; was reconstructed as high). Conditional on the throttle/xrun evidence (F-317 AC3) and a configured watchdog (F-325). | fixed (commit `991ff456`, 2026-04-19, PR status unknown) ... | PipeWire RT thread throttled — xruns under sustained load |
 | [F-292](defects/F-292.md) | high (reconstructed — confirm with architect) | fixed (commit `991ff456`, 2026-04-19, via D-065) — Pi ver... | WirePlumber policy.standard=disabled prevents node activation and port creation |
 | [F-293](defects/F-293.md) | low (latent — currently harmless per code comment) | fixed (commit `991ff456`, 2026-04-19, PR status unknown) | GraphManager seccomp filter blocks sched_setscheduler |
-| [F-295](defects/F-295.md) | medium (reconstructed — confirm with audio-engineer) | fixed (commit `991ff456`, 2026-04-19, PR status unknown) ... | Mixxx audio clicks — JACK client threads not RT; dormant ada8200-in driver node |
+| [F-295](defects/F-295.md) | low (audio-engineer ruling 2026-10-24; was reconstructed as medium). The Live-mode mic loss is tracked separately: F-323 / US-158 (and F-328). | fixed (commit `991ff456`, 2026-04-19, PR status unknown) ... | Mixxx audio clicks — JACK client threads not RT |
 | [F-296](defects/F-296.md) | medium | open | Tests that need audio stimulus have no stimulus source in local-demo |
-| [F-297](defects/F-297.md) | medium (tracking data loss) | open | scripts/split-monoliths.py would overwrite newer per-item tracking files |
+| [F-297](defects/F-297.md) | medium (tracking data loss) | open — architect ruling 2026-10-24 (fix defined below) | scripts/split-monoliths.py would overwrite newer per-item tracking files |
 | [F-298](defects/F-298.md) | high (test defect guarding a safety contract; no known safety defect) | open | D-063 gate-closed E2E test cannot fail — gate-open regression would show green |
-| [F-299](defects/F-299.md) | medium (D-009 compliance gap; no damage risk today: overshoots are fractions of a dB and the gain nodes attenuate by 60-64 dB downstream) | open | D-009 compliance not guaranteed between bins or below 20 Hz (generator and verifier) |
+| [F-299](defects/F-299.md) | medium (D-009 compliance gap; no damage risk today: overshoots are fractions of a dB) | open | D-009 compliance not guaranteed between bins or below 20 Hz (generator and verifier) |
 | [F-300](defects/F-300.md) | low | open | Minimum-phase verifier is a heuristic proxy (90% energy / 10% peak) |
 | [F-301](defects/F-301.md) | high | open | test_full_user_journey swallows filter-generation and D-009 failures as skips |
 | [F-302](defects/F-302.md) | high | open | Mute browser E2E skips when the mute API is unavailable |
@@ -290,10 +292,25 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-310](defects/F-310.md) | medium | open | Convolver reload test skips when there are no coefficient WAVs |
 | [F-311](defects/F-311.md) | medium (X1 is the biggest silent-coverage risk; priority) | open | Dead skip guards can only hide regressions (conditions always false in repo) |
 | [F-312](defects/F-312.md) | high (CI gate integrity) | open | No central stack-availability guard — CI can go green with the real stack down |
-| [F-313](defects/F-313.md) | high (a test contradicting a safety decision stays silently "green") | open | Orphaned test suites not executed by any runner (one contradicts D-063) |
+| [F-313](defects/F-313.md) | medium, safety-adjacent (QE, 2026-10-24; PM had filed it as high) | open | Orphaned test suites not executed by any runner (one contradicts D-063) |
 | [F-314](defects/F-314.md) | CRITICAL (speaker damage risk; audio-engineer) | open — escalated to owner by audio-engineer via team-lead... | Hot venue switch with gate open applies new gains instantly, without confirmation |
 | [F-315](defects/F-315.md) | medium (audio-engineer) | open | D-063 gate-open cosine ramp collapses to an instant step |
 | [F-316](defects/F-316.md) | low (security-specialist; not blocking) | open | Lab-only static route (US-156) hardcoded into the production image |
-| [F-317](defects/F-317.md) | medium (availability; security-specialist). Fix before the next gig. | open | RT throttle disabled (sched_rt_runtime_us=-1) with no configured watchdog backstop |
-| [F-318](defects/F-318.md) | high (integrity / audio safety; security-specialist), pending evidence | open — needs Pi evidence | Non-JACK streams may auto-link straight to the USBStreamer since D-065 |
+| [F-317](defects/F-317.md) | medium (availability; security-specialist). Fix before the next gig. **Blocks the next release image** (architect + security, 2026-10-24). | open | RT throttle disabled (sched_rt_runtime_us=-1) with no configured watchdog backstop |
+| [F-318](defects/F-318.md) | high, rising to CRITICAL if the Pi test confirms the USBStreamer is the default sink (joint position of audio-engineer and security-specialist, 2026-10-24) | open — needs Pi evidence | Non-JACK streams may auto-link straight to the USBStreamer since D-065 |
 | [F-319](defects/F-319.md) | unknown (suspected, unverified) | open — needs verification (CM OBSERVE session) | level-bridge hw-in still targets ada8200-in, removed by F-295 (suspected) |
+| [F-320](defects/F-320.md) | high (audio-engineer). Becomes a remote path when combined with F-037 (see F-037). | open — routed to architect for design. Sub-item E needs a... | D-063 gate state is not authoritative — gate can read CLOSED while audio is live |
+| [F-321](defects/F-321.md) | high, affects all venues (audio-engineer) | open | Venue `coefficients` field is not enforced at runtime — all venues share the last-deployed WAVs (dirac on a fresh image) |
+| [F-322](defects/F-322.md) | high (audio-engineer) | open | Per-speaker thermal / excursion limits are not enforced on runtime gain |
+| [F-323](defects/F-323.md) | high for Live-mode readiness (audio-engineer). No safety impact: UMIK-1 measurement uses a separate device. | open — fix is US-158 | No vocal-mic capture path in Live mode (production image) |
+| [F-324](defects/F-324.md) | high (QE): measurement-mode switching is on the safety path | open | graph_manager_client.py (measurement → GM mode switching) has zero tests |
+| [F-325](defects/F-325.md) | medium. Fix and test before the next gig (audio-engineer, security-specialist). | open | Hardware watchdog not configured — no backstop for RT lockups |
+| [F-326](defects/F-326.md) | medium (tooling; blocks Rule 13 PR flow and PR-state verification) | open — owner action | Invalid GITHUB_TOKEN in environment blocks all gh/PR operations |
+| [F-327](defects/F-327.md) | low (tracking integrity) | open | Defect IDs with no record anywhere (F-267–F-269, F-286, F-288, F-289, F-294) |
+| [F-328](defects/F-328.md) | high (Live-mode readiness; split from F-295 per architect ruling 2026-10-24) | open — architect question must be answered before any Liv... | ada8200-in capture node no longer deployed — Live-mode ADA8200 input path undefined |
+| [F-329](defects/F-329.md) | medium (process; quality-engineer) | open | CI keeps no durable test evidence — Rule 13 "CI green" not auditable after log expiry |
+| [F-330](defects/F-330.md) | medium (process; quality-engineer, advocatus-diaboli) | open | CI paths filter is an allowlist — unknown paths skip the tests |
+| [F-331](defects/F-331.md) | low (CPU budget; needs Pi measurement) | open — owner of analysis: architect | 16k-tap dirac on ch 5-8 roughly doubles convolver CPU load |
+| [F-332](defects/F-332.md) | low (misleading log message; behaviour is correct) | open | audio_mute.py logs "using 2-way defaults" when falling back to the 8-name list |
+| [F-333](defects/F-333.md) | high (process; Rule 13 gate unmeetable through CI) | open — owner decision O-26 | T3 (SD image build) not part of PR CI — no PR can meet "T1+T2+T3 green" |
+| [F-334](defects/F-334.md) | medium (mock-boundary divergence; F-318 cannot be reproduced locally) | open | local-demo still disables WirePlumber policy.standard — diverges from production (D-065) |

@@ -7,12 +7,17 @@ directories. Their index files are generated from the per-item files
 (see F-297: do NOT run `scripts/split-monoliths.py`).
 
 > **Re-sync caveats (2026-10-24).**
-> - PR state is **UNVERIFIED**. `gh` is unauthenticated for github.com, so
->   PR merges are known only from merge commits on main. Rule 13 approvals
+> - PR state: `gh` works again (2026-10-24, change-manager). PRs #13 and
+>   #22 are confirmed MERGED on GitHub (2026-04-05 `07313172`, 2026-04-06
+>   `4bd79a7e`). Other PR states are still taken from merge commits on main.
+>   Open on GitHub and untracked until now: #40 (sprint/session-16, CI
+>   24689960850 green) and #36 (F-270 audio-stimulus fixture); see O-21. Rule 13 approvals
 >   and owner acceptance for PRs #2–#35 are **not recorded** in tracking.
 > - `c34f7da7` and `991ff456` (2026-04-19) are single-parent commits on
->   origin/main with no PR number, so PR status is unknown. If they were
->   direct pushes, Rule 13 was bypassed.
+>   origin/main with no PR merge (change-manager, GitHub): direct pushes,
+>   Rule 13 bypassed (O-21).
+> - April CI logs have expired (HTTP 410). Items verified only by CI logs
+>   stay "awaiting verification" until a fresh Gate 1 run on main (F-329).
 > - Local main has an unpushed commit `95306f66` (PreCompact hook schema
 >   fix, 2026-10-24) made directly on main without a PR. It is waiting
 >   for an owner decision.
@@ -37,20 +42,55 @@ Session 15 focus, pending owner direction:
 
 ### Proposed work order (2026-10-24; worker spawning is the owner's call)
 
-1. **F-314** (critical safety; fix in GM, architect picks mechanism). Note
-   it touches gate/venue logic, so it must carry **F-298 Part A** with it
-   or follow it (AE merge condition).
-2. **F-298 Part A** (A1–A7) — D-063 gate test integrity. Unblocks US-113
-   and US-151 acceptance. A7 replaces the orphaned conf test (F-313).
-3. **F-315** (gate ramp is a step) — gate logic, after F-298 Part A.
-4. **F-290** (xfail → budget back to 5).
-5. **F-296** (stimulus fixture; unblocks F-298 Part B, F-301-adjacent work).
-6. **F-262 diagnosis** (AE + architect spec; covers F-299, F-308).
-7. **F-298 Part B**.
-8. **F-312** (REQUIRE_STACK guard) + **F-301/F-302** (high skip defects),
-   then F-303–F-311, then **US-157** lint. F-313 orphan wiring alongside.
-9. Pi evidence via CM sessions (amps OFF): **F-318** (WP auto-link), F-316
-   boot check, F-319 level-bridge, F-317 watchdog.
+1. **F-314 via US-159** (critical; GM gate module, design agreed by architect, AE, UX). It
+   touches gate/venue logic, so it must carry **F-298 Part A** with it or
+   follow it (AE merge condition). Part B must not delay it.
+2. **F-298 Part A** (A1–A7): D-063 gate test integrity. Unblocks US-113 and
+   US-151 acceptance. A7 absorbs the orphaned conf test (F-313).
+3. **F-320** (gate state not authoritative). Architect designs it. Sub-item
+   E needs the owner's restart decision.
+4. **F-315** (gate ramp is a step).
+5. **F-321 + F-322** (venue coefficients and per-speaker limits not
+   enforced). Before any CHN-50P use.
+6. **F-290** (xfail; brings the budget back to 5).
+7. **F-296** (stimulus fixture; unblocks F-298 Part B).
+8. **F-262 diagnosis** (AE + architect spec; covers F-299, F-308).
+9. **F-298 Part B**.
+10. Test integrity: **F-312**, **F-301/F-302**, **F-324**, F-313 wiring,
+    F-303–F-311, then **US-157** lint.
+11. Pi evidence via CM sessions (amps OFF): **F-318** (WP default sink),
+    F-321 (which coefficient files are on the Pi), F-316 boot check,
+    F-319 level-bridge, **F-325/F-317** watchdog configuration and lockup
+    test.
+12. **F-323 / US-158** (Live-mode mic). Needed before any Live gig.
+- **Gig blockers, independent of the order above:** F-037/US-110 (on
+  any shared network), F-314, F-320, F-325 and F-321/F-322 (CHN-50P rig).
+- **Owner action:** F-326 (invalid GITHUB_TOKEN).
+
+### Interim operating rules (2026-10-24; pending owner acceptance)
+
+These apply while the amps are on, until the referenced defects are fixed.
+safety.md carries the canonical wording (technical-writer, branch
+`docs/safety-d063-gate`).
+
+1. Close the gate before switching venues (F-314).
+2. Play nothing on the Pi except Mixxx, Reaper and the signal generator
+   (F-318).
+3. Don't open the gate on `foh-passthrough` (F-271, F-314).
+4. Don't run the CHN-50P rig until its 200 Hz filter files are verified on
+   the Pi (F-321, F-322).
+5. After a watchdog unlatch or any GraphManager restart, treat every
+   output as live. Press Close Gate before assuming silence (F-320).
+6. Never use UNMUTE. To recover from MUTE, press Close Gate, then Open Gate
+   (F-320).
+7. **Hard rule:** nothing else may reach the Pi. Keep it off shared or
+   venue WiFi, or block port 8080 to every device except the engineer's
+   (F-037).
+
+Also in safety.md (AE, for HP/IEM, until a level limit exists): before the
+gate opens in Live mode, the singer's earpieces are out or the IEM pack is
+at minimum. Levels come up only with the singer's agreement. No gain
+increase on ch 5-8 without owner confirmation (S-012).
 
 ## Active Work
 
@@ -72,12 +112,12 @@ Session 15 focus, pending owner direction:
 | US-132 | draft (epic) | Network management | DRIFT: release workflow committed without decomposition (`5279649e`, `26d77f2c`). |
 | US-072 | IMPLEMENT (HW validated) | NixOS reproducible build | Unchanged since session 9. |
 | US-112 | REVIEW (Rule 13 passed) | PW convolver hot-reload patch | AD-R13-003/004 open. Patch regen for PW 1.6.2 status unknown. |
-| US-115 | IMPLEMENT (Phase 0 done) | 8ch filter-chain convolver (D-063) | Story file still says `ready`, which is inconsistent. |
-| US-123 | IMPLEMENT (done) | GM deterministic boot state | Story file still says `draft`, which is inconsistent. |
-| US-125 | IMPLEMENT | Explicit mode arming | Session 9 worker state unknown. Story file says `draft`. |
-| US-126 | IMPLEMENT (Rule 13 conditional) | Persistent audio gate banner | QE conditions open. Story file says `draft`. |
+| US-115 | IMPLEMENT (Phase 0 done) | 8ch filter-chain convolver (D-063) | Story file updated 2026-10-24. Integration testing, review and acceptance not recorded. IEM routing conflict needs an owner decision. |
+| US-123 | IMPLEMENT (done) | GM deterministic boot state | Story file updated 2026-10-24. Rule 13/acceptance not recorded. Related: F-320 E. |
+| US-125 | IMPLEMENT | Explicit mode arming | Session 9 verification outcome not recorded. Story file updated 2026-10-24. |
+| US-126 | IMPLEMENT (Rule 13 conditional) | Persistent audio gate banner | QE conditions open. E2E blocked by F-305. The banner can show a wrong state (F-320). |
 | US-114 | TEST (Pi validated) | Minimal kernel config | AC #6, #7, #9 open. |
-| US-119 | IMPLEMENT (partial) | Image size tier 3 | Story file says `draft`. |
+| US-119 | IMPLEMENT (partial) | Image size tier 3 | libcamera disabled. Mesa override present, AC check pending. Story file updated 2026-10-24. |
 | US-098 | TEST | Room correction pipeline verification | P1/P2 41/41 pass (session 9). |
 | US-090, US-092–US-097 | REVIEW (Gate 3) | Seven web UI stories | Awaiting owner re-acceptance (since session 9). |
 | US-088 | REVIEW | Direct WS from Rust | Owner Pi session. |
@@ -92,28 +132,40 @@ Session 15 focus, pending owner direction:
 | US-110 | IMPLEMENT | Web UI passkey auth (F-037) | 17 tasks; progress since session 4 unknown. |
 | US-111 | IMPLEMENT 8/13 | Local-demo topology redesign | AC #8, #9 open. |
 
-**Known tracking inconsistency:** several story files (US-115, US-119,
-US-123, US-125, US-126) carry older statuses than this table, which
-reflects the session 9 status.md. Each story owner must confirm before
-the files are changed.
+Story files US-115, US-119, US-123, US-125 and US-126 were brought in
+line with this table on 2026-10-24 (owner directive).
 
-### Owner-Blocking Items
+### Owner Decisions Pending (recorded 2026-10-24 so they survive the session)
 
-| Item | Blocked on |
-|------|-----------|
-| `95306f66` unpushed direct-to-main commit | Owner decision: push, PR, or drop |
-| `gh` authentication for github.com | Owner re-auth (blocks PR verification + opening PRs) |
-| Retroactive Rule 13 / acceptance for PRs #2–#35, `991ff456`, `c34f7da7` | Owner to decide scope (accept as-is vs retroactive review) |
-| D-065 (reconstructed) | Owner confirms the decision was taken. Security: HIGH residual risk (F-318) pending Pi evidence |
-| **F-314 hot venue switch (CRITICAL)** | Escalated by AE; owner to prioritise fix. Interim: never change venue with gate open |
-| HP/IEM chain (ch 5-8, unity gain) | Owner decision after measurement: per-channel soft cap or limiter (AE). Interim procedural rules in safety.md (TW) |
-| US-155 AC3 sub D-031 exception | Owner confirms "owner directive" (then file decision) or require subsonic HPF |
-| US-158 priority | Owner confirms intent/priority (PO recommends high) |
-| US-090/092–097 re-acceptance | Owner (pending since session 9) |
-| US-088, US-084, US-044, US-077, US-063 Pi work | Owner Pi session |
-| US-079–082 re-validation | Owner local-demo test |
-| US-089 acceptance | Owner prioritization + Pi deploy |
-| US-099–104 (venue workflow) | Owner prioritization |
+| # | Decision | Context / recommendation |
+|---|----------|--------------------------|
+| O-1 | Accept interim operating rules 1–7 (above) | AE/security. Canonical text in safety.md (TW branch `docs/safety-d063-gate`). |
+| O-2 | Approve read-only Pi check (CM OBSERVE, amps OFF) | Would cover: which gate/venue code is deployed, the WP default sink (F-318), the hw-in level-bridge (F-319), which coefficient files are on the Pi (F-321), and the route boot behaviour (F-316). F-318 needs GM stopped plus a test stream, so it needs a CHANGE session. |
+| O-3 | GitHub auth route (F-326) | `gh` works again for change-manager (2026-10-24; PRs #41-#43 opened). Agent sessions still get 401 from the invalid `GITHUB_TOKEN` (AE, AD). Owner: remove/refresh the variable, or accept CM-supplied diffs as the review route. |
+| O-4 | `95306f66` (unpushed direct commit to main) | Branch + PR, or drop. |
+| O-5 | Retroactive review of `991ff456` and `c34f7da7` | AE and security reviews done 2026-10-24 (F-316–F-318, F-320–F-325). The full Rule 13 set is not done. |
+| O-6 | The 27 PRs merged without recorded reviews (#2–#35) | Review now, or accept as-is. |
+| O-7 | D-065: confirm the decision was taken | Joint AE + security: HIGH, CRITICAL if the USBStreamer is the default sink (F-318). |
+| O-8 | Worker spawning | Proposed start: F-314 via US-159 (gate module), with F-298 Part A (work order above). Also needed for QE's fresh Gate 1 run on main. |
+| O-9 | ~~Scope of the playwright MCP removal (PR #43, AD-43-1)~~ **RESOLVED 2026-10-24:** owner: "playwright: just the broken one in this project". `.mcp.json` only; the settings.json entry, wrapper and devShell package stay (US-109 kept). | #43 removes the `.mcp.json` entry only. `.claude/settings.json` `mcpServers.playwright`, `scripts/playwright-mcp.sh` and the `flake.nix:287` devShell package remain. Remove those too, or keep? Confirm the user-level playwright MCP as US-109's replacement. (The owner's local `.mcp.json` edit was moved onto #43 as `e7a728af` at team-lead's request; disclosed to the owner by change-manager. Main is clean.) |
+| O-10 | IEM routing: through the gate/convolver, or bypassing it | US-115 AC #4 and D-063 route HP/IEM through the convolver and gate. CLAUDE.md says IEM bypasses the convolver. The two conflict. |
+| O-11 | HP/IEM level limit (ch 5-8, unity gain) | Measure the ADA8200 → IEM transmitter → earpieces chain first, then decide on a per-channel soft cap or limiter (AE). |
+| O-12 | GM restart behaviour (F-320 E) | Zero gains on start (safe, but a crash silences the show), or adopt state (read back the Mults and report OPEN if any is above 0). AE first recommended adopting; the agreed US-159 design (G5/G5a, architect + AE + UX) zeroes on start. Owner to confirm. |
+| O-13 | PO Q1: Ultimax sub D-031 exception (US-155 AC3) | AE checked it numerically: ~12 mm against 28 mm Xmax at full PA4504 output. If confirmed, file a D-031 amendment. Otherwise add a subsonic HPF. |
+| O-14 | PO Q2: is the CHN-50P + Ultimax rig a real gig setup, and should it get full Rule 13 now? | PO recommends yes (7 W driver). |
+| O-15 | PO Q3: purpose and consumers of the US-156 route; production or dev-only? | PO and security recommend dev-only (F-316). |
+| O-16 | PO Q4: US-158 Live-mode mic, story and priority | PO and AE recommend high (F-323 blocks Live gigs). |
+| O-17 | F-037 / US-110 as a gig blocker | Security + AE: CRITICAL. Auth is off in the production image. Unblock by ANY of: auth enforced and verified on the Pi, 8080 firewalled to the engineer device, or never on a shared network. |
+| O-18 | US-090/092–097 re-acceptance | Pending since session 9. |
+| O-19 | US-088, US-084, US-044, US-077, US-063 Pi work | Owner Pi session. |
+| O-20 | US-079–082 re-validation; US-089 acceptance; US-099–104 prioritization | Unchanged since session 9. |
+| O-21 | Direct pushes and untracked PRs | `c34f7da7` and `991ff456` reached main without a PR (Rule 13 bypass). PRs #40 (sprint/session-16) and #36 (F-270) are open and untracked: review, merge path, or close? |
+| O-22 | ~~Does a CI paths-filter skip count as Rule 13 green?~~ **RESOLVED 2026-10-24:** owner: "Reviews as per team orchestration protocol". A skip is NOT green; T1-T3 must actually run on each PR head (CM + QE arranging runs). No author exemption: the TW gives an explicit verdict on their own PR #42. | T1-T3 were skipped on PRs #41-#43. QE: yes, only if QE confirms per PR (with grep evidence) that no changed file is a build or test input. AD: prefers the real fix, F-330 (denylist). If accepted, update CLAUDE.md Rule 13 and testing-process.md. |
+| O-23 | Dev disk full | **RESOLVED 2026-10-24:** owner cleared caches, ~6.1 GB free. |
+| O-24 | Hardware watchdog (F-325, F-317) | AE: not a speaker-safety backstop; a watchdog reboot resets USB and causes a transient with amps on. Worth it for availability (gate closed on boot). Owner to accept the tradeoff knowingly. |
+| O-25 | Authoritative state-format spec | `.claude/team/protocol/state-format.md` dropped the Phase column from the story table (l.91-93); the canonical `team-protocol/project-state/format.md` has it, and status.md uses it. TW recommends re-syncing the local copy. |
+| O-26 | T3 not in PR CI (F-333) | (a) manual T3 dispatch per PR; (b) T3 back in PR CI for `nix/`, `flake.*`, `configs/` PRs; (c) reword Rule 13 so T3 is a release gate. QE recommends (b), with (a) as the interim. Until decided, no PR can meet T1+T2+T3 green. |
+| O-27 | Gate ramp curve (F-315, D-063 amendment) | AE's 30 dB/s dB-linear slew (2 s full open) vs D-063's 3 s cosine implemented over real time. AE accepts either; minimum: wall-clock rate limit, per-tick cap, generation check, >= 2 s. |
 
 ## Component Status
 
@@ -164,19 +216,34 @@ the files are changed.
 
 | ID | Severity | Summary |
 |----|----------|---------|
+| **F-320** | High | Gate can read CLOSED while audio is live (watchdog unlatch, GM restart, UI UNMUTE). |
+| **F-321** | High | Venue coefficients not enforced; dirac on a fresh image; shared filenames across venues. |
+| **F-322** | High | No per-speaker power/excursion limit on runtime gain (7 W CHN-50P can get 450 W). |
+| **F-323** | High (readiness) | No vocal-mic capture in Live mode. Fix: US-158. |
+| **F-324** | High | `graph_manager_client.py` has zero tests. |
+| **F-328** | High (Live readiness) | ada8200-in no longer deployed; how Live mode gets ADA8200 ch 1/2 is unanswered (architect). Split from F-295. |
 | **F-314** | **Critical** | Venue switch with gate open: instant +60/+64 dB, no ramp/confirmation. Exists on main (US-113). AE veto on gate/venue/first-boot PRs. |
 | F-187 | Critical | Noise on 4 channels + broken spectrum after multiple PW restarts. Blocked — needs Pi at venue. |
 | F-271 | High | D-031 protection WAVs for ch 1-4 missing (blocks US-113 acceptance). |
 | F-298 | High | D-063 gate-closed test cannot fail. Part A is AE merge condition; blocks US-113/US-151 acceptance. |
-| F-318 | High | Since D-065, non-JACK streams may auto-link straight to USBStreamer (security). Needs Pi evidence. |
-| F-313 | High | Orphaned test suites; one contradicts D-063. Architect ruling: wire/migrate/port. |
+| F-318 | High → Critical if confirmed | Since D-065, non-JACK streams may auto-link straight to USBStreamer (joint AE + security). Needs Pi evidence. Non-reactive layer required. |
+| F-313 | Medium | Orphaned test suites; one contradicts D-063. Architect ruling + QE AC: wire/migrate/port. |
 | F-312 | High | No central REQUIRE_STACK guard; CI can go green with stack down. |
 | F-301, F-302 | High | Skips swallow D-009 / mute failures. |
 | F-287 | High | Fixed by PR #32. Two gaps before VERIFIED (node name ruling, pinning test). |
-| F-291 | High (reconstructed) | PW RT throttle / FIFO not applied. Fixed on main (`991ff456`), Pi verification unrecorded. Claimed security approval NOT confirmed; retroactive review: LOW + F-317. |
+| F-291 | Medium (AE ruling) | PW RT throttle / FIFO not applied. Fixed on main (`991ff456`), Pi verification unrecorded. Conditional on throttle/xrun evidence + configured watchdog. Claimed security approval NOT confirmed; retroactive review: LOW + F-317. |
 | F-292 | High (reconstructed) | WP policy.standard=disabled broke node activation. Fixed via D-065, Pi verification unrecorded. |
 | F-315 | Medium | D-063 gate-open ramp collapses to an instant step. |
-| F-317 | Medium | RT throttle off with no configured watchdog. Fix before next gig. |
+| F-317 | Medium | RT throttle off with no configured watchdog. Revert to bounded value; blocks next release image (architect + security). |
+| F-325 | Medium | Hardware watchdog not configured (BCM2835 failed 2/11). Fix + lockup test before next gig. |
+| F-326 | Medium | Invalid `GITHUB_TOKEN` blocks all PRs (owner action, O-3). |
+| F-327 | Low | Defect IDs with no record: F-267–269, F-286, F-288, F-289, F-294. |
+| F-329 | Medium | CI keeps no durable test evidence (junit / -rs artifacts). |
+| F-330 | Medium | CI paths filter is an allowlist; unknown paths skip T1-T3 (O-22: a skip is not green). |
+| F-333 | High | T3 (SD image) not in PR CI; no PR can meet T1+T2+T3 green (O-26). |
+| F-334 | Medium | local-demo still disables WP policy.standard; diverges from production (D-065), F-318 untestable locally. |
+| F-331 | Low | 16k-tap dirac on ch 5-8 ~doubles convolver load; BM-2 rerun at 8ch first (architect). |
+| F-332 | Low | `audio_mute.py:46` misleading log message. |
 | F-299 | Medium | D-009 not guaranteed between bins / below 20 Hz (generator + verifier). Joint fix with F-262. |
 | F-303–F-311 | Medium | Skip-audit groups and dead skip guards. |
 | F-262 | Medium | 2 xfails. Possible real min-phase filter-gen bug (architect ruling). Highest product risk among the xfails. |
@@ -184,7 +251,7 @@ the files are changed.
 | F-297 | Medium | `split-monoliths.py` would overwrite newer tracking files. Do not run. |
 | F-272 | Medium | RESOLVED (PRs #27, #34). VERIFIED pending CI log. |
 | F-290 | Low | Test assertion bug, xfail still present (architect priority 1). |
-| F-037 | High | Web UI no auth — converted to US-110 (ready, blocked on D-060 implementation) |
+| F-037 | **Critical** (security + AE) | Web UI no auth (auth off in production image) — US-110. **Gig blocker** on any shared network: remote unauthenticated driver damage via F-314/F-320/F-322. Interim rule 7, O-17. |
 | F-222 | High | Zombie process accumulation in container dev environment (PID 1 = sleep infinity) |
 | F-244 | High | All entity DELETE buttons in config tab lack confirmation dialogs. Cross-cutting UX (US-089/US-093). |
 | F-245 | High | Measurement error UI shows raw Python/NumPy exception. Overlaps F-235. |
@@ -222,7 +289,7 @@ the files are changed.
 |--------|-------|
 | Commits on main since 2026-04-04 | 185 (first-parent: 27 PR merges, 10 direct commits 2026-04-04, 2 single-parent commits 2026-04-19, 1 unpushed local) |
 | Total stories filed | 158 (US-155/156 written retroactively, US-157/158 new, 2026-10-24) |
-| Total defects filed | F-319 highest. Gaps with no record: F-266–F-269, F-286, F-288, F-289, F-294 (plus older historical gaps) |
+| Total defects filed | F-334 highest. Gaps with no record: F-267–F-269, F-286, F-288, F-289, F-294, tracked as F-327 (plus older historical gaps). F-266 reconstructed from `32da863d` |
 | Total decisions | D-065 highest (D-065 reconstructed, needs owner confirmation; D-064 DRAFT) |
 | Active xfails | 6 (limit 5) |
 | PW convolver CPU (q1024 / q256) | 1.70% / 3.47% (PW 1.4.9 measurements; not re-measured on 1.6.2) |
@@ -283,6 +350,18 @@ through D-065). Most significant recent decisions:
   on F-291, F-292, F-293, D-065: claimed F-291/F-293 approvals are NOT
   confirmed (F-293 approved retroactively today).
 - ID gap F-294 confirmed: no record anywhere.
+- Third commit (owner directive "update any outdated documentation or
+  project state; track all issues"): F-266 reconstructed; F-320–F-327
+  filed; AE retroactive reviews recorded (US-155, F-291, F-295, D-065/F-318);
+  F-313 detailed with QE AC; F-037 marked as a gig blocker; stale story
+  files US-115/119/123/125/126 updated; interim operating rules 1–7 and all
+  owner-pending decisions (O-1–O-27) recorded in this file. Review input
+  from the Rule 13 round on PRs #41-#43 recorded: F-037 CRITICAL, F-297
+  ruling and D-032 restore, F-295 split (F-328), F-317 analysis, US-157 AC
+  rewrite, US-159 gate-module story (architect + AE + UX design), F-328–F-332
+  filed, US-109 kept (O-9), CI-evidence gap (F-329/F-330), T3 gap (F-333),
+  local-demo WP divergence (F-334); owner rulings O-9, O-22, O-23 recorded;
+  AE severity rulings F-291 (medium), F-295 (low), F-299 rationale.
 - Status lines updated with merge evidence: US-113, US-120, US-128,
   US-131, US-140, US-142–US-154, US-132, F-256, F-262, F-272, F-287,
   F-290.
@@ -290,14 +369,15 @@ through D-065). Most significant recent decisions:
 
 ### Open follow-ups
 
-- PO: review US-157 AC.
-- AE: retroactive reviews of US-155 (first), F-291, F-295, D-065; F-318
-  assessment.
-- Architect: decide the F-297 fix. Confirm whether F-295 is one defect or
-  two. Rule on F-287 node name (D-057). Pick the F-314 mechanism.
-- QE: CI-log evidence for US-142–149, F-256, F-272 (needs CM).
-- CM (Pi OBSERVE/CHANGE, amps OFF): F-318 evidence, F-316 boot check, F-319.
-- Owner: `gh` re-auth, `95306f66`, retroactive review scope, D-065.
+- Done 2026-10-24: US-157 AC review (PO, architect, QE); F-297 ruling;
+  F-295 split (F-328); F-314 mechanism (US-159).
+- Architect: rule on F-287 node name (D-057); F-321 vs F-271 relation;
+  answer the F-328 Live-input question; F-331 analysis.
+- QE: fresh Gate 1 run on current main with `-rs -rx` output (F-256, F-272,
+  US-142–151); needs a worker (O-8).
+- CM (Pi OBSERVE/CHANGE, amps OFF, needs O-2): F-318 evidence, F-316 boot
+  check, F-319, F-321, F-328.
+- Owner: decisions in "Owner Decisions Pending" above.
 
 ## Session 9 Summary (2026-04-02)
 

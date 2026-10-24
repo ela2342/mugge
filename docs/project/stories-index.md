@@ -116,24 +116,24 @@ Generated from the per-item files in `stories/` (the source of truth). Do NOT ru
 | [US-106](stories/US-106.md) | draft (2026-03-28) | GraphManager Reconciler — Automated Link Topology |
 | [US-107](stories/US-107.md) | draft (2026-03-28) | GM Runtime Layout Reconfiguration via RPC |
 | [US-108](stories/US-108.md) | DRAFT (scoping only, NOT scheduled for delivery. Owner re... | Remove WirePlumber — GraphManager Absorbs Device Activation |
-| [US-109](stories/US-109.md) | DONE (Accepted 2026-03-29. AC #1-4 all done, DoD 3/3. QE ... | Playwright MCP Integration for Agent-Driven Browser Testing |
+| [US-109](stories/US-109.md) | DONE (accepted 2026-03-29). **Owner ruling 2026-10-24 (O-... | Playwright MCP Integration for Agent-Driven Browser Testing |
 | [US-110](stories/US-110.md) | IMPLEMENT (session 4 — architect decomposed 17 tasks) | Web UI Passkey Authentication |
 | [US-111](stories/US-111.md) | IMPLEMENT (session 4 — architect decomposed 13 tasks afte... | Local-Demo PipeWire Graph Topology Redesign |
 | [US-112](stories/US-112.md) | REVIEW (code complete — C patch, NixOS overlay, flake out... | PipeWire Filter-Chain Convolver Hot-Reload Patch |
 | [US-113](stories/US-113.md) | REVIEW — PR #22 merged to main 2026-04-06. Rule 13 approv... | First-Boot Active Config and FoH Passthrough Profile |
 | [US-114](stories/US-114.md) | in-progress (IMPLEMENT — code done, heading to TEST) | Minimal Kernel Config for Audio Workstation |
-| [US-115](stories/US-115.md) | ready | 8-Channel Filter-Chain Convolver (D-063) |
+| [US-115](stories/US-115.md) | IMPLEMENT — Phase 0 committed (`8f42b8c`, session 8): 8ch... | 8-Channel Filter-Chain Convolver (D-063) |
 | [US-116](stories/US-116.md) | ready | Per-Channel Time Delay Measurement and Compensation |
 | [US-117](stories/US-117.md) | draft | Tier 1 — Trivial Image Size Reductions |
 | [US-118](stories/US-118.md) | draft | Tier 2 — Reaper Closure Optimization |
-| [US-119](stories/US-119.md) | draft | Tier 3 — Build-Time Overrides for Mesa and PipeWire |
+| [US-119](stories/US-119.md) | IMPLEMENT (partial) — libcamera disabled (`1f3e865`, sess... | Tier 3 — Build-Time Overrides for Mesa and PipeWire |
 | [US-120](stories/US-120.md) | REVIEW — PR #11 merged to main 2026-04-05. Rule 13 approv... | Real-Time Transfer Function Measurement with Coherence |
 | [US-121](stories/US-121.md) | draft | Simultaneous Multi-Channel Delay Measurement |
 | [US-122](stories/US-122.md) | draft | Unified Real-Time Measurement Display |
-| [US-123](stories/US-123.md) | draft | Deterministic Boot State |
+| [US-123](stories/US-123.md) | IMPLEMENT (implementation complete per session 9, `6ef8f9... | Deterministic Boot State |
 | [US-124](stories/US-124.md) | draft | First-Boot Experience |
-| [US-125](stories/US-125.md) | draft | Explicit Mode Arming |
-| [US-126](stories/US-126.md) | draft | Persistent Audio Gate Banner |
+| [US-125](stories/US-125.md) | IMPLEMENT — in session 9 a worker was verifying the exist... | Explicit Mode Arming |
+| [US-126](stories/US-126.md) | IMPLEMENT (Rule 13 conditional per session 9; QE conditio... | Persistent Audio Gate Banner |
 | [US-127](stories/US-127.md) | draft | Runtime Filter Coefficient Switching (D-053) |
 | [US-128](stories/US-128.md) | REVIEW — PR #2 (PipeWire 1.6.2) merged to main 2026-04-04... | Upgrade PipeWire to 1.6.2 (Latest Stable) |
 | [US-129](stories/US-129.md) | BACKLOG | NixOS VM Smoke Tests in CI |
@@ -164,5 +164,6 @@ Generated from the per-item files in `stories/` (the source of truth). Do NOT ru
 | [US-154](stories/US-154.md) | IMPLEMENT — partly delivered by F-284 (`cda8f959`, PR #30... | Reclassify 57 Mislabeled E2E Tests to service-integration |
 | [US-155](stories/US-155.md) | in-review (retroactive; code on main since `c34f7da7`, 20... | Markaudio CHN-50P + Ultimax UMII18-22 Venue Configuration |
 | [US-156](stories/US-156.md) | in-review (retroactive; code on main since `991ff456`, 20... | Static Route from Pi to Lab VM Subnet |
-| [US-157](stories/US-157.md) | draft (architect ruling 2026-10-24; PO to review AC wording) | Mechanical Test Anti-Pattern Lint in test-unit |
+| [US-157](stories/US-157.md) | draft (architect ruling 2026-10-24; AC reworded by PO, AC... | Mechanical Test Anti-Pattern Lint in test-unit |
 | [US-158](stories/US-158.md) | draft. Owner to confirm intent and priority (PO recommend... | Live-Mode Mic Input Capture (F-295 follow-up) |
+| [US-159](stories/US-159.md) | draft. Design agreed by architect, audio-engineer and UX ... | GraphManager Gate Module — Single Owner of All Gain Writes |
