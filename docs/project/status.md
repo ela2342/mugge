@@ -129,7 +129,8 @@ safety.md §10 carries the canonical wording (technical-writer, branch
 numbers are given in brackets. Where a status.md rule is stricter or not
 yet in safety.md (rules 9-12), the stricter rule applies (AD).
 
-1. Close the gate before switching venues (F-314) [Rule 3].
+1. Close the gate before switching venues (F-314) [Rule 3], and before
+   every mode change (F-359; PO, AE; not yet in safety.md).
 2. Play nothing on the Pi except Mixxx, Reaper and the signal generator,
    and keep the amps off during any GraphManager restart (F-318) [Rule 9].
 3. Don't open the gate on `foh-passthrough` (F-271, F-314) [Rule 2].
@@ -292,7 +293,7 @@ and the active work (#41, #45, #46, the US-163 branch) already use. PO
 ruling (2026-10-24): main plus the active PRs are canonical; nothing
 changes today. If #40 is revived, its US-157..168, F-296 (and any
 T-IDs) must be renumbered in its rebase, from the next free IDs at
-that time (currently US-171, F-359, D-068). Until then nothing new is
+that time (currently US-171, F-360, D-068). Until then nothing new is
 allocated in US-166..168.
 
 - F-292: not a collision. The same defect; merged into one record (PM).
@@ -435,7 +436,8 @@ connected).
 | F-330 | Medium | CI paths filter is an allowlist; unknown paths skip T1-T3 (O-22: a skip is not green). |
 | F-333 | High | T3 (SD image) not in PR CI; no PR can meet T1+T2+T3 green (O-26). |
 | **F-335** | **Critical** | CI T1 fails on main before any test runs (`src/web-ui` not found in flake source). Blocks every merge, incl. #41-#43 (O-22). |
-| F-358 | Unrated (architect, AE) | Three fixes in #40's original records are missing on main: F-291's session 16 RT fix, F-295's `period-num` 5, D-065's convolver `node.always-process`. Static comparison only. |
+| F-359 | High (AE) | GM `set_mode` re-links mid-stream with the gate Open: step discontinuities into the amps, a different IEM feed at level (F-342). Fix US-159 G15; interim rule 1. |
+| F-358 | Medium (architect, AE; High if US-163 AC13 fails) | Three fixes in #40's original records are missing on main. RT fix: measure in AC13, then a separate port PR; `period-num` 5: US-164; `node.always-process`: rejected for now. Blocks gig-capable images (security). |
 | F-357 | High (QE) | A skipped `test-and-build` counts as CI green: every green run since 2026-04-20 was docs-only, so main has had no real T1 since. Either a skip satisfies branch protection or the job is not required (worker-2 to state). |
 | F-334 | Medium | local-demo still disables WP policy.standard; diverges from production (D-065), F-318 untestable locally. |
 | F-331 | Low | 16k-tap dirac on ch 5-8 ~doubles convolver load; BM-2 rerun at 8ch first (architect). |
@@ -702,7 +704,10 @@ through D-065). Most significant recent decisions:
   (owner: docs-only PRs exempt from CI) and F-357 rescoped; O-32 and
   rule 12(b) HP/IEM amps (AE); O-36 wording (security); F-355 (g)
   answered (AE); O-8 staleness (QE); #10 summary (UX, AD L3);
-  merge-order head; #47 follow-ups; provenance closed (CM).
+  merge-order head; #47 follow-ups; provenance closed (CM); F-358
+  rated and decided per item (architect, AE, security); F-359 filed
+  with US-159 G15 and T58-T60 (AE, PO); rule 1 mode changes; F-349
+  AC12 monitor detection; MBR ruling in US-163 (architect).
 - Status lines updated with merge evidence: US-113, US-120, US-128,
   US-131, US-140, US-142–US-154, US-132, F-256, F-262, F-272, F-287,
   F-290.
@@ -748,6 +753,16 @@ through D-065). Most significant recent decisions:
 - D-067 follow-up (TW): Rule 13 in CLAUDE.md (owner's file, so a PR
   for owner acceptance) and the protocol copy get the docs-only
   exemption; owner to answer D-067 questions 1-3 (CM via team-lead).
+- TW: does "close the gate before every mode change" (rule 1, F-359)
+  go into safety.md? Through a follow-up, so #45's approvals stay
+  intact (PO).
+- UX: view on PO's optional US-160 add-on: while the gate is Open, the
+  UI disables or greys out the mode switch, with a hint. Added to
+  US-160 only if UX agrees.
+- Owner questions via team-lead (PO): whether D-065's
+  `node.always-process = true` was the owner's decision (architect
+  and AE: reject for now, F-358 item 3); which US-156 route was
+  intended (default gateway, #40, or VM subnet via `.26`, main).
 - Room correction / measurement story: US-163 AC12a(c) disables the
   UMIK-1 in PW on the Pi 5; that story must re-enable it (architect N6).
 - #40 IDs: see the collision register (PO: no renumbering today).
