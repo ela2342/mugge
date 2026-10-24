@@ -156,7 +156,7 @@ line with this table on 2026-10-24 (owner directive).
 | O-9 | ~~Scope of the playwright MCP removal (PR #43, AD-43-1)~~ **RESOLVED 2026-10-24:** owner: "playwright: just the broken one in this project". `.mcp.json` only; the settings.json entry, wrapper and devShell package stay (US-109 kept). | #43 removes the `.mcp.json` entry only. `.claude/settings.json` `mcpServers.playwright`, `scripts/playwright-mcp.sh` and the `flake.nix:287` devShell package remain. Remove those too, or keep? Confirm the user-level playwright MCP as US-109's replacement. (The owner's local `.mcp.json` edit was moved onto #43 as `e7a728af` at team-lead's request; disclosed to the owner by change-manager. Main is clean.) |
 | O-10 | IEM routing: through the gate/convolver, or bypassing it | US-115 AC #4 and D-063 route HP/IEM through the convolver and gate. CLAUDE.md says IEM bypasses the convolver. The two conflict. |
 | O-11 | HP/IEM level limit (ch 5-8, unity gain) | Measure the ADA8200 → IEM transmitter → earpieces chain first, then decide on a per-channel soft cap or limiter (AE). |
-| O-12 | GM restart behaviour (F-320 E) | Zero gains on start (safe, but a crash silences the show), or adopt state (read back the Mults and report OPEN if any is above 0). The agreed US-159 design (G5/G5a, architect + AE + UX) zeroes on start. AE position (2026-10-24, corrects the earlier "adopt" recommendation): under either option the gate never reads CLOSED while any Mult is above 0. AE recommends zero on start (simpler, fully verifiable; matches US-159 G5/T5). Adopt is an acceptable owner option for show continuity only if the adopted values pass G3 validation (finite, at most 1.0, at most the per-speaker ceiling) and the graph passes the G4 health check; otherwise GM falls back to zero. If the owner chooses adopt, T5 asserts the invariant plus that validation. Owner to decide. |
+| O-12 | GM restart behaviour (F-320 E) | Zero gains on start (safe, but a crash silences the show), or adopt state (read back the Mults and report OPEN if any is above 0). The agreed US-159 design (G5/G5a, architect + AE + UX) zeroes on start. Architect: zero on start (adopting a previous Open state after a crash restores audio with no operator action). AE position (2026-10-24, corrects the earlier "adopt" recommendation): under either option the gate never reads CLOSED while any Mult is above 0. AE recommends zero on start (simpler, fully verifiable; matches US-159 G5/T5). Adopt is an acceptable owner option for show continuity only if the adopted values pass G3 validation (finite, at most 1.0, at most the per-speaker ceiling) and the graph passes the G4 health check; otherwise GM falls back to zero. If the owner chooses adopt, T5 asserts the invariant plus that validation. Owner to decide. |
 | O-13 | PO Q1: Ultimax sub D-031 exception (US-155 AC3) | AE checked it numerically: ~12 mm against 28 mm Xmax at full PA4504 output. If confirmed, file a D-031 amendment. Otherwise add a subsonic HPF. |
 | O-14 | PO Q2: is the CHN-50P + Ultimax rig a real gig setup, and should it get full Rule 13 now? | PO recommends yes (7 W driver). |
 | O-15 | PO Q3: purpose and consumers of the US-156 route; production or dev-only? | PO and security recommend dev-only (F-316). |
@@ -252,6 +252,8 @@ line with this table on 2026-10-24 (owner directive).
 | F-334 | Medium | local-demo still disables WP policy.standard; diverges from production (D-065), F-318 untestable locally. |
 | F-331 | Low | 16k-tap dirac on ch 5-8 ~doubles convolver load; BM-2 rerun at 8ch first (architect). |
 | F-332 | Low | `audio_mute.py:46` misleading log message. |
+| F-336 | Medium | Measurement-wizard T4 cannot run against the Pi; PI_AUDIO_URL ignored (QE to confirm). |
+| F-337 | Low | Gate 2/3 definitions differ between development.md and testing-process.md; `test-drivers` is not an app (QE to rule). |
 | F-299 | Medium | D-009 not guaranteed between bins / below 20 Hz (generator + verifier). Joint fix with F-262. |
 | F-303–F-311 | Medium | Skip-audit groups and dead skip guards. |
 | F-262 | Medium | 2 xfails. Possible real min-phase filter-gen bug (architect ruling). Highest product risk among the xfails. |
@@ -297,7 +299,7 @@ line with this table on 2026-10-24 (owner directive).
 |--------|-------|
 | Commits on main since 2026-04-04 | 185 (first-parent: 27 PR merges, 10 direct commits 2026-04-04, 2 single-parent commits 2026-04-19, 1 unpushed local) |
 | Total stories filed | 158 (US-155/156 written retroactively, US-157/158 new, 2026-10-24) |
-| Total defects filed | F-335 highest. Gaps with no record: F-267–F-269, F-286, F-288, F-289, F-294, tracked as F-327 (plus older historical gaps). F-266 reconstructed from `32da863d` |
+| Total defects filed | F-337 highest. Gaps with no record: F-267–F-269, F-286, F-288, F-289, F-294, tracked as F-327 (plus older historical gaps). F-266 reconstructed from `32da863d` |
 | Total decisions | D-065 highest (D-065 reconstructed, needs owner confirmation; D-064 DRAFT) |
 | Active xfails | 6 (limit 5) |
 | PW convolver CPU (q1024 / q256) | 1.70% / 3.47% (PW 1.4.9 measurements; not re-measured on 1.6.2) |
@@ -375,6 +377,12 @@ through D-065). Most significant recent decisions:
   AC9 (QE Gate 2 soak); F-298/F-313 linked to the safety.md change; O-28.
 - Fifth commit: AE nits (F-315 heading, O-12/F-320 E position, US-159 T2),
   F-335 root cause and full ACs (architect + QE), US-158 AC3 cross-reference (QE).
+- Follow-up PR (after the #41 freeze): F-322 AE severity rationale and
+  summed-sub ceiling (G9/T7); US-159 T9 browser E2E (UX + QE), T8 invariant
+  restated, B2 reuses link_audit.rs; architect O-12 position; AD leftovers
+  (D-049 date, F-323 link, F-112 status, F-319 links, Gate 1 scope,
+  F-335 "probable"); F-335 SHA-pin security note; US-159 GM-restart close
+  reason (UX); F-336, F-337 filed.
 - Status lines updated with merge evidence: US-113, US-120, US-128,
   US-131, US-140, US-142–US-154, US-132, F-256, F-262, F-272, F-287,
   F-290.
@@ -387,7 +395,7 @@ through D-065). Most significant recent decisions:
 - Architect: rule on F-287 node name (D-057); F-321 vs F-271 relation;
   answer the F-328 Live-input question; F-331 analysis.
 - QE: fresh Gate 1 run on current main with `-rs -rx` output (F-256, F-272,
-  US-142–151); needs a worker (O-8).
+  US-142–153); needs a worker (O-8).
 - F-335 fix (`${self}` + Nix pin/log, architect) needs a worker (O-8). QE's
   Gate 1 evidence run waits on it.
 - CM (Pi OBSERVE/CHANGE, amps OFF, needs O-2): F-318 evidence, F-316 boot

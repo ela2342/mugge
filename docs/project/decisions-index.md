@@ -51,7 +51,7 @@ Generated from the per-item files in `decisions/` (the source of truth). Do NOT 
 | [D-046](decisions/D-046.md) | 2026-03-25 | FFT default 4096, user-selectable with 4 presets |
 | [D-047](decisions/D-047.md) | 2026-03-25 | Level meters show both peak AND RMS with PPM ballistics |
 | [D-048](decisions/D-048.md) | 2026-03-25 | Display-side auto-ranging Y axis supersedes gain compensation |
-| [D-049](decisions/D-049.md) |  | Level-bridge / pcm-bridge separation for 24-channel metering (2026-03-25, REVISED 2026-03-26) |
+| [D-049](decisions/D-049.md) | 2026-03-25 | Level-bridge / pcm-bridge separation for 24-channel metering, revised 2026-03-26 |
 | [D-050](decisions/D-050.md) | 2026-03-26 | GM as audio session state manager — unified mode transitions |
 | [D-051](decisions/D-051.md) | 2026-03-27 | Dynamic filter-chain config per speaker design |
 | [D-052](decisions/D-052.md) | 2026-03-27 | ISO 226 baked into FIR target curve — entire chain minimum-phase |

@@ -101,7 +101,7 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-109](defects/F-109.md) | High | RESOLVED (2026-03-26) | Test tab level control does not affect signal-gen output level |
 | [F-110](defects/F-110.md) | Medium | BY-DESIGN (2026-03-26. Expected pink-spectrum physics for... | Higher frequencies show lower volume in spectrum display |
 | [F-111](defects/F-111.md) | High | RESOLVED (2026-03-26. Investigation found auto-range alre... | Test tab spectrum does not auto-scale (auto-range only on dashboard) |
-| [F-112](defects/F-112.md) | High | FIXED (2026-03-26, pending commit. Fix in spectrum-render... | Peak hold drops to bottom instead of decaying to new peak level |
+| [F-112](defects/F-112.md) | High | FIXED (2026-03-26). Fix is on main (`spectrum-renderer.js... | Peak hold drops to bottom instead of decaying to new peak level |
 | [F-113](defects/F-113.md) | High | RESOLVED (2026-03-26, commit `dd0bc3a`). US-084 web UI wi... | Levels appear at wrong meters — routing mismatch after US-079 (RESOLVED) |
 | [F-114](defects/F-114.md) | Low (downgraded — code path verified correct, likely browser cache per L-054) | CANNOT-REPRODUCE (2026-03-25. Code path correct end-to-en... | Stop button broken after test.js refactor |
 | [F-115](defects/F-115.md) | High | RESOLVED (2026-03-25. Root causes F-101 and F-102 fixed i... | Test tab spectrum now shows dashboard bugs (-60dB line, 20s delay) |
@@ -314,4 +314,6 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-332](defects/F-332.md) | low (misleading log message; behaviour is correct) | open | audio_mute.py logs "using 2-way defaults" when falling back to the 8-name list |
 | [F-333](defects/F-333.md) | high (process; Rule 13 gate unmeetable through CI) | open — owner decision O-26 | T3 (SD image build) not part of PR CI — no PR can meet "T1+T2+T3 green" |
 | [F-334](defects/F-334.md) | medium (mock-boundary divergence; F-318 cannot be reproduced locally) | open | local-demo still disables WirePlumber policy.standard — diverges from production (D-065) |
-| [F-335](defects/F-335.md) | critical (quality-engineer: blocks every merge). Architect and team-lead: high. Same impact either way. | open — root cause identified (architect + QE); fix needs ... | CI T1 fails on main before any test runs — test-all cannot cd into src/web-ui in the flake source |
+| [F-335](defects/F-335.md) | critical (quality-engineer: blocks every merge). Architect and team-lead: high. Same impact either way. | open — probable root cause identified (architect + QE; no... | CI T1 fails on main before any test runs — test-all cannot cd into src/web-ui in the flake source |
+| [F-336](defects/F-336.md) | medium (technical-writer; QE to confirm). Test gap before owner UAT; no safety impact. | open | Measurement-wizard T4 test has no real-Pi mode — PI_AUDIO_URL is ignored |
+| [F-337](defects/F-337.md) | low (process docs; QE to rule) | open — QE to rule which definition is canonical | Gate definitions drift between development.md and testing-process.md; `test-drivers` is a check, not an app |
