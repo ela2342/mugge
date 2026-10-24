@@ -230,6 +230,15 @@ Next free: F-366, US-172, D-069, T66.
   VM's SSH would likely need LAN exposure. Rule 13 code change, not in
   US-163 unless the owner asks. P3 (Architect).
 - AE-F6 (routing.rs:423): check whether tracked; file if not.
+- Pi 5 eth0 dropped to NO-CARRIER at 20:13:12 on 2026-10-24 (kernel
+  "Link is Down"; wlan0 .87 stayed up; blocked the tryboot). Find out
+  whether it was physical or a macb/switch flake; if it recurs,
+  investigate before relying on wired networking at gigs. P3
+  (worker-1).
+- Lowest: Pi 5 deploy eval warns that disko's legacy "table" type is
+  deprecated (migrate per disko's table-to-gpt guide). Check whether
+  MBR is intentional for the Pi 5 FAT/firmware, else migrate.
+  (worker-1)
 - US-170: Pi 4 allowlist and configurationRevision (AC1); Pi 4 WP ALSA
   rule; drvPath pin removal.
 
