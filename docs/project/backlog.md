@@ -8,9 +8,18 @@ land here. Maintained by the PM; the CM commits changes.
 ## Reserved IDs
 
 Taken (not yet filed as records): F-361, F-362, F-363, F-364 (below);
-T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
+D-068 (T57 gate dropped, below); T65 = US-159 G16 reconciler test.
+Next free: F-365, US-172, D-069, T66.
 
 ## US-163 text updates (critical path; one tracking batch before the PR)
+
+- **D-068 OWNER DECISION (2026-10-24, process override, relayed by
+  team-lead via CM):** "I don't think these tests even make sense to
+  run before the installation." / "Drop gate, test after install."
+  T57 is no longer a pre-erase gate. CM-T57-88-1 stopped; evidence so
+  far kept. The suites run after the install (installed NixOS or the
+  Mac VM) under the US-163 PR's Rule 13 review; Rule 13 unchanged.
+  Amend AC22/T57 accordingly.
 
 - Rename `mugge-pi5` to `mugge-pi5-deploy` in story and AC text
   (worker-1, 4de6cee0).
@@ -44,9 +53,10 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
   clients are on local-demo's remote; any link to the USBStreamer or
   HiFiBerry means stop and report to AE. Not for the NixOS image, not a
   general rule. Lapses if anything is connected to a Pi output.
-  USED 2026-10-24: T57 runs on .88 as CM-T57-88-1 at fb7d557e (QE
+  USED 2026-10-24: T57 ran on .88 as CM-T57-88-1 at fb7d557e (QE
   ruling; the Mac linux-builder VM has no user shell). Venue label:
-  "aarch64 Raspbian .88, interim; CI F-335 broken".
+  "aarch64 Raspbian .88, interim; CI F-335 broken". Only sandboxed
+  suites ran; no non-sandboxed suite ran on .88. Stopped by D-068.
 - Installer root login (item "(a)", owner approved 2026-10-24: "Allow
   it explicitly"): nixos-anywhere 1.13.0 needs root@ for
   `--phases disko,install`. RAM installer only: PermitRootLogin
