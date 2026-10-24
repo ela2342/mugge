@@ -802,6 +802,7 @@
             nixos-hardware.nixosModules.raspberry-pi-4
             ./nix/nixos/configuration.nix
             ./nix/nixos/boards/pi4
+            ./nix/nixos/lab/us156-route.nix
           ];
         in
         {

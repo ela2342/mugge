@@ -52,6 +52,23 @@
 { config, lib, pkgs, ... }:
 
 let
+  board = config.mugge.board;
+
+  # Pi 4B has no NVMe — disable the entire subsystem.
+  # BLK_DEV_NVME is the top-level NVMe block device; disabling it
+  # cascades to all transport modules (TCP, FC) and their TLS deps.
+  # Without this, NVME_TCP_TLS selects TLS, blocking our TLS=no.
+  # US-163: the Pi 5 keeps NVMe (mugge.board.kernel.keepNvme) because it
+  # has a PCIe connector for an NVMe HAT.
+  nvmeStrip = with lib.kernel; {
+    BLK_DEV_NVME = lib.mkForce (option no);
+    NVME_FC = lib.mkForce (option no);
+    NVME_TCP = lib.mkForce (option no);
+    NVME_MULTIPATH = lib.mkForce no;
+    NVME_TARGET = lib.mkForce (option no);
+    NVME_HWMON = lib.mkForce no;
+  };
+
   # Pin RPi kernel source to 6.12.62 from RPi-Distro packaging.
   # This is the same commit used by nixpkgs' linux-rpi.nix and matches
   # the Debian RPi OS kernel that has been validated on our Pi.
@@ -72,7 +89,7 @@ let
         modDirVersion = "6.12.62";
         src = rpiKernelSrc;
 
-        structuredExtraConfig = with lib.kernel; {
+        structuredExtraConfig = (with lib.kernel; {
 
           # =============================================================
           # PREEMPT_RT (D-013 mandatory)
@@ -260,16 +277,7 @@ let
           SCSI_SAS_ATA = lib.mkForce no;
           MEGARAID_NEWGEN = lib.mkForce no;
           FUSION = lib.mkForce no;
-          # Pi 4B has no NVMe — disable the entire subsystem.
-          # BLK_DEV_NVME is the top-level NVMe block device; disabling it
-          # cascades to all transport modules (TCP, FC) and their TLS deps.
-          # Without this, NVME_TCP_TLS selects TLS, blocking our TLS=no.
-          BLK_DEV_NVME = lib.mkForce (option no);
-          NVME_FC = lib.mkForce (option no);
-          NVME_TCP = lib.mkForce (option no);
-          NVME_MULTIPATH = lib.mkForce no;
-          NVME_TARGET = lib.mkForce (option no);
-          NVME_HWMON = lib.mkForce no;
+          # NVMe: see nvmeStrip below (board-dependent, US-163).
 
           # =============================================================
           # Platform: strip non-Pi hardware
@@ -309,11 +317,18 @@ let
           # =============================================================
           ACCESSIBILITY = lib.mkForce no;
           AUXDISPLAY = lib.mkForce no;
-        };
+        }) // lib.optionalAttrs (!board.kernel.keepNvme) nvmeStrip;
       };
     }
   );
 in
 {
-  boot.kernelPackages = lib.mkForce linuxPackages_rpi4_rt;
+  # US-163: "rpi-cached" is the unmodified nixpkgs linux_rpi4 from
+  # cache.nixos.org, for a board's first (bootstrap) system only. It is not
+  # PREEMPT_RT, so it must never carry the audio stack (D-013).
+  boot.kernelPackages = lib.mkForce (
+    if board.kernel.variant == "rt"
+    then linuxPackages_rpi4_rt
+    else pkgs.linuxPackages_rpi4
+  );
 }

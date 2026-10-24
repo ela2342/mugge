@@ -15,6 +15,12 @@
     ./firmware.nix
   ];
 
+  mugge.board = {
+    name = "pi4";
+    kernel.variant = "rt";
+    watchdog.device = "bcm2835-wdt";
+  };
+
   # Pi 4B initrd modules — only what's needed to mount root from SD/USB.
   # Most are built-in (=y) in our kernel but listed for documentation and
   # safety (availableKernelModules silently skips missing .ko files).
