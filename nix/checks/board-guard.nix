@@ -26,6 +26,8 @@ let
     && c.networking.interfaces.end0.ipv4.routes != [ ];
   tcpPorts = c: c.networking.firewall.allowedTCPPorts;
   ssh = c: c.services.openssh.settings;
+  hasCardBlock = c: builtins.any (p: lib.hasInfix "wireplumber-block-cards" p.name)
+    c.services.pipewire.wireplumber.configPackages;
 
   pi4 = conf:
     let c = cfg conf; in map (a: check conf a.name a.ok) [
@@ -37,6 +39,7 @@ let
       { name = "5900/8080 open (allowlist is a follow-up)"; ok = builtins.elem 8080 (tcpPorts c) && builtins.elem 5900 (tcpPorts c); }
       { name = "US-156 lab route present"; ok = hasUs156Route c; }
       { name = "PipeWire enabled"; ok = c.services.pipewire.enable; }
+      { name = "no ALSA card-block rule (Pi 4 follow-up)"; ok = !hasCardBlock c; }
     ];
 
   pi5Common = conf: c: [
@@ -69,6 +72,7 @@ let
     let c = cfg conf; in map (a: check conf a.name a.ok) (pi5Common conf c ++ [
       { name = "PREEMPT_RT kernel variant"; ok = c.mugge.board.kernel.variant == "rt"; }
       { name = "PipeWire enabled"; ok = c.services.pipewire.enable; }
+      { name = "WirePlumber disables other ALSA cards"; ok = hasCardBlock c; }
     ]);
 
   installer = conf:
