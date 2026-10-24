@@ -87,6 +87,10 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
 - SecSpec: L1-L5 closed in 924f1058 (L6 known); AC9a passed at code
   level on 4de6cee0, recheck against the built drvPath.
 
+- C7 passed 2026-10-24: Pi 5 booted the RAM installer, all functional
+  checks OK. Record in the lab note the IP the installer and the
+  installed system get (installer came up on .89, not .88).
+
 ## P1
 
 - **F-361** Link audit protects only ports named playback_AUX0..7
@@ -101,6 +105,10 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
 
 ## P2
 
+- Pi 5 DHCP address changes under NixOS (.89 vs Raspbian's .88; same
+  MAC, different client ID). Fix: static lease on the router or
+  ClientIdentifier=mac; record the final IP in the AC and lab note.
+  P2 (worker-1; supersedes SecSpec's DHCP LOW note).
 - **F-363** Purifi Qts test is order-dependent (`iterdir()[:20]`).
   Medium; QE ACs 1-4. (worker-2)
 - US-159 G16 with AE amendments a-e and architect additions 1-3; test
@@ -132,7 +140,7 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
   with EACCES (local-demo.sh:676-680; speaker_routes.py:136;
   hardware_routes.py:120). Low. (worker-2)
 - Security (owner: postponed): L6 allowlist format; SSH tunnel check on
-  mugge-pi5; DHCP ClientIdentifier=mac; fail-closed allowlist and US-170
+  mugge-pi5; fail-closed allowlist and US-170
   parity before any amps-on use; CI: pin dorny/paths-filter,
   softprops/action-gh-release, actions/upload-artifact by SHA (MEDIUM,
   before next release); top-level `permissions: contents: read`;
@@ -145,6 +153,9 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
   and HDMI audio on the vc4hdmi cards (AE, optional);
   status.md l.445 F-357 says High, should be Medium; US-169 AC5 citation
   separator.
+- Installer: systemd-resolved listens on LLMNR 5355 tcp/udp and mDNS
+  5353; the firewall drops them (only 22 reachable). Optionally disable
+  LLMNR in the installer. (worker-1)
 - Architect N1-N3 on #48 (CM PR comment).
 - US-163 follow-ups (worker-1): installer has no configurationRevision.
   (wayvnc on the Pi 5: DONE in 433e16f7, VNC left out.)
