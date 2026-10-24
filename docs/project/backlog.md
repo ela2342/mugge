@@ -30,8 +30,10 @@ Next free: F-366, US-172, D-069, T66.
     NixOS image); Nix < 2.35 or stop; known non-blocking items listed.
   - P3: after the announced deploy switch: T54/T55, AC13, T53 on
     deploy, T51 deriver.
-  - Deploy verb (Architect + QE, final): `nixos-rebuild boot
-    --target-host` plus an announced reboot (not `switch`).
+  - Deploy verb (Architect + QE, final; owner 2026-10-24: "boot is
+    fine."): from the Mac, `nixos-rebuild boot --flake
+    .#mugge-pi5-deploy --target-host ela@192.168.178.88 --sudo`, then
+    an announced reboot (not `switch`).
 
 - Rename `mugge-pi5` to `mugge-pi5-deploy` in story and AC text
   (worker-1, 4de6cee0).
