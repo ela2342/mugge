@@ -174,6 +174,11 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
   (SecSpec)
 - Mac disk nearly full (6.0 GiB free on 2026-10-24, falling slowly,
   CM). Clean up Nix store / old worktrees before heavy local builds.
+- Hermetic nix checks broken in the sandbox (pre-existing; found in
+  T57 by worker-1; CI never builds checks.*): checks.<sys>.test-midi
+  (../../../configs resolves to /), test-room-correction (cp
+  Permission denied on test_camilladsp.yml), test-web-ui (speaker
+  YAMLs missing, graph_manager_client not importable). Owner QE.
 - Architect N1-N3 on #48 (CM PR comment).
 - US-163 follow-ups (worker-1): installer has no configurationRevision.
   (wayvnc on the Pi 5: DONE in 433e16f7, VNC left out.)
