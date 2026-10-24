@@ -182,7 +182,15 @@ Next free: F-367, US-172, D-069, T66.
   is an alias only (not resolvable via the Mac's default/VPN
   resolvers); any use of the name must match the same known_hosts
   entry (HostKeyAlias), never a fresh accept-new; identity is host key
-  + MAC. Reference updates (.88/.185 -> .89) are GO, routed via CM.
+  + MAC. Reference updates (.88/.185 -> .89) are GO but PARKED until
+  after the deploy step (bookkeeping, not blocking): then one docs
+  batch on the story branch (TW docs + CLAUDE.md, worker-1 the
+  pi5/default.nix comment, CM routes .claude/team).
+- Host key: the Architect's pre-reboot record of the installed host key
+  from /mnt was not done; first boot used TOFU (the accepted plan).
+  Architect + SecSpec deciding whether TOFU key a5kILUyr stands or
+  needs an extra check (e.g. on the HDMI console). Future reinstalls:
+  see the P3 pre-generation item.
   Pending: Architect reconsidering DHCP ClientIdentifier="mac"
   hardening; if accepted, a separate commit after F-366.
 - First-boot records on the bootstrap all green (CM; file
