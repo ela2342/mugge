@@ -41,7 +41,7 @@ per the mandatory consultation trigger matrix.
    to main directly — all changes reach main via PR.
 
    **NEVER run `git checkout` or `git switch` in the main repository
-   (`/home/ela/mugge`).** Your branch lives in its own worktree at the path
+   (`<repo-root>`).** Your branch lives in its own worktree at the path
    the CM provided. All your work happens there. Running `git checkout` in
    the main repo pollutes the shared working tree and breaks other agents.
    This is a protocol violation.

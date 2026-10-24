@@ -4,6 +4,8 @@
 
 - **Backend:** repo-local
 - **State directory:** docs/project/
+- **Local repository:** `/Users/gabriela.bogk/hacks/mugge` — referred to as
+  `<repo-root>` in role prompts and protocol files
 
 ## Phases
 

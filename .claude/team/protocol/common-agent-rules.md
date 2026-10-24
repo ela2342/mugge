@@ -3,6 +3,9 @@
 These rules apply to ALL team members (advisory, coordination, quality,
 challenge, implementation). Your role prompt may add role-specific details.
 
+`<repo-root>` means the **Local repository** path declared in the project's
+`config.md`.
+
 ## Communication & Responsiveness (L-040)
 
 **Mental model:** Agents are independent processes. They do NOT read messages
@@ -121,7 +124,7 @@ maintains the team's institutional memory so knowledge is never lost.
 
 Workers MUST use git worktrees for all feature branch work. Each worktree is
 a separate working tree with its own branch, sharing the same `.git` object
-store as the main repo. The main repository (`/home/ela/mugge`) MUST stay on
+store as the main repo. The main repository (`<repo-root>`) MUST stay on
 `main` at all times.
 
 ### Worktree creation is the CM's job
@@ -146,11 +149,11 @@ orchestrator.
 ### Rules
 
 1. **MUST use absolute paths.** Agent cwd resets between bash calls. Always
-   use `/home/ela/mugge/.claude/worktrees/<name>/...` in commands.
+   use `<repo-root>/.claude/worktrees/<name>/...` in commands.
 2. **MUST NOT modify main repo files from a worktree.** Each worktree has
    its own copy of all tracked files. Edit only within your worktree path.
 3. **MUST NOT run `git checkout`, `git switch`, or any branch-changing
-   command in the main repository (`/home/ela/mugge/`).** The main tree
+   command in the main repository (`<repo-root>/`).** The main tree
    stays on `main` at all times. Your branch lives in the worktree the CM
    provided.
 4. **MUST NOT run `git` commands against the main repo while in a worktree.**
@@ -175,10 +178,10 @@ The CM owns worktree cleanup. Workers MUST NOT remove worktrees. The CM
 cleans up after PR merge or branch abandonment:
 
 ```bash
-cd /home/ela/mugge
+cd <repo-root>
 git worktree remove .claude/worktrees/<name>
 git branch -d <branch-name>
-git worktree list   # verify only /home/ela/mugge remains
+git worktree list   # verify only <repo-root> remains
 ```
 
 ### Gotchas

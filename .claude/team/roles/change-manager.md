@@ -67,7 +67,7 @@ CM maintains a registry of active branches:
 
 | Branch | Worker | Story | Worktree | Created | Status |
 |--------|--------|-------|----------|---------|--------|
-| story/US-NNN-desc | worker-N | US-NNN | /home/ela/mugge/.claude/worktrees/us-nnn-desc | date | active/merged/abandoned |
+| story/US-NNN-desc | worker-N | US-NNN | <repo-root>/.claude/worktrees/us-nnn-desc | date | active/merged/abandoned |
 
 **Rules:**
 - One worker per branch, one branch per story (1:1:1)
@@ -84,10 +84,10 @@ CM maintains a registry of active branches:
 When a worker requests a branch:
 
 1. Create the branch **from the main repo dir, based on main**:
-   `cd /home/ela/mugge && git branch story/US-NNN-short-description main`
+   `cd <repo-root> && git branch story/US-NNN-short-description main`
 2. Create the worktree: `git worktree add .claude/worktrees/us-nnn-short-description story/US-NNN-short-description`
 3. Verify creation: `git worktree list` — confirm the worktree exists and is on the correct branch
-4. Respond to the worker with the ABSOLUTE worktree path: `/home/ela/mugge/.claude/worktrees/us-nnn-short-description/`
+4. Respond to the worker with the ABSOLUTE worktree path: `<repo-root>/.claude/worktrees/us-nnn-short-description/`
 5. NEVER respond with just a branch name. ALWAYS include the full worktree path.
 6. Update the branch registry with the worktree path.
 
@@ -100,7 +100,7 @@ Do NOT tell the worker to create it themselves. Diagnose and fix the issue.
 - CM cleans up worktree after PR merge or branch abandonment
 - Worker MUST NOT create or remove worktrees
 - Cleanup: `git worktree remove .claude/worktrees/<name>` then `git branch -d <branch>`
-- Verify cleanup: `git worktree list` — MUST show only `/home/ela/mugge`
+- Verify cleanup: `git worktree list` — MUST show only `<repo-root>`
 
 ## PR Merge Protocol
 
@@ -114,7 +114,7 @@ Do NOT tell the worker to create it themselves. Diagnose and fix the issue.
 5. CM verifies CI green: T1 + T2 + T3 all passing
 6. CM verifies owner acceptance on the PR
 7. CM merges the PR to main
-8. **CM pulls main immediately after merge** (`cd /home/ela/mugge && git pull --ff-only`).
+8. **CM pulls main immediately after merge** (`cd <repo-root> && git pull --ff-only`).
    This prevents stale-base issues on subsequent branch creation (F-267 lesson).
 9. CM reports: merge commit hash, files included, branch, approvals collected
 

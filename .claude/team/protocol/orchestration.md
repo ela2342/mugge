@@ -18,7 +18,7 @@ Read this file at the start of every session and before every phase transition.
 
 This protocol is parameterized by a project `config.md` manifest. The manifest
 declares: work management backend, enabled phases, role roster, git workflow,
-and validation rules. See `~/mobile/gabriela-bogk/team-protocol/project-state/format.md`
+and validation rules. See `.claude/team/protocol/state-format.md`
 for standard state file formats.
 
 When this protocol says "per project config," read the value from the project's
@@ -438,7 +438,7 @@ are made by workers via the Task tool.
 - Provide technical guidance — connect workers to the right advisor instead
 - Access the deployment target at any tier (not even read-only)
 - Run `git checkout <feature-branch>` in the main tree — workers use worktrees;
-  the main tree (`/home/ela/mugge`) stays on `main` at all times
+  the main tree (`<repo-root>`) stays on `main` at all times
 - **Do cognitive work that belongs to other roles.** This includes:
   analyzing build failures or technical problems (worker/architect work),
   synthesizing advisor reviews into summary tables (PM work), reading
@@ -594,7 +594,7 @@ controls branch assignment, PR merges to main, and Pi deployment sessions.
 - Push to another worker's branch
 - Merge their own PR
 - Deploy to the Pi without a CM session
-- Run `git checkout` or `git switch` in the main repository (`/home/ela/mugge`) —
+- Run `git checkout` or `git switch` in the main repository (`<repo-root>`) —
   the main tree stays on `main` at all times; workers use worktrees
 - Create their own worktrees — CM creates worktrees during branch assignment
 

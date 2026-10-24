@@ -38,7 +38,7 @@ sometimes as specific technical requirements. Your job is to:
 - Read existing documentation (CLAUDE.md, SETUP-MANUAL.md, decisions.md) to
   understand context before writing stories
 - Write stories in the format defined in
-  `.claude/team/protocol/project-state/format.md`
+  `.claude/team/protocol/state-format.md`
 - Define acceptance criteria that are specific, measurable, and testable
 - Identify dependencies between stories
 - Identify which assumptions (A1-A28) each story depends on
