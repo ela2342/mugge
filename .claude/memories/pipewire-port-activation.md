@@ -25,6 +25,12 @@ that conflicts with GraphManager per D-039):
 - `policy.standard = disabled` — no auto-linking
 - `policy.node = required` — port activation still works
 
+**Correction (2026-10-24, D-065 / F-292):** On the Pi, `policy.standard =
+disabled` broke node activation and port creation, so production removed it
+(`90-no-auto-link.conf` gone). The "minimum viable" config above holds only
+for local-demo, which still uses it (`scripts/local-demo.sh`). Production
+relies on `node.autoconnect=false` plus GM reconciler cleanup instead.
+
 This is a **permanent architectural constraint** until upstream PipeWire changes
 the activation model. D-056 (full WP removal) cannot proceed without an alternative
 port activation mechanism.

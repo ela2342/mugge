@@ -19,7 +19,8 @@ damage speakers and risk hearing.
 
 ### Actions That Cause Transients
 
-- Rebooting the Pi
+- Rebooting the Pi, including an automatic reboot by the hardware watchdog
+  (see below)
 - `systemctl --user restart pipewire.service`
 - Any action that causes PipeWire to drop the USBStreamer playback stream
 - USB bus resets affecting the USBStreamer
@@ -28,6 +29,13 @@ damage speakers and risk hearing.
 risk from `systemctl restart camilladsp` no longer applies. All audio
 processing is now within PipeWire's filter-chain — the only transient risk
 is from PipeWire restarts or USB interruptions.
+
+**Hardware watchdog reboot:** The BCM2835 hardware watchdog is currently not
+fed, so it never reboots the Pi (F-317, F-325). If it is configured, a
+watchdog reboot after a lockup is an unannounced reboot: the USBStreamer
+stream drops with no chance to warn the owner or turn off the amps. Whether
+to enable it (automatic recovery vs an unannounced transient) is an owner
+decision (O-24).
 
 ### Required Procedure
 
@@ -248,7 +256,7 @@ constraints discovered during system testing, updated for D-040 architecture
 | 5 | Correct PipeWire quantum for measurement mode | `pw-metadata -n settings \| grep quantum` | Quantum affects convolver processing latency and CPU load. Measurement typically uses quantum 256 (live mode). |
 | 6 | Signal-gen hard cap is -20 dBFS | `echo '{"cmd":"status"}' \| nc -q1 127.0.0.1 4001` -- check `max_level_dbfs` in response | Safety cap incorrect or missing. The -20 dBFS cap is immutable after startup but verify at pre-flight to confirm correct startup flag. |
 | 7 | Signal-gen ports visible in PipeWire graph | `pw-cli ls Node \| grep signal-gen` | Signal-gen not registered as PW node. In managed mode, GraphManager creates links -- if ports are missing, no audio can flow. |
-| 8 | ADA8200 capture adapter stopped (if not needed) | `pw-cli ls \| grep ada8200` | F-015: USB bandwidth contention between capture and playback streams on USBStreamer |
+| 8 | ADA8200 capture adapter absent (if not needed) | `pw-cli ls Node \| grep ada8200` | F-015: USB bandwidth contention between capture and playback streams on USBStreamer. The NixOS image no longer deploys the capture adapter (`20-usbstreamer.conf`, F-295), so `ada8200-in` should be absent unless someone started it by hand. Consequence: Live-mode mic input on the ADA8200 is currently not configured (F-323). |
 | 9 | Owner confirmed amp level safe | Verbal/written confirmation | Transient/excursion damage risk |
 
 **Note:** The old check #9 (ALSA Loopback buffer adequate, F-028) has been
@@ -344,9 +352,29 @@ confirmation.
 
 ## 8. Web UI Gain Controls (US-065, Config Tab)
 
-The Config tab provides per-channel gain sliders controlling the four PipeWire
-filter-chain `linear` builtin gain nodes. These are the same gain nodes used
-by the panic MUTE button (Section 7, F-040) and the measurement pipeline.
+The Config tab provides per-channel gain sliders controlling the eight PipeWire
+filter-chain `linear` builtin gain nodes (D-063: one per USBStreamer output,
+channels 1-8). These are the same gain nodes used by the panic MUTE button
+(F-040, below), the universal audio gate (Section 10), and the measurement
+pipeline.
+
+| Ch | Gain node | Output |
+|----|-----------|--------|
+| 1 | `gain_left_hp` | Left main |
+| 2 | `gain_right_hp` | Right main |
+| 3 | `gain_sub1_lp` | Sub 1 |
+| 4 | `gain_sub2_lp` | Sub 2 |
+| 5 | `gain_hp_l` | Engineer headphone L |
+| 6 | `gain_hp_r` | Engineer headphone R |
+| 7 | `gain_iem_l` | Singer IEM L |
+| 8 | `gain_iem_r` | Singer IEM R |
+
+The gain nodes are builtins inside the filter-chain module. They are not
+separate PipeWire graph nodes; they appear as prefixed parameters on the
+`pi4audio-convolver` node (e.g. `gain_left_hp:Mult`). All eight default to
+`Mult = 0.0` in `configs/pipewire/30-filter-chain-convolver.conf` (D-063 gate
+closed at startup). Operating values come from the active venue config and
+are applied when the gate opens (Section 10).
 
 ### Two-Layer Gain Cap
 
@@ -383,8 +411,9 @@ understands the impact.
 
 ### Panic MUTE Integration (F-040)
 
-The MUTE button (always visible in the status bar) sets all four gain node
-Mult values to 0.0. Pre-mute values are stored in memory by
+The MUTE button (always visible in the status bar) sets the Mult value of
+every `gain_*` parameter on the convolver node to 0.0 (all eight channels;
+`audio_mute.py` discovers them from `pw-dump`). Pre-mute values are stored in memory by
 `AudioMuteManager`. UNMUTE restores the stored values. The MUTE operation
 does NOT drop the PipeWire stream — this is critical for USBStreamer transient
 safety (Section 1). The audio path remains connected; only the gain is zeroed.
@@ -398,10 +427,14 @@ explicitly rejected it as a safety risk.
 
 **Why it is dangerous:**
 
-Production gain values attenuate the signal by 54-64 dB (Mult 0.001 = -60 dB
-mains, Mult 0.000631 = -64 dB subs). Setting these to unity while speakers
-are connected would send full-scale audio through the 4x450W amplifier chain.
-Even momentarily, this can damage drivers and ears.
+Production venue operating gains (`configs/venues/production.yml`) attenuate
+the speaker channels by 60-64 dB (Mult 0.001 = -60 dB mains, Mult 0.000631 =
+-64 dB subs). Setting these to unity while speakers are connected would send
+full-scale audio through the 4x450W amplifier chain. Even momentarily, this
+can damage drivers and ears.
+
+Headphone and IEM channels (5-8) already run at unity in the production
+venue configs. Their hearing-safety rules are in Section 10.
 
 **The safe alternative:** Display-side compensation. The spectrum analyzer
 uses an auto-ranging Y axis (D-048) that adapts to the signal level at any
@@ -441,17 +474,20 @@ This threat is addressed by a four-layer defense-in-depth architecture.
 
 ### Layer 1: PipeWire Exclusive ALSA Hold
 
-PipeWire's static adapters (`20-usbstreamer.conf`, `21-usbstreamer-playback.conf`)
-hold the USBStreamer ALSA device open continuously. Any other process attempting
+PipeWire's static playback adapter (`21-usbstreamer-playback.conf`) holds
+the USBStreamer ALSA playback device open continuously. Any other process attempting
 `open()` on the ALSA device node receives `EBUSY`. This is the primary defense
 and blocks all bypass attempts while PipeWire is running.
+
+The capture adapter (`20-usbstreamer.conf`, `ada8200-in`) is no longer
+deployed by the NixOS image (F-295). Capture is not a bypass risk.
 
 **Residual risk:** When PipeWire is stopped or restarting, the ALSA device is
 momentarily available. Layer 2 covers this gap.
 
 ### Layer 2: udev Device Permissions
 
-The udev rule `99-usbstreamer-lockout.rules` restricts USBStreamer ALSA device
+The udev rule `90-usbstreamer-lockout.rules` restricts USBStreamer ALSA device
 nodes to `OWNER=ela MODE=0600`:
 
 - **Locked:** `pcmC{X}D0p` (playback) and `controlC{X}` (mixer control)
@@ -476,35 +512,58 @@ This catches edge cases where a PipeWire client (e.g., `pw-cli`, a misbehaving
 application) creates an unauthorized node targeting the USBStreamer within the
 PipeWire graph.
 
+**Residual risk (D-065):** Layer 3 destroys rogue *nodes*; it does not stop
+WirePlumber from creating *links*. D-065 removed `90-no-auto-link.conf`, so
+WirePlumber's standard linking policy is active again. The remaining
+anti-link measures are `node.autoconnect = false` and GraphManager's
+reconciler cleanup. `node.autoconnect = false` on a sink only stops that
+node from linking itself: if a sink is the default sink, WirePlumber's
+default policy is expected to auto-link other streams to it. That is
+expected from WirePlumber's default policy but not yet confirmed on the Pi
+(F-318, amps-off test pending).
+
 ### Layer 4: Filter-Chain Watchdog (T-044-4)
 
 The GraphManager's watchdog (`src/graph-manager/src/watchdog.rs`) continuously
-monitors 6 critical nodes in the PipeWire graph:
+monitors 2 critical nodes in the PipeWire graph (`MONITORED_NODES`):
 
 | Node | Role |
 |------|------|
 | `pi4audio-convolver` | Filter-chain capture side |
 | `pi4audio-convolver-out` | Filter-chain playback side |
-| `gain_left_hp` | Left main gain node |
-| `gain_right_hp` | Right main gain node |
-| `gain_sub1_lp` | Sub 1 gain node |
-| `gain_sub2_lp` | Sub 2 gain node |
+
+The eight gain builtins (Section 8) are not monitored separately. They are
+parameters on `pi4audio-convolver`, so they cannot disappear independently
+of it. They are the watchdog's mute target, not part of its monitored set.
 
 If ANY monitored node disappears from the PipeWire graph, the watchdog
 triggers a **latched safety mute**:
 
-**Primary mute mechanism:** Set `Mult=0.0` on all 4 gain nodes via native
-PipeWire API (`pw_node_set_param` via `pipewire-rs` FFI). Target response
-time: <1ms per node, <5ms total.
+**Primary mute mechanism:** Set `Mult=0.0` on all 8 gain parameters
+(`GAIN_PARAM_NAMES`) on the convolver node via native PipeWire API
+(`pw_node_set_param` via `pipewire-rs` FFI). Target response time: <1ms per
+param, <8ms total.
 
-**Fallback mechanism:** If the gain nodes themselves have disappeared (can't
-set Mult on a nonexistent node), the watchdog destroys ALL links to the
-USBStreamer input ports using `pw_registry::destroy_global()`.
+**Fallback mechanism:** If the convolver node itself is gone (no node to set
+params on), the watchdog destroys ALL links to the USBStreamer input ports
+using `pw_registry::destroy_global()`.
+
+**Gate interaction (D-063):** Both the primary and the fallback mute close
+the universal audio gate (Section 10).
 
 **Latch behavior:** Once triggered, the mute is LATCHED -- it stays active
 even after the missing nodes return. Unlatching requires an explicit RPC
 command (`watchdog_unlatch`). This prevents transient audio during graph
 recovery. Pre-mute gain values are stored and restored on unlatch.
+**Caution:** unlatch restores those gains immediately, without a ramp, and
+leaves the gate state CLOSED, so audio is live while the gate reads closed
+(F-320-D). Unlatch is not a safe recovery path; see Section 10, rule 5.
+
+**Gain integrity check (T-044-5):** `src/graph-manager/src/gain_integrity.rs`
+polls the gain parameters via `pw-dump` every 30 s. If any Mult is above 1.0
+(amplification), it triggers the same safety mute and closes the gate. This
+is a control-plane check (30 s interval), not part of the <21ms watchdog
+path.
 
 **Response time budget:** <21ms (1 PipeWire graph cycle at quantum 1024).
 Registry events are push-based (not polled), so the watchdog fires within
@@ -519,10 +578,10 @@ watchdog's mute path meets its <21ms deadline even under CPU contention.
 
 | Layer | Mechanism | Blocks | When PW down? | Config |
 |-------|-----------|--------|---------------|--------|
-| 1 | PipeWire exclusive ALSA hold | All non-PW processes | No | `20/21-usbstreamer.conf` |
-| 2 | udev OWNER/MODE | Other users, system services | Yes | `99-usbstreamer-lockout.rules` |
+| 1 | PipeWire exclusive ALSA hold | All non-PW processes | No | `21-usbstreamer-playback.conf` |
+| 2 | udev OWNER/MODE | Other users, system services | Yes | `90-usbstreamer-lockout.rules` |
 | 3 | WirePlumber node deny | Rogue PW client nodes | N/A (WP requires PW) | `53-deny-usbstreamer-alsa.conf` |
-| 4 | GraphManager watchdog | Convolver/gain node loss | N/A (GM requires PW) | `src/graph-manager/src/watchdog.rs` |
+| 4 | GraphManager watchdog | Convolver node loss; gain Mult > 1.0 (integrity check) | N/A (GM requires PW) | `src/graph-manager/src/watchdog.rs`, `gain_integrity.rs` |
 
 ### Cross-References
 
@@ -531,10 +590,155 @@ watchdog's mute path meets its <21ms deadline even under CPU contention.
 - T-044-2: WirePlumber deny policy
 - T-044-3: GraphManager link audit
 - T-044-4: Filter-chain watchdog
-- `configs/udev/99-usbstreamer-lockout.rules`
+- T-044-5: Gain integrity check
+- D-065: WirePlumber `90-no-auto-link.conf` removed; F-318: WirePlumber auto-link
+- `configs/udev/90-usbstreamer-lockout.rules`
 - `configs/wireplumber/53-deny-usbstreamer-alsa.conf`
 - `configs/wireplumber/scripts/deny-usbstreamer-alsa.lua`
 - `src/graph-manager/src/watchdog.rs`
+- `src/graph-manager/src/gain_integrity.rs`
+
+---
+
+## 10. Universal Audio Gate (D-063, US-113)
+
+**No signal reaches any USBStreamer output until the operator explicitly
+opens the audio gate.** This applies to every venue and every mode. Since
+D-063, all eight output channels (mains, subs, engineer headphones, singer
+IEM) pass through the filter-chain convolver and its eight gain nodes
+(Section 8). Channels 5-8 use Dirac (identity) coefficients. The gate
+controls all eight.
+
+### How the Gate Works
+
+| State or event | What happens | Source |
+|----------------|--------------|--------|
+| PipeWire start (boot, PW restart) | All 8 gain nodes load `Mult = 0.0` from `30-filter-chain-convolver.conf` | `configs/pipewire/30-filter-chain-convolver.conf` |
+| GraphManager start | Gate state is CLOSED. The persisted or default venue is loaded as *pending* gains only | `src/graph-manager/src/main.rs` |
+| Venue selected (gate closed) | New gains become pending. Nothing is applied to PipeWire | `set_venue` RPC |
+| Gate opened | Pending venue gains are written to the 8 gain nodes. Refused if no venue is loaded | `open_gate` RPC, `POST /api/v1/venue/gate/open` |
+| Gate closed | All 8 gain nodes set to `Mult = 0.0` | `close_gate` RPC, `POST /api/v1/venue/gate/close` |
+| Automatic close | Standby transition, watchdog mute (Section 9), gain integrity violation (Section 9) | `main.rs`, `registry.rs` |
+
+**Gate opening is currently a step, not a ramp.** D-063 specifies a 3 s,
+30-step cosine ramp-up. The current implementation computes all 30 steps
+within a single PipeWire main-loop iteration, so PipeWire applies only the
+final value: in practice the gains jump straight to the venue values in one
+graph cycle. Tracked as F-315. Until it is fixed, treat gate open as an
+instant step to full venue gain.
+
+**The gate indicator shows GraphManager's state, not the actual gains.**
+Until F-320-D, F-320-E and F-320-F are fixed, the indicator can read CLOSED
+while audio is live:
+
+- after a watchdog unlatch (F-320-D): unlatch restores the stored gains
+  immediately, without a ramp, and leaves the gate state CLOSED;
+- after a GraphManager restart (F-320-E): GraphManager starts with the gate
+  CLOSED but does not write the gains, so PipeWire keeps whatever values it
+  had (GraphManager restarts automatically on failure);
+- after UNMUTE (F-320-F): see "MUTE is not the gate" below.
+
+**MUTE is not the gate.** The panic MUTE button (Section 8) zeroes the gains
+but does not change the gate state, and it is not latched against the gate.
+Opening the gate or changing venue re-applies gains even while MUTE shows
+active. UNMUTE restores the pre-mute gains regardless of gate state, with no
+ramp (F-320-F).
+
+### Rules for Opening the Gate
+
+1. **Check the venue before opening.** Confirm the active venue name and its
+   per-channel gains in the web UI before pressing open. The gate applies
+   whatever venue is pending.
+2. **First boot: foh-passthrough has no driver protection.** On first boot
+   the default venue is `foh-passthrough`: unity gain on all 8 channels and
+   no driver protection on channels 1-4 (`dirac.wav`). Until F-271 is
+   resolved, do not open the gate with `foh-passthrough` loaded while the PA
+   amps are on. Select a venue with protection filters first, or keep the
+   amps off.
+3. **Never change venue while the gate is open (interim, F-314).**
+   A venue change with the gate open applies the new gains immediately, with
+   no ramp and no confirmation. Switching from `production` to
+   `foh-passthrough` is a +60/+64 dB jump into the 4x450W amplifiers with
+   Dirac on channels 1-4. Procedure: close the gate, apply the venue, verify
+   the venue detail, then reopen.
+4. **Live mode: IEM at minimum before opening.** Before opening the gate in
+   Live mode, the singer's earpieces must be out or the IEM pack volume must
+   be at minimum. Bring the IEM level up from minimum with the singer
+   present and agreeing.
+5. **After a watchdog unlatch, treat all outputs as live at venue levels**
+   (interim, F-320-D). Press Close Gate (which zeroes all gains), then
+   re-open through the gate.
+6. **After any GraphManager restart** (crash, redeploy, service restart),
+   **press Close Gate before assuming the outputs are silent** (interim,
+   F-320-E).
+7. **Recover from MUTE with Close Gate, then Open Gate. Do not use UNMUTE**
+   (interim, F-320-F).
+8. **No amps on a shared network (interim, F-037).** The web UI has no
+   authentication: anyone on the network can open the gate, select
+   `foh-passthrough` and raise gains. Until F-037 is fixed, do not power the
+   amps while the Pi is on a network other people can join, or restrict
+   port 8080 to the engineer's device.
+
+Watchdog mute, gain-integrity mute, and the standby transition all close the
+gate. Watchdog unlatch and UNMUTE are **not** safe recovery paths.
+
+### Headphone and IEM Channels (5-8)
+
+The engineer headphone (5-6) and singer IEM (7-8) channels run at unity
+gain (Mult 1.0, 0 dB) in the `production` and `markaudio-ultimax-200hz`
+venue configs. A full-scale digital signal reaches those outputs without
+attenuation. The level at the ear is set only by:
+
+- the source fader (Reaper or Mixxx), and
+- the headphone amplifier or IEM transmitter gain.
+
+The server hard cap (Mult <= 1.0, Section 8) does not protect these
+channels: unity is within the cap.
+
+**Rules:**
+
+1. S-012 (Section 7) covers channels 5-8: no gain increase on headphone or
+   IEM channels (venue gain, Mult, or source-side routing changes) without
+   owner confirmation, and for IEM also the singer's confirmation.
+2. The IEM-at-minimum rule in "Rules for Opening the Gate" applies every
+   time the gate is opened in Live mode.
+
+**Open item:** The headphone and IEM chain (ADA8200 output → IEM
+transmitter → earpieces) has not been measured. No SPL or dBFS limit can be
+stated yet. Measuring the chain and deciding on a per-channel soft cap or
+limiter for channels 5-8 is owner decision O-11 ("Owner Decisions Pending"
+in `docs/project/status.md`).
+
+### Known Gaps
+
+| Gap | Effect | Interim rule | Tracking |
+|-----|--------|--------------|----------|
+| Ramp not temporal | Gate open is an instant step to venue gain | Treat gate open as a step | F-315 |
+| Hot venue switch | Venue change with gate open applies new gains instantly | Rule 3: close gate before venue change | F-314 |
+| No D-031 protection in `foh-passthrough` | Full-range signal on mains and subs once gate is open | Rule 2: amps off or protected venue | F-271 |
+| Unlatch leaves gate CLOSED with gains live | Indicator reads CLOSED while audio flows | Rule 5 | F-320-D |
+| GraphManager restart does not write gains | Indicator reads CLOSED while PipeWire keeps venue gains | Rule 6 | F-320-E |
+| MUTE/UNMUTE independent of the gate | Gains re-applied while MUTE shows active; UNMUTE bypasses gate | Rule 7 | F-320-F |
+| No persisted gate state | D-063's `active.yml` `audio_enabled` field is not implemented; the gate exists only in GraphManager memory | Rules 5-6 | F-320-G |
+| Web UI has no authentication | Anyone on the network can open the gate, change venue and raise gains | Rule 8 | F-037 (Critical) |
+| HP/IEM chain not measured | No SPL limit can be stated for channels 5-8 | HP/IEM rules above | O-11 |
+
+### Cross-References
+
+- D-063: 8-channel convolver with universal audio gate
+- US-113: Venue config, first-boot active config, gate implementation
+- D-031: Mandatory driver protection filters (Section 2)
+- D-009: Gain hard cap (Section 8)
+- S-012: No gain increase without owner confirmation (Section 7)
+- F-271: D-031 protection filters for `foh-passthrough`
+- F-314: Hot venue switch with gate open applies gains instantly
+- F-315: Gate-open cosine ramp collapses to an instant step
+- F-320: Gate state not authoritative (D: unlatch, E: GM restart, F: MUTE/UNMUTE, G: `audio_enabled`)
+- F-037: Web UI has no authentication
+- `src/web-ui/app/audio_mute.py`: MUTE/UNMUTE (independent of the gate)
+- `configs/venues/`: Venue gain configs
+- `src/graph-manager/src/main.rs`: Gate open/close and venue handling
+- `src/web-ui/app/venue_routes.py`: Gate REST endpoints
 
 ---
 
@@ -549,6 +753,7 @@ watchdog's mute path meets its <21ms deadline even under CPU contention.
 | S-012 | No gain increase without owner confirmation | 7, 8 |
 | F-040 | Panic MUTE sets gain to 0.0 without dropping PW stream | 8 |
 | US-044 | Four-layer ALSA lockout + watchdog defense | 9 |
+| D-063 | 8ch convolver; universal audio gate, all outputs muted at boot | 8, 9, 10 |
 
 ## Safety Incident Register
 

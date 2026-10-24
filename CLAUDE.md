@@ -343,21 +343,27 @@ Gabriela Bogk. This is a personal project, not mobile.de work.
 
 ## Current Mission
 
-**D-040: CamillaDSP abandoned. Pure PipeWire filter-chain pipeline.**
+**D-040: Pure PipeWire filter-chain pipeline (CamillaDSP abandoned).** Since
+D-063, all 8 output channels pass through the filter-chain convolver behind
+the universal audio gate (`docs/operations/safety.md` Section 10).
 
-BM-2 benchmark (2026-03-16) showed PipeWire's built-in convolver is 3-5.6x more
-CPU-efficient than CamillaDSP on Pi 4B ARM (1.70% vs 5.23% at comparable buffer
-sizes). First successful PW-native DJ session (GM-12): 40+ minutes, zero xruns,
-58% idle, 71C. DJ PA path latency dropped from ~109ms to ~21ms.
+Session 15 (2026-10-24) focus, pending owner direction:
+1. **Safety: F-314 (CRITICAL).** A venue switch with the gate open applies
+   the new gains instantly (+60/+64 dB from `production` to
+   `foh-passthrough`). Interim rule: never change venue with the gate open.
+2. **Tracking re-sync.** There were no commits between 2026-04-19 and
+   2026-10-24; the state of the Pi after April is unknown.
+3. **Test integrity:** D-063 gate tests (F-298) and the xfail budget.
+4. **Retroactive Rule 13 review** of work that landed without recorded
+   approvals.
 
-US-059 (GraphManager Core + Production Filter-Chain) is in IMPLEMENT phase.
-GraphManager manages PipeWire link topology and mode transitions. Two reconciler
-bugs block automated routing — manual `pw-link` used for GM-12.
+**The NixOS image builds the PREEMPT_RT kernel (RPi fork 6.12.62) with
+hardware V3D GL (D-022).** No V3D blacklist, no pixman, no llvmpipe.
 
-**Pi is on PREEMPT_RT kernel (`6.12.62+rpt-rpi-v8-rt`) with hardware V3D GL.**
-No V3D blacklist, no pixman, no llvmpipe. CamillaDSP service stopped (D-040).
-
-See `docs/project/status.md` for full current state. Decisions in `docs/project/decisions.md`.
+See `docs/project/status.md` for the full current state and proposed work
+order. Decisions are in `docs/project/decisions/` (index:
+`docs/project/decisions-index.md`; the old monolith `decisions.md` stops at
+D-059).
 
 ## Team
 
@@ -381,7 +387,7 @@ Pi: `ela@192.168.178.185` (hostname: mugge), key-based auth, passwordless sudo.
 - **OS:** NixOS (flake-based, SD card image built from `flake.nix`). v0.1.0 image booted and verified (F-266). **PREEMPT_RT kernel (`6.12.62+rpt-rpi-v8-rt`)**.
 - **Desktop:** labwc (Wayland) with **hardware V3D GL compositor** (D-022). No pixman override. lightdm disabled, labwc runs as systemd user service.
 - **V3D:** Hardware V3D GL active on PREEMPT_RT. No blacklist needed (D-022). Upstream fix for ABBA deadlock (commit `09fb2c6f4093`) included in `6.12.62+rpt-rpi-v8-rt`. F-012/F-017 RESOLVED.
-- **Audio:** PipeWire 1.6.2 (NixOS, US-128) at SCHED_FIFO 88 (systemd override, F-020 workaround deployed). PW filter-chain convolver handles all FIR processing (FFTW3/NEON, 16k taps, 4ch). Four `linear` builtin gain nodes provide per-channel attenuation (Mult params from `.conf` defaults; runtime `pw-cli` changes are session-only per C-009). CamillaDSP 3.0.1 installed but **service stopped** (D-040: abandoned in favor of PW convolver). GraphManager (port 4002) manages link topology and mode transitions. Signal-gen (port 4001) provides RT measurement audio. pcm-bridge (port 9100) provides lock-free level metering.
+- **Audio:** PipeWire 1.6.2 (NixOS, US-128) at SCHED_FIFO 88 (systemd override, F-020 workaround deployed). PW filter-chain convolver handles all FIR processing (FFTW3/NEON, 16k taps). Since D-063 all 8 output channels pass through it: FIR on ch 1-4, Dirac (identity) on ch 5-8. Eight `linear` builtin gain nodes provide per-channel attenuation. Their `.conf` defaults are `Mult = 0.0` (D-063 universal audio gate, closed at startup); operating values come from the active venue config when the gate is opened. Runtime `pw-cli` changes are session-only per C-009. CamillaDSP is not part of the NixOS image (D-040: abandoned in favor of the PW convolver). GraphManager (port 4002) manages link topology and mode transitions. Signal-gen (port 4001) provides RT measurement audio. pcm-bridge (port 9100) provides lock-free level metering.
 - **Quantum:** Production config at `~/.config/pipewire/pipewire.conf.d/10-audio-settings.conf` sets quantum 256. DJ mode needs quantum 1024 (set at runtime via `pw-metadata -n settings 0 clock.force-quantum 1024`).
 - **99-no-rt.conf:** DELETED (was Test 3 artifact forcing PipeWire to SCHED_OTHER).
 - **Mixxx:** Runs with hardware V3D GL on PREEMPT_RT (D-022). `pw-jack mixxx` — no `LIBGL_ALWAYS_SOFTWARE=1` needed. CPU ~85% with hardware GL (vs 142-166% with llvmpipe).
@@ -389,7 +395,7 @@ Pi: `ela@192.168.178.185` (hostname: mugge), key-based auth, passwordless sudo.
 - **UMIK-1 calibration:** `/home/ela/7161942.txt` (magnitude-only, serial 7161942, -1.378dB sensitivity)
 - **Firewall:** nftables active (US-000a). Default DROP inbound. Allowed: SSH (22/tcp), VNC (5900/tcp), Web UI (8080/tcp), mDNS (5353/udp), ICMP, loopback, established/related. Port 8080 persistent (TK-140 confirmed).
 - **SSH:** Password auth disabled (TK-056 verified), key-based only
-- **Listening ports:** SSH (22/tcp, all interfaces), avahi/mDNS (5353/udp, all interfaces), wayvnc (5900/tcp when active, password auth), Web UI (8080/tcp, HTTPS, all interfaces, F-037: no auth). Localhost only: GraphManager RPC (4002/tcp), signal-gen RPC (4001/tcp), pcm-bridge levels (9100/tcp). CamillaDSP websocket (1234/tcp) — service stopped (D-040). rpcbind and CUPS disabled (TK-012).
+- **Listening ports:** SSH (22/tcp, all interfaces), avahi/mDNS (5353/udp, all interfaces), wayvnc (5900/tcp when active, password auth), Web UI (8080/tcp, HTTPS, all interfaces, F-037: no auth). Localhost only: GraphManager RPC (4002/tcp), signal-gen RPC (4001/tcp), pcm-bridge levels (9100/tcp). rpcbind and CUPS disabled (TK-012).
 - **Installed (via NixOS):** PipeWire 1.6.2 (US-128), GraphManager, signal-gen, pcm-bridge, level-bridge, web-ui. Mixxx and Reaper available via NixOS packages. CamillaDSP abandoned (D-040). RustDesk removed (D-018).
 
 ## Owner Preferences (from session 2026-03-08)
@@ -400,7 +406,7 @@ Pi: `ela@192.168.178.185` (hostname: mugge), key-based auth, passwordless sudo.
 - **Mode switching:** Whole-gig for starters, quick switch future nice-to-have
 - **Singer IEM:** Engineer controls for MVP, singer self-control future bonus
 - **Singer needs:** Extra track for vocal cues (Reaper provides)
-- **IEM signal path:** Reaper → direct PipeWire link → USBStreamer ch 6-7 (bypasses convolver entirely). Post-D-040, IEM channels no longer need to route through a DSP engine — PipeWire links directly to the USBStreamer output ports.
+- **IEM signal path:** Reaper → PipeWire filter-chain (identity `dirac.wav` filter + gain node, behind the D-063 audio gate) → USBStreamer ch 7-8 (engineer headphones are ch 5-6). Since D-063, all 8 channels route through the filter-chain; the IEM no longer bypasses it. The dirac filter adds no latency.
 
 ### Safety Rules (2026-03-10)
 
@@ -417,10 +423,14 @@ pre-flight checklists, and PREEMPT_RT as a safety requirement (D-013).
   reboot, `systemctl --user restart pipewire`, or any action that causes the USBStreamer
   to lose its audio stream. This applies to all team members — workers, CM, everyone.
   The owner decides when it is safe to proceed (e.g., after turning off amps).
-  **Gain attenuation:** The filter-chain convolver config uses `linear` builtin
-  Mult params for gain (0.001 = -60 dB mains, 0.000631 = -64 dB subs). Default
-  values load from `.conf` at startup; runtime `pw-cli` changes are session-only
-  and revert on PW restart (C-009 verified). The old `config.gain` approach is
+  **Gain attenuation:** The filter-chain convolver config uses eight `linear`
+  builtin Mult params for gain, one per output channel. The `.conf` defaults
+  are all `Mult = 0.0`: the D-063 universal audio gate keeps every output
+  silent until the operator opens it (`docs/operations/safety.md` Section 10).
+  Opening the gate applies the active venue's gains (production venue: 0.001 =
+  -60 dB mains, 0.000631 = -64 dB subs, unity on headphone/IEM ch 5-8).
+  Runtime `pw-cli` changes are session-only and revert to `Mult = 0.0` on PW
+  restart (C-009 verified). The old `config.gain` approach is
   silently ignored by PW 1.4.9+ (TK-237).
 
 ## Key Documents
@@ -431,7 +441,8 @@ pre-flight checklists, and PREEMPT_RT as a safety requirement (D-013).
   Everything in `testing-process.md` derives from these.
 - `SETUP-MANUAL.md` — The comprehensive setup manual (2200 lines). This is the primary
   deliverable so far. Covers everything from OS setup through CamillaDSP configuration,
-  Mixxx, Reaper, MIDI controllers, headless operation, and troubleshooting.
+  Mixxx, Reaper, MIDI controllers, headless operation, and troubleshooting. Partly
+  pre-D-040: the CamillaDSP sections are historical (prose rewrite pending, US-071).
 - `docs/operations/safety.md` — Safety operations manual. All safety constraints in one
   place: transient risk, driver protection, measurement safety, gain staging, pre-flight
   checklists. **Read this before any audio-producing operation.**
@@ -474,9 +485,9 @@ pre-flight checklists, and PREEMPT_RT as a safety requirement (D-013).
 ## Software Stack
 
 - **PipeWire 1.6.2** — Audio server, JACK bridge, AND DSP engine (filter-chain convolver with FFTW3/NEON for FIR crossover + room correction). Single audio graph — no external DSP process.
-- **CamillaDSP v3.0.1** — Installed but **service stopped** (D-040). Previously handled DSP via ALSA Loopback. Historical data in US-001/US-002.
+- **CamillaDSP v3.0.1** — Abandoned (D-040), not part of the NixOS image. Previously handled DSP via ALSA Loopback. Historical data in US-001/US-002.
 - **Mixxx** — DJ software (DJ/PA mode)
-- **Reaper** — DAW for live mixing (Live mode, installed via Pi-Apps or manual download)
+- **Reaper** — DAW for live mixing (Live mode, NixOS package in `nix/nixos/applications.nix`, run via `pw-jack reaper`)
 - **REW** — Room measurement (may run on Pi or separate machine)
 
 ## Critical Design Decisions
@@ -509,9 +520,11 @@ convolver processes within the same graph cycle, adding no buffering latency.
 - DJ/PA mode: quantum 1024 (~21ms PA path) — efficient convolution, saves CPU for Mixxx
 - Live mode: quantum 256 (~5.3ms PA path) — prevents singer hearing slapback echo from PA
 
-The singer's IEM path bypasses the convolver entirely (~5ms via direct PipeWire link).
-She also hears the PA acoustically. At quantum 256, total PA path is ~5.3ms — far below
-the ~25ms slapback threshold. This is a dramatic improvement over the previous
+Since D-063, ch 5-8 (HP/IEM) route through the filter-chain with an identity (dirac)
+filter and a gain node, which adds no latency. IEM path ≈ 5.3ms at quantum 256
+(theoretical; neither path has been measured end-to-end since D-040). The IEM path is
+gated (D-063) like the PA path. The singer also hears the PA acoustically. At quantum
+256, total PA path is ~5.3ms — far below the ~25ms slapback threshold. This is a dramatic improvement over the previous
 architecture (~22ms at chunksize 256 + quantum 256 via CamillaDSP/Loopback).
 
 **D-011 context:** D-011 originally targeted chunksize 256 + quantum 256 to achieve
@@ -551,7 +564,7 @@ At 48kHz, 16,384 taps = 341ms = 2.9Hz frequency resolution.
 - [x] ~~**F-020:** Investigate PipeWire RT module self-promotion failure on PREEMPT_RT. Persist workaround (systemd override or ExecStartPost chrt).~~ RESOLVED (workaround): systemd user service drop-in deployed (commit `9c6f3b1`). PipeWire at FIFO/88 after reboot.
 - [ ] **Mixxx perf:** Hardware GL restored (D-022) — ~85% CPU vs 142-166% with llvmpipe. Investigate further reduction if needed (lighter skin, waveform settings).
 - [ ] **T3d:** 30-min stability test on PREEMPT_RT `6.12.62+rpt-rpi-v8-rt` with hardware GL. F-020 prerequisite met.
-- [ ] **Watchdog reliability:** BCM2835 watchdog failed on Test 3 and Test 5 (2/11 lockups). Investigate.
+- [ ] **Watchdog reliability:** BCM2835 watchdog failed on Test 3 and Test 5 (2/11 lockups, pre-NixOS). On the NixOS image nothing feeds the hardware watchdog (no `systemd.watchdog.runtimeTime` in `nix/`), so it is not a backstop until that is configured. Tracked as F-317 / F-325. A watchdog reboot is an unannounced USBStreamer transient (`docs/operations/safety.md` Section 1), so enabling it is an owner decision (O-24).
 - [x] ~~**Upstream V3D bug report**~~ Not needed — upstream fix already merged (commit `09fb2c6f4093`, `raspberrypi/linux#7035`). Included in `6.12.62+rpt-rpi-v8-rt`.
 
 ## Design Principles

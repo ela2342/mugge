@@ -11,13 +11,17 @@ constraint, not a configuration issue.
 **Source:** Security specialist defect filing in `docs/project/defects.md`.
 **Tags:** f-036, vnc, wayvnc, rfb, password, des, authentication, us-018
 
-## Topic: F-037 (HIGH) Web UI has no authentication (2026-03-21)
+## Topic: F-037 (HIGH, re-rated CRITICAL 2026-10-24) Web UI has no authentication (2026-03-21)
 
 **Context:** Security specialist review identified that the FastAPI web UI on
 port 8080 has no authentication mechanism.
 **Learning:** Anyone on the local network can: control the signal generator via
 `/ws/siggen`, trigger measurements, and access live PCM audio streams. TLS
-(D-032) provides encryption but not authentication. The web UI service file
+(D-032) provides encryption but not authentication. Since D-063 an
+unauthenticated client can also open the audio gate, select
+`foh-passthrough` and raise gains, so security and audio-engineer re-rated it
+Critical (2026-10-24). Interim rule: no amps on a shared network, or restrict
+port 8080 to the engineer's device (safety.md §10 rule 8). The web UI service file
 (`configs/systemd/user/pi4-audio-webui.service`) binds `0.0.0.0:8080` --
 network-facing. Recommended fix: HTTP Basic Auth over TLS. This is HIGH
 severity because the signal generator can produce audio output through the PA
