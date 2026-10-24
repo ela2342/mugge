@@ -8,8 +8,9 @@ land here. Maintained by the PM; the CM commits changes.
 ## Reserved IDs
 
 Taken (not yet filed as records): F-361, F-362, F-363, F-364 (below);
-F-365; D-068 (T57 gate dropped); T65 = US-159 G16 reconciler test.
-Next free: F-366, US-172, D-069, T66.
+F-365; F-366 (US-163 section); D-068 (T57 gate dropped); T65 = US-159
+G16 reconciler test.
+Next free: F-367, US-172, D-069, T66.
 
 ## US-163 text updates (critical path; one tracking batch before the PR)
 
@@ -128,6 +129,18 @@ Next free: F-366, US-172, D-069, T66.
   (3) On link loss: STOP, no retry, situation to the owner -- stands.
   Record in the US-163 lab note.
 
+- **F-366** mugge-pi5-deploy RT kernel config fails: NVME_*_TCP_TLS
+  select TLS, which kernel-rt.nix:150 forces to n; Pi 5 keepNvme=true
+  skips the whole nvmeStrip (kernel-rt.nix:320). Blocks the post-install
+  deploy step only, not the bootstrap. Proposed fix (worker-1): split
+  the strip into fabrics/local plus a board-guard assert; Architect and
+  AE ruling. In US-163 scope (fix on the story branch).
+- 2026-10-24 20:28:03: Pi 5 restarted, assumed to be the owner's power
+  cycle (confirmation pending via team-lead). C8 regressed on that boot
+  (apt timers re-armed); re-stop granted as CM-CHG-.88-3. Tryboot go is
+  conditional on SD serial, MAC and BOOT_ORDER checks; the previous-boot
+  log is waived (no persistent journal). Record in the lab note.
+
 ## P1
 
 - **F-361** Link audit protects only ports named playback_AUX0..7
@@ -222,6 +235,8 @@ Next free: F-366, US-172, D-069, T66.
   (SecSpec)
 - Mac disk nearly full (6.0 GiB free on 2026-10-24, falling slowly,
   CM). Clean up Nix store / old worktrees before heavy local builds.
+  Also: a failed build grew the Mac store by 16 GiB vs 6.6 GiB
+  expected; find out why (CM).
 - **F-365** Hermetic nix checks broken in the sandbox (pre-existing; found in
   T57 by worker-1; CI never builds checks.*): checks.<sys>.test-midi
   (../../../configs resolves to /), test-room-correction (cp
