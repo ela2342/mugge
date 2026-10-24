@@ -166,8 +166,10 @@ update-branch). main is at 289390bf; the pre-PR US-163 tracking batch
 bases on it. Branch protection requires up-to-date with main, so each
 merge needs update-branch and 7 reconfirmations at the new head.
 
-- #42 (team docs paths): 7/7 at 10c3938b, held on owner Q1/A7 (does
-  .claude/team count as docs-only); needs update-branch on merge.
+- #42 (team docs paths): 7/7 at 10c3938b. Owner answered A7 ("Yes,
+  docs-only" for .claude/team/protocol/*.md). Held on owner Q2 only:
+  its dispatch run 40099078614 FAILED (F-335 artefact); does a failed
+  job block a docs-only PR? Then update-branch and 7 reconfirmations.
 - #49 F-335 fix: new head b959e5c9 pending push voids verdicts; needs a
   fresh round and green T1-T3. Off the US-163 path.
 - #43, #45, #44: need #49 on main and real green CI; #45 before #44.
