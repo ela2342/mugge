@@ -132,14 +132,19 @@ Next free: F-367, US-172, D-069, T66.
 - **F-366** mugge-pi5-deploy RT kernel config fails: NVME_*_TCP_TLS
   select TLS, which kernel-rt.nix:150 forces to n; Pi 5 keepNvme=true
   skips the whole nvmeStrip (kernel-rt.nix:320). Blocks the post-install
-  deploy step only, not the bootstrap. Proposed fix (worker-1): split
-  the strip into fabrics/local plus a board-guard assert; Architect and
-  AE ruling. In US-163 scope (fix on the story branch).
-- 2026-10-24 20:28:03: Pi 5 restarted, assumed to be the owner's power
-  cycle (confirmation pending via team-lead). C8 regressed on that boot
-  (apt timers re-armed); re-stop granted as CM-CHG-.88-3. Tryboot go is
-  conditional on SD serial, MAC and BOOT_ORDER checks; the previous-boot
-  log is waived (no persistent journal). Record in the lab note.
+  deploy step only, not the bootstrap. In US-163 scope (fix on the
+  story branch). Fix APPROVED by the Architect: always strip fabrics
+  (FC/TCP/TARGET), strip local only when !keepNvme, plus a board-guard
+  assert on the evaluated config values on all boards. Rejected:
+  dropping keepNvme, TLS=m. AE verdict pending on worker-1's diff
+  against fb7d557e (/tmp/us163-nvme-fix-<sha>.diff), written after
+  the install.
+- 2026-10-24 20:28:03: Pi 5 restart CONFIRMED as the owner's power
+  cycle ("It needed a power cycle", ~20:29, via team-lead). C8
+  regressed on that boot (apt timers re-armed); re-stop granted as
+  CM-CHG-.88-3. Tryboot READY checks passed (serial 0xa720b2a2, MAC
+  88:a2:9e:8c:8d:4e, BOOT_ORDER 0xf461); previous-boot log waived (no
+  persistent journal); tryboot go active. Record in the lab note.
 
 ## P1
 
