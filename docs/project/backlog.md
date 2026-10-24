@@ -171,9 +171,11 @@ Next free: F-366, US-172, D-069, T66.
   cycle." Suspects: macb / BCM54213PE NIC, PHY, driver or firmware
   (seen under Raspbian 6.12.47; wlan0 .87 stayed up). Wired networking
   at gigs depends on it: check for recurrence under NixOS, and capture
-  dmesg/ethtool if it does. P2 (worker-1, CM); Architect assessing the
-  risk to the US-163 install -- re-rate if that ruling makes it
-  blocking.
+  dmesg/ethtool if it does. Architect hypothesis (unverified): macb/PHY
+  EEE (Energy Efficient Ethernet) link drops under load; if confirmed,
+  persist `eee off` in the final configs. P2 (worker-1, CM). The
+  install-time recovery path and link pre-check are US-163 gates, not
+  tracked here.
 
 ## P3
 
