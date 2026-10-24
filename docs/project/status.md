@@ -37,8 +37,9 @@ directories. Their index files are generated from the per-item files
 >   of the CLAUDE.md change in #45 (CM).
 >   Non-blocking follow-ups: F-343.
 >   Both #44 and #45 edit venue-setup.md (merge-conflict risk, CM aware).
->   The `nc -q1` commands are still unverified on the Pi (CM OBSERVE, waits
->   on O-2; F-341). Merge order (CM, per TW): #41, PR #46 (the follow-up
+>   The `nc -q1` commands are still unverified on the Pi (F-341; O-2 moot,
+>   now post-bootstrap verification on the Pi 5). Merge order (CM, per
+>   TW): #41, PR #46 (the follow-up
 >   tracking PR, `chore/tracking-followup`, head `0161e41a`, stacked on
 >   #41's branch; batches 6-7, which #45 cites: F-342, F-344, F-345;
 >   workflow_dispatch CI run 40105627665, F-335 expected). #46 was pushed
@@ -50,6 +51,30 @@ directories. Their index files are generated from the per-item files
 >   after April is unknown.
 
 ## Current Mission
+
+**New mission (owner, 2026-10-24): bootstrap NixOS on a Pi 5 with
+nixos-anywhere.** Owner: "There is multiple, and none of the historical
+ones is currently reachable. Working with the NixOS one is correct. Ok.
+We currently have a Pi 5 running Raspbian, reachable using ssh
+ela@192.168.178.88. Use this to bootstrap a new NixOS system using
+nixos-anywhere. This is hooked up to the USBStreamer and the ADA8200.
+Amps are off, so the system is safe."
+
+- Analysis basis: the team's analysis of the NixOS build stands, so
+  F-348 and F-349 stand as analysed. None of the historical Pis
+  (`192.168.178.185`, `192.168.178.35`) is reachable.
+- Target: Pi 5, Raspbian today, USBStreamer and ADA8200 attached, amps
+  off (owner). All access goes through the CM (tiers as before); warn
+  the owner before any reboot or audio-stack restart (CLAUDE.md safety
+  rule), which the install will cause.
+- Story: product-owner is writing it (ID pending). Worker: `worker-1`
+  (team-lead). Separate from the O-8 question for F-335, still open.
+- Owner questions: O-36 (keep anything on Raspbian before the wipe?),
+  O-37 (install from the story branch before the Rule 13 merge, CI
+  broken by F-335?).
+- Docs assume a Pi 4B throughout: F-353.
+
+Previous mission:
 
 **D-040: Pure PipeWire filter-chain pipeline (CamillaDSP abandoned).**
 PipeWire 1.6.2 is on main (US-128, PR #2). Pi deployment of 1.6.2 is not
@@ -232,13 +257,13 @@ line with this table on 2026-10-24 (owner directive).
 | # | Decision | Context / recommendation |
 |---|----------|--------------------------|
 | O-1 | Accept interim operating rules 1–8 (above; rule 8 added 2026-10-24, F-342) | AE/security. Canonical text in safety.md (TW branch `docs/safety-d063-gate`). Rules 9-12 are under O-32 (AD). |
-| O-2 | Approve read-only Pi check (CM OBSERVE, amps OFF) | Would cover: which gate/venue code is deployed, the WP default sink (F-318), the hw-in level-bridge (F-319), which coefficient files are on the Pi (F-321), the route boot behaviour (F-316), and whether the safety.md `nc -q1` commands work (F-341). F-318 needs GM stopped plus a test stream, so it needs a CHANGE session. |
+| O-2 | ~~Approve read-only Pi check (CM OBSERVE, amps OFF)~~ | **MOOT 2026-10-24:** the old Pis are unreachable (owner). The pending checks are re-scoped to post-bootstrap verification on the Pi 5, or dropped, as their owners decide (F-348 AC7, F-341 AC3, F-346 AC7, F-316, F-318, F-319, F-321, F-328). Was to cover: which gate/venue code is deployed, the WP default sink (F-318), the hw-in level-bridge (F-319), which coefficient files are on the Pi (F-321), the route boot behaviour (F-316), and whether the safety.md `nc -q1` commands work (F-341). F-318 needs GM stopped plus a test stream, so it needs a CHANGE session. |
 | O-3 | GitHub auth route (F-326) | `gh` works again for change-manager (2026-10-24; PRs #41-#43 opened). Agent sessions still get 401 from the invalid `GITHUB_TOKEN` (AE, AD). Owner: remove/refresh the variable, or accept CM-supplied diffs as the review route. |
 | O-4 | `95306f66` (unpushed direct commit to main) | Branch + PR, or drop. |
 | O-5 | Retroactive review of `991ff456` and `c34f7da7` | AE and security reviews done 2026-10-24 (F-316–F-318, F-320–F-325). The full Rule 13 set is not done. |
 | O-6 | The 27 PRs merged without recorded reviews (#2–#35) | Review now, or accept as-is. |
 | O-7 | D-065: confirm the decision was taken | Joint AE + security: HIGH, CRITICAL if the USBStreamer is the default sink (F-318). |
-| O-8 | Worker spawning | Proposed start: F-314 via US-159 (gate module), with F-298 Part A (work order above). Also needed for QE's fresh Gate 1 run on main. |
+| O-8 | Worker spawning | Proposed start: F-314 via US-159 (gate module), with F-298 Part A (work order above). Also needed for QE's fresh Gate 1 run on main. Still open for F-335; `worker-1` (Pi 5 NixOS bootstrap, 2026-10-24) is separate. |
 | O-9 | ~~Scope of the playwright MCP removal (PR #43, AD-43-1)~~ **RESOLVED 2026-10-24:** owner: "playwright: just the broken one in this project". `.mcp.json` only; the settings.json entry, wrapper and devShell package stay (US-109 kept). | #43 removes the `.mcp.json` entry only. `.claude/settings.json` `mcpServers.playwright`, `scripts/playwright-mcp.sh` and the `flake.nix:287` devShell package remain. Remove those too, or keep? Confirm the user-level playwright MCP as US-109's replacement. (The owner's local `.mcp.json` edit was moved onto #43 as `e7a728af` at team-lead's request; disclosed to the owner by change-manager. Main is clean.) |
 | O-10 | IEM routing: confirm D-063 supersedes the CLAUDE.md IEM-bypass note | Confirm that D-063 (IEM/HP through convolver and gate) supersedes the 2026-03-08 CLAUDE.md IEM-bypass note. If confirmed, correct CLAUDE.md (owner-approved edit) (architect). D-063 (2026-03-30) is an explicit owner decision ("8 channels passthrough from app to output"), implemented in `routing.rs` l.602-616; US-115 AC #4 agrees. The CLAUDE.md line predates it. `docs/safety-d063-gate` (TW) and PR #44 already describe IEM through the gate; CLAUDE.md sync follows the owner's answer (UX). AC on closing (TW): `docs/safety-d063-gate` (`93237884`) carries "owner reconfirmation pending, O-10"; when the owner closes O-10, that clause comes out of CLAUDE.md, safety.md §10, README, design-rationale and venue-setup. |
 | O-11 | HP/IEM level limit (ch 5-8, unity gain) | Measure the ADA8200 → IEM transmitter → earpieces chain first, then decide on a per-channel soft cap or limiter (AE). |
@@ -266,6 +291,8 @@ line with this table on 2026-10-24 (owner directive).
 | O-33 | Coefficient reload while the gate is Open (US-159 G8c, F-346) | Architect ruling R-b, AE (RF4) and AD: reload only while the gate is confirmed Closed. Not a policy preference but a correctness requirement with the current patch: each swap is a hard discontinuity with no crossfade, and the 8 channels swap in different cycles. Reload while Open could only be reconsidered once the patch provides a synchronized, crossfaded all-channel swap. Owner to confirm. |
 | O-34 | PR #46 (tracking follow-up, `0161e41a`) pushed and opened without owner approval | team-lead read "commit away" as covering push and PR, then withdrew it; change-manager had already pushed by SHA and opened #46. Not undone. #46 stays open with its review paused (CM; team-lead concurs) until the owner chooses: (a) resume, (b) convert to draft, or (c) close it and delete the branch. Verdicts at `0161e41a` stay on record: architect, QE (content only) and UX approve; SecSpec no concerns, approval withheld until CI is green; AE, TW and AD request changes (one issue: interim rule 11; plus AE S1, TW B2, AD M1). The fixes are batch 8, held until the owner rules; committing them moves #46's head and voids every verdict. AE: put batch 8 into #46; a later PR is acceptable only if #46 doesn't merge first. |
 | O-35 | New Critical F-349 (non-finite audio drives full-scale output; fires at gate open) | AE rated it Critical (likelihood low; worst case rated because the sink mapping is undefined) and asked for it to go to the owner via team-lead. It blocks nothing not already blocked (AE's veto on gate code covers US-159). Owner: acknowledge, adopt interim rule 12 (a)-(c) (O-32), and decide whether the fix is a US-159 AC or a sibling story (architect and PM to propose). |
+| O-36 | Pi 5 Raspbian contents before the wipe | Does anything on the Raspbian system (`192.168.178.88`) need keeping before nixos-anywhere replaces it? Asked by team-lead, 2026-10-24. |
+| O-37 | Install from the story branch before the Rule 13 merge | May the Pi 5 NixOS install run from the story branch before Rule 13 approval and merge, given CI is broken (F-335)? Asked by team-lead, 2026-10-24. |
 
 ## Component Status
 
@@ -417,7 +444,7 @@ line with this table on 2026-10-24 (owner directive).
 
 | Dependency | Status |
 |------------|--------|
-| Pi 4B hardware | Production Pi `192.168.178.185`; test Pi `192.168.178.35`. Current state unknown (no activity since April). |
+| Pi hardware | New target (owner, 2026-10-24): Pi 5 at `ela@192.168.178.88`, Raspbian until the NixOS bootstrap, USBStreamer and ADA8200 attached. Old Pi 4B production (`192.168.178.185`) and test (`192.168.178.35`) Pis unreachable (owner). |
 | GitHub CLI auth | **Broken.** `gh` returns HTTP 401 for github.com. Owner must re-authenticate. |
 | Core software | PW 1.6.2 on main, Mixxx 2.5.0, Reaper 7.64 |
 | Hercules USB-MIDI | Enumeration confirmed, full test pending |
@@ -570,6 +597,11 @@ through D-065). Most significant recent decisions:
   Eleventh batch: F-351 rated High with AE's ACs; F-352 filed (Config
   API accepts NaN Mult; Critical if PW parses `nan`, AE); US-159 G11 (f)
   -0.0 split (QE); local commits `cac75d44`, `0ced44e5` (CM).
+  Twelfth batch: owner answer on the Pi identity and the new mission
+  (Pi 5 at `192.168.178.88`, NixOS bootstrap with nixos-anywhere,
+  `worker-1`); O-2 moot and its checks re-scoped (F-341, F-346 AC7,
+  F-348 AC7); O-8 note; O-36, O-37; F-353 filed (Pi 4B references);
+  local commit `78b436a3` (CM).
 - Status lines updated with merge evidence: US-113, US-120, US-128,
   US-131, US-140, US-142–US-154, US-132, F-256, F-262, F-272, F-287,
   F-290.
@@ -585,8 +617,11 @@ through D-065). Most significant recent decisions:
   US-142–153); needs a worker (O-8).
 - F-335 fix (`${self}` + Nix pin/log, architect) needs a worker (O-8). QE's
   Gate 1 evidence run waits on it.
-- CM (Pi OBSERVE/CHANGE, amps OFF, needs O-2): F-318 evidence, F-316 boot
-  check, F-319 (both suspected dead consumers), F-321, F-328.
+- CM (Pi OBSERVE/CHANGE, amps OFF; O-2 moot, re-scoped to the Pi 5 after
+  the NixOS bootstrap, or dropped, as each check's owner decides): F-318
+  evidence, F-316 boot check, F-319 (both suspected dead consumers),
+  F-321, F-328, F-341, F-346 AC7, F-348 AC7.
+- Pi 4B references in CLAUDE.md, config.md and the benchmarks (F-353).
 - Owner: decisions in "Owner Decisions Pending" above.
 
 ## Session 9 Summary (2026-04-02)
