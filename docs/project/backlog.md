@@ -170,9 +170,14 @@ Next free: F-367, US-172, D-069, T66.
   key ED25519 SHA256:a5kILUyr7XhT3D5Vdm4Z0lBDtitGOW2gb33socC/xSE (to
   SecSpec). /run/current-system = p9mzphhy... (installed bootstrap),
   kernel 6.12.47. CM ruling: target identity is host key + MAC, not
-  IP; the deploy verb uses the current IP. Open owner question (not
-  blocking): fixed router lease? Then update .88 references (team
-  config, docs, memories, deploy verb).
+  IP; the deploy verb uses the current IP. Lease question ANSWERED,
+  owner verbatim via team-lead: "I pinned the IP in the DHCP server.
+  There's also always a DNS entry being generated,
+  mugge.lab.andreas.org". CM verified read-only: the name resolves to
+  .89 via LAN DNS 192.168.178.1 (not via the Mac's default resolvers);
+  MAC and host key at .89 match. Architect + SecSpec to rule IP vs name
+  (CM recommends pinned IP, name as alias); then update .88 references
+  (team config, docs, memories, deploy verb).
 - First-boot records on the bootstrap all green (CM; file
   ~/mugge-pi5-prewipe-20261024/firstboot-p9mzphhy.txt): T48 rev
   fb7d557e, current = booted = p9mzphhy; T49 running, 0 failed units;
@@ -203,11 +208,10 @@ Next free: F-367, US-172, D-069, T66.
 
 ## P2
 
-- Pi 5 DHCP address changes under NixOS (.89 vs Raspbian's .88; same
-  MAC, different client ID). Fix: static lease on the router or
-  ClientIdentifier=mac; record the final IP in the AC and lab note.
-  Seen on first NixOS boot: .89 (see US-163 first-boot entry).
-  P2 (worker-1; supersedes SecSpec's DHCP LOW note).
+- Pi 5 DHCP address: RESOLVED by the owner pinning .89 on the router
+  (DNS mugge.lab.andreas.org; see US-163 first-boot entry). Remaining:
+  record the final address in the AC and lab note after the Architect
+  + SecSpec IP-vs-name ruling. (worker-1)
 - **F-363** Purifi Qts test is order-dependent (`iterdir()[:20]`).
   Medium; QE ACs 1-4. (worker-2)
 - US-159 G16 with AE amendments a-e and architect additions 1-3; test
