@@ -175,9 +175,13 @@ Next free: F-367, US-172, D-069, T66.
   There's also always a DNS entry being generated,
   mugge.lab.andreas.org". CM verified read-only: the name resolves to
   .89 via LAN DNS 192.168.178.1 (not via the Mac's default resolvers);
-  MAC and host key at .89 match. Architect + SecSpec to rule IP vs name
-  (CM recommends pinned IP, name as alias); then update .88 references
-  (team config, docs, memories, deploy verb).
+  MAC and host key at .89 match. SecSpec ruling: the pinned IP is
+  canonical, not the DNS name; any use of the name must match the same
+  known_hosts entry (HostKeyAlias), never a fresh accept-new. HOLD on
+  address updates: the owner later wrote "yes, pinned to 99" while the
+  Pi is verified at .89; team-lead is asking whether that is a typo or
+  a .99 pin (the Pi would move on its next lease). No .88/.89/.185
+  reference changes until answered (file list with the CM).
 - First-boot records on the bootstrap all green (CM; file
   ~/mugge-pi5-prewipe-20261024/firstboot-p9mzphhy.txt): T48 rev
   fb7d557e, current = booted = p9mzphhy; T49 running, 0 failed units;
@@ -186,8 +190,10 @@ Next free: F-367, US-172, D-069, T66.
   permitrootlogin no, root no keys, ela 4 owner keys; firewall 22,
   5353, DHCP only; watchdog devices present, RuntimeWatchdogUSec=0;
   PipeWire absent, ALSA sees APC mini + USBStreamer, nothing opened.
-  T52 and AE check #10 are deploy-image only. SecSpec verdict on
-  T48-T53/AC9b pending on the raw output.
+  T52 and AE check #10 are deploy-image only. SecSpec: T48-T53 and
+  AC9b PASS. SecSpec's nmap and @temp-ports checks are deferred to the
+  US-163 PR Rule 13 review (owner: "I don't know why you do the
+  portscan now?").
 
 ## P1
 
