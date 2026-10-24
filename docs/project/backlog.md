@@ -217,6 +217,11 @@ Next free: F-366, US-172, D-069, T66.
   Pi 4 config. P3. Also: enable a non-root shell into the Mac
   linux-builder VM (its builder key is root-only), via an owner-config
   key for the builder user or another owner-provided route. Low (CM).
+- After US-163: Pi self-rebuild via the Mac builder VM. Needs
+  nix.buildMachines + known_hosts entry in the Pi config, a builder@
+  key on the Pi (a secret), and a fixed Mac IP (.26 moved to .36; VM
+  on :31022). SecSpec to rule on the new trust path (builder is a
+  trusted-user on the VM). P3 (Architect).
 - AE-F6 (routing.rs:423): check whether tracked; file if not.
 - US-170: Pi 4 allowlist and configurationRevision (AC1); Pi 4 WP ALSA
   rule; drvPath pin removal.
