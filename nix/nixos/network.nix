@@ -1,12 +1,20 @@
 { config, lib, pkgs, ... }:
 let
   allowlist = config.mugge.firewall.uiAllowlist;
+  vnc = config.mugge.vnc.enable;
 in
 {
-  # US-163: restrict wayvnc to an allowlist of source addresses. Enabled on
-  # the Pi 5 configurations; the Pi 4 keeps 5900 open until its own
-  # follow-up. The web UI (8080) stays open on the LAN on every board
-  # (owner ruling 2026-10-24; known risk F-037).
+  # US-163, owner ruling 2026-10-24: "web ui stays open! vnc is not needed
+  # right now." The web UI (8080) is open on the LAN on every system that
+  # runs it (known risk F-037). The Pi 5 disables VNC entirely; the Pi 4
+  # keeps it open until its own follow-up. The source-address allowlist for
+  # 5900 is unused for now (backlog).
+  options.mugge.vnc.enable = lib.mkOption {
+    type = lib.types.bool;
+    default = true;
+    description = "Run wayvnc (display.nix) and open TCP 5900 for it.";
+  };
+
   options.mugge.firewall.uiAllowlist = {
     enable = lib.mkEnableOption ''
       source-address allowlist for TCP 5900 (wayvnc). When enabled, 5900
@@ -35,10 +43,10 @@ in
       firewall = {
         enable = true;
         allowedTCPPorts = [ 22 ]  # SSH
-          ++ lib.optionals (!allowlist.enable) [ 5900 ]  # wayvnc
-          ++ [ 8080 ];  # web-ui
+          ++ lib.optionals (vnc && !allowlist.enable) [ 5900 ]  # wayvnc
+          ++ lib.optionals (!config.mugge.bootstrap.minimal) [ 8080 ];  # web-ui
         allowedUDPPorts = [ 5353 ];           # mDNS
-        extraInputRules = lib.mkIf allowlist.enable (lib.concatStringsSep "\n" (
+        extraInputRules = lib.mkIf (vnc && allowlist.enable) (lib.concatStringsSep "\n" (
           lib.optional (allowlist.v4 != [ ])
             "ip saddr { ${lib.concatStringsSep ", " allowlist.v4} } tcp dport 5900 accept"
           ++ lib.optional (allowlist.v6 != [ ])

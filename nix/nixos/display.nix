@@ -7,6 +7,9 @@
 # D-022: PREEMPT_RT + hardware V3D GL confirmed working.
 # No pixman override, no llvmpipe, no LIBGL_ALWAYS_SOFTWARE.
 { config, lib, pkgs, ... }:
+let
+  vnc = config.mugge.vnc.enable;
+in
 
 {
   # ── GPU / Mesa drivers ─────────────────────────────────────────
@@ -66,6 +69,7 @@
     mode = "0755";
     text = ''
       ${pkgs.systemd}/bin/systemctl --user import-environment WAYLAND_DISPLAY XDG_RUNTIME_DIR XDG_SESSION_TYPE
+    '' + lib.optionalString vnc ''
       ${pkgs.systemd}/bin/systemctl --user start wayvnc.service
     '';
   };
@@ -87,7 +91,7 @@
   # Password authentication is configured via wayvnc's config file
   # (~/.config/wayvnc/config) on the target — not managed by Nix
   # (contains credentials).
-  systemd.user.services.wayvnc = {
+  systemd.user.services.wayvnc = lib.mkIf vnc {
     description = "wayvnc — VNC server for Wayland";
     after = [ "graphical-session.target" ];
     partOf = [ "graphical-session.target" ];
@@ -104,7 +108,7 @@
   # ── Packages ───────────────────────────────────────────────────
   environment.systemPackages = with pkgs; [
     labwc
-    wayvnc
+  ] ++ lib.optional vnc wayvnc ++ [
     # wlr-randr is useful for display configuration over VNC
     wlr-randr
   ];

@@ -83,10 +83,14 @@ let
     { name = "/boot/firmware mounted at boot (F-289)"; ok = !hasNoauto c; }
     { name = "no US-156 lab route"; ok = !hasUs156Route c; }
     { name = "networkd DHCP matched on driver"; ok = c.systemd.network.networks."10-wired".matchConfig.Driver == "macb"; }
-    { name = "UI allowlist enabled"; ok = c.mugge.firewall.uiAllowlist.enable; }
+    # Owner ruling 2026-10-24 ("web ui stays open! vnc is not needed right
+    # now"); F-037 accepted risk. The allowlist moved to the backlog.
+    { name = "UI allowlist disabled (cannot block 8080)"; ok = !c.mugge.firewall.uiAllowlist.enable; }
+    { name = "VNC disabled"; ok = !c.mugge.vnc.enable; }
+    { name = "no wayvnc unit or package"; ok = !(c.systemd.user.services ? wayvnc) && !(c.systemd.services ? wayvnc)
+        && !builtins.any (p: lib.hasPrefix "wayvnc" (p.pname or p.name or "")) c.environment.systemPackages; }
     { name = "5900 not opened by any port list or range"; ok = !(tcpOpen c 5900); }
-    { name = "8080 open on the LAN (owner ruling, F-037)"; ok = builtins.elem 8080 (tcpPorts c); }
-    { name = "allowlist rules never mention 8080"; ok = !(lib.hasInfix "8080" (fw c).extraInputRules); }
+    { name = "4001/4002/9100 not opened (localhost only)"; ok = !builtins.any (tcpOpen c) [ 4001 4002 9100 ]; }
     { name = "HiFiBerry modules blacklisted"; ok = lib.all (m: builtins.elem m c.boot.blacklistedKernelModules) hifiberryModules; }
     { name = "config.txt force_eeprom_read=0"; ok = builtins.elem "force_eeprom_read=0" (txtLines c); }
     { name = "config.txt has no HiFiBerry overlay"; ok = !builtins.any (l: builtins.match "dtoverlay=.*(hifiberry|pcm512).*" l != null) (txtLines c); }
@@ -108,6 +112,7 @@ let
       { name = "no audio stack"; ok = !c.services.pipewire.enable; }
       { name = "no audio/display units"; ok = audioUnits c == [ ]; }
       { name = "no vc4-kms overlay"; ok = !hasVc4 c; }
+      { name = "8080 not opened (no web UI)"; ok = !(tcpOpen c 8080); }
     ]);
 
   pi5Full = conf:
@@ -118,6 +123,7 @@ let
       { name = "vc4-kms overlay with noaudio"; ok = lib.hasInfix "dtoverlay=vc4-kms-v3d-pi5,noaudio" (configTxt c); }
       { name = "PipeWire enabled"; ok = c.services.pipewire.enable; }
       { name = "WirePlumber disables other ALSA cards"; ok = hasCardBlock c; }
+      { name = "8080 open on the LAN (owner ruling, F-037)"; ok = builtins.elem 8080 (tcpPorts c); }
     ]);
 
   installer = conf:

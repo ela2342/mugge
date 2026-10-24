@@ -29,10 +29,11 @@
     hat.blockHifiberry = true;
   };
 
-  # Fail-closed allowlist for wayvnc (security ruling); the list is empty,
-  # so 5900 is closed (owner: VNC not needed for now). The web UI (8080)
-  # is open on the LAN (owner ruling 2026-10-24, F-037).
-  mugge.firewall.uiAllowlist.enable = true;
+  # Owner ruling 2026-10-24: "web ui stays open! vnc is not needed right
+  # now." No wayvnc and no 5900; 8080 is open on the LAN (F-037,
+  # network.nix). The allowlist stays off (backlog), so it can never
+  # block the web UI.
+  mugge.vnc.enable = false;
 
   # /boot/firmware is written on every switch (bootloader.nix), so it must
   # be mounted at boot (F-289). No noauto.
