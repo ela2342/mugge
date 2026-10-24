@@ -39,10 +39,10 @@ load as `Mult = 0.0` and the gate is closed (D-063, Section 10), so the
 reboot transient would be the only acoustic risk and nothing would play
 until the operator reopens the gate. Gate-closed-at-boot is not verified by
 any test (F-298, F-313), and after any web UI speaker-profile activation
-the boot config has non-zero gains (F-348, Section 10 Known Gaps): run
-pre-flight check #10 (Section 5) before the amps go back on. Whether to
-enable the watchdog (automatic recovery vs an unannounced transient) is an
-owner decision (O-24).
+the outputs may come up with non-zero gains (F-348, Section 10 Known Gaps):
+run pre-flight check #10 (Section 5) before the amps go back on. Whether
+to enable the watchdog (automatic recovery vs an unannounced transient) is
+an owner decision (O-24).
 
 ### Required Procedure
 
@@ -265,7 +265,7 @@ constraints discovered during system testing, updated for D-040 architecture
 | 7 | Signal-gen ports visible in PipeWire graph | Command #7 below the table | Signal-gen not registered as PW node. In managed mode, GraphManager creates links -- if ports are missing, no audio can flow. |
 | 8 | No USBStreamer capture stream active (unless needed) | Command #8 below the table returns nothing (no output = pass). See the notes on check #8 | F-015: USB bandwidth contention between capture and playback streams on the USBStreamer. This applies to any capture on the USBStreamer, not only the `ada8200-in` adapter. No capture-plus-playback stability run has been done since D-040. |
 | 9 | Owner confirmed amp level safe | Verbal/written confirmation | Transient/excursion damage risk |
-| 10 | All 8 gains read 0.0 in PipeWire before amps on | After every boot and after any PipeWire or GraphManager restart: read the gain params from PipeWire itself (`pw-cli enum-params <pi4audio-convolver id> Props`, or `pw-dump`). Pass: exactly 8 `gain_*:Mult` values, all exactly 0.0, and all `Add` values 0.0. Do NOT use the web UI gate indicator (F-320) | Gains live with the gate showing CLOSED. No automated test covers gate-closed-at-boot (F-298, F-313). Fewer than 8 values found, or any non-zero value: amps stay off |
+| 10 | All 8 gains read 0.0 in PipeWire before amps on | After every boot and after any PipeWire or GraphManager restart: read the gain params from PipeWire itself (`pw-cli enum-params <pi4audio-convolver id> Props`, or `pw-dump`). Pass: `pw-dump` shows exactly one node named `pi4audio-convolver` (the `pi4audio-convolver-out` playback node is not counted), and that node has exactly 8 `gain_*:Mult` values, all exactly 0.0, and all `Add` values 0.0. Do NOT use the web UI gate indicator (F-320) | Gains live with the gate showing CLOSED. No automated test covers gate-closed-at-boot (F-298, F-313). A second convolver node can be live while this node reads 0.0 (F-348). More than one `pi4audio-convolver` node, fewer than 8 values found, or any non-zero value: amps stay off |
 
 **Commands for checks #3, #5, #7 and #8.** These contain a shell pipe, so
 they are kept out of the table: inside a Markdown table the pipe has to be
