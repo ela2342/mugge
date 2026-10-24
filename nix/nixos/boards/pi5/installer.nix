@@ -104,6 +104,13 @@ in
   boot.supportedFilesystems = lib.mkForce [ "ext4" "vfat" "squashfs" ];
   services.speechd.enable = false;
   boot.initrd.services.lvm.enable = false;
+  # The bundle must fit Raspbian's 424M-free FAT. nixos-anywhere needs
+  # neither the nixpkgs source (registry/NIX_PATH, ~185M) nor
+  # nixos-rebuild (python3, ~110M): it copies the closure and runs
+  # nixos-install.
+  nixpkgs.flake.setFlakeRegistry = false;
+  nixpkgs.flake.setNixPath = false;
+  system.tools.nixos-rebuild.enable = false;
 
   # Files for Raspbian's /boot/firmware.
   system.build.pi5TrybootBundle = pkgs.runCommand "pi5-tryboot-bundle" { } ''
@@ -120,6 +127,6 @@ in
     # The firmware only uses a prefixed overlays/ if it has a README.
     echo "Overlays for the Pi 5 NixOS installer" > $d/overlays/README
     cp ${tryboot} $out/tryboot.txt
-    (cd $out && find . -type f | sort | xargs sha256sum) > $out/SHA256SUMS
+    (cd $out && find . -type f ! -name SHA256SUMS | sort | xargs sha256sum) > $out/SHA256SUMS
   '';
 }
