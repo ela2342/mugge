@@ -145,6 +145,19 @@ Next free: F-367, US-172, D-069, T66.
   CM-CHG-.88-3. Tryboot READY checks passed (serial 0xa720b2a2, MAC
   88:a2:9e:8c:8d:4e, BOOT_ORDER 0xf461); previous-boot log waived (no
   persistent journal); tryboot go active. Record in the lab note.
+- Install gate rulings (2026-10-24; record in the lab note and ACs):
+  - Link pre-check criterion (Architect, option a): all RX/TX error
+    counters 0; carrier_changes does not rise after the initial
+    link-up; 1000/Full; 0% ping loss. rx_dropped is recorded, not
+    gating (stack-level drops of unhandled multicast; installer showed
+    103 -> 219 with 0 errors).
+  - C2 (AD): accepted with changes. CONFIG_MMC_BLOCK=m is OK via initrd
+    availableKernelModules. C3 gains: (i) mmc_block.ko inside the
+    firmware-loaded gens/<id>/initrd, release matching the Image;
+    (ii) init=<toplevel>/init in cmdline.txt, toplevel present;
+    (iii) blkid labels FIRMWARE / NIXOS_SD.
+  - Installer host keys logged by SecSpec: ED25519 QVn+Ta3b...MIw8,
+    installer boot_id 4da95547.... disko,install GO issued to worker-1.
 
 ## P1
 
@@ -269,6 +282,9 @@ Next free: F-367, US-172, D-069, T66.
   VM's SSH would likely need LAN exposure. Rule 13 code change, not in
   US-163 unless the owner asks. P3 (Architect).
 - AE-F6 (routing.rs:423): check whether tracked; file if not.
+- Add mmc_block to boot.initrd.kernelModules for an explicit load (now
+  only via availableKernelModules). Not in this install; may ride with
+  the F-366 commit if the Architect agrees. Low (AD).
 - Lowest: Pi 5 deploy eval warns that disko's legacy "table" type is
   deprecated (migrate per disko's table-to-gpt guide). Check whether
   MBR is intentional for the Pi 5 FAT/firmware, else migrate.
