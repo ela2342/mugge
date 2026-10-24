@@ -399,10 +399,17 @@ confirmation.
 
 The Config tab shows per-channel gain sliders for the eight PipeWire
 filter-chain `linear` builtin gain nodes (D-063: one per USBStreamer output,
-channels 1-8). The sliders show the values read when the Config tab was
-opened; they do not update on their own (re-open the tab to refresh). These
-are the same gain nodes used by the panic MUTE button (F-040, below), the
-universal audio gate (Section 10), and the measurement pipeline.
+channels 1-8). These are the same gain nodes used by the panic MUTE button
+(F-040, below), the universal audio gate (Section 10), and the measurement
+pipeline.
+
+The sliders show the gain values read from PipeWire when the Config tab was
+opened; they do not update on their own (reopen the tab to re-read). A
+slider reading -INF does not prove silence: the value may be stale, or the
+parameter may be missing (shown as a greyed-out row). A non-zero slider
+while the gate shows CLOSED means the outputs were live when the tab was
+opened: keep the amps off. Pre-flight check #10 (Section 5) is the
+authoritative check.
 
 **Interim (until US-159): the Config tab gain sliders are read-only in
 practice.** Do not use Config tab gain Apply. It writes the gain nodes
