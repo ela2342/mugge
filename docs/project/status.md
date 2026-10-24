@@ -130,7 +130,9 @@ numbers are given in brackets. Where a status.md rule is stricter or not
 yet in safety.md (rules 9-12), the stricter rule applies (AD).
 
 1. Close the gate before switching venues (F-314) [Rule 3], and before
-   every mode change (F-359; PO, AE; not yet in safety.md).
+   every mode change (F-359; PO, AE; not yet in safety.md). If the web
+   UI restarts or becomes unreachable during a measurement: amps off
+   and HP/IEM off first (F-360; AE, PO).
 2. Play nothing on the Pi except Mixxx, Reaper and the signal generator,
    and keep the amps off during any GraphManager restart (F-318) [Rule 9].
 3. Don't open the gate on `foh-passthrough` (F-271, F-314) [Rule 2].
@@ -291,10 +293,11 @@ line with this table on 2026-10-24 (owner directive).
 #40 (`sprint/session-16` @ `c1832030`, owner-held) reuses IDs that main
 and the active work (#41, #45, #46, the US-163 branch) already use. PO
 ruling (2026-10-24): main plus the active PRs are canonical; nothing
-changes today. If #40 is revived, its US-157..168, F-296 (and any
+changes today. If #40 is revived, its US-157..165, F-296 (and any
 T-IDs) must be renumbered in its rebase, from the next free IDs at
-that time (currently US-171, F-360, D-068). Until then nothing new is
-allocated in US-166..168.
+that time (currently US-172, F-361, D-068). US-166..168 exist only on
+#40 and keep their IDs; nothing new is allocated in US-166..168
+(TW, AD L1).
 
 - F-292: not a collision. The same defect; merged into one record (PM).
 - US-155, US-156, D-065, F-291, F-293, F-295: the same items, but #40
@@ -436,7 +439,8 @@ connected).
 | F-330 | Medium | CI paths filter is an allowlist; unknown paths skip T1-T3 (O-22: a skip is not green). |
 | F-333 | High | T3 (SD image) not in PR CI; no PR can meet T1+T2+T3 green (O-26). |
 | **F-335** | **Critical** | CI T1 fails on main before any test runs (`src/web-ui` not found in flake source). Blocks every merge, incl. #41-#43 (O-22). |
-| F-359 | High (AE) | GM `set_mode` re-links mid-stream with the gate Open: step discontinuities into the amps, a different IEM feed at level (F-342). Fix US-159 G15; interim rule 1. |
+| F-360 | High (PO, AE) | Web UI crash mid-measurement leaves measurement mode with the gate Open. Fix US-171 (GM measurement lease); interim rule 1. |
+| F-359 | High (AE) | GM `set_mode` re-links mid-stream with the gate Open: step discontinuities into the amps, a different IEM feed at level (F-342). Fix US-160 (G-a/G-b); interim rule 1. |
 | F-358 | Medium (architect, AE; High if US-163 AC13 fails) | Three fixes in #40's original records are missing on main. RT fix: measure in AC13, then a separate port PR; `period-num` 5: US-164; `node.always-process`: rejected for now. Blocks gig-capable images (security). |
 | F-357 | High (QE) | A skipped `test-and-build` counts as CI green: every green run since 2026-04-20 was docs-only, so main has had no real T1 since. Either a skip satisfies branch protection or the job is not required (worker-2 to state). |
 | F-334 | Medium | local-demo still disables WP policy.standard; diverges from production (D-065), F-318 untestable locally. |
@@ -707,7 +711,19 @@ through D-065). Most significant recent decisions:
   merge-order head; #47 follow-ups; provenance closed (CM); F-358
   rated and decided per item (architect, AE, security); F-359 filed
   with US-159 G15 and T58-T60 (AE, PO); rule 1 mode changes; F-349
-  AC12 monitor detection; MBR ruling in US-163 (architect).
+  AC12 monitor detection; MBR ruling in US-163 (architect). PR #48
+  at `26f7fd1e` (CM).
+  Sixteenth batch (#48 follow-up): G-mode and the measurement/TF
+  restore paths in US-160 AC5-AC15 and T58-T64 (PO; architect R1-R6
+  with AE A1-A3 and M1; AD M5; UX), US-159 G11/G15 delivered there;
+  F-360 (High) and US-171 (measurement lease; AE M2-M5); unified
+  CloseFailed banner; collision register US-157..165, next free
+  US-172/F-361 (TW, AD L1); US-163 T-order (QE), AC12a strict form
+  (architect, AE), AC13 single PID, AD M4 and L2-L6, AE N2/N5, QE
+  N4, Bluetooth, runbook (UX); US-169 (AE, AD M3, UX); D-067 Q1/Q3
+  notes and per-head classification (architect, security, AD); F-330
+  filter list (QE); F-357 medium, AC5, AC6 (QE, AD M2); O-8 wording
+  (QE); #40 provenance wording and Found-by (TW).
 - Status lines updated with merge evidence: US-113, US-120, US-128,
   US-131, US-140, US-142–US-154, US-132, F-256, F-262, F-272, F-287,
   F-290.
@@ -755,19 +771,28 @@ through D-065). Most significant recent decisions:
   exemption; owner to answer D-067 questions 1-3 (CM via team-lead).
 - TW: does "close the gate before every mode change" (rule 1, F-359)
   go into safety.md? Through a follow-up, so #45's approvals stay
-  intact (PO).
-- UX: view on PO's optional US-160 add-on: while the gate is Open, the
-  UI disables or greys out the mode switch, with a hint. Added to
-  US-160 only if UX agrees.
+  intact (PO). Also (PO): Standby is refused while the gate is open,
+  and the operator's "off" action is closing the gate, not MUTE
+  (F-355). The UX add-on is decided: US-160 AC14.
 - Owner questions via team-lead (PO): whether D-065's
   `node.always-process = true` was the owner's decision (architect
   and AE: reject for now, F-358 item 3); which US-156 route was
   intended (default gateway, #40, or VM subnet via `.26`, main).
-- Room correction / measurement story: US-163 AC12a(c) disables the
-  UMIK-1 in PW on the Pi 5; that story must re-enable it (architect N6).
+- PO, then the owner: Bluetooth is off on the Pi 5 (`disable-bt-pi5`);
+  before DJ use there, verify the Hercules over USB-MIDI or bring
+  Bluetooth back (architect; US-163 note).
+- Architect, informational: once the PW 1.6.2 source is readable,
+  check whether the convolver clears its history on suspend/resume
+  (F-358 AC5; F-349 AC2 stays mandatory).
+- TW N4 (#48): re-check the #45 `d605b5c1` citations in F-343 and
+  F-345 against #45's current head (TW, with the CM).
+- PO: US-160's title ("hide or relabel UNMUTE") no longer covers its
+  scope (G-mode, restore paths, G11); retitle if wanted.
+- UX: review `docs/project/stories/US-160.md` and US-171 once #48
+  carries them (PO).
 - #40 IDs: see the collision register (PO: no renumbering today).
-  PO: reconcile US-155, US-156, D-065, F-291, F-293, F-295 with #40's
-  originals. Architect and AE: rate F-358.
+  F-291, F-293 and F-295 are ruled inside F-358; D-065's flag and
+  US-156's route are with the owner (PO).
 - #47 follow-ups for `.claude/memories/pi5-bootstrap.md` (TW, after
   #47 merges): (1) AE: the RT/FIFO 88/xrun behaviour of our build on
   Pi 5 hardware (RP1 USB) is unverified; (2) AE, optional: "confirm
