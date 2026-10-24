@@ -397,11 +397,16 @@ confirmation.
 
 ## 8. Web UI Gain Controls (US-065, Config Tab)
 
-The Config tab provides per-channel gain sliders controlling the eight PipeWire
+The Config tab shows per-channel gain sliders for the eight PipeWire
 filter-chain `linear` builtin gain nodes (D-063: one per USBStreamer output,
-channels 1-8). These are the same gain nodes used by the panic MUTE button
-(F-040, below), the universal audio gate (Section 10), and the measurement
-pipeline.
+channels 1-8). The sliders read the live values. These are the same gain
+nodes used by the panic MUTE button (F-040, below), the universal audio gate
+(Section 10), and the measurement pipeline.
+
+**Interim (until US-159): the Config tab gain sliders are read-only in
+practice.** Do not use Config tab gain Apply. It writes the gain nodes
+directly, bypasses the D-063 gate, and the gate indicator keeps showing
+CLOSED (Section 10, Rule 11; F-344).
 
 | Ch | Gain node | Output |
 |----|-----------|--------|
@@ -808,6 +813,17 @@ ramp (F-320-F).
       venue's filter set was generated (for the Markaudio rig, US-155 AC4).
     - No such record exists yet. If you cannot confirm the set, keep the
       amps off.
+11. **Gate bypass** (interim, until GraphManager is the sole Mult writer,
+    US-159; F-344, F-345). CLOSED does not guarantee silence. Two web UI paths
+    write non-zero Mult without GraphManager: Config tab gain Apply, and the
+    thermal limiter, which restores gain toward the profile gain as the
+    coil cools if it was limiting when the gate closed.
+    - Never use Config tab gain Apply.
+    - To make the outputs safe, turn the amps off; do not rely on CLOSE
+      GATE alone.
+    - If Apply was used, or the thermal limiter was ENGAGED at any point
+      since the last open, treat the outputs as live and pass pre-flight
+      check #10 (Section 5) before the amps go on.
 
 Watchdog mute, gain-integrity mute, and the standby transition all close the
 gate. Watchdog unlatch and UNMUTE are **not** safe recovery paths.
@@ -861,6 +877,7 @@ in `docs/project/status.md`).
 | MUTE/UNMUTE independent of the gate | Gains re-applied while MUTE shows active; UNMUTE bypasses gate | Rule 7 | F-320-F |
 | CLOSE GATE button disabled while the gate reads CLOSED | The UI cannot close the gate in the F-320 states, where it matters most | Rules 5-7: panic MUTE, then REST or RPC close | F-338 |
 | Live mode not refused on 3-way profiles | Headphone feed on the IEM outputs ch 7-8 | HP/IEM Rule 3: never select Live mode on a 3-way profile; only engineer headphones on outputs 7-8 | F-342 |
+| Gate bypass by web UI Mult writers | Config tab gain Apply and the web UI thermal limiter write Mult bypassing the gate; GraphManager gain integrity checks only > 1.0 and never re-zeroes | Rule 11 | US-159 (sole writer, reduce-only limiter); F-344, F-345 |
 | Close reports success without proof | `close_gate` returns ok without verifying, even if no gains were written (convolver node missing) | Rules 5-7 end with pre-flight check #10 | F-339 |
 | No persisted gate state | D-063's `active.yml` `audio_enabled` field is not implemented; the gate exists only in GraphManager memory | Rules 5-6 | F-320-G |
 | Web UI has no authentication | Anyone on the network can open the gate, change venue and raise gains | Rule 8 | F-037 (Critical) |
@@ -890,6 +907,8 @@ in `docs/project/status.md`).
 - F-338: CLOSE GATE button disabled while the gate reads CLOSED
 - F-339: Gate close reports success without verifying the gains
 - F-342: GraphManager does not enforce D-054 `mode_constraints` on `set_mode`
+- F-344: Config tab gain Apply writes Mult directly, bypassing the gate
+- F-345: Thermal limiter restores Mult while the gate is closed
 - `src/web-ui/app/audio_mute.py`: MUTE/UNMUTE (independent of the gate)
 - `configs/venues/`: Venue gain configs
 - `src/graph-manager/src/main.rs`: Gate open/close and venue handling
