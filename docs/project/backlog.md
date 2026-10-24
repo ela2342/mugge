@@ -136,11 +136,15 @@ Next free: F-367, US-172, D-069, T66.
   story branch). Fix APPROVED by the Architect: always strip fabrics
   (FC/TCP/TARGET), strip local only when !keepNvme, plus a board-guard
   assert on the evaluated config values on all boards. Rejected:
-  dropping keepNvme, TLS=m. AE verdict pending on worker-1's diff
+  dropping keepNvme, TLS=m. AE APPROVED too (no audio concerns), so a
+  joint Architect + AE ruling on worker-1's diff
   /tmp/us163-nvme-fix-fb7d557e.diff (sha256 7d3630b4...b463; scratch
   worktree only). board-guard 102 PASS, mutation tests FAIL as
   intended; Pi 4 kernel drv unchanged; Pi 5 deploy configfile builds
-  via Mac offload.
+  via Mac offload. Next: worker-1 commits it to the story branch after
+  the first-boot checks; full Pi 5 deploy kernel build CM-MAC-BUILD-2;
+  then, at the committed SHA and before the deploy step, AE N2 (the
+  four HiFiBerry modules =m or absent) plus the modules.builtin check.
 - 2026-10-24 20:28:03: Pi 5 restart CONFIRMED as the owner's power
   cycle ("It needed a power cycle", ~20:29, via team-lead). C8
   regressed on that boot (apt timers re-armed); re-stop granted as
