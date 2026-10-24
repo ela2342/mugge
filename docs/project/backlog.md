@@ -44,6 +44,15 @@ T65 = US-159 G16 reconciler test. Next free: F-365, US-172, D-068, T66.
   clients are on local-demo's remote; any link to the USBStreamer or
   HiFiBerry means stop and report to AE. Not for the NixOS image, not a
   general rule. Lapses if anything is connected to a Pi output.
+- Installer root login (item "(a)", owner approved 2026-10-24: "Allow
+  it explicitly"): nixos-anywhere 1.13.0 needs root@ for
+  `--phases disko,install`. RAM installer only: PermitRootLogin
+  prohibit-password, root keys = ela's four users.nix keys. Bootstrap
+  and deploy stay root-locked (board-guard negative test). Conditions
+  (Architect, SecSpec): no --copy-host-keys; no
+  /mnt/root/.ssh/authorized_keys before the first reboot; T53 `sshd -T`
+  shows root login off; fix the installer.nix:18 comment. AC9a text
+  ("PermitRootLogin no") needs amending for the installer.
 - AD install challenges (2026-10-24; C1-C3 required before the erase):
   - C1 (bug, FIXED in 41fd1105, bundle verified): installer.nix
     SHA256SUMS lists itself, so `sha256sum -c`
