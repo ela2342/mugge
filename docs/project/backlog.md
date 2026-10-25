@@ -1767,7 +1767,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   on frspf350, removed when US-172 closes (CM, 2026-10-25: kept at
   RESTORED, removed only at US-172 close). Run-2 at stable SHAs
   (us172.sh 8706a804, drm-reads d1c52592), under Architect/QE
-  review. H1 may pre-empt the Pi
+  review. Run-2 reviews (CM, 2026-10-25): Architect APPROVE at
+  8706a804/d1c52592; Architect N1: tryboot.txt stays armed if tb-pre
+  fails after the put, so tb-pre now removes it. QE CHANGES
+  REQUESTED: R1 FALSIFIED only on the exact base states; R2 an
+  oracle self-test before arming; R3 tb-reboot runs once per run
+  id. worker-2 is revising. H1 may pre-empt the Pi
   build queue between derivations once reviewed; US-173 Gate-2
   follows H1.
   /dev/mem firmware-log read: DEFERRED. Eligible only if H1 is
@@ -2191,7 +2196,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   chore/rc-check-configs, then the 174b PR; US-173 merges main after
   chore/rc-check-configs. F-374 merges first per the earlier ruling.
   Pushed (CM, 2026-10-25, later): story/US-174-room-correction =
-  d595613f (US-174b).
+  d595613f (US-174b). worker-4 hit one classifier denial (PII Data
+  Handling, a read under /tmp/claude-503); team-lead reports it to
+  the owner.
   Measurement SNR check (AE, P2, AE-owned; 2026-10-25): US-174b
   shows the correction raises up to +0.67 dB in below-target
   regions at -40 dB noise re peak, clean at -60. The sweep capture
@@ -2457,8 +2464,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   a non-LR route). The CM asked the AE whether 96 must stay and the
   Architect about scope. Every reviewer re-reviews the merge-main
   head after F-363 merges (strict protection).
-  Non-blocking #55 notes: Architect N1: extend the phase check to
-  24 dB/oct. UX N1: slope-error tuple wording; UX N2: release note
+  Non-blocking #55 notes: Architect N1 (CM wording): the
+  phase-at-fc <= 5 deg check extended to LR4 (24 dB/oct). UX N1:
+  slope-error tuple wording; UX N2: release note
   "a crossover section without `type` now means LR" (TW). QE N2:
   the web-ui teardown flake is F-387 (cited in the #55 body). QE
   N3: F-383 cites the #55 post-combine test by name (sum margin 0.1
@@ -2778,6 +2786,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     same source may be affected (worker-6 scanning). AC: a parser
     test with comma decimals plus a Qts/Qms range sanity check in
     the data tests. QE-owned.
+  - Coast record (AE + QE final, via CM, 2026-10-25): KEEP, marked
+    ts_consistency: unverifiable (a separate value from
+    datasheet-inconsistent); stored values unchanged. The QE owns
+    the exemption mechanics. Open (AE, PM question): whether the
+    fail-closed rule above also covers "unverifiable".
 - **F-379** (worker-4, Architect ruling; 2026-10-25) Web-UI
   correction level defect: src/web-ui/app/filter_routes.py:231 calls
   correction.generate_correction_filter directly, with no IR level
