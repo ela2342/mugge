@@ -207,6 +207,7 @@ Pi 4B on Raspberry Pi OS. On the Pi 5 (NixOS):
   generation, not a second kernel image; see `nixos-upgrade.md` Section 8.4
   and 8.5.
 - **D-013** is re-confirmed on the Pi 5 (PREEMPT_RT, PipeWire FIFO 88).
+  Decision record for the Pi 5 baseline: D-069.
 
 ### The V3D Fix (D-022)
 
