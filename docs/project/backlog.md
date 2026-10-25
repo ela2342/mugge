@@ -1854,7 +1854,24 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   reboot" above): tb-normal runs after tb-restore as a plain reboot
   gated by the CM's logged go, because the tb-normal guard cannot
   trigger with tb-post skipped; a known limitation in the run
-  report. H1 may pre-empt
+  report.
+  ARCHITECT ADDENDUM (via CM, 2026-10-25): tb-normal YES after
+  tb-restore on the CM's logged go (supersedes the Architect's
+  "skip"; QE and Architect agree). Run-3 guard: refuse tb-normal
+  when a tb-reboot log with a FAIL exists and there is no tb-post
+  log, unless US172_CM_GO=1. Hypothesis B variant: was
+  overlay_map.dtb in o/? worker-2 states this; if it was missing,
+  3a includes it, sha-checked from KDIR. Discrimination: a
+  hung-boot journal rules out B; no journal and no flash code
+  points to early kernel; a flash code points to firmware.
+  disable_splash stays the marker. F-389 BLOCKS US-172. Console
+  repeat not now: HDMI during 3b is offer-only; UART is the last
+  fallback, only if 3b hangs AND leaves no journal; any repeat with
+  a console goes back to the Architect. get_throttled counts as a
+  current-boot reading only. worker-2's recovery script
+  us172-recovery.sh (bf33e6e1...) is under Architect + QE review.
+  HDMI and UART stay list-only until run 3 is approved (CM: not to
+  team-lead now). H1 may pre-empt
   the Pi
   build queue between derivations once reviewed; US-173 Gate-2
   follows H1.
@@ -2467,6 +2484,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   objection; via CM, 2026-10-25). US-172 run 2: run 1 +
   overlay_prefix=o/ + disable_splash=1 turned a 36 s return into no
   return. Details, recovery and the run-3 design under US-172.
+  BLOCKS US-172 (Architect, 2026-10-25). Linked: the watchdog
+  reliability TODO (CLAUDE.md open questions; BCM2835 watchdog
+  failed Tests 3/5 on the Pi 4) and the RuntimeWatchdogSec check
+  under US-163 AC5 below.
 - Docs (TW; via CM, 2026-10-25): flake test apps run on a /nix/store
   copy of the git tree, so untracked new test files are invisible
   to `nix run .#test-*` until git-added. On darwin, test-web-ui is
@@ -3421,6 +3442,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   generation sets RuntimeWatchdogSec at all (the bootstrap read
   showed RuntimeWatchdogUSec=0). The Pi 4 watchdog failed in Tests
   3/5, so this matters for gigs; run 3 also needs it on bcm2835.
+  Linked to F-389 and the CLAUDE.md watchdog reliability TODO
+  (Architect, 2026-10-25).
 
 ## Open PRs (2026-10-24, per CM)
 
