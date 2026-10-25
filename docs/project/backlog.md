@@ -3513,6 +3513,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   1c36889f in; then a diff-only re-check by all 7; one more main
   update after #54 merges (strict protection), then the BS1 docs PR
   (c37b8f3c; CM rechecks base blobs).
+  #55 at d0a317c3 (CM, 2026-10-25): worker-5's merge of main 1c36889f
+  pushed; three-dot diff byte-identical to ce872e30; room-correction
+  1244/0/1, web-ui unit 937/1; body v4 posted; CI 40241633913 running;
+  diff-only re-check out to all 7. APPROVED so far: UX (own cmp of the
+  diff), AD (no new findings; not covering CI; lapses at the post-#54
+  update) = 2/7. One intermittent "1 warning" in a web-ui unit run, 2
+  reruns clean; worker-5 tries to capture its text; possibly the F-387
+  family; the QE is informed.
   AD L3 suggested text (via CM; TW/AE tidy): "designed so the two legs
   sum flat; the shipped LR4 profile is verified within ±1 dB, LR8
   after room correction is not yet verified (F-383)" (markaudio LR4
@@ -3908,6 +3916,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   QE's CHANGES REQUESTED. TW v2 (MANIFEST c8a6e156) has R1, N1 and N2
   but not yet F-388 AC-f; the CM holds it until the TW folds AC-f in,
   so the 7 re-check only once.
+  #58 v2 at ff586707 (TW MANIFEST 000c414b, CM 2026-10-25; supersedes
+  c8a6e156, never committed): the QE's R1 plus N1/N2, the AE's
+  exemption-sentence fix, and F-388 AC-f as F-388.md AC 6 (AE text
+  verbatim; UX "same message at every entry point" credited to UX).
+  Diff-only re-check out to all 7. The QE's F-262 XPASS line stays OUT
+  of #58 (TW, scope as reviewed); queued for the TW's next defects
+  docs PR.
   #56 backlog (AD, TW, 2026-10-25): AD L1 = TW (3), P3: the CLI
   scripts/drivers/validate_drivers.py and pytest need one shared
   exemption/bounds source (the CLI flags the 8 exempted records
@@ -4350,6 +4365,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   /nix/store/7zah6n80zm3xri1xhy76hz622i3q2grq-test-room-correction.drv;
   AD M1 needs the H1 run (40241169781) to match it. TW body v2 ready
   (182097d7), posted after H1.
+  #54 H1 MET (CM, 2026-10-25): run 40241169781 on aarch64-linux
+  succeeded; drvPath 7zah6n80, identical to the local eval; 1211
+  collected, 1210 passed / 1 skipped / 0 failed; all 14
+  TestRealDriverRecords PASSED; the skip is test_mic_sim_with_cal_file
+  (not a driver test). The AD's M1 merge gate is met by the same
+  evidence. Scratch branch deleted. Body v3 posted (TW v2 with the H1
+  row filled in); the QE does the diff-only body check. Open: the QE
+  verdict and CI 40240718064 at 46343238 (running).
   Pi build queue (Architect, 2026-10-25): F-365, then the F-374
   PR-head suite, then the wireplumber-no-bypass check; each from a
   tarball at the declared SHA with sandbox=true. WP check
