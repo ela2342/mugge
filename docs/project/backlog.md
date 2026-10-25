@@ -1457,6 +1457,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      again for another reason); AE signs off the diff. Done on
      docs/US-163-postmerge at 1472206a (TW, AE wording); AD sees
      the widened row 14 (PM routed it). In review as PR #51.
+  15. US-175 WP-restart re-link (AE, verbatim, 2026-10-25; PENDING
+     the matching safety.md text in the TW's F-318 note batch, Part
+     C2): "US-175: GraphManager re-link after a WirePlumber restart
+     verified to come back gate closed, gains unchanged or 0, no
+     automatic resume. Until verified: the operator check in the
+     safety.md WirePlumber-restart rule after every WirePlumber
+     restart." Under D-070 (supervised home-lab session) the
+     operator check is enough; for gig or unattended use the row
+     must be closed (AE). Source: /private/tmp/ae-f318-note-review-
+     v1.md ADDENDUM. Mirror consequence: the safety.md lead-in ("14
+     rows", "rows 1-3 and 5-14") and the Gate rule ("1-3, 5-14")
+     change with this row; the TW updates them in the same batch,
+     and this list then follows the merged safety.md wording.
   NEXT safety.md TOUCH (#51 reviews, non-blocking, fail safe; TW
   drafts, AE owns the wording, this list follows per the mirror
   rule): (1) AD L1 = UX (a): the lead-in "holds" (closed and
@@ -1910,6 +1923,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     GM-linked JACK path; (3) confirm with `journalctl --user -u
     wireplumber | grep F-318`; (4) never pw-link to the USBStreamer
     by hand.
+    Status (TW, 2026-10-25): draft /tmp/tw-f318-note-draft-v3.md:
+    a safety.md bullet after the F-373 rule plus a new SETUP-MANUAL
+    section 14 subsection "No target node available" (no other
+    troubleshooting doc). Part C = the US-175 WP-restart addition:
+    C1 in the Section 1 transient list (AE OK); C2 a Pi 5 rule
+    bullet, replaced by the AE's verbatim text (marked NOT yet
+    verified; operator check after every WP restart), with amps-on
+    row 15 added (see the AMPS-ON list). UX OK'd v3. Waiting: AE
+    sign-off of the final draft; the CM merging main (#51) into the
+    US-173 branch first, so the whole-file batch does not undo
+    safety.md row 14. Then a whole-file batch to the CM; worker-3
+    commits.
   - UX N2 (backlog; not needed for US-173): a dismissible web UI
     information line "Playback from <app> blocked: mugge routes
     audio itself".
@@ -2189,6 +2214,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (seen in the 695f69af test, not caused by F-318; = worker-3
   finding a under US-173); until then output is silent with no
   visible cause.
+  UX backlog (2026-10-25, from the AE's F-318 note review; not for
+  the US-173 batch): show GraphManager's link_audit result in the
+  web UI as "Routing OK / ROUTING VIOLATION", so the pre-amps-on
+  `pw-link -l` check stops being an eyeball check. A violation is a
+  red banner near CLOSE FAILED in the U8 order. Related: N3 above
+  and F-361.
 - **F-372** (SecSpec, MEDIUM; amps-on/gig blocker class next to
   F-037): the S-001 fix is weak. filter_routes.py:545 tests
   abspath(output_dir).startswith(abspath(DEFAULT_OUTPUT_DIR)), a
@@ -2423,6 +2454,23 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
 
 ## P2
 
+- **Stale HP/IEM routing docs** (AE, docs, P2; AE review; folded per
+  team-lead, 2026-10-25). docs/architecture/graph-manager.md section
+  5.3/5.4 (0e0cbd38, same on main; lines ~164-195) still documents
+  the pre-D-063 "Mixxx HP --> USBStreamer direct" and "Reaper
+  HP/IEM --> USBStreamer direct". The code is authoritative
+  (src/graph-manager/src/link_audit.rs:21-24): HP/IEM route through
+  the convolver (Dirac passthrough); any direct USBStreamer link is
+  a violation. Contradicts the F-318 operator rule ("only
+  pi4audio-convolver-out may feed the USBStreamer"). Update the
+  section 5 routing tables and link counts. Same item: the project
+  CLAUDE.md IEM lines (Owner Preferences "IEM signal path ...
+  bypasses convolver entirely", ch 6-7; Design Decision 2 "the
+  singer's IEM path bypasses the convolver entirely"). AE-verified
+  wording: HP/IEM routed through the convolver per D-063, channels
+  7-8 to match the channel table. Owner TW: one docs PR, normal
+  Rule 13 review. CLAUDE.md is the owner's file: team-lead tells the
+  owner; if the owner objects, that part waits. Not urgent.
 - **F-370** (QE, Low; RULED by the Architect: Low, P2, not a merge
   blocker; not US-163 scope): the Pi 5 hook rewrites config.txt and
   MAP.txt on a no-op deploy with identical content (seen in
@@ -2727,7 +2775,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (2026-10-25): 5.1 GiB free, 99% used; later 5.0 GiB. Team-lead
   pauses new workers because of it. CM df later on 2026-10-25: 4.9
   GiB. F-380 step 1 waits for at least 8 GiB free. Later (CM): 4.7
-  GiB.
+  GiB. Later (CM, 2026-10-25): 4.0 GiB, AT the CM's line: no new
+  worktrees or builds (backlog commits continue).
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
