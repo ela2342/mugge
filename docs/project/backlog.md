@@ -1729,6 +1729,32 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   prints the base-DTB model and compatible. Order: Mac results,
   then the revised step 2 reviewed by the Architect and the QE,
   then the CM's grant.
+  H1 RULING (Architect, via CM, 2026-10-25): H1 FIRST and ALONE.
+  H1 = a 64-byte firmware overlay path buffer overflows (paths of
+  <=62 chars loaded, >=66 failed). Run-2 design: gens/<id>/o/ with
+  copies, overlay_prefix=o/ plus disable_splash=1 in tryboot.txt
+  only, 4-state oracle (accepted). Verdict confirmed / falsified /
+  mixed = STOP. If H1 confirms, the fix (per-generation
+  overlay_prefix in bootloader.nix or a shorter gen id, plus a
+  path-length assertion in board-guard.nix) gets its own ruling.
+  LIBPI option (i) approved: indirect root /home/ela/.us172-libpi
+  on frspf350, removed when US-172 closes. H1 may pre-empt the Pi
+  build queue between derivations once reviewed; US-173 Gate-2
+  follows H1.
+  /dev/mem firmware-log read: DEFERRED. Eligible only if H1 is
+  falsified or mixed AND the Mac check shows the mailbox
+  (/dev/vcio) cannot fetch the log; then the Architect and QE rule
+  and the guard script gets its own review. BINDING pre-conditions
+  (SecSpec, recorded per the Architect): (1) read only the exact
+  range chosen/log 0x3ff22000 + 512K, no writes; (2) STRICT_DEVMEM
+  stays on; a kernel refusal is the answer; (3) fail-closed guard:
+  the range lies inside memreserve/reserved-memory, no overlap with
+  a device reg, iomem or a secure/TF-A node; one attempt; (4)
+  treated as a possible crash: CHANGE tier, exclusive, announced,
+  boot-id/oops/SError check afterwards; (5) dump 0600, sha logged,
+  only reviewed excerpts quoted; (6) a one-off diagnostic, not a
+  mechanism. Debug-UART capture needs the owner's hands: last
+  resort.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -1935,6 +1961,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     US-173 branch first, so the whole-file batch does not undo
     safety.md row 14. Then a whole-file batch to the CM; worker-3
     commits.
+    AE ruling (via TW, 2026-10-25): SETUP-MANUAL section 14 "No
+    Sound Output" is fixed IN this batch with AE text (step 6
+    opened the gate with no checks; step 7 ran speaker-test
+    straight to hw:1,0; step 1 `aplay -l` becomes `cat
+    /proc/asound/cards`). Not a backlog item. TW has 3 open
+    questions to the AE on the C2 bullet; row 15 number and text
+    may still change.
   - UX N2 (backlog; not needed for US-173): a dismissible web UI
     information line "Playback from <app> blocked: mugge routes
     audio itself".
@@ -1954,6 +1987,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     Optional F-321(f) tone check, digital only, gains at or below
     the venue draft (sats -12, sub -20, ch 4 and HP/IEM -120); then
     the gate closed, gains back to 0 and AC14 read back.
+  - Gate-2 evidence (AE, via CM, 2026-10-25): raw `pw-link -l`
+    captures, to confirm the PW 1.6.2 input marker before the
+    operator docs name it, and that AUX0..7 carry only
+    convolver-out. Gate-2 follows US-172 H1 on the Pi.
   worker-3 findings (not fixed):
   - a) A WirePlumber restart re-creates the ports of nodes it adopts
     and drops their links, even with the policy disabled;
@@ -2470,7 +2507,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   wording: HP/IEM routed through the convolver per D-063, channels
   7-8 to match the channel table. Owner TW: one docs PR, normal
   Rule 13 review. CLAUDE.md is the owner's file: team-lead tells the
-  owner; if the owner objects, that part waits. Not urgent.
+  owner; if the owner objects, that part waits. Not urgent. Needs
+  AE review (AE, via TW, 2026-10-25).
+- **SETUP-MANUAL `aplay -l`** (AE, via TW, 2026-10-25; docs, small):
+  SETUP-MANUAL.md:530 and :1845 still use `aplay -l`, which does
+  not exist on the image (no alsa-utils). Replace with `cat
+  /proc/asound/cards` as in the F-318 batch's section 14 fix. Owner
+  TW.
 - **F-370** (QE, Low; RULED by the Architect: Low, P2, not a merge
   blocker; not US-163 scope): the Pi 5 hook rewrites config.txt and
   MAP.txt on a no-op deploy with identical content (seen in
@@ -2761,6 +2804,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   and gig thermal checks. P3 (worker-1). Fix (Architect): add
   `libraspberrypi` (in pinned nixpkgs, evaluates for aarch64-linux;
   needs /dev/vcio) to the Pi 5 system packages. Not US-163.
+  Re-raised (Architect, via CM, 2026-10-25): add raspberrypi-utils
+  / libraspberrypi to the Pi 5 closure as a diagnostic tool
+  (vcgencmd, vclog). Not part of US-172.
 - Nix on the installer is nixpkgs 2.31.2, below the 2026-10-13
   advisory fixes (2.34.9/2.35.3). If the final systems ship it too:
   bump nix.package or nixpkgs. LOW for now (local nix-daemon only, ela
@@ -2776,7 +2822,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   pauses new workers because of it. CM df later on 2026-10-25: 4.9
   GiB. F-380 step 1 waits for at least 8 GiB free. Later (CM): 4.7
   GiB. Later (CM, 2026-10-25): 4.0 GiB, AT the CM's line: no new
-  worktrees or builds (backlog commits continue).
+  worktrees or builds (backlog commits continue). Team-lead
+  accepted the stop; the owner was asked to free space. Pytest-only
+  runs continue; the CM asked the Architect and QE whether queued
+  Mac builds can run on the Pi.
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
@@ -2806,7 +2855,25 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   prepares a git-archive tarball plus a path: flake run with a
   drvPath equality gate; re-grant pending worker-7's revised scripts
   (CM). Pi fact: mugge.cachix is
-  not configured, only cache.nixos.org. test-midi
+  not configured, only cache.nixos.org.
+  v2 run (CM, 2026-10-25): drvPath gate PASSED (909sn50k, Mac =
+  Pi); STOPPED at the dry-run gate: 40 derivations to build
+  (camilladsp Rust + crates, python camilladsp, testPython, the
+  test) because mugge.cachix is not on the Pi. Cleanup clean,
+  session released. RULING (Architect): option (a), a native Pi
+  build of the 40 derivations; amends the earlier "no dependency
+  source builds on the Pi". (c) rejected: drvPath identity is not
+  a pass on aarch64; adding mugge.cachix to the Pi is a substituter
+  config change, not done ad hoc. Conditions: --max-jobs 1 --cores
+  2; thermal STOP at 80 C, one resume below 60 C, a second STOP is
+  reported; progress to the QE every 30 min; audio stack untouched;
+  outputs kept for follow-on builds. QE concurrence pending;
+  worker-7 prepares v3.
+  Pi build queue (Architect, 2026-10-25): F-365, then the F-374
+  PR-head suite, then the wireplumber-no-bypass check; each from a
+  tarball at the declared SHA with sandbox=true. WP check
+  post-condition: live PW/WP pids unchanged, no new USBStreamer
+  links. US-172 H1 may pre-empt between derivations. test-midi
   (worker-7, QE): NOT a silent skip; flake.nix copies the configs
   flat (midi/, configs/), but src/midi/tests/test_midi_daemon.py:56
   resolves tests/../../../configs, so 6 tests (lines 93, 123, 132,
@@ -2857,7 +2924,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   deprecated (migrate per disko's table-to-gpt guide). Check whether
   MBR is intentional for the Pi 5 FAT/firmware, else migrate before
   upstream removes the legacy type. Predates F-366; the install was
-  not affected. (worker-1, re-reported via CM) Update 2026-10-25
+  not affected. (worker-1, re-reported via CM; again by worker-2,
+  2026-10-25: every eval of mugge-pi5-deploy) Update 2026-10-25
   (worker-1): seen on every `nix eval` of BOTH mugge-pi5-deploy and
   mugge-deploy, sometimes with a "read-only, set multiple times"
   error. Not blocking; not US-163 scope. Owner: Architect.
