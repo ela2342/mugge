@@ -2637,6 +2637,47 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       as the only failed check: a KNOWN FINDING F-396. If the nodes
       are idle or running, exit 0 is expected, logged as "F-396 not
       reproduced". Anything else is FAIL. One build follows (r8).
+    - JOINT r7 RESULTS (AE + Architect, 2026-10-26;
+      /tmp/w3-gate2-rulings/r7-results-joint.md sha256 a4ad5338,
+      frozen copy /tmp/pm-backlog/r7-results-joint-a4ad5338.md; both
+      read the raw files, SUMS e9d5b394): ACCEPTED: the readback, cap
+      and state-rule parts (matrix identical to r6b; cap case INVALID;
+      G1-G5, the probe and the wake PASS in policy and control; G2
+      logs "values alone pass (blind)"; the NV reason is visible in
+      every FAIL line and in the summary, which the QE confirmed). NOT
+      YET COMPLETE: the selftest; S2a, S2b, C1b-neg and fail-replay
+      never ran their logic. Finding (F-396 evidence): across the
+      step-6 WP restart every node goes to suspended, including fc,
+      fc-out, the convolver and the sandbox USBStreamer node
+      (policy/pw-mon-step6.txt), despite suspend-timeout 0 and
+      pause-on-idle false; no suspend message in the logs, mechanism
+      unknown (AE hypothesis: WP re-adopts the node).
+    - Remedy (c) + (a); (b) REJECTED. gate2.py: logic unchanged, only
+      the non-blocking "(not verifiable)" top-line suffix.
+      gate2_selftest.py, ONE edit: (1) before EACH of S2a, S2b,
+      C1b-neg and fail-replay, re-wake with the same pw-link-only
+      flow_start/flow_stop as the existing wake, logged as
+      preparation; each must start at idle/idle (else harness FAIL)
+      and reach its intended exit (1/3/3/3) with its intended reason;
+      (2) the main-run cleanup outcome is ASSERTED (policy and
+      control): suspended after the restart gives exit 3 with the ONLY
+      failed check "gains not verifiable: f318-fc state
+      suspended/suspended ..." and a FINDING line "WP restart
+      re-suspended the filter-chain (F-396)"; idle or running gives
+      exit 0, logged "F-396 not reproduced" (PASS, joint addendum);
+      anything else FAIL; (3) synthetic gains self-cases on a fixed
+      zero base, never on live state. The CM cleared worker-3 for ONE
+      edit and ONE build (r8); the joint re-review covers the r8 diff
+      and results.
+    - Pi implications (Q3): the --wp-restart cleanup verdict is "STOP,
+      F-396", never a pass, until F-396 lands. The D-070 row 15
+      interim stands: after a WP restart the amps stay off until a PW
+      restart or a cold cycle, with the gains verified. Production may
+      differ (GM links convolver-out to the USBStreamer driver); the
+      Pi settles it. P-a never restarts WP or makes WP re-adopt the
+      test chain; if the null sink is created via WP or pw-cli, log
+      the states after creation and at every read. No other P-a
+      change.
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -3912,6 +3953,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   citing F-394. Rule 13 requested from all 7; CI 40245796169 queued.
   #55 stays at 9fd7bf2b until #59 merges; then update-branch onto
   main, the QE's diff-only re-check and a new CI run.
+  UPDATE (CM, team-lead, 2026-10-26): #59 has 7/7 APPROVE at 011bfa5d,
+  all posted verbatim (comments AE 6405030806, SecSpec 6405031003, TW
+  6405031203, QE 6405031402, Architect 6405031668, UX 6405031894, AD
+  6405032125; verdict files /tmp/pr59-architect-verdict-011bfa5d.md,
+  /tmp/tw-verdict-pr59-011bfa5d.md, /tmp/pr59-ad-verdict-011bfa5d.md,
+  /tmp/pr59-review-011bfa5d/AE-verdict.md). Conditions: QE, CI
+  40245796169 green with test_level_bridge_sw_has_signal SKIPPED or
+  XFAILED and nothing else red; SecSpec, CI T1-T3 green at this head;
+  AD, test_timestamps_monotonic PASSED, not SKIPPED (not DJ-gated).
+  The QE, AE, Architect and AD accept not narrowing the marker
+  (raises= would separate nothing; all failure paths are asserts). The
+  CM merges under standing consent on: CI green; the sw test SKIPPED
+  or XFAILED; nothing else red, no new XPASS, test count unchanged;
+  test_timestamps_monotonic PASSED. CI 40245796169 still running.
   AD L3 suggested text (via CM; TW/AE tidy): "designed so the two legs
   sum flat; the shipped LR4 profile is verified within ±1 dB, LR8
   after room correction is not yet verified (F-383)" (markaudio LR4
@@ -4028,6 +4083,23 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   makes 3 of 3 failures whenever DJ mode engaged. #54 run 40242139498
   still in its E2E step; the CM takes both results to the QE together;
   the pre-agreed fail-again plan most likely applies.
+  Non-blocking notes from the #59 review (2026-10-26, via CM; the QE
+  as record owner places them):
+  - UX N1, for AC (iii): say explicitly whether the production web-UI
+    sw-tap meters on the Pi are also silent in DJ mode, or only the CI
+    local-demo. If the Pi is affected, link it to the F2 rule
+    ("confirm live meters before amps on") and to the F2 / U8 METERS
+    STALE item.
+  - Liveness split (AD L1; SecSpec LOW; Architect): no remaining test
+    checks that the level-bridge-sw peak list is non-empty. Move the
+    liveness and connectivity asserts (lines >= 1, peak list
+    non-empty) out of the quarantined test into an un-quarantined
+    test, or make it an F-394 AC.
+  - Record (AD L2, TW): main has no defects/F-394.md, so the xfail
+    marker points at a backlog line only. The TW adds the record with
+    ACs (vi) and (viii) in the docs/F-395-annotations PR if the QE
+    agrees, together with the AC (v) F-262 D-249 correction ("now
+    passes consistently", contradicted by #59).
 - **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
   per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
   2026-10-26): on a suspended node, the gain readers in the r6b matrix
@@ -4177,6 +4249,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   F-397); the F-394 record and its AC (v) correction only if the QE
   confirms. US-176 story text stays out (own PR). Branch requested
   from the CM; PR number pending.
+  UPDATE (CM, 2026-10-26): the TW's branch is docs/F-395-annotations
+  at ba5cc200; it overlaps the stale #40 on defects-index.md. PR
+  number pending.
+  UPDATE (joint r7 results C, Architect; the AE confirmed C,
+  2026-10-26): cold-cycle order AGREED as above. Step 1 does not touch
+  the graph. Conditions: amixer reads only (contents/get, never
+  set/sset/cset); nothing between the boot and the gains read opens a
+  PCM or runs pw-*, wpctl or GM ("no GM" means no GM RPC and no web-UI
+  action; GM and PW start at boot as normal); the gains read logs the
+  fc and fc-out states from the same pw-dump; the elapsed time from
+  the boot to the read is recorded.
 - **F-396** Production must never suspend the filter-chain or the
   USBStreamer node (P1 unless the Architect rules otherwise; AE,
   2026-10-26, from the r6b ruling draft section 4): a suspend of the
@@ -4213,6 +4296,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   because TW batch v17 already treats a WP restart as a USBStreamer
   interruption. Non-blocking: cite F-396 there the next time the batch
   is touched (TW).
+  UPDATE (AE, 2026-10-26; "amends r7-results-joint Q3 (AE,
+  2026-10-26)"; the joint r7 addendum agrees): (1) Classification:
+  F-396 is a SAFETY item now, still P1, as a precaution; this
+  supersedes the "only IF the Pi shows the USBStreamer suspending"
+  condition in r7-results-joint Q3. (2) safety.md wording: Q3's
+  condition stays. Now no new rule: v17 already treats a WP restart as
+  a USBStreamer interruption (announce it, amps rule); the TW cites
+  F-396 next to "USBStreamer interruption (Section 1)" the next time
+  the batch is touched. If the Pi observation shows the real
+  USBStreamer node suspending across a WP restart, safety.md names the
+  WP restart explicitly as a transient event, citing F-396; the AE
+  gives the wording and the TW applies it (F-396 AC4 in the AE's notes
+  on the F-395 docs draft).
 - **US-176** Canary node for the gains readback (AE + Architect;
   durable F-395 fix; joint r6b ruling section 3 + Addendum 1 A +
   Addendum 2 item 1, 2026-10-26): the production filter-chain gets one
