@@ -2383,6 +2383,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   once F-384 lands. Staffing suggestion (Architect): worker-4 fixes
   it as its own commit or small PR; CM and team-lead decide. Until
   they do, the team-lead one-mission ruling above stands.
+  DECIDED (team-lead, 2026-10-25): the Architect's suggestion was
+  considered and DECLINED. The ruling stands: F-383 and F-384 are
+  one mission for a new worker after US-174b merges; worker-4 stays
+  on US-174b.
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
