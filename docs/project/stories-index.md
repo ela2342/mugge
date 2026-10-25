@@ -176,4 +176,4 @@ Generated from the per-item files in `stories/` (the source of truth). Do NOT ru
 | [US-169](stories/US-169.md) | draft (PO, 2026-10-24, from AE's verdict on #40's D-066 t... | D-066 on main: per-identity sealed-sub HPF exemption, quantified and enforced |
 | [US-170](stories/US-170.md) | draft (PO, 2026-10-24, from worker-1) | Pi 4 config hardening parity |
 | [US-171](stories/US-171.md) | draft (PO, 2026-10-24; design by the architect, amended b... | GraphManager measurement lease closes the gate when the web UI is lost |
-| [US-172](stories/US-172.md) | draft (PO, 2026-10-25, from F-367). Next active job direc... | Pi 5 local display (D-022): vc4/DRM, greetd/labwc, Mixxx on HDMI |
+| [US-172](stories/US-172.md) | in progress (2026-10-25; owner via team-lead: "start the ... | Pi 5 local display (D-022): vc4/DRM, greetd/labwc, Mixxx on HDMI |
