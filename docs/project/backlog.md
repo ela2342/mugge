@@ -199,10 +199,15 @@ Next free: F-369, US-173, D-069, T66.
     fallback the ban lasts until the F-291 port is merged and A1/A2
     pass.
     Fix placement agreed (PO + Architect; team-lead hold lifted; CM
-    told worker-1 08:31Z): on story/US-163. Architect rule: user@ hard
-    RTPRIO >= 88 -> drop-in on the pipewire user unit; 0 -> the
-    user@<uid> instance only, SecSpec OK first; otherwise the fallback.
-    Fix shape: not yet ruled; the Architect names it after diagnosis.
+    told worker-1 08:31Z): on story/US-163.
+    ARCHITECT RULING (2026-10-25, via CM): MINIMAL; the fallback does
+    NOT apply. Cause: RLIMIT_NICE=0, so module-rt's nice -11 gets
+    EPERM and RTKit then grants RR/20. Fix: one commit, all boards: a
+    new PW conf.d fragment 05-rt-direct.conf sets module.rt=false and
+    loads module-rt with nice.level=20 ("don't change"), rt.prio=88,
+    rtkit and portal disabled. No unit, PAM or limit change (narrower
+    than the SecSpec condition). AE + Architect review the diff before
+    deploy; AC13 must PASS with A1-A4; Pi 4 recorded as unverified.
     Update the F-358 record (High) and status.md.
   - **F-367** T49 FAIL: greetd crash-loops every ~10 s (~45 restarts
     in 8 min, not marked failed): no DRM device (vc4/v3d =m but not
@@ -230,17 +235,22 @@ Next free: F-369, US-173, D-069, T66.
     presence without GraphManager would be a deviation that must be
     explained." No longer blocks US-163. Live mode on the Pi 5 still
     needs the capture path: backlog with F-295/Live mode.
-    OPEN (QE): reconcile F-328 (High, "capture node no longer
-    deployed") with the "by design per F-295" ruling so the records
-    don't contradict; Architect/QE to word the F-328 update.
+    F-328 reconciled (QE request; Architect recommendation, PM
+    adopted): re-state F-328 as "PW capture node deferred per F-295;
+    ALSA 8-in verified by hw_params (AC12)"; it stays open as the
+    capture tracker, priority set by the PO (pending; record says
+    High). Record update in the pre-PR tracking batch.
   - AE check #10 PASS (enum-params; 1+1 convolver nodes, 8 gains
     0/0). AC12a full PASS. AC14 PASS, complete (quantum base 256,
     force 1024). AC13 (F-358) is the only open AE item.
   - T50 PASS (61.2C, no throttle).
   - Pending: T48 cold boot (needs an owner power cycle).
-  - US-163 waits on (team-lead, 2026-10-25): the Architect naming the
-    F-358 fix; worker-1's F-367 guard (CM cleared); reviews of both
-    diffs; the deploy; then the owner's cold boot for T48 and AC13.
+  - US-163 waits on (team-lead, 2026-10-25; CM update): the F-358
+    fix commit (05-rt-direct.conf) and its AE + Architect review; the
+    F-367 guard f87c162b (ConditionPathExistsGlob; AE APPROVED, SecSpec
+    OK on the linger change; Architect HOLDS it for a read-only
+    diagnosis of why vc4 doesn't load); the deploy; then the owner's
+    cold boot for T48 and AC13.
   - Pi 5 cooling (Architect via CM): the cooling_fan DT node is
     "disabled" and there is no fan hwmon, so an Active Cooler would
     not spin. OPEN owner question: is a fan fitted? If yes: small Pi 5
@@ -319,6 +329,9 @@ Next free: F-369, US-173, D-069, T66.
   the Pi 5; sits next to the F-358/F-291 work. Starting point: the
   F-367 crash loop from the US-163 deploy (vc4 not loaded, no DRM
   device). (PO, 2026-10-25)
+- WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
+  -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
+  US-163. (Architect)
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
