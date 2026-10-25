@@ -495,6 +495,36 @@ Next free: F-371, US-173, D-069, T66.
       change. Docs-only: no redeploy; the two PR proofs above. A
       narrower AC17 clause (only boot, kernel, firmware, power or
       thermal paths) was proposed and withdrawn (Architect).
+    POST-v77 (via CM, 2026-10-25):
+    - story/US-163 = afbc04ae: docs-only lab-note fix of the FAT
+      section, parent f0fbefd1 (pushed, verified). Docs-only after M,
+      so the option (A) PR proofs above apply.
+    - QE folds AC2, AC3, AC4 into the AC17 OBSERVE on M; every
+      command printed with a label and its rc.
+      AC2: `findmnt -no SOURCE / /boot/firmware` plus `lsblk`; root
+      and the FAT partition on mmcblk0. disko.nix:40 stays in the PR
+      as the design half.
+      AC3: /sys/kernel/realtime = 1 (if absent: uname -v plus
+      config.gz); PAGESIZE = 4096.
+      AC4: trip types and temps side by side; the critical/hot trip
+      above 80 C; the 50000 trip is active/passive.
+    - usbstreamer-volume-replug: AE chose (a), run inside the AC17
+      session. CHANGE step: USBStreamer `authorized` 0 -> 1, with
+      BEFORE and AFTER reads (usbmixer, pw Props, the 16 gains,
+      links). If usbmixer shows hardware Volume controls: add one
+      announced physical replug by the owner. PASS: every value
+      after <= before and the gains still 0. FAIL: G16 becomes High,
+      an amps-on blocker owned by US-159. Node or links not coming
+      back is a recovery finding (amps-on precondition), not an AC
+      fail.
+    - F-341 AC3 and US-159 T47: FINAL (b), both out of US-163 (PO;
+      AE agrees; QE: no US-163 evidence relied on `nc`, the GM gate
+      used bash /dev/tcp and AC14 used pw-cli/pw-dump). The PR lists
+      both under "not run in US-163", each pointing to the AMPS-ON
+      PRECONDITION LIST (Pi 5) in P1. T47 stays with US-159.
+    - AC8, AC9a, AC11: Mac-only, worker-1, pending. The CM holds the
+      PR until worker-1's two proof files cited by the body are on
+      disk.
     1. PASS (QE + SecSpec; CM-OBS-.89-T53, T53b, T53c): T53-on-deploy,
        ONE read-only OBSERVE on the running deploy. NO external port
        scan (owner directive, see the test-process rule below); the
@@ -910,6 +940,42 @@ Next free: F-371, US-173, D-069, T66.
   batch.
 
 ## P1
+
+- **AMPS-ON PRECONDITION LIST (Pi 5)** (PO, 2026-10-25; the single
+  consolidated list). Gates ANY amps, HP or IEM use of the Pi 5. Every
+  item must hold; each links to its own entry:
+  1. Owner re-confirmation plus the S-012/safety.md pre-flight.
+  2. F-341 AC3 PASS on the Pi 5. Until then also NO signal-gen
+     measurement session on the Pi 5 (AE, PO).
+  3. US-172 condition: HiFiBerry layer (a) restored, or the AE
+     re-rules (P1 US-172 GATE; layer deviation accepted only while
+     nothing is connected).
+  4. US-170 A1 item (QE): the Pi 4 AC13 A1 precondition before
+     amps-on (Pi 4 runtime unverified).
+  5. F2: pcm-bridge/level-bridge PW nodes back after a PW restart
+     (P1 below), or the INTERIM RULE (restart both bridges, confirm
+     live meters).
+  6. F-037/AC20: the open 8080 web UI is accepted only while nothing
+     is connected.
+  7. F-361 link-audit fix (P1 below: "before any amps-on use").
+  8. usbstreamer-volume-replug: if it FAILs, G16 is High and an
+     amps-on blocker (US-159); node or links not returning after the
+     replug is a recovery finding on this list.
+  9. The AC20 open blockers for amps-on / gig use: F-317, F-318,
+     F-352, F-354, F-355 (F-358 resolved on the Pi 5; Pi 4 US-170).
+  Revisit before amps-on (not blocks): host key on console (P3,
+  MANDATORY before gig/amps-on); ela PAM rtprio/memlock (P3); nix
+  advisory version (P3); fail-closed allowlist + US-170 parity
+  (postponed security, P3).
+  Already PASS: AE AC13 A1-A4 on the Pi 5 (RT side lifted).
+- **F-341** signal-gen pre-flight #6 replacement. MEDIUM (AE):
+  pre-flight #6 only VERIFIES the -20 dBFS signal-gen cap, which stays
+  enforced in code and immutable after start; it would be High if an
+  unverified substitute were improvised. AC3 (made precise, PO): "AC3
+  verifies on the Pi 5 the exact replacement command that goes into
+  safety.md (not an equivalent). Until then: don't improvise, don't
+  proceed." No improvised netcat variants (AE). Out of US-163 (FINAL
+  (b)); a hard gate on the AMPS-ON PRECONDITION LIST (Pi 5).
 
 - **AMPS-ON PRECONDITION** (AE + Architect): "pcm-bridge/level-bridge
   PW nodes don't come back after a PipeWire restart, so metering is
