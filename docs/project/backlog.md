@@ -2401,7 +2401,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the 174d real-gate line. B6g was NOT applied; it is superseded
   by B6h (PM, MANIFEST f78e6296, same B6e base at bcc353ed,
   whole-file replace of US-174.md), which adds the QE's A1-A5 to
-  AC2. PO FINAL (via CM, 2026-10-25): the constant move is within
+  AC2. B6h was NOT applied either; it is superseded by B6i (PM,
+  MANIFEST b69ab2f5, same B6e base at bcc353ed, whole-file replace
+  of US-174.md), which carries the QE's T1-T6 in place of A1-A5.
+  The CM applies B6i on top of worker-4's AC2 commit.
+  PO FINAL (via CM, 2026-10-25): the constant move is within
   the "test-only" intent; (A) stands, no split (supersedes "the PO
   may still ask for the split"). QE A1-A5 on (A) (via CM,
   2026-10-25; the QE's C1-C3 lapse): A1 the real chain (1/6-oct
@@ -2413,6 +2417,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   and "verified by tests only, no shipped code enforces it"; A5
   counts against 1268/76. worker-4 is implementing it. Option (B)
   is CLOSED, not filed (AE: it duplicates US-174d).
+  QE final conditions T1-T6 on (A) (via CM, 2026-10-25; supersede
+  A1-A5): T1 the same chain as the gate, with a deterministic
+  one-line degradation for the teeth test; T2 three asserts, values
+  to 2 decimals; T3 mutations (a) constant -> 8 REQUIRED, (b)
+  constant -> 3.2 optional or the margin stated, (c) np.max ->
+  np.mean REQUIRED, (d) tests import the constant only, a grep
+  shows zero copies in tests/; T4 the band per assert; T5 the AC
+  text, plus "enforced by tests, not a runtime gate", and (B)'s
+  closure cites 174d; T6 counts against 1268/76.
   Backlog finding (QE, via CM, 2026-10-25; not US-174b): the
   legacy verify paths run_all_checks (verify.py:493) and
   runner.py:390 `--stage verify` have no test coverage at all. No
