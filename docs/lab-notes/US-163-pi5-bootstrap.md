@@ -505,10 +505,11 @@ evidence file and read each result in the files themselves.
 
 ### Procedure
 
-- Deploy from the Mac with the D-069 deploy verb (`boot`, see
-  `docs/guide/howto/nixos-upgrade.md` §8.3): `switch-to-configuration boot`,
-  not `switch`, with the pinned known_hosts and `StrictHostKeyChecking=yes`.
-- One announced warm reboot.
+- Deploy from the Mac (start 19:49:34Z) with the D-069 deploy verb
+  (`nixos-rebuild-ng` `boot`, see `docs/guide/howto/nixos-upgrade.md` §8.3),
+  from a clean export of `07a65f9e`: `switch-to-configuration boot`, not
+  `switch`, with the pinned known_hosts and `StrictHostKeyChecking=yes`.
+- One announced warm reboot (issued 19:54:15Z).
 - The AC17/AC19 read set before (PRE) and after (POST) the reboot, and a
   second service read at the 10-minute mark (same boot id).
 
