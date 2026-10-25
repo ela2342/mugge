@@ -43,8 +43,10 @@ origin and all worktrees, 2026-10-25); F-390 (P1, speaker-config
 path split, GATE before US-173/US-174c/d sessions; PO; PM checked
 free across main, origin and all worktrees, 2026-10-25); F-391
 (P1, measurement sweep ignores mandatory_hpf_hz; AE; PM checked
-free across main, origin and all worktrees, 2026-10-25).
-Next free: F-392, US-176, D-071, T66.
+free across main, origin and all worktrees, 2026-10-25); F-392
+(P2, unequal LR orders at one crossover point; AE; PM checked free
+across main, origin and all worktrees, 2026-10-25).
+Next free: F-393, US-176, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -2209,6 +2211,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     in the finally block must still STOP and still run the checks; E1
     a fresh selftest. worker-3 is fixing (with SecSpec's LOW and the
     Architect's C1a/C1b).
+    Gate-2 r3 (CM, 2026-10-25; verdicts /tmp/w3-gate2-verdicts-r3/):
+    gate2 b226c0ba, selftest 9d941567, SUMS 6f34661c. SecSpec
+    APPROVED, its LOW closed. AE APPROVE on the code; E1 (fresh
+    selftest) still open. Architect: gate2.py b226c0ba APPROVED;
+    selftest CHANGES S1 (None-default branch coverage) and S2 (C1a
+    unreadable-state cases). worker-3 adds S1/S2, then runs the fresh
+    selftest. The disk hold on the selftest is lifted (5.3 GiB free;
+    CM cleared worker-3).
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -2522,6 +2532,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   closed_loop.deviation_within_limit / passes_residual_gate (QE,
   Architect)". worker-4's 27d8ff11 (QE T1-T6 done; degraded +6.66 dB;
   mutation (c) reds 3 tests) is held for AE (a)/(c) (CM, 2026-10-25).
+  B6n received and verified by the CM (2026-10-25); the CM applies it
+  on top of worker-4's next #57 commit.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -3002,6 +3014,44 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - Architect A1 addendum (via CM): partly superseded by the
     AE/Architect correction above; recorded when the Architect's
     updated A1 text arrives.
+  - F-391 ruling COMPLETE (CM, 2026-10-25):
+    /tmp/f391-architect-ruling.md, sha256 3f10fc5a...b0a9 (PM frozen
+    copy /tmp/pm-backlog/f391-architect-ruling-3f10fc5a.md).
+    AUTHORITATIVE SET for worker-5, in order: R1-R7, then the FINAL
+    ADDENDUM (sha256 7e467465, F-1 to F-9), then PART B (60095f5d,
+    F-10/F-11), then PART C (b91ac082). A1 and A2 are SUPERSEDED IN
+    FULL (supersedes the A1 line above). The AE APPROVED the set;
+    nothing open. The brief goes to worker-5 after #55 merges (lane
+    F-390, then F-391).
+  - Final addendum F-8 (one identity validator): today
+    speaker_routes.py:162/218 requires mandatory_hpf_hz to be a number
+    (the editor cannot save the Dayton identity) and
+    config_generator.py:218-225 raises on None; ONE shared validator
+    for the editor save, the session start (R2) and the generator.
+    Tests: the editor round-trips the Dayton identity; a null without
+    an exception gives 422 at the editor and a refusal at session
+    start; an exception with a non-null hpf is refused in both places.
+    F-3: the gain-cal low edge by zeroing/tapering the bins below
+    f_low in the existing frequency-domain step
+    (gain_calibration.py:177-183). Timing note (part B): every delay
+    measurement uses the same padded reference array; reviewers check
+    that no code path rebuilds an unpadded sweep.
+  - PART C (Architect, accepted AE C2/C3): F-2 step 1 AMENDED: the log
+    sweep starts at f_start = max(20.0, hpf/2), not at hpf (a start at
+    hpf puts the Hann fade-in on the HPF edge and hpf to about 1.2*hpf
+    is regularised away, the band where the deployed HPF and the
+    correction still act; the step-3 high-pass keeps the stimulus at
+    hpf/2 >= 40 dB down, about 8 dB margin). For a d031_exception
+    identity hpf := min_stimulus_hz; gain-cal unchanged, f_low =
+    max(100, hpf). SUPERSEDES R3 "f_start = max(20.0, hpf_hz)" above.
+  - PART C F-5 mutations REPLACED (supersede R6 (e) "f_start -> 20.0"
+    above, which would stay green because the step-3 high-pass still
+    protects): each must turn at least one test red: (m1) step 3
+    (stimulus high-pass) removed -> F-4 bounds red; (m2) step 3 at 4th
+    order (24 dB/oct) -> F-4 red; (m3) step 4 (outer taper) removed ->
+    F-5 taper check red; (m4) deconvolve() given the unpadded or
+    unfiltered sweep -> F-6 / R6(d) red. The QE runs or reviews these
+    as F-391 PR test evidence.
 - Deployed-coeff HPF verifier (Architect R5 under F-391;
   AE-conditional, only if the AE wants it): check that the coeff WAVs
   deployed in the convolver carry each channel's D-031 HPF. Not F-391
@@ -3286,12 +3336,51 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   ceiling. L4 "the session start is refused" overclaims: profiles that
   exist only under /etc are skipped (backlog (a) = F-390) and deep
   validation does not run the check (backlog (c)).
+  #55 7/7 APPROVED at ce872e30 (CM, 2026-10-25; posted verbatim,
+  comments 6403940247-6403942053); CI 40238022026 in progress. Strict
+  protection: a main merge after #56, then a diff-only check by all 7.
+  QE: confirm the 270 collected vs 271 run discrepancy (likely a
+  module-level skip) via --collect-only; one body line at the
+  main-merge push.
+  AD L3 suggested text (via CM; TW/AE tidy): "designed so the two legs
+  sum flat; the shipped LR4 profile is verified within ±1 dB, LR8
+  after room correction is not yet verified (F-383)" (markaudio LR4
+  passes only ±1 dB / 35 deg, F-385). AD L4: deep validation and
+  activate don't check yet (backlog c), and the session pre-check
+  skips /etc-only profiles (a = F-390) and fails only at CP-5; hedge
+  the text, or it becomes true with F-390.
+  Slope ACs (worker-5 point (1)): AE wording check done (2026-10-25).
+  US-011.md:17 / user-stories.md:761 OK as drafted; the default stays
+  48 (all shipped profiles except the 200 Hz markaudio/Ultimax one use
+  it; the generator defaults to it). US-091.md:34 /
+  user-stories.md:6831 NOT OK as drafted: the code at ce872e30 has one
+  profile-wide crossover.slope_db_per_oct plus an optional
+  high_slope_db_per_oct per bandpass driver, both in {24, 48}. AE
+  text: "Crossover slope LR 24 or 48 dB/oct, one value per profile
+  (narrowed per F-374, PO 2026-10-25). Per-crossover-point slopes are
+  a future item: both legs that meet at one crossover point must use
+  the same LR order." Batch BS1 frozen: /tmp/pm-bs1/, MANIFEST sha1
+  c37b8f3c (base main dfdbbbd6); applied after #55 merges (CM routes).
+  PO informed.
 - Steeper crossover slopes (96 dB/oct LR and up; PO, 2026-10-25;
   Low/P3, future work): steeper slopes as minimum-phase FIR. AC (AE):
   the AE first evaluates the group delay and pre-echo behaviour at the
   crossover frequency. If the AE sees a real need (e.g. driver
   protection near a tweeter's Fs), the AE may raise the priority; that
   ruling goes back to the PO.
+  AE note (2026-10-25): the min-phase FIR follows LR's phase, so a
+  steeper order means more group delay at the crossover frequency; at
+  80 Hz that weighs against the transient goal. No need seen now.
+- **F-392** Unequal LR orders at one crossover point (P2, audio
+  quality, not speaker safety; AE, 2026-10-25): a bandpass driver's
+  high_slope_db_per_oct can differ from the profile slope that the
+  next driver up uses at the same crossover frequency (e.g. the mid's
+  upper edge at LR8, the HF high-pass at LR4). LR legs of different
+  orders don't sum flat: a dip or bump of a few dB around the
+  crossover frequency. validate_profile_crossover accepts this today.
+  AC (AE): "the validator refuses a profile where the two legs meeting
+  at a crossover point use different slopes". No shipped profile sets
+  high_slope_db_per_oct, so nothing deployed is affected.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
@@ -3931,6 +4020,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   recorded and closed (CM). Later (CM): disk 2.6 GiB and falling;
   the hold stays. Later (CM): 2.5 GiB, still falling. Later (CM):
   2.3 GiB.
+  Later (team-lead, CM, 2026-10-25): 5.3 GiB free; the US-173 Gate-2
+  selftest is no longer disk-held (CM cleared worker-3).
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
