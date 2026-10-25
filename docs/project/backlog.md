@@ -1781,7 +1781,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   granted to worker-2 (two announced reboots). QE non-blocking:
   US172_CM_GO set per command only; the run report notes that
   disarm is untested. Architect note: a failed first tb-reboot also
-  locks the run until the CM releases it (intended). H1 may pre-empt
+  locks the run until the CM releases it (intended). Run 2 (CM,
+  2026-10-25, CM-CHG-.89-US172c, run id 20261025T210128Z): tb-pre
+  PASS, PRE-base ok, additions only, config.txt untouched, thermal
+  65-67.75 °C. GC root /home/ela/.us172-libpi -> frspf350
+  (libraspberrypi), REMOVED at US-172 close. tb-reboot (1 of 1) in
+  progress. H1 may pre-empt
   the Pi
   build queue between derivations once reviewed; US-173 Gate-2
   follows H1.
@@ -2898,9 +2903,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   aarch64-linux build of the wireplumber-no-bypass check with the
   -L log plus the negative control (Pi route or scratch dispatch);
   (2) F-318 is not closed or amps-on-cleared until F-380 has that
-  check gating in CI. F-365's Linux leg is also deferred to
-  step 1 here (a Linux failure reopens F-365 at High). Step 1
-  also greps the test suites for other unsorted
+  check gating in CI. Superseded (QE ruling, 2026-10-25): run
+  40232728057 IS F-365's Linux leg; step 1 is still required for
+  permanent gating (a later Linux failure reopens F-365 at High).
+  Step 1 also greps the test suites for other unsorted
   iterdir/glob/listdir slicing (QE, F-363 follow-up).
 - US-159 G16 with AE amendments a-e and architect additions 1-3; test
   T65 (not T62). Medium; re-rate on (i) volume after replug, (ii) relink
@@ -3082,8 +3088,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Mac builds can run on the Pi. CM measured 3 GiB free
   (2026-10-25), BELOW the 4 GiB line: still no new worktrees or
   builds; backlog commits continue. Later (CM, 2026-10-25): 3.3
-  GiB; only worker-4's cleared US-174b nix runs (abort below 3.0
-  GiB).
+  GiB; later 3.2 GiB (CM). Only worker-4's cleared US-174b nix
+  runs (abort below 3.0 GiB).
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
@@ -3158,7 +3164,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   updates the #54 body; the scratch branch is deleted. QE ruling
   (2026-10-25) for the #54 body: the counts side by side, F-380
   still required, and this run named as F-365's Linux leg. The CM
-  updates #54 once worker-7 sends the final sha1.
+  updates #54 once worker-7 sends the final sha1. Posted (CM,
+  2026-10-25): #54 body at 7cc2890f, QE-confirmed against the
+  ruling. Two final edits with worker-7: "first entry" becomes
+  "among the first 20 entries", plus the sandbox record "Sandboxed
+  build: the build dir is /build (CI log l.1787, 1912), the Linux
+  sandbox default". Then the QE text-approves; that approval carries
+  into the seven-reviewer re-review after F-363 (update-branch
+  voids the approvals anyway).
   Pi build queue (Architect, 2026-10-25): F-365, then the F-374
   PR-head suite, then the wireplumber-no-bypass check; each from a
   tarball at the declared SHA with sandbox=true. WP check
