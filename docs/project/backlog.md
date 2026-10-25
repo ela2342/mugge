@@ -505,10 +505,18 @@ Next free: F-369, US-173, D-069, T66.
     team-lead): "No fan, but a metal case that provides a little bit
     of cooling. Let me know if you run into temperature issues." So no
     fan config fix is needed (the disabled cooling_fan node is
-    correct). Rule for every Pi load test (T48-T55, T57): record
-    thermal_zone0, STOP at >= 80 C; any reading near the 80 C stop
-    line goes to team-lead for the owner. Reference: deploy 2 max
+    correct; Architect: nothing to fix). Reference: deploy 2 max
     66.65 C.
+  - THERMAL RULE (AE + Architect; replaces the "STOP at >= 80 C"
+    interim line) for every Pi 5 load run: sample thermal_zone0 AND
+    cpu0 scaling_cur_freq every 10 s; record max temperature and min
+    frequency. WARN at >= 75 C: report to the owner via team-lead,
+    keep running. STOP at >= 80 C (Pi 5 firmware throttle onset; full
+    throttle at 85 C). Any frequency drop below max during a run makes
+    that run's CPU/xrun evidence INVALID, even below 80 C; the run is
+    repeated (AE). A frequency drop is a finding, not a STOP
+    (Architect). No builds on the Pi; all builds stay on the Mac VM
+    (Architect). Gig cooling: see the P1 Pi 5 thermal soak item.
   - QE request: commit a SecSpec-vetted subset of the deploy evidence
     into the US-163 PR.
 - 2026-10-24 20:28:03: Pi 5 restart CONFIRMED as the owner's power
@@ -686,6 +694,20 @@ Next free: F-369, US-173, D-069, T66.
 - Skip reasons invisible (QE): the integration-browser run shows 10
   skips with no reasons in the log (no -rs). Make skip reasons
   visible (cf. F-362). Low.
+- **GIG-READINESS PRECONDITION: Pi 5 cooling / thermal soak** (AE +
+  Architect, merged; AE criteria supersede the Architect's 30 min /
+  < 80 C; not US-163). Owner: no fan, metal case; boot/idle peak
+  66.65 C. Sustained DJ load (Mixxx + convolver) in a passively
+  cooled, closed flight case will very likely cross 80 C; expect a
+  fan or heatsink for gig use. Throttling means xruns (clicks): a
+  gig-readiness precondition, not a speaker-safety veto. Test:
+  passive soak first, 60 min in the closed flight case, DJ quantum
+  1024, Mixxx + convolver, amps off, sampling every 10 s
+  (thermal_zone0 + cpu0 freq). PASS = max < 75 C, cpu0 freq never
+  below max, 0 xruns, ambient recorded (margin noted for warm
+  venues). FAIL: add active cooling (or a case vent design) and
+  re-run. Any cpufreq drop invalidates the run (thermal rule, US-163
+  section). Links to the flight-case ventilation TODO.
 
 ## P2
 
