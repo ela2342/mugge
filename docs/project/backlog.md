@@ -9,9 +9,9 @@ land here. Maintained by the PM; the CM commits changes.
 ## Reserved IDs
 
 Taken (not yet filed as records): F-361, F-362, F-363, F-364 (below);
-F-365; F-366 (US-163 section); D-068 (T57 gate dropped); T65 = US-159
-G16 reconciler test.
-Next free: F-367, US-172, D-069, T66.
+F-365; F-366, F-367, F-368 (US-163 section); D-068 (T57 gate
+dropped); T65 = US-159 G16 reconciler test.
+Next free: F-369, US-172, D-069, T66.
 
 ## US-163 text updates (critical path; one tracking batch before the PR)
 
@@ -146,6 +146,23 @@ Next free: F-367, US-172, D-069, T66.
   the first-boot checks; full Pi 5 deploy kernel build CM-MAC-BUILD-2;
   then, at the committed SHA and before the deploy step, AE N2 (the
   four HiFiBerry modules =m or absent) plus the modules.builtin check.
+  COMMITTED 798f2dc7 on the story branch (parent fb7d557e); touches
+  only nix/checks/board-guard.nix and nix/nixos/kernel-rt.nix; diff
+  sha256 = the approved 7d3630b4...b463 (CM verified). Built in
+  CM-MAC-BUILD-2 and deployed to .89 (see post-deploy entry).
+
+- US-163 post-deploy on .89 at 798f2dc7 (QE, 2026-10-24/25):
+  - T51 PASS: current = booted = x83m7bir, deriver kz0j0c6f, RT
+    kernel. Amend T51 text: `nix store verify -r --no-trust` (QE's
+    `--sigs-needed 0` spec was wrong).
+  - **F-368** AC13 FAIL: PipeWire data-loop at RR/20, not FIFO 88. RT
+    is a safety requirement (D-013), so this BLOCKS US-163 acceptance.
+    Diagnosis: Architect + AE.
+  - **F-367** T49 FAIL: greetd crash-loops (~45 restarts in 8 min, not
+    marked failed). New defect, US-163 scope. Amend the T49 criterion:
+    no failed units AND NRestarts <= 3 for every service.
+  - T50 PASS (61.2C, no throttle). T48 covered for warm reboot only;
+    the cold-boot part needs the owner.
 - 2026-10-24 20:28:03: Pi 5 restart CONFIRMED as the owner's power
   cycle ("It needed a power cycle", ~20:29, via team-lead). C8
   regressed on that boot (apt timers re-armed); re-stop granted as
@@ -203,9 +220,11 @@ Next free: F-367, US-172, D-069, T66.
   5353, DHCP only; watchdog devices present, RuntimeWatchdogUSec=0;
   PipeWire absent, ALSA sees APC mini + USBStreamer, nothing opened.
   T52 and AE check #10 are deploy-image only. SecSpec: AC9b full
-  PASS; T48-T53 host-side PASS only -- the external nmap scan and
-  @temp-ports are deferred to the US-163 PR Rule 13 review (owner: "I
-  don't know why you do the portscan now?"), so not a full PASS yet.
+  PASS; T48-T53 host-side PASS. @temp-ports CLOSED (empty; worker-1's
+  secspec-T48-T53-raw.txt, collected 19:02Z); UDP accepted on ss + nft
+  evidence. Only the external TCP scan (nmap -p-) stays deferred to
+  the US-163 PR Rule 13 review (owner: "I don't know why you do the
+  portscan now?"); the early partial run was stopped, output filed.
 
 ## P1
 
@@ -314,6 +333,13 @@ Next free: F-367, US-172, D-069, T66.
   CM). Clean up Nix store / old worktrees before heavy local builds.
   Also: a failed build grew the Mac store by 16 GiB vs 6.6 GiB
   expected; find out why (CM).
+- Compact or cap the Mac linux-builder qcow2
+  (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
+  never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
+  Mac free 16 -> 4 GiB stopped CM-MAC-BUILD-2 run 2 at 20:58Z on the
+  5 GiB line; owner lowered it to 2 GiB for that build). Fix lives in
+  the owner's nix-darwin linux-builder config, not mugge.
+  Owner-requested, not blocking (CM).
 - **F-365** Hermetic nix checks broken in the sandbox (pre-existing; found in
   T57 by worker-1; CI never builds checks.*): checks.<sys>.test-midi
   (../../../configs resolves to /), test-room-correction (cp
@@ -342,8 +368,9 @@ Next free: F-367, US-172, D-069, T66.
   US-163 unless the owner asks. P3 (Architect).
 - AE-F6 (routing.rs:423): check whether tracked; file if not.
 - Compare the Pi 5 host key fingerprint (a5kILUyr) on the HDMI/serial
-  console. Optional, only if the owner is at the Pi anyway (never
-  asked); MANDATORY before any gig or amps-on use. LOW (SecSpec).
+  console (`ssh-keygen -lf` on the host key). Optional, only if the
+  owner is at the Pi anyway (never asked); MANDATORY before any gig or
+  amps-on use. LOW (SecSpec).
 - Future Pi reinstalls: pre-generate the installed system's host keys
   inside the verified installer session (`ssh-keygen -A -f /mnt`) and
   record the fingerprints before the reboot, removing first-boot TOFU.
