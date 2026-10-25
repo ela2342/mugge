@@ -342,7 +342,7 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-360](defects/F-360.md) | high (PO, from AE's A3; architect and AE own the fix) | open — static analysis only, nothing run. Fix: US-171 (GM... | A web UI crash or restart mid-measurement leaves measurement mode with the gate Open |
 | [F-361](defects/F-361.md) | medium while latent (audio-engineer, architect); high if the USBStreamer comes up with a non-AUX port name or a non-pro-audio profile | open. Fix after US-160, before US-159, and before any amp... | Link audit protects only ports named playback_AUX0..7 |
 | [F-362](defects/F-362.md) | high (quality-engineer; security-specialist: security-relevant) | open. Not a US-163 blocker; defined and dispositioned in ... | Silent ImportError module skips hide whole test modules |
-| [F-363](defects/F-363.md) | medium (quality-engineer) | open. Not US-163 scope. Condition (QE): if Linux CI T1 on... | Purifi Qts test is order-dependent and hides a data error |
+| [F-363](defects/F-363.md) | medium (quality-engineer) | resolved. PR #56 merged 2026-10-25 (`1c36889f`). All 3 a... | Purifi Qts test is order-dependent and hides a data error |
 | [F-364](defects/F-364.md) | low | open | local-demo seeds are read-only, so saving a profile fails |
 | [F-365](defects/F-365.md) | not rated yet (owner: quality-engineer) | open. Pre-existing (pending the drvPath-vs-main proof). C... | Hermetic nix checks are broken in the sandbox |
 | [F-366](defects/F-366.md) | not rated; blocked the US-163 deploy step (not the bootstrap) | resolved in US-163: committed `798f2dc7` on story/US-163 ... | Pi 5 RT kernel config fails on NVMe TCP TLS |
@@ -352,3 +352,4 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-371](defects/F-371.md) | low (P3) | open (P3). Harmless | Pi 5 deploy closure ships the full nixpkgs source, including test private keys |
 | [F-372](defects/F-372.md) | medium (security-specialist); amps-on/gig blocker class, next to F-037 | open. AMPS-ON PRECONDITION LIST (Pi 5), item 11. No owner... | S-001 path check uses a string prefix and an unsanitised profile name |
 | [F-373](defects/F-373.md) | high for availability (audio-engineer); safety-relevant | open. Not a US-163 blocker (AC17-B step (a) PASSED on saf... | USBStreamer sink does not recover after USB re-enumeration |
+| [F-388](defects/F-388.md) | P2 (audio-engineer) | open. ACs accepted by the AE (2026-10-25). Precondition fo... | Xmax definition unknown in the excursion-mask derivation |

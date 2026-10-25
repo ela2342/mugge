@@ -465,7 +465,6 @@ connected).
 | **F-335** | **Critical** | CI T1 fails on main before any test runs (`src/web-ui` not found in flake source). Blocks every merge, incl. #41-#43 (O-22). |
 | F-361 | Medium (AE, architect; High if a non-AUX port name or profile) | Link audit protects only ports named `playback_AUX0..7`. Amps-on precondition 7. |
 | F-362 | High (QE) | Silent ImportError module skips hide whole test modules. Not a US-163 blocker. |
-| F-363 | Medium (QE) | Purifi Qts test is order-dependent and hides a data error. Blocks if Linux CI T1 on #50 hits the failing order. |
 | F-364 | Low | local-demo seeds are read-only, so saving a profile fails. |
 | F-365 | Not rated (QE) | Hermetic nix checks are broken in the sandbox; CI never builds `checks.*`. |
 | F-367 | Medium | greetd crash-loops on the Pi 5 (no DRM device). Guarded in US-163; real fix US-172. |
