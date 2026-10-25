@@ -2215,6 +2215,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   non-vacuity, the large_hall/outdoor_tent exclusions with a
   guard, the rename to test_venue_closed_loop.py and the F-383
   margin comment; 68 passed, e2e 76. Waiting on the QE's verdict.
+  Pushed (CM, 2026-10-25): 830b4e20 with the QE's noise-live
+  assert; 69 tests; worker-4's mutation check is red with the noise
+  branch disabled. QE CHANGES REQUESTED at f515f99d, R1: the guard
+  test must also check do-no-harm (max+ <= MAX_POSITIVE_DEVIATION_DB)
+  on the excluded large_hall/outdoor_tent; one line, test count
+  unchanged. R1 is with worker-4. After R1, worker-4 is cleared to
+  run both nix run apps (the dry-run builds only the wrapper drvs):
+  df before and after, sequential, abort below 3.0 GiB free.
   Measurement SNR check (AE, P2, AE-owned; 2026-10-25): US-174b
   shows the correction raises up to +0.67 dB in below-target
   regions at -40 dB noise re peak, clean at -60. The sweep capture
@@ -2802,10 +2810,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   40232728057, same drv 909sn50k), so it hid F-363 from Linux CI;
   it only ever covers 20 of ~2345 records. Fix inside the F-363 PR
   (worker-6): delete it in favour of the full-set test, or sort it.
-  Medium; closes with the F-363 PR. Whether this gets its own ID or
-  stays under F-363 (PM: same test as the title and AC (1)) is with
-  the QE. F-380 step 1 follow-up: grep the test suites for other
-  unsorted iterdir/glob/listdir slicing.
+  Medium; closes with the F-363 PR. No new ID (QE): it stays under
+  F-363 (same test as the title and AC (1)). F-380 step 1
+  follow-up: grep the test suites for other unsorted
+  iterdir/glob/listdir slicing.
+  QE requests to worker-6 (relayed by the CM, 2026-10-25): R-a
+  delete the order-dependent sample test (preferred) or sort it;
+  R-b the mutation reds come from the full-set and exemption tests,
+  naming the red test per mutation; R-c Linux CI evidence that the
+  full-set test is red before the fix.
   Follow-ups outside worker-6's fence (QE and AE via worker-6,
   2026-10-25; not in the F-363 PR):
   - Re-scrape risk (QE): the driver scrapers would undo the F-363
@@ -2886,7 +2899,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   -L log plus the negative control (Pi route or scratch dispatch);
   (2) F-318 is not closed or amps-on-cleared until F-380 has that
   check gating in CI. F-365's Linux leg is also deferred to
-  step 1 here (a Linux failure reopens F-365 at High).
+  step 1 here (a Linux failure reopens F-365 at High). Step 1
+  also greps the test suites for other unsorted
+  iterdir/glob/listdir slicing (QE, F-363 follow-up).
 - US-159 G16 with AE amendments a-e and architect additions 1-3; test
   T65 (not T62). Medium; re-rate on (i) volume after replug, (ii) relink
   with gate_open true. Match by node and direction.
@@ -3066,7 +3081,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   runs continue; the CM asked the Architect and QE whether queued
   Mac builds can run on the Pi. CM measured 3 GiB free
   (2026-10-25), BELOW the 4 GiB line: still no new worktrees or
-  builds; backlog commits continue.
+  builds; backlog commits continue. Later (CM, 2026-10-25): 3.3
+  GiB; only worker-4's cleared US-174b nix runs (abort below 3.0
+  GiB).
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
@@ -3138,7 +3155,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (fallback only). RESULT (CM, 2026-10-25): GREEN, 1198 passed / 1
   skipped, not the expected red on F-363 (explained by F-363's
   order-dependent sample, see there). The QE is ruling; worker-7
-  updates the #54 body; the scratch branch is deleted.
+  updates the #54 body; the scratch branch is deleted. QE ruling
+  (2026-10-25) for the #54 body: the counts side by side, F-380
+  still required, and this run named as F-365's Linux leg. The CM
+  updates #54 once worker-7 sends the final sha1.
   Pi build queue (Architect, 2026-10-25): F-365, then the F-374
   PR-head suite, then the wireplumber-no-bypass check; each from a
   tarball at the declared SHA with sandbox=true. WP check
