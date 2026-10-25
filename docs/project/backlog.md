@@ -377,6 +377,11 @@ Next free: F-370, US-173, D-069, T66.
     bbff469e (CM, 2026-10-25). Later: story/US-163 = 976ed8c5
     (lab-note docs commit, pushed; CM). Then story/US-163 = 96b4246c
     (F-369 fix, parent 976ed8c5; pushed, ls-remote verified; CM).
+    Then b9e8974e (F-369 review additions, parent 96b4246c). Then
+    M = story/US-163 = f0fbefd1 (merge of origin/main 289390bf,
+    parents b9e8974e + 289390bf; delta docs/project 132 files +
+    .claude/memories 2, 27 commits, no code; pushed, ls-remote
+    verified; CM).
   - Recovery (Architect): the firmware partition keeps 2 gens, now
     nkifli3r + x83m7bir; p9mz... was pruned. The PR text and recovery
     notes use gens/x83m7bircd4b7j8wchx9k1mnilzi8kl4/ as the fallback
@@ -417,6 +422,12 @@ Next free: F-370, US-173, D-069, T66.
     AC18b NOT GRANTED: held until the F-369 fix is deployed (PO;
     item 7). HELD for worker-1's follow-up commit + QE acceptance;
     then (CM) merge origin/main 289390bf into the branch -> DEPLOY.
+    UPDATE (CM, 2026-10-25): reviews closed, merge done (M =
+    f0fbefd1). AC18b GRANTED and IN PROGRESS, no longer HELD:
+    CM-DEP-.89-3 to worker-1, AC18b + AC18c + T54b in one run, steps
+    (a)-(e) (item 7), exact {M, N} criterion, thermal sampler
+    condition; three reboots announced to team-lead. Next: AC1a
+    re-run on M (separate grant) -> PR opens -> AC17.
     1. PASS (QE + SecSpec; CM-OBS-.89-T53, T53b, T53c): T53-on-deploy,
        ONE read-only OBSERVE on the running deploy. NO external port
        scan (owner directive, see the test-process rule below); the
@@ -618,6 +629,19 @@ Next free: F-370, US-173, D-069, T66.
          idempotence (a second run changes nothing), plus a plain
          `system` symlink in setup(). QE accepts on a local log with a
          non-zero count; CI confirms on the PR.
+       - DONE in b9e8974e (CM): (i) CI step for
+         checks.x86_64-linux.pi5-prune-gens; (ii) "13/13 cases
+         passed"; new cases 8 (unlinked booted), 9 (idempotence; plain
+         `system` link in every fake profile), 10 (system /
+         system-foo / system-foo-link; the MAP loop skips non-numeric
+         entries), 11 (empty prev/booted). The check runs the hook's
+         exact script (system.build.pi5PruneGens); board-guard
+         (107/107) asserts the hook calls that store path.
+       - Architect APPROVE b9e8974e, no changes: tested text =
+         deployed text; the MAP-loop change touches only non-numeric
+         entries, F-369 scope holds. QE ACCEPTED 96b4246c + b9e8974e
+         (test adequacy). OPEN for the PR review: the CI log shows
+         pi5-prune-gens "13/13 cases passed" (QE).
        AC18b/AC18c/T54b PASS CRITERIA (joint Architect + QE ruling,
        FINAL; N = nkifli3r, M = the deployed head, which must contain
        96b4246c):
