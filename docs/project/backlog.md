@@ -17,6 +17,13 @@ local display). F-368 WITHDRAWN, never to be reused (was a
 duplicate of the existing F-358 for AC13).
 D-069 (Architect: Pi 5 platform baseline under NixOS, PROPOSED).
 Next free: F-374, US-173, D-070, T66.
+PROVISIONAL (PO, 2026-10-25, pending the owner via team-lead): the
+owner says GPU acceleration is a prerequisite (Wayland doesn't start
+without it). PO recommends #50/US-163 scope and acceptance unchanged,
+and US-172 raised to HIGH as the next active priority directly after
+US-163. Read-only US-172 diagnosis may run in parallel if it doesn't
+touch #50. If the owner pulls US-172 into #50, the PO reports back.
+When decided: US-172.md priority line + stories index row (B3).
 
 ## US-163 text updates (critical path; one tracking batch before the PR)
 
@@ -665,14 +672,28 @@ Next free: F-374, US-173, D-070, T66.
       before the clock is synced.
     - Lab note d15a1bec (CM, local, on top of 1443401d) joins the #50
       head move.
-    - Open (AE + Architect ruling): the image-status notes say the PW
-      main thread is SCHED_OTHER, but it is FF 88 on both cold boots
-      (cf. the P2 "PW main thread back to SCHED_OTHER" item).
-    - Open (PM -> CM/QE): AC19 says the Pi is redeployed from the
-      merged main SHA "and AC17 is re-checked". Does that need two
-      more owner cold cycles, or does rule (d) (docs-only after M)
-      cover it? The CM says no more physical steps; the PM's owner
-      status (via team-lead) said two more cycles after the merge.
+    - AE: AC17 PASS and CLOSED for US-163. The AFTER amixer dumps
+      are byte-identical to the step-(a) BEFORE (29d42498), so the
+      USBStreamer powers up at hw 0 dB and re-open trigger (iii)
+      stands. Cold boots enumerate before PW, so the F-373 hot-replug
+      path is not exercised; that is scope. QE's AC17 verdict is
+      pending. B3 v7 (CM: yes) records AC17 PASS in US-163.md once QE
+      rules; the lab note alone is not enough.
+    - RULED (AE, verbatim): "Current: PW main thread and data-loop.0
+      both SCHED_FIFO 88 (main thread via F-020 unit, data loop via
+      module-rt / 05-rt-direct.conf), verified on 2 cold boots.
+      Backlog P2 (not US-163): return the main thread to SCHED_OTHER
+      so only the data loop runs at 88." The Architect owns the P2
+      design. Any image-status note listing the main thread as
+      SCHED_OTHER misreads P2 as the current state and is corrected
+      (the owning author; not in B3, PM checked).
+    - Open (PM -> CM -> QE, PO): AC19 says the Pi is redeployed from
+      the merged main SHA "and AC17 is re-checked". Two more owner
+      cold cycles, or rule (d) (docs-only after M)? CM recommends a
+      warm-reboot AC17 read set after the redeploy, with cold cycles
+      only if the nix-diff shows a real change. The PM's owner status
+      (via team-lead) said two more cycles after the merge; corrected
+      once QE and the PO rule.
     - AD APPROVE is comment 6398339160 (CM). AD M2 precise: the
       f0fbefd1 -> final diffstat is docs-only AND the
       mugge-pi5-deploy nix-diff shows only configurationRevision,
@@ -1420,6 +1441,9 @@ Next free: F-374, US-173, D-070, T66.
   CM-DEP-.89-3 (c)). Fix: skip the rewrite when the content is
   identical (cmp -s before mv). Reason: every rewrite reopens the
   accepted vfat power-loss window (bootloader.nix step 2), not wear.
+- Current state (AE ruling 2026-10-25): PW main thread AND
+  data-loop.0 run at SCHED_FIFO 88 (verified on 2 cold boots); the
+  item below is the proposed change, not the current state.
 - "PipeWire main thread back to SCHED_OTHER: drop the F-020
   CPUSchedulingPolicy=fifo/88 from the pipewire user unit, now that
   module-rt promotes the data loops directly (F-358). At equal FIFO
@@ -1507,7 +1531,11 @@ Next free: F-374, US-173, D-070, T66.
   snapshot of the tracked tree, so new files must be git-added first;
   the CI section 7.2 pin and guard text; the PytestCacheWarning note.
 - Low (QE, #49): `cat` the guard's out path in the CI step so the
-  "Checked N app scripts" count shows in the log.
+  "Checked N app scripts" count shows in the log. (QE follow-up 1 on
+  the #49 APPROVE; same item.)
+- Low (QE follow-up 2 on #49): dev-howto note: `nix run .#test-*`
+  doesn't pick up unstaged new test files, because the apps run on
+  the store copy of the tracked files. (TW)
 - AD L1 (#49): the lint only catches `toString ./.` and `toString
   self`, and the closure check covers apps only: widen the lint or
   document the limit.
@@ -1719,7 +1747,9 @@ merge needs update-branch and 7 reconfirmations at the new head.
   $out, not in the log). T3 run 40205694612 (release.yml,
   dispatched by the owner at 316cc3eb) GREEN (CM): artifact
   sd-card-image ~1.04 GB, digest 7a9ae2ce...; verify-ci skipped by
-  design (tag-only). QE ruling on C3 and the final APPROVE pending.
+  design (tag-only). QE APPROVED at 316cc3eb, C1/C2/C3 MET (comment
+  6399540510). All 7 approvals at the head, CI green, GitHub CLEAN.
+  Owner merge consent requested via team-lead.
 - #50 US-163: open; see the US-163 section (PR #50 block).
 - #43, #45, #44: need #49 on main and real green CI; #45 before #44.
 - #36, #40: no Rule 13 review; owner direction needed (#40 IDs clash).
