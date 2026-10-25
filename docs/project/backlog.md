@@ -2846,7 +2846,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     are covered automatically.
   - Dual-voice-coil Re (AE, P3): Earthquake/Image Dynamics records
     store series Re as if per-coil; the IDMAX10D2 Re 3.44 is in no
-    manufacturer document. AE-owned.
+    manufacturer document. AE-owned. Detail (worker-6, 2026-10-25):
+    the Earthquake DBXi-12D/15D and Image Dynamics V4 records seem
+    to hold the series (both-coil, about 2x per-coil) Re. Scope:
+    settle the per-coil vs both-coil Re convention for dual-coil
+    records, then re-check those Re values and the IDMAX10D2 3.44.
+    Kept out of the F-363 PR (AE). No ID yet, like the other
+    follow-ups here.
   - Decimal-comma parse bug (QE, P2 until worker-6's scan is in):
     datasheet ingestion read European decimal commas wrongly;
     accuton-c173-11-191 stored Qts 34.0 / Qms 527.0 where the
