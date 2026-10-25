@@ -45,8 +45,10 @@ free across main, origin and all worktrees, 2026-10-25); F-391
 (P1, measurement sweep ignores mandatory_hpf_hz; AE; PM checked
 free across main, origin and all worktrees, 2026-10-25); F-392
 (P2, unequal LR orders at one crossover point; AE; PM checked free
-across main, origin and all worktrees, 2026-10-25).
-Next free: F-393, US-176, D-071, T66.
+across main, origin and all worktrees, 2026-10-25); F-393 (P2,
+check-sandbox guard misses configs/drivers; AD L1 + QE on #54; PM
+checked free across main, origin and all worktrees, 2026-10-25).
+Next free: F-394, US-176, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -2333,6 +2335,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     nixpkgs#python3Packages.pyflakes` (1.1 MiB fetched; no harm, 5.2
     GiB free); the disk hold covers nix run, so every nix build/run
     needs CM clearance first.
+    r5 (CM, 2026-10-25): r5 build running (gain_matrix.py 7050eac2).
+    The AE and Architect validity conditions went to worker-3. One r6
+    build is pre-cleared (CM, disk hold) if r5 does not capture them.
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -2659,6 +2664,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   margin 3.66 dB. Then the CM verifies, pushes (27d8ff11 and 46c53424
   come along), applies B6n (bddbe5c8) as a separate commit, pushes,
   updates the body; QE/AE review.
+  #57 (b) JOINT LINE (CM, 2026-10-25; PENDING one-line confirmations
+  from the AE and the Architect; worker-4 gets instructions only after
+  both confirm): max_positive_deviation_db MAY raise ValueError on
+  non-finite input. passes_residual_gate and deviation_within_limit
+  check finiteness first and return False, never raising. Tests: (i)
+  gate(NaN/+inf/-inf) is False, no exception; (ii) the metric raises
+  on NaN/+inf/-inf. Plus np.isfinite asserts at
+  test_venue_closed_loop.py:438/:473/:492. #57 CI at e548a3d6 was
+  green (that head will move).
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -3514,6 +3528,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   AC (AE): "the validator refuses a profile where the two legs meeting
   at a crossover point use different slopes". No shipped profile sets
   high_slope_db_per_oct, so nothing deployed is affected.
+- **F-393** Check-sandbox guard misses configs/drivers (P2, PM
+  provisional, QE to confirm; AD L1 + QE, #54 at 46343238,
+  non-blocking there, via CM 2026-10-25): the room-correction check's
+  sandbox guard in flake.nix (`test -d configs/venues && test -d
+  configs/speakers`) does not cover configs/drivers. If that folder
+  were missing from the sandbox, #56's driver-record tests (the F-363
+  full-set gate) would skip silently. Fix (AD, QE): add
+  configs/drivers to the guard. Related: F-380 (CI builds no
+  checks.*).
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
@@ -3837,6 +3860,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   quote-None notes start with "F-363: unverifiable" (as above). CM
   observation sent to the QE: the E2E local-demo step shows 1 xpassed
   (QE to classify; F-272 removed xfails).
+  F-262 one-liner (QE, from #56, via CM, 2026-10-25; supersedes "QE to
+  classify" above; record docs/project/defects/F-262.md on main):
+  "XPASS observed in CI 40236821737 (main candidate, #56) — evidence
+  for non-determinism; F-262 closure must convert to strict or
+  remove." The TW carries it into F-262.md with the next defects docs
+  PR. PR #58 (docs-only, CI-exempt; CM, 2026-10-25): the TW's batch
+  closing F-363 and adding F-388 (/tmp/tw-defects-f363-f388-v1/,
+  MANIFEST 9e22c930), head 51cb3fa0; review open with all 7. It sets
+  F-363.md resolved (Resolution: all records checked, exemption table,
+  plausibility bounds), adds F-388.md (AE M1/M2 verbatim plus
+  AC-b/c/e), updates the defects-index.md F-363 row, adds an F-388 row
+  and removes the status.md Open Blockers F-363 row. On merge, the
+  F-388 line "No defects/F-388.md record on main yet" and the TW close
+  item above are superseded.
   #56 backlog (AD, TW, 2026-10-25): AD L1 = TW (3), P3: the CLI
   scripts/drivers/validate_drivers.py and pytest need one shared
   exemption/bounds source (the CLI flags the 8 exempted records
@@ -4263,6 +4300,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   head 46343238; all 7 asked for a FULL re-review (bundle
   /tmp/pr54-review-46343238/); CI 40240718064 running. Merge order
   unchanged: #54, then #55.
+  #54 Rule 13 at 46343238 (CM, 2026-10-25): 6 verdicts posted: UX (no
+  concerns), SecSpec, TW, AE, Architect, AD (the CM posts the AD text
+  once it has it as a file). AD APPROVE does not cover CI and lapses
+  on a head move. AD M1 MERGE GATE: CI 40240718064 builds no checks.*
+  (F-380), so "green at the merged head" needs one check run at
+  46343238 showing 0 failed / 1211 collected; the check evidence so
+  far is from 320c3ae6, before #56, so #56's new driver tests never
+  ran in the check sandbox. QE on HOLD for H1/H2: H1 scratch run
+  (branch scratch/pr54-h1-rc-check 3a95ae77, run 40241169781); H2 body
+  text, the TW drafting. AD L1 + QE: F-393 (not fixed in #54).
   Pi build queue (Architect, 2026-10-25): F-365, then the F-374
   PR-head suite, then the wireplumber-no-bypass check; each from a
   tarball at the declared SHA with sandbox=true. WP check
