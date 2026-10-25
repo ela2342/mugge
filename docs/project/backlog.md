@@ -219,8 +219,9 @@ Next free: F-369, US-173, D-069, T66.
     in 8 min, not marked failed): no DRM device (vc4/v3d =m but not
     loaded, /sys/class/drm empty), so the labwc greeter cannot start.
     Medium. PO RULING (2026-10-25): guard on US-163, real fix in
-    US-172 (P1). Amend the T49 criterion: no failed units AND
-    NRestarts <= 3 per service. New US-163 AC "no-crashloop" (PO):
+    US-172 (P1). Amend the T49 criterion (QE): no failed units, and
+    no service with NRestarts > 3 after 10 minutes of uptime. New
+    US-163 AC "no-crashloop" (PO):
     after boot no systemd unit (system or user) is failed or
     restart-looping; the display stack is disabled or guarded on this
     image while no DRM device exists; checked before Gate 2. A working
@@ -245,7 +246,8 @@ Next free: F-369, US-173, D-069, T66.
     adopted): re-state F-328 as "PW capture node deferred per F-295;
     ALSA 8-in verified by hw_params (AC12)"; it stays open as the
     capture tracker. PO ADVICE (2026-10-25; owner sets the final
-    priority): re-rate High -> **Medium**. No US-163 AC depends on it
+    priority; team-lead told the owner it stands as Medium unless
+    they object): re-rate High -> **Medium**. No US-163 AC depends on it
     (AC12 amended); DJ mode needs no USBStreamer capture (measurement
     uses the separate UMIK-1); only Live mode on the Pi 5 needs it.
     Re-rate trigger: High as soon as Live mode on the Pi 5 is
@@ -258,10 +260,10 @@ Next free: F-369, US-173, D-069, T66.
   - Pending: T48 cold boot (needs an owner power cycle).
   - US-163 waits on (team-lead, 2026-10-25; CM update): the F-358
     fix commit (05-rt-direct.conf) and its AE + Architect review; the
-    F-367 guard f87c162b (ConditionPathExistsGlob; AE APPROVED, SecSpec
-    OK on the linger change; Architect HOLDS it for a read-only
-    diagnosis of why vc4 doesn't load); the deploy; then the owner's
-    cold boot for T48 and AC13.
+    deploy; then the owner's cold boot for T48 and AC13. The F-367
+    guard f87c162b (ConditionPathExistsGlob) has all its reviews (AE
+    APPROVED, SecSpec OK on the linger change, Architect APPROVED; no
+    hold on the display diagnosis) and is clear for the CM to push.
   - Pi 5 cooling (Architect via CM): the cooling_fan DT node is
     "disabled" and there is no fan hwmon, so an Active Cooler would
     not spin. OPEN owner question: is a fan fitted? If yes: small Pi 5
@@ -341,13 +343,20 @@ Next free: F-369, US-173, D-069, T66.
   F-367 crash loop from the US-163 deploy (vc4 not loaded, no DRM
   device). (PO, 2026-10-25)
   Architect note: on the Pi 5 every GPU/HDMI DT node is
-  status=disabled, so vc4/v3d never autoload; the deployed kernel
-  ships vc4-kms-v3d-pi5.dtbo. First checks: config.txt has the
-  dtoverlay line; gens/<id>/overlays has the README and the dtbo;
-  /proc/device-tree/chosen/os_prefix; whether disable-bt-pi5 applied
-  (overlay-specific vs no overlays loaded at all); the firmware
-  "variant start_cd" line. greetd must also be ordered after the DRM
-  device, because the f87c162b condition is checked once at boot.
+  status=disabled, so vc4/v3d never autoload. Finding (overlay reads
+  at 798f2dc7): NO firmware overlay is applied at all, not only vc4;
+  disable-bt-pi5 did not apply either (BT still on serial@7d50c000).
+  Checks out: config.txt has both dtoverlay lines; gens/<id>/overlays/
+  has the README and both dtbo files; chosen/os_prefix and
+  chosen/overlay_prefix point at gens/<id>/overlays/. So the firmware
+  looks in the right place, yet nothing is merged. First US-172 read:
+  /proc/device-tree/chosen/log (firmware log) for overlay load/apply
+  errors. Candidate causes: Pi 5 firmware handling of os_prefix
+  overlays; the dtbo coming from the bcm2711_defconfig RT kernel
+  build. Evidence: ~/mugge-pi5-prewipe-20261024/
+  diag-F367-overlay*-798f2dc7.txt. greetd must also be ordered after
+  the DRM device, because the f87c162b condition is checked once at
+  boot.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect)
