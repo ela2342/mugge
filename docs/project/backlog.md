@@ -2189,6 +2189,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - Gate-2 r2 (CM, 2026-10-25): gate2.py dda3bfcf, selftest
     f72a0aba, out for diff-only re-review by AE, Architect and
     SecSpec; the selftest is held on disk (2.3 GiB).
+    Gate-2 r2 verdicts (CM, 2026-10-25): SecSpec APPROVED at
+    dda3bfcf/f72a0aba, with 1 new LOW: an unexpected exception escapes
+    without writing summary.txt (worker-3 fixing). Architect
+    CHANGES-REQUESTED: C1a wp_state fails open on a read error; C1b
+    the selftest must exercise the WP history replay on a real sandbox
+    WP with history [B, A], plus a negative case; N4/N5 non-blocking.
+    AE pending. worker-3 is fixing. A fresh selftest at the final
+    hashes is required (held on disk).
+    Interim rule (SecSpec, via CM, 2026-10-25), until the LOW fix is
+    in: any Gate-2 run without summary.txt or with a traceback counts
+    as STOP; the CM checks sink, target.object, the 16 gains and the
+    gate before releasing the lock.
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -2475,6 +2487,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   test-file follow-up is in progress) and told worker-4 the AC2
   test conditions, including the required mutation (c) np.max ->
   np.mean and (d) the grep.
+  B6m (PM, MANIFEST 6f29708d, base US-174.md sha256 32260961)
+  supersedes B6l (never applied): the AE's REQUIRED AC2 boundary tests
+  (target +3.0 dB passes, +3.01 dB fails, NaN FAILS;
+  max_positive_deviation_db raises or returns +inf on non-finite
+  input, or every caller uses <=), the AE's exact closed_loop.py
+  comment text, and the teeth window bounds taken from
+  MAX_POSITIVE_DEVIATION_DB and the verify_target_deviation default
+  (no literals). The AE boundary line replaces the deleted 2.9/3.1
+  line. worker-4 implements all of it plus QE O1-O3 in one follow-up
+  commit; the CM holds B6m for that SHA.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -2696,6 +2718,32 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     scraped xmax_mm counts as unknown-definition until its source
     is classified.
   - AC-e (QE N1): a test once a consumer of xmax exists.
+  AE ACCEPT with edits (via CM, 2026-10-25; replaces the AC-a and AC-d
+  wording; AC-b, AC-c and AC-e stay; "derate a mathematical Xmax"
+  above is superseded by "re-derive, no percentage derate"):
+  - M1: "Every safety computation that reads a driver record
+    (excursion mask, thermal, protection, D-031 derivation) refuses at
+    load any record that has a ts_consistency mark, or has a null in a
+    field the computation needs. The error names the record, the mark
+    or the field, and the computation. It fails closed: no fallback
+    values, no skipping the channel. Simulation (speaker_sim) may
+    still load marked records, but it logs the mark, and its output
+    must never feed a safety gate." The F-363 follow-up "Fail closed
+    (AE condition)" is merged into M1 (one record). Precondition for
+    F-385 (i') CHN-50P excursion mask.
+  - M2: "Driver records get xmax_definition with values linear
+    (manufacturer measured linear limit, e.g. Klippel), overhang
+    (plain (winding depth - gap depth)/2), mathematical (overhang plus
+    terms such as + gap depth/4), or unknown. Safety computations use
+    linear and overhang as stored. A mathematical Xmax is re-derived
+    as the plain overhang from the datasheet's winding and gap depths,
+    and both figures are recorded; if the depths aren't printed, it is
+    rejected. An unknown Xmax is rejected. No percentage derate
+    factors. Only the drivers referenced by speaker identities need a
+    classification (AE), starting with markaudio-chn-50p (xmax 3.5)
+    before the F-385 mask. The 2345 scraped records may stay unknown."
+    PRV example: mathematical 7.15 mm re-derives to (18.8 - 9.0)/2 =
+    4.9 mm.
 - **F-389** Pi 5 tryboot with KMS+BT overlays via overlay_prefix:
   no network, needed an owner power cycle (Architect, no QE
   objection; via CM, 2026-10-25). US-172 run 2: run 1 +
@@ -2803,6 +2851,75 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   channel's D-031 HPF. Either way the dead field is removed or
   wired. Interim: F-390 fallback condition (d). Lane: CM (likely
   next to F-390; both touch session.py).
+  - Architect route ruling (2026-10-25, cc AE, CM; supersedes "the
+    Architect chooses the route"): route (A) on EVERY stimulus the
+    session generates, the HPF taken server-side from the loaded
+    identity; (B) is not a gate, a hash record only (R5). Why not (B):
+    the first venue measurement runs on dirac/placeholder coeffs, so
+    (B) would block it or need an HPF placeholder FIR (safety.md
+    option (a), another story); a spectral check of a WAV is new
+    error-prone safety-path code; (A) is the only place the session
+    controls end to end.
+  - Code facts: the session.py:193 field is never read;
+    routes.py:44/144 copy it from the CLIENT request. Measurement
+    sweeps session.py:733-735 call generate_log_sweep(f_start=20.0,
+    f_end=20000.0) at sweep_level_dbfs (session.py:202, default -20);
+    verification sweeps session.py:1353-1355 hardcode 20.0 too (2nd
+    instance); gain cal gain_calibration.py:93/156-190 plays pink
+    noise 100 Hz-10 kHz, 4th-order Butterworth (3rd instance;
+    identities with an HPF above 100 Hz: bose-jewel-double-cube 200,
+    hoqs-c3d-hf 800; hoqs-c3d-mid 100 and markaudio-chn-50p 80 are
+    close). sweep.py:59-62 50 ms Hann fades leave a little energy
+    below f_start. safety.md:140-175: D-031 requires subsonic
+    protection "in the audio pipeline"; dirac placeholders give none.
+  - R1 source: per channel from the identity via the F-390 resolver
+    (profile -> speaker_key -> identity.mandatory_hpf_hz). Remove
+    mandatory_hpf_hz from the /measurement/start request model
+    (routes.py:44/144) and the ChannelConfig client input; a client
+    that sends it gets 422; a client can never lower the protection.
+  - R2 fail closed (= F-390 AC4): no speaker_key, an unloadable
+    identity or a missing mandatory_hpf_hz fails at session start,
+    before gain cal. The only accepted null is an identity with the
+    documented D-031 exception (dayton-ultimax-umii18-22-sealed-120l),
+    machine-readable (e.g. d031_exception: "<reason>"; the AE defines
+    the field); without it a null refuses. An excepted null has a 20
+    Hz floor.
+  - R3 measurement and verification sweeps: f_start = max(20.0,
+    hpf_hz) AND the stimulus high-passed at hpf_hz before scaling
+    (covers the fade leakage). The AE picks the slope (Architect
+    default 48 dB/oct, as the D-031 FIR generators; at least 24).
+    Deconvolution MUST use the exact played (filtered) signal as
+    reference; results below hpf_hz are marked regularized/invalid.
+    One shared stimulus builder for both call sites.
+  - R4 gain cal: calibrate_channel takes hpf_hz, f_low =
+    max(PINK_NOISE_F_LOW, hpf_hz) (gain_calibration.py:93/156);
+    measure_nearfield gets the same (covers the CLI).
+  - R5 (B) as a record: at session start, log and store the sha256 of
+    each deployed coeff WAV in /etc/pi4audio/coeffs next to the F-390
+    AC2 hashes (F-390 fallback (d) becomes permanent evidence). A
+    deployed-coeff HPF verifier is a separate backlog item, if the AE
+    wants it (below).
+  - R6 tests: (a) per channel, stimulus energy below hpf_hz under an
+    AE-set bound (e.g. <= -40 dB re passband), sweeps at both call
+    sites and the gain-cal noise, at hpf 42/80/200/800; (b) a request
+    with mandatory_hpf_hz gets 422; (c) a missing identity or HPF
+    refuses before gain cal, and an excepted null runs at 20 Hz; (d)
+    the deconvolution reference equals the played signal; (e) the
+    mutation f_start -> 20.0 makes (a) fail.
+  - R7 interim until F-391 merges: F-390 fallback (d) AND no session
+    on an identity with an HPF above 100 Hz (gain cal already violates
+    D-031 there). Supersedes "Interim: F-390 fallback condition (d)"
+    above.
+  - F-390 review (Architect): AC4 and the extended AC2 accepted (R5
+    covers both; AC4 also covers F-391 R2). One shared resolver: if
+    F-390 and F-391 share a lane, F-390 lands first. Lane: CM.
+  - Open for the AE: the slope, the R6(a) bound, the d031_exception
+    field definition, and whether a deployed-coeff HPF verifier is
+    wanted.
+- Deployed-coeff HPF verifier (Architect R5 under F-391;
+  AE-conditional, only if the AE wants it): check that the coeff WAVs
+  deployed in the convolver carry each channel's D-031 HPF. Not F-391
+  scope.
 - Speaker-config reset-to-default action (Architect R4 under F-390;
   not F-390 scope).
 - Docs (TW; via CM, 2026-10-25): flake test apps run on a /nix/store
@@ -3349,6 +3466,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   2026-10-25): 6/7 APPROVED and posted verbatim: QE (its required
   body edit applied by the CM, head unchanged), Architect,
   SecSpec, UX, AD, TW. AE pending; CI 40236821737 running.
+  AE APPROVE posted (CM, 2026-10-25): 7/7 at 684da11a; merge on CI
+  40236821737 green (standing merge consent). AE: purifi is covered
+  (qts 0.23 -> 0.26, computed 0.2589; test_all_real_drivers_pass green
+  at 684da11a in the AE's own run).
   On merge (TW): close docs/project/defects/F-363.md (main says
   "open"; its AC2 says "sorted sample") and record the
   resolution: all records checked, exemption table, plausibility
@@ -3390,6 +3511,7 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     closed on ANY record with a ts_consistency mark (today
     datasheet-inconsistent and unverifiable), so future mark values
     are covered automatically. Related: F-388 (Xmax definition).
+    MERGED into F-388 M1 (AE, 2026-10-25); F-388 is the one record.
   - Dual-voice-coil Re (AE, P3): Earthquake/Image Dynamics records
     store series Re as if per-coil; the IDMAX10D2 Re 3.44 is in no
     manufacturer document. AE-owned. Detail (worker-6, 2026-10-25):
