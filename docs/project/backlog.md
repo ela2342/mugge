@@ -9,11 +9,11 @@ land here. Maintained by the PM; the CM commits changes.
 ## Reserved IDs
 
 Taken (not yet filed as records): F-361, F-362, F-363, F-364 (below);
-F-365; F-366, F-367 (US-163 section); D-068 (T57 gate dropped); T65 =
+F-365; F-366, F-367, F-369 (US-163 section); D-068 (T57 gate dropped); T65 =
 US-159 G16 reconciler test; US-172 (P1, Pi 5
 local display). F-368 WITHDRAWN, never to be reused (was a
 duplicate of the existing F-358 for AC13).
-Next free: F-369, US-173, D-069, T66.
+Next free: F-370, US-173, D-069, T66.
 
 ## US-163 text updates (critical path; one tracking batch before the PR)
 
@@ -378,8 +378,11 @@ Next free: F-369, US-173, D-069, T66.
   - Recovery (Architect): the firmware partition keeps 2 gens, now
     nkifli3r + x83m7bir; p9mz... was pruned. The PR text and recovery
     notes use gens/x83m7bircd4b7j8wchx9k1mnilzi8kl4/ as the fallback
-    generation; drop any p9mz line. Pre-PR batch. After AC18b x83 is
-    pruned and the fallback becomes nkifli3r (Architect).
+    generation; drop any p9mz line. Pre-PR batch. Correction (CM,
+    Architect + QE): x83 was pruned at AC18a, not AC18b (a no-op
+    deploy prunes the FAT to {new, prev, booted}, which collapse to
+    one); the recovery line is now gens/nkifli3r.../ and x83 is in the
+    store only. See F-369.
   - F2 (pcm-bridge/level-bridge nodes after PW restart): P1, see P1.
     The US-163 PR lists F2 as an OPEN AMPS-ON PRECONDITION, not only
     as observed (team-lead, CM).
@@ -395,20 +398,26 @@ Next free: F-369, US-173, D-069, T66.
     tree at 132997f9) -> land all pending branch docs commits -> CM
     merges origin/main 289390bf into the branch = M -> AC18b deploys M
     from a clean checkout -> the PR opens at M -> AC17 on M. The FAT
-    keeps 2 gens, so AC18b evicts x83m7bir; T54 runs first. Item 1 can
+    keeps 2 gens, so AC18b evicts x83m7bir; T54 runs first. (Actual:
+    AC18a evicted x83; see F-369, item 7.) Item 1 can
     run at any point. QE conditions: (a) the merge diff stat is
     recorded and empty under nix/, flake.*, configs/ and src/ (CM
     verified: 132 docs/project files + 2 .claude/memories files); (b)
     the AC18b nix-diff against nkifli3r shows ONLY
     configurationRevision; (c) QE ACCEPTS the T54 evidence before
-    AC18b (AC18b prunes x83); (d) if the head moves: docs-only + diff
+    AC18b (AC18b prunes x83; in fact AC18a pruned it, after T54 was
+    accepted, so (c) held); (d) if the head moves: docs-only + diff
     recorded keeps AC18b/AC17 valid; any non-docs change reruns both.
-    Status (CM, 2026-10-25): T53 PASS, T54 ACCEPTED; AC18a is next.
+    Status (CM, 2026-10-25): T53 PASS, T54 ACCEPTED, AC18a PASS.
+    AC18b NOT GRANTED: held until the F-369 fix is deployed (PO;
+    item 7).
     1. PASS (QE + SecSpec; CM-OBS-.89-T53, T53b, T53c): T53-on-deploy,
        ONE read-only OBSERVE on the running deploy. NO external port
        scan (owner directive, see the test-process rule below); the
-       running nmap scans were stopped. Checks: host key a5kILUyr + MAC
-       (PASS); `sudo sshd -T`: permitrootlogin, passwordauthentication,
+       running nmap scans were NOT stopped; they ran to completion at
+       12:30:10Z, past the directive (CM correction; v66 said
+       "stopped"). Checks: host key a5kILUyr + MAC (PASS); `sudo sshd
+       -T`: permitrootlogin, passwordauthentication,
        kbdinteractiveauthentication all no (PASS); no root
        authorized_keys; listener clause (QE + SecSpec joint, replaces
        all earlier wording): "Evidence: on-device `sudo ss -ltnup` (bind
@@ -455,7 +464,9 @@ Next free: F-369, US-173, D-069, T66.
        recorded, not a fail: greetd loop, PW RR 20, no linger
        (F-367/F-358). If x83 fails: card reader, config.txt ->
        gens/nkifli3r.../. Reboots announce-only.
-    3. OPEN: AC18, RE-WORDED to the boot verb (PO, verbatim): "(a)
+    3. AC18a PASS (Architect + QE; corrected expectation: the no-op
+       pruned the FAT to one generation, see F-369). AC18b HELD (item
+       7). AC18, RE-WORDED to the boot verb (PO, verbatim): "(a)
        no-op: `boot` at the same SHA creates no new generation; (b)
        `boot` at a trivially different SHA -> announced reboot -> the
        new generation is active, short re-check (no failed units,
@@ -469,6 +480,8 @@ Next free: F-369, US-173, D-069, T66.
        the PR head moves after AC18b, AC18b reruns on the merge SHA;
        QE decides required vs recorded. After AC18b x83 is pruned: the
        recovery line becomes nkifli3r; update the recovery notes.
+       (Actual: pruned at AC18a; the recovery line is already
+       gens/nkifli3r.../.)
     4. OPEN: AC17, two cold power cycles stay (PO). ONE owner request
        for two back-to-back cycles on the FINAL deployed SHA (after
        AC18b; QE). The first counts as T48 (incl. AE's ps -L). Per
@@ -528,6 +541,36 @@ Next free: F-369, US-173, D-069, T66.
        `images.sd-card`) (PO, Architect concurs). The PR states this
        explicitly (QE) and keeps "Pi 4 runtime change is unverified
        on hardware".
+    7. OPEN, US-163 code change: **F-369** High (QE finding; PO
+       ruling 2026-10-25 supersedes all earlier positions). The FAT
+       keep set {new, prev, booted} collapses to ONE generation after
+       any repeat or no-op deploy; after AC18a only nkifli3r is on the
+       FAT, x83 is in the store only, so the AC2a one-line SD rollback
+       has no second generation. PO: AC2a means ">= 2 complete
+       generations on the FAT, always, as soon as >= 2 have ever
+       existed" -- it protects operator rollback to an EARLIER
+       generation (T54), not only a failed new boot; a booting
+       generation can still prove bad later (audio, Mixxx, at the
+       gig). QE: no boot risk, but the AC covers more. Fix (PO): the
+       prune also keeps the newest other complete generation
+       (nix/nixos/boards/pi5/bootloader.nix); the Architect specifies,
+       worker-1 implements, usual review. Merged into F-369 (same
+       root): keep the previous profile generation's dir (Architect);
+       document the no-op behaviour in the bootloader.nix header
+       comment. AC2a second clause (QE wording, PO): "if the boot
+       selector points at an unbooted generation, the booted one is
+       always among those kept." New **AC18c** (PO): "A no-op
+       redeploy (boot at the same SHA) leaves >= 2 complete
+       generations on the FAT, and the booted generation is among
+       them." QE AC18b criteria: (i) MAP shows >= 2 present (M +
+       nkifli3r) after the deploy and after the reboot; (ii) AC18c on
+       the fixed head still leaves >= 2. Sequence (PO; CM sequences):
+       fix deploy -> AC18b + AC18c in one run (saves reboots); T54
+       runs on the fixed state (PO). bootloader.nix changes, so
+       AC18b/AC17 run on the fixed head (QE); the US-163 delta is no
+       longer docs-only after the fix (QE condition (d)). Not an owner
+       topic (PO). Superseded: Architect "per spec, optional Low" and
+       the relayed "PO amends AC2a to except after a no-op deploy".
   - US-163 PR known deviations (PO, 2026-10-25, verbatim):
     - "Pi 5 firmware merges none of the config.txt dtoverlay lines
       (vc4-kms-v3d-pi5, disable-bt-pi5). The bootloader writes
@@ -575,19 +618,22 @@ Next free: F-369, US-173, D-069, T66.
     rpi_volt undervoltage alarm (path found in T53c:
     /sys/class/hwmon/hwmon1/in0_lcrit_alarm; match on name rpi_volt, the
     hwmon index can change). The sampler runs as root (sudo):
-    cpuinfo_cur_freq is root-readable only (worker-1). OPEN (T54): the
-    sampler did not match a cpufreq cooling_device; the AE decides
-    whether it is fixed before AC18b. worker-1 confirms on the Pi that
-    cpuinfo_cur_freq and scaling_cur_freq agree at idle. WARN at
-    >= 75 C: report to the owner via team-lead, keep running. STOP at
-    >= 80 C (Pi 5 firmware throttle onset; full throttle at 85 C). The
-    run's CPU/xrun evidence is INVALID, and the run is repeated, if at
-    any sample: any cooling_device cur_state != 0; the undervoltage
-    alarm is set; or cpuinfo_cur_freq < cpuinfo_max_freq (AE: the
-    firmware can cap the clock at the soft limit without a Linux
-    cooling_device showing it). Invalidation is a finding, not a STOP
-    (Architect). No builds on the Pi; all builds stay on the Mac VM
-    (Architect). Gig cooling: see the P1 Pi 5 thermal soak item.
+    cpuinfo_cur_freq is root-readable only (worker-1). T54 (AE): T54
+    PASS stands, cooling_device recorded as "not sampled" (the sampler
+    matched none). Sampler fix is a CONDITION of the AC18b grant:
+    cooling_device inventory, rpi_volt by name, labelled fields, the
+    cooling_device criterion N/A if no cpufreq-type device exists.
+    worker-1 confirms on the Pi that cpuinfo_cur_freq and
+    scaling_cur_freq agree at idle. WARN at >= 75 C: report to the owner
+    via team-lead, keep running. STOP at >= 80 C (Pi 5 firmware throttle
+    onset; full throttle at 85 C). The run's CPU/xrun evidence is
+    INVALID, and the run is repeated, if at any sample: any
+    cooling_device cur_state != 0; the undervoltage alarm is set; or
+    cpuinfo_cur_freq < cpuinfo_max_freq (AE: the firmware can cap the
+    clock at the soft limit without a Linux cooling_device showing it).
+    Invalidation is a finding, not a STOP (Architect). No builds on the
+    Pi; all builds stay on the Mac VM (Architect). Gig cooling: see the
+    P1 Pi 5 thermal soak item.
   - QE request: commit a SecSpec-vetted subset of the deploy evidence
     into the US-163 PR.
 - 2026-10-24 20:28:03: Pi 5 restart CONFIRMED as the owner's power
