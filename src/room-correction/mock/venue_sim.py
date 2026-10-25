@@ -40,9 +40,13 @@ SCENARIO_SPEAKER_ALIASES = {
     "sub2": "sub2",
 }
 
-# Measurement noise added to each recorded sweep, dB re recording peak.
+# Measurement noise added to each recorded sweep: RMS in dB re recording
+# peak. AE, 2026-10-25: pink (1/f, real rooms are noisy in the bass);
+# -60 dB gates every slice-1 AC, -40 dB is run for the report only.
 # Fixed seed per channel keeps runs deterministic (QE).
-DEFAULT_NOISE_DB = -80.0
+DEFAULT_NOISE_DB = -60.0
+DEFAULT_NOISE_COLOR = "pink"
+NOISE_COLORS = ("white", "pink")
 DEFAULT_SEED = 174
 SWEEP_DURATION_S = 3.0
 SPEAKER_IR_TAPS = 4096
@@ -87,6 +91,20 @@ def speaker_position(scenario, speaker_key):
     return speakers[scenario_key]["position"]
 
 
+def measurement_noise(n, color, rng, sr=SAMPLE_RATE):
+    """Unit-RMS noise. 'pink' has a 1/f power spectrum (flat below 1 Hz)."""
+    if color not in NOISE_COLORS:
+        raise ValueError(f"unknown noise color {color!r}, expected one of {NOISE_COLORS}")
+    white = rng.randn(n)
+    if color == "white":
+        return white / np.sqrt(np.mean(white ** 2))
+    spectrum = np.fft.rfft(white)
+    freqs = np.fft.rfftfreq(n, d=1.0 / sr)
+    spectrum /= np.sqrt(np.maximum(freqs, 1.0))
+    pink = np.fft.irfft(spectrum, n=n)
+    return pink / np.sqrt(np.mean(pink ** 2))
+
+
 def true_delays_samples(arrival_samples):
     """Delay compensation implied by the geometry: latest arrival = 0."""
     latest = max(arrival_samples.values())
@@ -96,7 +114,8 @@ def true_delays_samples(arrival_samples):
 def simulate_venue_measurements(profile, scenario, scenario_name="scenario",
                                 sr=SAMPLE_RATE, noise_db=DEFAULT_NOISE_DB,
                                 seed=DEFAULT_SEED,
-                                sweep_duration_s=SWEEP_DURATION_S):
+                                sweep_duration_s=SWEEP_DURATION_S,
+                                noise_color=DEFAULT_NOISE_COLOR):
     """
     Measure every speaker of a profile in a simulated scenario.
 
@@ -107,7 +126,9 @@ def simulate_venue_measurements(profile, scenario, scenario_name="scenario",
     scenario : dict
         Loaded scenario YAML.
     noise_db : float or None
-        Measurement noise, dB re recording peak. None = noiseless.
+        Measurement noise RMS, dB re recording peak. None = noiseless.
+    noise_color : str
+        'pink' (default) or 'white'.
     """
     sweep = generate_log_sweep(duration=sweep_duration_s, sr=sr)
     mic = scenario["microphone"]["position"]
@@ -123,7 +144,8 @@ def simulate_venue_measurements(profile, scenario, scenario_name="scenario",
         if noise_db is not None:
             rng = np.random.RandomState(seed + index)
             level = dsp_utils.db_to_linear(noise_db) * np.max(np.abs(recording))
-            recording = recording + level * rng.randn(len(recording))
+            recording = recording + level * measurement_noise(
+                len(recording), noise_color, rng, sr=sr)
         measured[spk_key] = deconvolution.deconvolve(recording, sweep, sr=sr)
         paths[spk_key] = path_ir
         distances[spk_key] = float(room_simulator.distance(pos, mic))

@@ -12,8 +12,8 @@ Metrics (values: AE, 2026-10-25):
   dsp_utils.fractional_octave_smooth), evaluated on a log frequency grid.
 - Max positive deviation from target, one-sided (the cut-only pipeline
   must remove peaks; it is not allowed to fill dips).
-- Below-target regions stay unchanged: where the uncorrected response is
-  below target, the corrected one stays within a tolerance of it.
+- Below-target regions: never raised, over-cut bounded near peaks, only
+  the D-009 margin far from peaks (below_target_report, AE ruling).
 - Minimum phase: energy of (h - minphase(|H|)) relative to energy of h.
 - Causality / wrap-around: energy in the last 5% of taps.
 
@@ -113,19 +113,52 @@ def max_positive_deviation_db(response_db, target_db):
     return float(np.max(np.asarray(response_db) - np.asarray(target_db)))
 
 
-def below_target_change_db(corrected_db, uncorrected_db, target_db):
+def below_target_report(freqs, corrected_db, uncorrected_db, target_db, margin_db,
+                        band=None, far_octaves=1.0 / 3.0):
     """
-    Largest |corrected - uncorrected| where uncorrected is below target.
+    Below-target criteria for cut-only correction (AE ruling, 2026-10-25).
 
-    Cut-only correction must leave dips alone. Returns 0.0 if the
-    uncorrected response is nowhere below target.
+    In bins where the uncorrected response is below target:
+
+    - ``raised``: max (corrected - uncorrected). Cut-only must never lift
+      a dip (gate: <= +0.05 dB).
+    - ``over_cut``: max |corrected - uncorrected + m|, m = |margin_db| the
+      D-009 margin the correction applied everywhere. Cut skirts next to
+      a peak spill into neighbouring dips (gate: <= 1.0 dB).
+    - ``far_field``: the same as over_cut, restricted to bins more than
+      far_octaves from any above-target bin, where only the margin may
+      act (gate: <= 0.1 dB). Separates skirt spill from a broadband
+      over-cut. NaN if there are no such bins (``n_far`` = 0).
+
+    Evaluate on a grid that extends past the band by at least far_octaves,
+    so peaks just outside the band count; ``band`` = (f_low, f_high)
+    limits which bins are judged. Returns a dict of floats.
     """
-    corrected_db = np.asarray(corrected_db)
-    uncorrected_db = np.asarray(uncorrected_db)
-    below = uncorrected_db < np.asarray(target_db)
-    if not np.any(below):
-        return 0.0
-    return float(np.max(np.abs(corrected_db[below] - uncorrected_db[below])))
+    freqs = np.asarray(freqs, dtype=np.float64)
+    delta = np.asarray(corrected_db) - np.asarray(uncorrected_db)
+    excess = np.asarray(uncorrected_db) - np.asarray(target_db)
+    in_band = np.ones(len(freqs), dtype=bool)
+    if band is not None:
+        in_band = (freqs >= band[0]) & (freqs <= band[1])
+    below = in_band & (excess < 0)
+    above = excess > 0
+
+    log_f = np.log2(freqs)
+    if np.any(above):
+        distance = np.min(np.abs(log_f[:, None] - log_f[above][None, :]), axis=1)
+    else:
+        distance = np.full(len(freqs), np.inf)
+    far = below & (distance > far_octaves)
+
+    m = abs(margin_db)
+    nan = float("nan")
+    return {
+        "raised": float(np.max(delta[below])) if np.any(below) else nan,
+        "over_cut": float(np.max(np.abs(delta[below] + m))) if np.any(below) else nan,
+        "far_field": float(np.max(np.abs(delta[far] + m))) if np.any(far) else nan,
+        "n_below": int(np.sum(below)),
+        "n_far": int(np.sum(far)),
+    }
 
 
 def minimum_phase_reference(h, oversample=8):

@@ -7,6 +7,9 @@ from the scenario definition: geometry for delays, the injected mode for
 cut depth, the simulated speaker*room path for the residual. None of the
 truth comes from the pipeline's own estimators (QE P3).
 
+Measurement noise (AC6a, AE): pink, fixed seed per channel. Every gate
+runs at -60 dB re recording peak; -40 dB is run and printed, not gated.
+
 Not covered here, on purpose:
 - System (sat+sub summed) response and the crossover region (AC3/AC5
   judgement): blocked on F-374. Per-channel bands below stay clear of the
@@ -29,7 +32,7 @@ import soundfile as sf
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from mock import room_simulator, venue_sim
-from room_correction import closed_loop, dsp_utils, verify
+from room_correction import closed_loop, correction, dsp_utils, verify
 from room_correction import venue_pipeline as vp
 from room_correction.correction import generate_correction_filter, normalize_ir_level
 from room_correction.export import export_filter
@@ -49,6 +52,16 @@ MAX_POSITIVE_DEVIATION_DB = 3.0
 LEVEL_INVARIANCE_DB = 0.1
 CUT_ACCURACY_DB = 2.0
 AC6_TOLERANCE_S = 0.2e-3
+GATED_NOISE_DB = -60.0
+REPORT_NOISE_DB = -40.0
+# AE below-target ruling, 2026-10-25.
+MAX_RAISE_DB = 0.05
+MAX_OVER_CUT_DB = 1.0
+MAX_FAR_FIELD_DB = 0.1
+FAR_OCTAVES = 1.0 / 3.0
+# The D-009 margin the correction stage applies everywhere. combine has no
+# logged margin scalar yet; when F-374 adds one, read m from there (AE).
+CORRECTION_MARGIN_DB = correction.D009_MARGIN_DB
 
 EXPECTED_FILES = {
     "combined_left_hp.wav": "fir",
@@ -65,19 +78,23 @@ def bundle():
     return vp.load_venue_bundle(VENUE, PROFILE)
 
 
+def _simulate(bundle, name, noise_db=GATED_NOISE_DB):
+    return venue_sim.simulate_venue_measurements(
+        bundle.profile, venue_sim.load_scenario(name), scenario_name=name,
+        noise_db=noise_db, noise_color="pink")
+
+
 @pytest.fixture(scope="module", params=SCENARIOS)
 def run(request, bundle):
-    """(scenario name, SimulatedMeasurement, VenueFilterResult), noise on, fixed seed."""
+    """(scenario name, SimulatedMeasurement, VenueFilterResult) at the gated noise."""
     name = request.param
-    sim = venue_sim.simulate_venue_measurements(
-        bundle.profile, venue_sim.load_scenario(name), scenario_name=name)
+    sim = _simulate(bundle, name)
     return name, sim, vp.generate_venue_filters(bundle, sim.measured_irs)
 
 
 @pytest.fixture(scope="module")
 def home_lab(bundle):
-    sim = venue_sim.simulate_venue_measurements(
-        bundle.profile, venue_sim.load_scenario("home_lab"), scenario_name="home_lab")
+    sim = _simulate(bundle, "home_lab")
     return sim, vp.generate_venue_filters(bundle, sim.measured_irs)
 
 
@@ -147,8 +164,9 @@ class TestAC2Gates:
 
     def test_corrections_never_boost(self, run):
         # The intermediate correction FIR overshoots its own -0.5 dB margin by
-        # up to 0.15 dB after the min-phase step (AE finding 3, open); the
-        # deployed files are held to D-009 above. Here: no boost at all.
+        # up to 0.15 dB after the step-9 re-clip (F-384); the deployed files
+        # are held to D-009 above. Here: no boost at all.
+        # TODO(F-384): tighten to <= -0.5 dB once F-384 lands.
         name, _, result = run
         for spk, corr in result.corrections.items():
             assert _max_gain_db(corr) <= 0.0, f"{name} {spk}"
@@ -285,17 +303,59 @@ class TestLevelAndCut:
         assert excess > vp.MAX_CUT_DB + 4.0
         assert vp.MAX_CUT_DB - CUT_ACCURACY_DB <= cut <= vp.MAX_CUT_DB + 0.5, cut
 
+    @staticmethod
+    def _deep_mode_ir():
+        ir = room_simulator.generate_room_ir(
+            [1.0, 1.0, 1.0], [3.0, 1.0, 1.0], [8.0, 6.0, 3.0], wall_absorption=1.0,
+            room_modes=[{"frequency": 42.5, "q": 8.0, "gain": 24.0}], sr=SR)
+        return normalize_ir_level(ir, vp.REFERENCE_BANDS_HZ["lowpass"], sr=SR)[0]
+
+    def test_cap_bounds_the_whole_correction(self):
+        # Architect: 18 caps the deepest cut at -18 dB (pre-combine), at every
+        # frequency, not just at the mode; the uncapped filter goes deeper.
+        ir = self._deep_mode_ir()
+        mag_db = lambda h: dsp_utils.linear_to_db(np.abs(np.fft.rfft(h, n=1 << 17)))
+        freqs = np.fft.rfftfreq(1 << 17, d=1.0 / SR)
+        audible = (freqs >= 20.0) & (freqs <= 20000.0)
+        capped = mag_db(generate_correction_filter(ir, n_taps=N_TAPS, sr=SR, max_cut_db=18.0))
+        uncapped = mag_db(generate_correction_filter(ir, n_taps=N_TAPS, sr=SR))
+        # Non-vacuous: uncapped goes past the capped tolerance (-19.6 dB here).
+        assert np.min(uncapped[audible]) < -18.0 - 0.5
+        assert np.min(capped[audible]) >= -18.0 - 0.5
+
+    def test_no_cap_is_unchanged_behaviour(self):
+        # None (default) must be byte-identical to omitting the kwarg and to
+        # a cap no bin reaches. (Byte identity with the pre-US-174b code was
+        # checked once against b0666c02; see the PR.)
+        ir = self._deep_mode_ir()
+        omitted = generate_correction_filter(ir, n_taps=N_TAPS, sr=SR)
+        none = generate_correction_filter(ir, n_taps=N_TAPS, sr=SR, max_cut_db=None)
+        huge = generate_correction_filter(ir, n_taps=N_TAPS, sr=SR, max_cut_db=1000.0)
+        assert omitted.tobytes() == none.tobytes() == huge.tobytes()
+
 
 # -- residual per channel ---------------------------------------------------
 
-def _corrected_and_uncorrected(bundle, sim, result, spk):
+EXT = 2.0 ** FAR_OCTAVES   # judge peaks just outside the band too
+
+
+def _corrected_and_uncorrected(bundle, sim, result, spk, extend=1.0):
+    """1/6-oct responses re the measured reference level, on band (x/÷ extend)."""
     lo, hi = RESIDUAL_BANDS_HZ[bundle.profile["speakers"][spk]["filter_type"]]
     level = result.reference_levels_db[spk]
     path = sim.true_paths[spk]
-    _, unc = closed_loop.smoothed_response_db(path, lo, hi)
+    freqs, unc = closed_loop.smoothed_response_db(path, lo / extend, hi * extend)
     _, cor = closed_loop.smoothed_response_db(
-        closed_loop.system_response(path, result.corrections[spk]), lo, hi)
-    return cor - level, unc - level
+        closed_loop.system_response(path, result.corrections[spk]), lo / extend, hi * extend)
+    return freqs, cor - level, unc - level
+
+
+def _below_target(bundle, sim, result, spk):
+    lo, hi = RESIDUAL_BANDS_HZ[bundle.profile["speakers"][spk]["filter_type"]]
+    freqs, cor, unc = _corrected_and_uncorrected(bundle, sim, result, spk, extend=EXT)
+    return closed_loop.below_target_report(
+        freqs, cor, unc, np.zeros_like(unc), CORRECTION_MARGIN_DB,
+        band=(lo, hi), far_octaves=FAR_OCTAVES)
 
 
 class TestResidualPerChannel:
@@ -304,28 +364,86 @@ class TestResidualPerChannel:
     def test_max_positive_deviation(self, bundle, run):
         name, sim, result = run
         for spk in result.corrections:
-            cor, _ = _corrected_and_uncorrected(bundle, sim, result, spk)
+            _, cor, _ = _corrected_and_uncorrected(bundle, sim, result, spk)
             dev = closed_loop.max_positive_deviation_db(cor, np.zeros_like(cor))
             assert dev <= MAX_POSITIVE_DEVIATION_DB, f"{name} {spk}: {dev:+.2f} dB"
 
-    def test_below_target_never_raised(self, bundle, run):
-        # Cut-only: where the room is below target the filter must not lift it.
-        # The magnitude bound (AE "unchanged within 0.5 dB") is open with the
-        # AE: the global -0.5 dB margin plus cut skirts next to modes give
-        # up to 1.35 dB today, always downward.
+    def test_below_target(self, bundle, run, capsys):
+        # AE ruling: never raised; over-cut near peaks bounded; far from
+        # peaks only the margin. Worst values go to the test output.
         name, sim, result = run
-        for spk in result.corrections:
-            cor, unc = _corrected_and_uncorrected(bundle, sim, result, spk)
-            below = unc < 0.0
-            if np.any(below):
-                assert np.max(cor[below] - unc[below]) <= 0.05, f"{name} {spk}"
+        reports = {spk: _below_target(bundle, sim, result, spk) for spk in result.corrections}
+        with capsys.disabled():
+            for spk, r in sorted(reports.items()):
+                print(f"\n  below-target {name} {spk}: raised {r['raised']:+.2f} dB, "
+                      f"over-cut {r['over_cut']:.2f} dB, far-field {r['far_field']:.2f} dB "
+                      f"({r['n_far']}/{r['n_below']} bins far)", end="")
+        for spk, r in reports.items():
+            if r["n_below"] == 0:
+                continue
+            assert r["raised"] <= MAX_RAISE_DB, f"{name} {spk}: {r}"
+            assert r["over_cut"] <= MAX_OVER_CUT_DB, f"{name} {spk}: {r}"
+            if r["n_far"]:
+                assert r["far_field"] <= MAX_FAR_FIELD_DB, f"{name} {spk}: {r}"
+
+    def test_far_field_guard_is_not_vacuous(self, bundle, home_lab):
+        sim, result = home_lab
+        assert _below_target(bundle, sim, result, "sub1")["n_far"] > 10
+
+    def test_below_target_report_flags_broadband_over_cut(self):
+        # A 1 dB cut everywhere on top of the margin: over-cut stays within
+        # 1.0 dB, so only the far-field guard catches it.
+        freqs = closed_loop.log_grid(30.0, 200.0)
+        unc = np.where(np.abs(np.log2(freqs / 50.0)) < 0.1, 6.0, -1.0)
+        cor = unc - 0.5 - 1.0
+        r = closed_loop.below_target_report(freqs, cor, unc, np.zeros_like(unc), -0.5)
+        assert r["raised"] < 0 and r["over_cut"] <= MAX_OVER_CUT_DB
+        assert r["far_field"] > MAX_FAR_FIELD_DB
 
     def test_home_lab_sub_is_not_vacuous(self, bundle, home_lab):
         sim, result = home_lab
-        cor, unc = _corrected_and_uncorrected(bundle, sim, result, "sub1")
+        _, cor, unc = _corrected_and_uncorrected(bundle, sim, result, "sub1")
         zero = np.zeros_like(unc)
         assert closed_loop.max_positive_deviation_db(unc, zero) > 10.0
         assert closed_loop.max_positive_deviation_db(cor, zero) <= MAX_POSITIVE_DEVIATION_DB
+
+
+# -- AC6a: noise robustness -------------------------------------------------
+
+def _sub_correction(bundle, sim):
+    normalized, _ = normalize_ir_level(
+        sim.measured_irs["sub1"], vp.reference_band(bundle, "sub1"), sr=SR)
+    return generate_correction_filter(normalized, n_taps=N_TAPS, sr=SR,
+                                      max_cut_db=vp.MAX_CUT_DB)
+
+
+class TestAC6aNoise:
+
+    def test_noise_adds_no_cuts_below_30_hz(self, bundle, run):
+        # AE: at the gated noise, no sub cut below 30 Hz that the noise-free
+        # measurement would not make (within 1 dB).
+        name, _, result = run
+        clean = _sub_correction(bundle, _simulate(bundle, name, noise_db=None))
+        _, a = closed_loop.smoothed_response_db(clean, 15.0, 30.0)
+        _, b = closed_loop.smoothed_response_db(result.corrections["sub1"], 15.0, 30.0)
+        assert np.max(np.abs(a - b)) <= 1.0, name
+
+    @pytest.mark.parametrize("name", SCENARIOS)
+    def test_report_at_minus_40_db(self, bundle, name, capsys):
+        # Report only (AE): printed for review, not gated.
+        sim = _simulate(bundle, name, noise_db=REPORT_NOISE_DB)
+        result = vp.generate_venue_filters(bundle, sim.measured_irs)
+        truth = venue_sim.true_delays_samples(sim.arrival_samples)
+        with capsys.disabled():
+            for spk in sorted(result.corrections):
+                _, cor, _ = _corrected_and_uncorrected(bundle, sim, result, spk)
+                r = _below_target(bundle, sim, result, spk)
+                _, cut = closed_loop.smoothed_response_db(result.corrections[spk], 20.0, 500.0)
+                print(f"\n  REPORT -40 dB {name} {spk}: max+ {np.max(cor):+.2f} dB, "
+                      f"deepest cut {np.min(cut):.1f} dB, raised {r['raised']:+.2f}, "
+                      f"over-cut {r['over_cut']:.2f}, far-field {r['far_field']:.2f}, "
+                      f"delay err {result.delays_samples[spk] - truth[spk]} samples", end="")
+        assert set(result.filters) == set(EXPECTED_FILES)
 
 
 # -- AC6: time alignment against geometry ----------------------------------
