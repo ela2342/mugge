@@ -2448,6 +2448,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   and B6g, none applied) carries it. HELD (CM) for the QE's OK on
   the separate constant and worker-4's AC2 SHA. PM reading: the
   MEASURED constant is 174d scope, not #57.
+  AE correction (2026-10-25): the "SNR below 60 dB re peak"
+  sentence used an underived placeholder. It now reads: "A
+  re-measurement whose SNR fails the measurement-time SNR check
+  (backlog item; threshold AE-set there) is INVALID (repeat it),
+  never a pass." The rest stands. B6k (PM, MANIFEST a81655c0)
+  superseded B6j. QE (via CM, 2026-10-25): the separate MEASURED
+  constant is OK; the stale AC2 line "Boundary tests: 2.9 dB
+  passes, 3.1 dB fails." goes, unless worker-4's AC2 commit has
+  2.9/3.1 tests, then it stays with "(through the same chain, QE
+  T1)". B6l (PM, MANIFEST 78bac870, same B6e base at bcc353ed)
+  deletes the line; worker-4's local AC2 commit e548a3d6 (seen
+  read-only in the worktree) has no 2.9/3.1 tests. B6l-keep (PM,
+  MANIFEST e504d5f6) is the alternative if the final AC2 SHA adds
+  them. Both supersede B6k; HELD (CM) for worker-4's AC2 SHA.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390.
   PO FINAL (via CM, 2026-10-25): the constant move is within
@@ -2478,7 +2492,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Measurement SNR check (AE, P2, AE-owned; 2026-10-25): US-174b
   shows the correction raises up to +0.67 dB in below-target
   regions at -40 dB noise re peak, clean at -60. The sweep capture
-  must estimate SNR and warn or refuse below 60 dB re peak.
+  must estimate SNR and warn or refuse below 60 dB re peak. The 60
+  dB figure is a PLACEHOLDER, not yet derived (AE, 2026-10-25); the
+  AE sets the threshold here, and US-174d's real gate points to
+  this check.
   Pushed (CM, 2026-10-25): US-174 head e071452b = US-174b code
   a3bc538c (55 new tests; local 1252 passed / 1 F-363 fail; sim-e2e
   130 passed) plus B6e. Its sandbox check stays red on the new
@@ -2645,6 +2662,26 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   5.0 -> 7.15 is +3.3 dB less conservative; other scraped records
   likely carry the same unknown definition). No defects/F-388.md
   record on main yet (TW); add one with the next defects docs PR.
+  ACs from the #56 verdicts (AD, QE, Architect, via CM and
+  team-lead, 2026-10-25; supersede the proposed M1/M2 above; AE
+  acceptance asked):
+  - AC-a (AD M1 + QE): no code reads ts_consistency today. Before
+    any excursion or power derivation reads driver records, the
+    loader refuses marked records, or the caller opts in
+    explicitly.
+  - AC-b (QE + Architect; condition of the QE's no-re-push and the
+    Architect's agreement on #56): correct the "keeps it out of the
+    safety math" comment in test_driver_validation.py. The #56 body
+    cites F-388 for this.
+  - AC-c (QE; condition of the QE's no-re-push on #56): a paired
+    loader test: a record marked "unverifiable" is refused AND a
+    normal record is still accepted in the same test (the positive
+    control proves the loader doesn't refuse everything).
+  - AC-d (AD M2): xmax_mm gets a definition attribute; a
+    "mathematical"/overhang-plus Xmax is derated or rejected; every
+    scraped xmax_mm counts as unknown-definition until its source
+    is classified.
+  - AC-e (QE N1): a test once a consumer of xmax exists.
 - **F-389** Pi 5 tryboot with KMS+BT overlays via overlay_prefix:
   no network, needed an owner power cycle (Architect, no QE
   objection; via CM, 2026-10-25). US-172 run 2: run 1 +
@@ -2708,7 +2745,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - R7: #55 is NOT widened; F-390 branches after #55 merges (or
     rebases) and replaces `_profile_dirs()`.
   CM assigns the lane; the Architect reviews design and diff before
-  the PR; the AE confirms the gate and AC2 wording.
+  the PR; the AE confirms the gate and AC2 wording. Lane: the CM
+  assigns it after #55 merges (CM, 2026-10-25).
 - Speaker-config reset-to-default action (Architect R4 under F-390;
   not F-390 scope).
 - Docs (TW; via CM, 2026-10-25): flake test apps run on a /nix/store
@@ -2912,7 +2950,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   48-96 dB/oct; worker-5 is applying the TW text, the AE confirms
   the claims, body v3 adds QE N-a/N-b. AE verdict pending. All
   approvals lapse on a head move; UX does a diff-only re-check at
-  the merge-main head.
+  the merge-main head. AE APPROVED at 2e29f82e (comment
+  6403796828), so #55 is at 6/7; TW CHANGES pending worker-5's
+  user-journeys.md:289-294 fix. The new head voids the approvals:
+  a diff-only re-check by all 7 follows.
   #55 backlog from the 2e29f82e verdicts (pre-existing, none
   blocking):
   - SecSpec LOW: the measurement session's profile_name has no slug
@@ -2922,7 +2963,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     ways; consolidate it into one helper.
   - Architect N3 = AD N5: the editor and validate_profile_crossover
     accept crossover as a LIST; generate_profile_filters calls .get
-    on it -> AttributeError -> 500.
+    on it -> AttributeError -> 500. AE (same item): fails closed,
+    no shipped profile uses list form, pre-dates #55.
   - AD L2 (extends L2 above): the default_profile.yml line 19
     comment "48-96 recommended" is wrong now that 96 is rejected.
   - AD N3: the editor browser test fakes the 422 on the PUT, no
@@ -3247,7 +3289,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   from all 7; CI run 40236821737. Rule 13 at 684da11a: APPROVED
   UX (no concerns: no web UI code reads driver records, no shipped
   speaker or venue config references the 36 changed records), AD
-  (does not cover CI; lapses on a head move), TW. Others pending.
+  (does not cover CI; lapses on a head move), TW. Later (CM,
+  2026-10-25): 6/7 APPROVED and posted verbatim: QE (its required
+  body edit applied by the CM, head unchanged), Architect,
+  SecSpec, UX, AD, TW. AE pending; CI 40236821737 running.
   On merge (TW): close docs/project/defects/F-363.md (main says
   "open"; its AC2 says "sorted sample") and record the
   resolution: all records checked, exemption table, plausibility
@@ -3260,7 +3305,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Express-sourced records (tang-band's pointed to another driver).
   TW (4), P3 docs debt: the docs/project/test-strategy.md:51
   inventory lacks test_driver_validation.py; the table is stale.
-  AD M1/M2: see F-388.
+  AD M1/M2: see F-388 (AC-a to AC-e). AD L2 detail: the tang-band
+  record pointed to the W2-2360S.
+  #56 backlog (Architect, QE, via CM, 2026-10-25): Architect N1 the
+  allowlist value becomes a list of {field, value, quote} if a
+  record needs two fields; N2 extend the reference test if a new
+  way of referencing drivers is added; N3 a non-numeric Q gives a
+  TypeError, not a readable violation. QE N2 (optional): assert
+  that a quote-None record's notes start with "F-363:
+  unverifiable".
   Follow-ups outside worker-6's fence (QE and AE via worker-6,
   2026-10-25; not in the F-363 PR):
   - Re-scrape risk (QE): the driver scrapers would undo the F-363
