@@ -1501,6 +1501,24 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      TW v10, applied in /tmp/tw-f318-applied-v10.diff; the version the
      CM relayed earlier is superseded. This list mirrors the merged
      safety.md wording.
+     Row 15 text PENDING (TW, AE verbatim, 2026-10-25; replaces the
+     ADDENDUM 5 final text above because of the joint AE + Architect
+     r3 ruling,
+     /tmp/w3-gate2-rulings/joint-AE-Architect-r3-gain-readback.md;
+     this list takes it on merge, mirror rule): "After any WirePlumber
+     restart: amps stay off until PipeWire is restarted or the Pi is
+     cold power-cycled, with the gains verified at their boot values
+     and the gate closed (safety.md, WirePlumber restart). Interim,
+     until US-175 is verified and the live gains readback is proven
+     (Gate-2 r3)." The matching safety.md and D-070 text is in the
+     TW's F-318 batch: v11 (a3f87b1a) has the caveat; v12
+     (/tmp/tw-f318-applied-v12.diff, sha256 549c783c) with "live"
+     instead of "runtime" (CM asked). The TW flagged the WP-restart
+     bullet (safety.md:99-108) and the D-070 / row 15 interim check:
+     it reads the live state, so ruling point 2 applies; the AE is
+     wording it. The batch stays held for that wording, the AE's final
+     OK and the merged US-173 head. The row 14 replacements above are
+     unchanged.
      Earlier note, superseded by the final text: the AE has since ruled that
      "unchanged" is a FAIL, so "gains unchanged or 0" above is
      superseded; the TW asked the AE for corrected text. Do not act
@@ -2255,6 +2273,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     caveat the safety.md "Gains at boot" bullet (F-318 v10); the
     amps-on list here follows the merged safety.md wording. Disk 5.2
     GiB after one ~8 MB build.
+    AE confirmed option (A) (CM note in the ruling file, 2026-10-25;
+    file now sha256 dccaffd0, PM frozen copy
+    /tmp/pm-backlog/joint-r3-gain-readback-dccaffd0.md): "Point 2 as
+    sent: Gate-2 on the Pi may run once the r4 selftest passes." It
+    runs under nothing-connected, silence only and no gain writes, and
+    its report carries "gains: boot defaults verified; live readback
+    unproven (r3 finding)". The AE's earlier "held" line is
+    superseded. Addendum (Architect + AE): point 4 wording follows the
+    AE: "(live readback under investigation, Gate-2 r3)". Point 3
+    fallback: see the Pi -0.0 readback check item.
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -4462,5 +4490,11 @@ merge needs update-branch and 7 reconfirmations at the new head.
   and no PW restart. If the Pi doesn't print -0.000000, enum-params is
   blind to runtime sets on the Pi: an AE finding that blocks B1 as
   live proof.
+  Fallback (Architect + AE addendum, 2026-10-25): if the sandbox (b6)
+  shows that the T2 (in-daemon) variant normalises -0.0 to 0, the -0.0
+  probe can't be used; the Pi step then uses gain_*:Mult 0.001. That
+  is a gain increase, so standing rule S-012 needs the owner's OK, and
+  the AE first explains it to the owner in plain language. Until then
+  B1 stays "boot defaults verified; live readback unproven".
 - #36, #40: no Rule 13 review; owner direction needed (#40 IDs clash).
 - chore/backlog (this file): no PR yet; docs-only.
