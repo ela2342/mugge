@@ -2370,7 +2370,32 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   New backlog item (AE + Architect, P2; 2026-10-25): option (B), a
   verify_corrected_response gate on REAL post-correction
   measurements, in the venue measurement pipeline story; the
-  Architect decides its API shape. No ID yet.
+  Architect decides its API shape. No ID yet. DROPPED (AE, via CM,
+  2026-10-25): (B) is rejected; the real gate is US-174d's
+  re-measurement, with the AE setting its tolerance there. Not
+  filed.
+  AC2 FINAL (Architect, AE agrees, PO condition met; via CM,
+  2026-10-25): "Venue closed-loop residual gate (simulated
+  scenarios): closed_loop.max_positive_deviation_db of the 1/6-oct
+  smoothed corrected response vs target <= 3.0 dB (AE value)."
+  verify_target_deviation is a filter-only sanity check; its 8.0
+  default stays. Correction: the v138 wording "only the venue
+  closed loop passes tolerance_db=3.0" rested on a wrong premise
+  and is superseded. Additions: MAX_POSITIVE_DEVIATION_DB moves into
+  closed_loop.py as a named constant (174d revisits it on real
+  data); a teeth test (a degraded correction with a residual in
+  (3, 8] dB fails; the mutation constant -> 8 goes red). PO: re-word
+  in place in #57, no split. worker-4 is implementing (A); the QE's
+  conditions for (A) are pending. The CM told the PO the constant
+  move is a one-line source change against their "test-only"
+  clause; the PO may still ask for the split. Story batch B6g (PM,
+  MANIFEST 072fba75, on the B6e base at bcc353ed, whole-file
+  replace of US-174.md; supersedes the VOID B6f) carries AC2 and
+  the 174d real-gate line.
+  Backlog finding (QE, via CM, 2026-10-25; not US-174b): the
+  legacy verify paths run_all_checks (verify.py:493) and
+  runner.py:390 `--stage verify` have no test coverage at all. No
+  ID yet.
   Measurement SNR check (AE, P2, AE-owned; 2026-10-25): US-174b
   shows the correction raises up to +0.67 dB in below-target
   regions at -40 dB noise re peak, clean at -60. The sweep capture
