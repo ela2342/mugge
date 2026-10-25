@@ -55,8 +55,12 @@ Gate-2 r6b (ii-c); AE co-owns per A5; PM provisional; PM checked
 free across main, origin and all worktrees, 2026-10-26; AE asked
 for this P1, 2026-10-26); F-396 (P1, production must never suspend
 the filter-chain or USBStreamer node; AE; Architect may re-rate; PM
-checked free across main, origin and all worktrees, 2026-10-26).
-Next free: F-397, US-176, D-071, T66.
+checked free across main, origin and all worktrees, 2026-10-26);
+US-176 (canary node for the gains readback, F-395 follow-up; AE +
+Architect; joint r6b ruling); F-397 (P1, gain readback consumers
+UI/GM show 0 on suspended nodes; Architect; joint r6b ruling); PM
+checked both free across main, origin and all worktrees, 2026-10-26.
+Next free: F-398, US-177, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -1638,6 +1642,25 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      reading (states logged with it). A suspended node reads 0
      whatever the real gain is, so that result is NOT VERIFIABLE,
      never a pass." The AE reviews the TW's diff word for word.
+     UPDATE v162 (AE via TW, 2026-10-26; FINAL, AE verified TW F-318
+     batch v17 bc1efdd1 word for word; the A5 texts are closed on the
+     AE side). Three more safety.md replacements; no "Gate-2 r3" is
+     left in the batch. (a) WirePlumber-restart bullet: "(live
+     readback under investigation, Gate-2 r3)" becomes "(live readback
+     proven in the sandbox only for nodes that are idle or running,
+     Gate-2 r6b; Pi check pending)". (b) Same bullet: "(Gate-2 r3
+     in-daemon result plus the AE's Pi check)" becomes "on the Pi
+     (Gate-2 r6b sandbox result plus the AE's Pi check, F-395)"; the
+     sentence now reads "…until US-175 is verified AND the live gains
+     readback is proven on the Pi (Gate-2 r6b sandbox result plus the
+     AE's Pi check, F-395). The AE then lifts it." (c) Gains at boot:
+     "and it may not show runtime pw-cli changes (live readback under
+     investigation, Gate-2 r3)." becomes "and, like enum-params, it
+     shows 0 on a suspended node whatever the real gain is (F-395,
+     Gate-2 r6b)." TW batch history: v15 (A5 texts), v16 (AE final
+     phrase), v17 (bc1efdd1, (a)-(c)). The batch still waits only for
+     the merged US-173 head (rebase, amps-on ranges), then goes to the
+     CM; this list mirrors it on merge.
      Earlier note, superseded by the final text: the AE has since ruled that
      "unchanged" is a FAIL, so "gains unchanged or 0" above is
      superseded; the TW asked the AE for corrected text. Do not act
@@ -2487,6 +2510,79 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     wake them with a silent stream) and on whether the Pi P-a check is
     now due; worker-3 holds. The cleared build is used up; disk at 4.3
     GiB. r5 and r6 stay non-counting records.
+    JOINT r6b RULING FINAL (AE + Architect, via CM, 2026-10-26;
+    /tmp/w3-gate2-rulings/joint-r6b-ruling-final.md sha256 b7c4a4fd,
+    Addendum 1 e011714f, Addendum 2 10ca06f6, each addendum wins where
+    they differ; PM frozen copies
+    /tmp/pm-backlog/joint-r6b-ruling-final-b7c4a4fd.md,
+    joint-r6b-addendum-1-e011714f.md,
+    joint-r6b-addendum-2-10ca06f6.md; supersedes "Next: the AE and
+    Architect rule..." and "worker-3 holds" above). The AE draft is
+    adopted in full, with [ARCH] additions:
+    - r6b COUNTS (both checked the raw data).
+    - Cap: the code must match r6 note 1 exactly before any next
+      build. A phase that reaches the hard per-phase wall-time cap is
+      NO DATA + INVALID, even with >= 48000 covered frames; "cap
+      reached" is flagged per phase; a selftest case covers it. r6b is
+      unaffected (no phase reached the cap).
+    - gate2.py base rule (F-395 AC (a)): a gains reading counts only
+      if the production filter-chain node AND its output node are idle
+      or running, from state snapshots taken immediately BEFORE and
+      AFTER the enum-params read; a change between them is NOT
+      VERIFIABLE. NOT VERIFIABLE is reported as FAIL (exit 1), reason
+      "gains not verifiable: <node> state <before>/<after>"; no new
+      exit code; never retried into a PASS. B1 unchanged: enum-params
+      is the only PASS source.
+    - Selftest cases, each with a reason check: (1) never-run
+      suspended node, conf Mult 0: NOT VERIFIABLE; (2) the same with
+      conf Mult 0.25: NOT VERIFIABLE (the AE's mutation, F-395 AC
+      (b)); (3) a node that has run (idle), Mult 0: PASS; (4) the
+      same, runtime Mult 0.5: FAIL; (5) the state changes between the
+      two reads: NOT VERIFIABLE. The suspended set-param probe now
+      expects NOT VERIFIABLE.
+    - WAKE MODE is NOT part of this change: Gate-2 stays read-only. If
+      the Pi OBSERVE shows the production chain suspended or never run
+      at boot, wake mode becomes a separate joint design (AE
+      conditions plus GM/link-audit coordination).
+    - Interim consequence (Addendum 1 B, fail-closed, accepted by the
+      AE and the Architect): if the Pi chain is suspended or never run
+      at boot, Gate-2 cannot pass until the canary (US-176) or the
+      no-suspend fix (F-396) lands.
+    - Pi P-a is DUE. Step 1 (OBSERVE): the state of the production
+      filter-chain, its output node and the USBStreamer node at idle
+      and right after the next announced boot; it also re-runs US-163
+      check #10 and AC14 under the new rule (F-395 AC (c), CM folds
+      them in). Step 2 (CHANGE): P-a with condition (f) amended: the
+      only stream is an exact-digital-zero stream linked only into the
+      test chain's INPUT; the test chain's output goes to a DEDICATED
+      null sink (support.null-audio-sink, no device), now standard,
+      created for the test and removed afterwards (Addendum 1 D,
+      supersedes the [ARCH] "optional" null sink);
+      node.autoconnect=false on every test node; WirePlumber's default
+      sink identical before and after (logged); the null sink's
+      monitor recorded throughout and exact zeros throughout; (b) and
+      (c) unchanged (pw-link -l at every step, no device-port link at
+      any time, Add 0.000000). Test-chain conf: gain_a Mult 0, gain_b
+      Mult 0.25. Sequence: 2.1 read while suspended (a MEASUREMENT,
+      not pass/fail, Addendum 2 item 2: if gain_b reads 0.25 there,
+      the Pi reader is not blind there; logged, does not fail the
+      run); 2.2 start the zero stream and read (expect gain_b 0.25);
+      2.3 set gain_a 0.5 and read (expect 0.5); 2.4 set 0 and read;
+      2.5 stop the stream and unload. Steps 2.2-2.4 are pass/fail. No
+      device path changes gain, so S-012 does not apply. Production
+      Mult 0.000001 stays the last resort only.
+    - Gains status line for Gate-2 reports, verbatim (supersedes the
+      r5 interim line above): "Boot defaults verified ONLY where the
+      node state at the reading was idle or running (otherwise
+      unproven). Live readback proven in the sandbox for non-suspended
+      nodes (r6b). Suspended state: readers blind (P1). Pi: pending
+      OBSERVE + P-a." Amps-on use of the readback still needs P-a to
+      pass, plus the gate2.py base rule merged.
+    - Status (CM, 2026-10-26): worker-3 is implementing the base rule
+      (a-d, no wake mode) plus the exact cap fix; one sandbox build
+      cleared. The Pi steps are DEFERRED: the Pi 5 .89 is down (no
+      ping), waiting for the owner's power cycle in the US-172c
+      recovery.
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -3728,6 +3824,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   approving, conditional on CI 40242141720 (test-and-build running).
   QE N2 closed for #55 as F-387 (extended, see F-387). The post-#54
   update and its diff-only re-check by all 7 still apply.
+  UPDATE (CM, 2026-10-26): CI 40242141720 FAILED: only the E2E test
+  test_level_bridge_sw_has_signal (F-394), identical silence message;
+  log /tmp/ci55-40242141720-failed.log. The CM takes it to the QE with
+  #54's result; the F-394 fail-again plan most likely applies
+  (strict-xfail test-only PR, then update-branch, then diff-only
+  re-checks).
   AD L3 suggested text (via CM; TW/AE tidy): "designed so the two legs
   sum flat; the shipped LR4 profile is verified within ±1 dB, LR8
   after room correction is not yet verified (F-383)" (markaudio LR4
@@ -3838,6 +3940,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   nondeterministic DJ switch. Fix candidate: export a WP_STORE pinned
   from the flake, like PW_STORE. Same at both #54 heads, so not a #54
   concern.
+  Evidence update (CM, 2026-10-26): #55 CI 40242141720 FAILED on this
+  test only, identical silence message (1 failed, 69 passed, 7
+  skipped, 4 xfailed; log /tmp/ci55-40242141720-failed.log). That
+  makes 3 of 3 failures whenever DJ mode engaged. #54 run 40242139498
+  still in its E2E step; the CM takes both results to the QE together;
+  the pre-agreed fail-again plan most likely applies.
 - **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
   per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
   2026-10-26): on a suspended node, the gain readers in the r6b matrix
@@ -3882,6 +3990,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   and optional silent-zero wake mode, P-a amendment to condition (f),
   the new gains status line), which the Architect sends to the CM for
   worker-3. The AE's draft is the frozen copy above.
+  UPDATE (joint r6b ruling final + Addenda 1-2, 2026-10-26; supersedes
+  "Still open: the joint AE + Architect r6b text" above): settled.
+  F-395 = the (ii-c) P1, AE owner, Architect co-owner (Addendum 1 F,
+  Addendum 2 item 3). AC (a) and (b) are specified by the gate2.py
+  base rule and selftest cases 1-5 in the Gate-2 ruling block
+  (worker-3 implementing); AC (d) is the Pi step 1 OBSERVE and the
+  amended P-a (deferred while .89 is down). Follow-ups: US-176
+  (canary), F-397 (readback consumer audit).
 - **F-396** Production must never suspend the filter-chain or the
   USBStreamer node (P1 unless the Architect rules otherwise; AE,
   2026-10-26, from the r6b ruling draft section 4): a suspend of the
@@ -3893,6 +4009,53 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Architect: does the production filter-chain or the USBStreamer sink
   ever suspend on the Pi? F-395 AC (d) step 1 (Pi OBSERVE of the node
   states at idle and right after boot) answers it.
+  UPDATE (joint r6b ruling final + Addenda 1-2, 2026-10-26; supersedes
+  "P1 unless the Architect rules otherwise" and "Open question to the
+  Architect" above): P1 confirmed; AE owner, Architect co-owner.
+  Architect answer: the production config already forbids suspend:
+  configs/pipewire/30-filter-chain-convolver.conf:213/224 (capture and
+  playback props) sets session.suspend-timeout-seconds = 0 and
+  node.pause-on-idle = false; 20-usbstreamer.conf:27-28 and
+  21-usbstreamer-playback.conf:30-31 do the same;
+  configs/pipewire/tests/test_filter_chain_config.py:83/85 guards only
+  the convolver props. The config does NOT exclude "never run since
+  boot": the convolver chain has no node.always-process (only
+  25-loopback-8ch.conf:17 sets it). ACs (Addendum 1 E): verify on the
+  Pi (the step 1 OBSERVE records the filter-chain and USBStreamer node
+  states); extend the config test guard to 20-usbstreamer.conf and
+  21-usbstreamer-playback.conf.
+- **US-176** Canary node for the gains readback (AE + Architect;
+  durable F-395 fix; joint r6b ruling section 3 + Addendum 1 A +
+  Addendum 2 item 1, 2026-10-26): the production filter-chain gets one
+  builtin linear canary node with a fixed non-zero conf default,
+  connected to no graph output. gate2.py and every readback consumer
+  trust the gain values only if the canary reads exactly its default
+  in the SAME enum-params read; a mismatch is FAIL "not verifiable".
+  Turns reader blindness into a loud failure in every state, and
+  closes "idle but never instantiated". The AE confirms CPU and audio
+  irrelevance. One shared validator (F-391 rule). ACs (the canary is
+  audio-irrelevant only if all hold):
+  - the production conf keeps EXPLICIT inputs and outputs arrays, and
+    the canary is in neither (no auto-assigned graph port);
+  - the node's pw-dump port list is identical before and after the
+    change;
+  - the canary's input is unconnected (fed silence) and its Add is 0;
+  - its value is distinct from 0, 1 and every production gain: 0.123;
+  - it is read in the SAME enum-params call as the gains; a mismatch
+    means FAIL "not verifiable";
+  - a selftest asserts the canary has no port (no input or output port
+    in pw-dump) (Addendum 2 item 1);
+  - the conf change needs AE review and reaches the Pi as a normal
+    DEPLOY.
+- **F-397** Gain readback consumers show 0 on suspended or never-run
+  nodes (P1, Addendum 1 C, raised from backlog: a safety display;
+  owner the Architect; joint r6b ruling section 2, 2026-10-26): every
+  gain readback consumer (the web-UI config/gain display,
+  GraphManager) shows 0 for a suspended or never-run node even when
+  the real gain is non-zero, so a node can show "muted" and surprise
+  the operator when it resumes. AC: audit all gain readback consumers;
+  they must label or refuse readback on nodes that are not idle or
+  running. Related: F-395, US-176.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
