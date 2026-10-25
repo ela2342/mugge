@@ -226,7 +226,9 @@ Next free: F-369, US-173, D-069, T66.
     restores the RLIMIT_RTTIME watchdog.
     Reviews: Architect APPROVED f87c162b..42c83376; QE ACCEPTED the
     board-guard (token-exact since 132997f9, folds in QE nit (a)).
-    AE + Architect re-review through 132997f9 before DEPLOY.
+    AE + Architect re-review DONE: 132997f9 APPROVED by the Architect
+    (unconditional, f87c162b..132997f9) and the AE (no veto); QE
+    ACCEPTED the board-guard. Deployed as CM-DEP-.89-2 (see below).
     RISK (Architect): the PW main thread is now really FIFO 88, so
     the 200 ms RTTIME also covers PW startup (filter-chain init, 8
     convolvers x 16k taps; unmeasured). Post-boot evidence: pipewire
@@ -292,6 +294,33 @@ Next free: F-369, US-173, D-069, T66.
     force 1024). AC13 (F-358) is the only open AE item.
   - T50 PASS (61.2C, no throttle).
   - Pending: T48 cold boot (needs an owner power cycle).
+- US-163 deploy 2 (CM-DEP-.89-2, worker-1, 2026-10-25; DONE, lock
+  released; announce-only via team-lead): story/US-163 = 132997f9.
+  Toplevel nkifli3r...-nixos-system-mugge-25.11.20260320.812b398,
+  profile system-3, boot_id 1531f01f-e66f-4f6f-9b15-a5e9c362ee10.
+  Deploy 08:49:41-08:50:05Z, warm reboot 08:51:50Z, PW restart
+  08:56:26Z.
+  - AC13 (F-358) PASS: A1, A1b, A2 recorded (xhci FF 50), RTTIME
+    200000/200000, no startup kill; all after the boot AND after the
+    PW restart. PENDING: AE rules whether the warm reboot satisfies
+    "cold boot" (else re-check at the T48 power cycle).
+  - no-crashloop / F-367 PASS: greetd condition-skipped; user@1000 up
+    from boot via linger. T49 PASS: 11 min, max NRestarts 0.
+  - T51 PASS (958 paths). Thermal max 66.65 C (below the 80 C STOP).
+  - AC14 PASS (all 0); count is 16 (8 linear x Mult/Add), not 24:
+    AE/PO to confirm the expected count.
+  - hifiberry-blocked PASS via /proc/asound/cards (aplay/arecord are
+    not on the image). Sink S32LE/8ch/48k.
+  - P2 main-thread item NOT triggered (no startup kill).
+  - Still open: T48 owner power cycle; the fan question.
+  - Wording: aplay/arecord are not on the image, so the AC12 and
+    hifiberry-blocked checks must allow /proc/asound/cards as live
+    evidence. Pre-PR batch.
+  - Recovery: the firmware partition keeps 2 gens, now nkifli3r +
+    x83m7bir; p9mz... was pruned, so any recorded p9mz recovery line
+    is obsolete. New recovery line:
+    gens/x83m7bircd4b7j8wchx9k1mnilzi8kl4/. Pre-PR batch.
+  - F2 (pcm-bridge/level-bridge nodes after PW restart): see P2.
   - US-163 waits on (team-lead, 2026-10-25; CM update): the F-358
     fix commit (05-rt-direct.conf) and its AE + Architect review; the
     deploy; then the owner's cold boot for T48 and AC13. The F-367
@@ -373,7 +402,10 @@ Next free: F-369, US-173, D-069, T66.
   + MAC. Reference updates (.88/.185 -> .89) are GO and UNPARKED
   (deploy done, 2026-10-25): one docs batch on the story branch (TW
   docs + CLAUDE.md, worker-1 the pi5/default.nix comment, CM routes
-  .claude/team); include the nixos-rebuild-ng deploy verb.
+  .claude/team); include the nixos-rebuild-ng deploy verb. Deploy-2
+  finding F3 (CM): nixpkgs 26.11 renamed the darwin nixos-rebuild-ng
+  binary to `nixos-rebuild`; the deploy-verb docs (.89 batch and the
+  HOWTO) must name the binary per nixpkgs version.
 - Host key a5kILUyr ACCEPTED as is (joint Architect + SecSpec): TOFU
   on a MAC-verified LAN host, current-system p9mzphhy and revision
   fb7d557e matching. CLOSED, do not re-open. No extra check for
@@ -437,7 +469,9 @@ Next free: F-369, US-173, D-069, T66.
     US-172 restores HiFiBerry layer (a) or the AE re-rules.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
-  US-163. (Architect)
+  US-163. (Architect) Deploy-2 finding F1 (CM): WirePlumber's own
+  module-rt also hits nice -11 EPERM and activates rtkit-daemon at
+  boot. Architect rules fix vs backlog.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -455,6 +489,11 @@ Next free: F-369, US-173, D-069, T66.
 
 ## P2
 
+- After a PW restart the pcm-bridge and level-bridge PW nodes don't
+  come back (7 vs 12 nodes after 6 min), so web-UI metering is dead
+  until the bridges restart. Probably pre-existing; related to F-090
+  (resolved; links lost on restart), but this is the nodes. Backlog
+  unless the Architect objects. (CM, deploy-2 finding F2)
 - "PipeWire main thread back to SCHED_OTHER: drop the F-020
   CPUSchedulingPolicy=fifo/88 from the pipewire user unit, now that
   module-rt promotes the data loops directly (F-358). At equal FIFO
