@@ -37,14 +37,14 @@ flowchart LR
 
     subgraph PW["PipeWire — Single Audio Graph<br/>SCHED_FIFO 88"]
         PWR["JACK Bridge<br/>quantum 1024 (DJ)<br/>quantum 256 (Live)"]
-        FIR["filter-chain Convolver<br/>(FFTW3 + ARM NEON)<br/>16,384-tap FIR<br/>4 speaker channels"]
+        FIR["filter-chain Convolver<br/>(FFTW3 + ARM NEON)<br/>16,384-tap FIR on 4 speaker channels<br/>Dirac identity on 4 monitor channels"]
     end
 
     subgraph Output["USBStreamer → ADA8200"]
         direction TB
         CH01["ch 0-1: Main L/R<br/>(via HP FIR)"]
         CH23["ch 2-3: Sub 1 / Sub 2<br/>(via LP FIR, mono sum)"]
-        CH45["ch 4-5: Engineer HP<br/>(direct bypass)"]
+        CH45["ch 4-5: Engineer HP<br/>(Dirac identity)"]
         CH67["ch 6-7: Singer IEM<br/>(Reaper only)"]
     end
 
@@ -60,13 +60,16 @@ flowchart LR
     PWR --> FIR
     FIR --> CH01
     FIR --> CH23
-    PWR -->|"direct link"| CH45
-    RE -->|"direct link<br/>(live mode)"| CH67
+    FIR --> CH45
+    FIR -->|"live mode"| CH67
     CH01 --> SP
     CH23 --> SB
     CH45 --> HP
     CH67 --> IEM
 ```
+
+Channel labels in this diagram are 0-indexed (ch 6-7 = the singer IEM,
+which the user guides call channels 7-8).
 
 The entire audio pipeline runs within a single PipeWire graph. No ALSA
 Loopback, no external DSP process. The filter-chain convolver uses FFTW3 with
@@ -74,16 +77,25 @@ ARM NEON SIMD for non-uniform partitioned convolution.
 
 **DJ mode** routes Mixxx stereo output through the convolver to the four speaker
 channels (mains + subs). PipeWire natively sums the L+R inputs connected to
-each sub channel for mono sum. Headphone channels bypass the convolver via
-direct PipeWire links. PipeWire quantum 1024.
+each sub channel for mono sum. Headphone channels pass through the
+filter-chain with an identity (Dirac) filter. PipeWire quantum 1024.
 
 **Live mode** routes Reaper output through the convolver for the speaker
-channels. Headphone and singer IEM channels bypass the convolver via direct
-PipeWire links. PipeWire quantum 256.
+channels. Headphone and singer IEM channels pass through the filter-chain
+with an identity (Dirac) filter. PipeWire quantum 256.
 
-The four speaker channels (0-3) receive FIR processing; the monitor channels
-(4-7) bypass the convolver entirely via direct PipeWire links to the
-USBStreamer.
+The four speaker channels (0-3) receive FIR processing. Since D-063 the
+monitor channels (4-7) also route through the filter-chain, using an identity
+(Dirac) filter and a gain node. In the intended routing every output passes
+a gain node, so one audio gate covers every channel. See
+`docs/operations/safety.md` Sections 9 and 10 for the known gaps (F-318,
+F-320). The monitor routing follows D-063 (owner decision 2026-03-30; owner
+reconfirmation pending, O-10). 3-way profiles are DJ/standby only (D-054
+`mode_constraints`): the 8-channel convolver has no room for IEM channels, and
+in Live routing the headphone feed would land on ch 7-8 (the IEM outputs).
+GraphManager currently does not enforce this constraint (F-342). The identity filter adds no latency (theoretical: it
+runs in the same graph cycle; not yet measured end-to-end), but each Dirac
+channel still costs a full convolver channel of CPU (F-331).
 
 ---
 
@@ -322,9 +334,10 @@ speaker channels (with FIR processing) and the monitor channels (passthrough).
 This meant the singer's IEM path had to transit CamillaDSP regardless,
 adding two chunks of buffering latency even for passthrough channels.
 
-With the current PipeWire-native architecture, the IEM channels bypass the
-convolver entirely via direct PipeWire links to the USBStreamer. The singer's
-IEM path is just one PipeWire quantum: about 5ms at quantum 256. The PA path
+With the current PipeWire-native architecture, the IEM channels pass through
+the filter-chain with an identity (Dirac) filter (D-063). This happens in the
+same graph cycle, so the singer's IEM path is still one PipeWire quantum:
+about 5ms at quantum 256 (theoretical, not yet measured end-to-end). The PA path
 through the convolver is also about 5.3ms -- the filter-chain convolver
 processes synchronously within the same PipeWire graph cycle, adding no
 additional buffering latency.

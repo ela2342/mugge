@@ -1045,9 +1045,24 @@ but differ in application, CamillaDSP configuration, and interaction model.
 3. **Physical amp power off** as last resort
 
 **System freeze / kernel lockup:**
-1. Wait 10 seconds (BCM2835 watchdog should trigger reboot)
-2. If no recovery: power cycle the Pi
-3. Audio stack auto-restarts on boot -- verify via web UI after reboot
+1. Turn off the amplifiers first. A power cycle resets the USBStreamer, and the
+   transient goes through the amp chain (`docs/operations/safety.md` Section 1).
+2. Power cycle the Pi. Do not wait for an automatic reboot: nothing feeds the
+   hardware watchdog on the NixOS image yet (F-317, F-325).
+3. Audio stack auto-restarts on boot -- verify via web UI after reboot. All
+   outputs should start muted behind the audio gate (D-063), but nothing
+   verifies that automatically and the web UI gate indicator is not
+   authoritative. Before opening the gate:
+   a. With the amps still off, run pre-flight check #10
+      (`docs/operations/safety.md` Section 5, which gives the command):
+      exactly 8 `gain_*:Mult` values, all 0.0, and all `Add` values 0.0,
+      read from PipeWire with `pw-cli enum-params` or `pw-dump`, not the web
+      UI. It needs a shell on the Pi: the owner over SSH, or a team member in
+      an OBSERVE session granted by the Change Manager. If it fails, the amps
+      stay off.
+   b. Turn the amps on.
+   c. Singer's IEM earpieces out, or the IEM pack at minimum.
+   d. Open the gate, then bring the levels up.
 
 **Singer loses IEM:**
 1. Check web UI IEM meters -- is signal present?
@@ -1306,7 +1321,7 @@ PipeWire — single audio graph (SCHED_FIFO 88)
     |   |-- Per-channel delay: time alignment
     |   |-- 4 speaker channels (mains HP + subs LP, 16,384 taps each)
     |
-    +-- Direct PipeWire links (bypass convolver)
+    +-- filter-chain identity (Dirac) channels + gain (D-063)
     |   |-- Engineer headphones (ch 5-6)
     |   |-- Singer IEM (ch 7-8, live mode only)
     |

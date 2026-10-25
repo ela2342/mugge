@@ -186,8 +186,11 @@ The Pi outputs eight channels simultaneously: left and right main speakers,
 two independently corrected subwoofers, engineer headphones (stereo), and
 singer in-ear monitors (stereo). The four speaker channels route through
 PipeWire's filter-chain convolver for FIR processing (crossover + room
-correction). The monitor channels bypass the convolver via direct PipeWire
-links to the USBStreamer.
+correction). Since D-063 the monitor channels also pass through the
+filter-chain, with an identity (Dirac) filter and a gain node, so in the
+intended routing every output sits behind the same audio gate. A stray
+direct link to the USBStreamer bypasses it (F-318). (D-063, owner decision
+2026-03-30; owner reconfirmation pending, O-10.)
 
 ## Software Stack
 

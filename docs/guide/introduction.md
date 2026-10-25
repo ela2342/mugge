@@ -90,7 +90,7 @@ PipeWire (SCHED_FIFO/88)
   |     - Combined crossover + room correction
   |
   |-- Monitor channels (5-8):
-  |     Direct PipeWire links (bypass convolver)
+  |     filter-chain, identity (Dirac) filter + gain (D-063)
   |
   v
 USBStreamer -> ADA8200 -> Amplifiers -> Speakers

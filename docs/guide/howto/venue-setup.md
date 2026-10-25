@@ -49,14 +49,36 @@ These steps happen before the Pi is powered on.
    For DJ mode set it to 1024 (press the 1024 button and Apply). For live
    vocal mode set it to 256.
 
-9. Check the gain values. The Config tab shows per-channel gain sliders for
-   the four speaker channels (left, right, sub 1, sub 2). Production defaults
-   are deep attenuation (around -60 dB for mains, -64 dB for subs). Do not
-   change these until measurement is complete.
+9. Check the active venue (`docs/operations/safety.md` Section 10, Rules 1-2).
+   On first boot, with no saved venue, it is `foh-passthrough` (unity gain
+   on all 8 channels, no crossover). Keep the amps off while
+   `foh-passthrough` is active, and select the correct venue before the gate
+   is ever opened. Open (or reopen) the Config tab. The sliders show the
+   gain values read from PipeWire when the Config tab was opened; they do
+   not update on their own (reopen the tab to re-read). A slider reading
+   -INF does not prove silence: the value may be stale, or the parameter may
+   be missing (shown as a greyed-out row). A non-zero slider while the gate
+   shows CLOSED means the outputs were live when the tab was opened: keep
+   the amps off and do not proceed. Pre-flight check #10
+   (`docs/operations/safety.md` Section 5) is the authoritative check. Do
+   not use the Config tab gain Apply: it writes the gain nodes directly and
+   bypasses the gate (F-344). The gate indicator alone does not guarantee
+   silence; see `docs/operations/safety.md` Section 10 (Rule 11, gate
+   bypass).
 
-10. Turn on the amplifier. Because the gain nodes are at deep attenuation and
-    no audio application is running, the speakers are silent. This is the safe
-    moment to power the amp.
+10. Turn on the amplifier. After boot the audio gate should be closed and
+    all gain nodes at 0.0 (D-063), and no audio application is running, so
+    the speakers should be silent. The web UI gate indicator is not
+    authoritative (F-320). Before turning on the amplifier, run pre-flight
+    check #10 (`docs/operations/safety.md` Section 5): all 8 gains read 0.0
+    from PipeWire. It needs a shell on the Pi (the owner over SSH, or a team
+    member in an OBSERVE session granted by the Change Manager). If it fails,
+    leave the amp off.
+
+    **Live mode:** before turning on the amplifier, the singer's IEM
+    earpieces must be out or the IEM pack at minimum, and stay that way until
+    step 29. The measurement signals (steps 18-24) and the test track
+    (step 27) can reach the IEM channels.
 
 ---
 
@@ -261,10 +283,17 @@ room, computes correction filters, and deploys them -- all from the web UI.
     replaces the previous correction filters.
 
 29. If you are in live mode, check the singer's in-ear monitors. The IEM
-    channels bypass the convolver entirely (direct PipeWire link to
-    USBStreamer channels 7-8). The singer should hear the backing track
-    without room correction artifacts. Confirm the PA path delay is
-    acceptable -- at quantum 256, the PA path is approximately 5.3 ms.
+    channels (USBStreamer channels 7-8) pass through the filter-chain with an
+    identity (Dirac) filter, so they get no room correction. In the intended
+    routing they are behind the same audio gate as the PA (D-063), so the
+    singer hears nothing until the gate is open (a stray direct link to the
+    USBStreamer would bypass the gate, F-318; D-063, owner decision
+    2026-03-30; owner reconfirmation pending, O-10). The earpieces have
+    been out or the pack at minimum since step 10: bring the IEM level up
+    from minimum with the singer present and agreeing. The singer
+    should hear the backing track without room correction artifacts. Confirm
+    the PA path delay is acceptable -- at quantum 256, the PA path is
+    approximately 5.3 ms (theoretical, not yet measured end-to-end).
 
 ---
 

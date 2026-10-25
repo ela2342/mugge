@@ -765,7 +765,7 @@ files changed (impure, runs against working tree).
 | pcm-bridge Rust (`src/pcm-bridge/`) | `test-pcm-bridge` |
 | signal-gen Rust (`src/signal-gen/`) | `test-signal-gen` |
 | MIDI daemon (`src/midi/`) | `test-all` (includes midi suite) |
-| Driver YAMLs (`configs/drivers/`) | `test-drivers` |
+| Driver YAMLs (`configs/drivers/`) | `test-all` (includes the drivers suite). `test-drivers` is a flake check, not an app: `nix build .#checks.<system>.test-drivers` |
 | PipeWire/WP configs (`configs/pipewire/`, `configs/wireplumber/`) | No local test — mark "requires Pi validation" |
 | systemd units (`configs/systemd/`) | No local test — mark "requires Pi validation" |
 | udev rules (`configs/udev/`) | No local test — mark "requires Pi validation" |
@@ -868,9 +868,15 @@ of story acceptance. This is the final gate before a story moves to DONE.
 - **Worker** executes the checklist and provides evidence
 - **Owner** performs final hands-on verification at Gate 3
 
-### 8.4 Future: GitHub Actions CI (Gate 1b)
+### 8.4 GitHub Actions CI (Gate 1b)
 
-The owner has approved GitHub Actions with a self-hosted runner as a future
+**Current state (2026-10-24):** CI exists (`.github/workflows/ci.yml`). It
+runs on GitHub-hosted runners, including `ubuntu-24.04-arm` for the test
+suites, not on a self-hosted runner. A `test-and-build` job skipped by the
+paths filter does not count as green (owner ruling O-22). The rest of this
+section is the original plan, kept for its design concerns.
+
+The owner approved GitHub Actions with a self-hosted runner as a future
 enhancement. When implemented, CI will:
 
 - Run ALL `nix run .#test-*` suites on push/PR against committed code
@@ -1121,5 +1127,5 @@ This process was created in response to L-042. Key failure modes it prevents:
 | 66% of "E2E" tests bypass the browser (L-E2E-AUDIT) | Binding E2E definition: browser required. Non-browser tests are service integration. QE rejects misclassified tests (Sec 3.9) |
 | Stories accepted without owner hands-on testing | Gate 3: owner acceptance is mandatory sub-step of REVIEW (Sec 8) |
 | Too many stories waiting for owner | WIP limit of 3 at Gate 3; PM tracks queue (Sec 8) |
-| Worker claims tests passed but committed code differs | Future CI (Gate 1b) will test committed code automatically (Sec 8.4) |
+| Worker claims tests passed but committed code differs | CI (Gate 1b) tests the PR head commit automatically; a paths-filter skip does not count as green (Sec 8.4, O-22) |
 | Mock-mode early return hides untested real code (L-US120) | Mock-mode branch audit in QE review + Architect checklist item (Sec 3.8, 4.8, QE Rule 11) |

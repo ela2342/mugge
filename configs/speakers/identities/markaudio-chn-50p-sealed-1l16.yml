@@ -7,11 +7,22 @@
 #   Qtc: 0.764, Fc: 157Hz, F3: 107Hz
 #   Alignment: slightly underdamped (good transient response)
 #
-# CRITICAL: max_power_watts is only 7W. This driver has very low
-# thermal capacity. Power limiting in CamillaDSP is essential.
+# CRITICAL: max_power_watts is only 7W (-18.1 dB re 450 W). This driver
+# has very low thermal capacity, so power limiting is essential. Nothing
+# enforces it at runtime yet: the profile's power_limit_db is declarative
+# only, and gain_integrity checks only the global Mult <= 1.0 (F-322).
+# Never run this driver at unity gain (e.g. the foh-passthrough venue).
+# Agreed per-channel ceiling (G9): Mult <= 0.112 (about -19 dB).
+#
+# Mains-only. It must run behind its venue crossover FIR (200 Hz in
+# markaudio-ultimax-200hz), which must also meet the 80 Hz
+# mandatory_hpf_hz floor (D-031). With unfiltered (Dirac) coefficients,
+# excursion reaches Xmax at about -17 dB re full scale, within 2 dB of
+# the -19 dB (Mult 0.112) G9 ceiling.
 #
 # mandatory_hpf_hz at 80Hz protects against excursion below the
-# crossover region where the sub takes over.
+# crossover region where the sub takes over (must be embedded in the
+# FIR; no separate HPF stage since D-040).
 
 name: "Markaudio CHN-50P Sealed 1.16L"
 manufacturer: "Markaudio"

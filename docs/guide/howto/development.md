@@ -27,7 +27,7 @@ nix run .#test-graph-manager    # GraphManager Rust tests (pure logic)
 nix run .#test-integration-browser  # Playwright browser integration tests
 nix run .#test-integration      # PipeWire integration test (Linux only, US-075)
 nix run .#test-e2e              # Real E2E: full stack + browser (Linux only)
-nix run .#test-all              # All suites sequentially
+nix run .#test-all              # Combined suites, no browser tests (see 2.7)
 nix run .#local-demo            # Local dev stack (PipeWire + GM + web UI, Linux only)
 ```
 
@@ -124,7 +124,7 @@ skipped in automated E2E runs. Run them manually with explicit opt-in only.
 Located in `src/midi/tests/` and `scripts/drivers/tests/` respectively.
 These do not have individual `nix run` targets. They are included in:
 
-- `nix run .#test-all` (runs all suites sequentially)
+- `nix run .#test-all` (the combined suites, see 2.7)
 
 ### 2.5 GraphManager Rust Tests
 
@@ -154,11 +154,15 @@ The test verifies:
 - GM `get_graph_info` and `get_links` RPC respond correctly
 - Full cycle completes in < 30 seconds
 
-### 2.7 Running Everything
+### 2.7 Running the Combined Suites
 
 ```sh
-nix run .#test-all # All suites sequentially against working tree
+nix run .#test-all        # Python, room-correction, MIDI, drivers and Rust suites (no browser tests)
+nix run .#test-everything # test-all plus the browser (integration/E2E) tests
 ```
+
+Neither includes the pcm-bridge, signal-gen or level-bridge suites; run
+those with their own `test-*` apps.
 
 ### 2.8 Three-Gate Testing Process
 
@@ -166,9 +170,13 @@ The project uses a three-gate testing process (owner-approved, 2026-03-22):
 
 | Gate | When | What | Who |
 |------|------|------|-----|
-| **Gate 1** | Every task | `nix run .#test-<suite>` (targeted suite for changed code) | Worker |
-| **Gate 2** | Pre-merge / story-closing commits | `nix run .#test-all` (full suite including E2E) | Worker or CI |
-| **Gate 3** | REVIEW phase | Pi acceptance testing | Owner |
+| **Gate 1** | Every task | `nix run .#test-<suite>` (targeted suite for changed code); CI green on the PR head | Worker, CI |
+| **Gate 2** | Story-closing and batched fix commits that deploy to the Pi | Pi hardware validation, criteria written by the QE | Worker under a CM DEPLOY session; QE signs off |
+| **Gate 3** | REVIEW phase | Owner acceptance | Owner |
+
+`docs/project/testing-process.md` Section 8 is authoritative for the gates.
+`nix run .#test-all` does not include browser or E2E tests; use
+`nix run .#test-everything` for test-all plus the browser suite.
 
 **`nix run .#test-*` is the sole QA gate.** `nix flake check` is build
 validation only. `nix develop` is for interactive exploration, not QA.
