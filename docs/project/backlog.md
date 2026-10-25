@@ -1885,8 +1885,7 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   green; Lua 18/18 with 4 mutants killed; integration 17/17; the
   negative control fails 14/17 as required. Implementation reviews
   open: Architect, SecSpec, UX. B5b (caebf509) was relayed but is
-  NOT on the branch (only B5 ad478593); US-173.md is unchanged at
-  695f69af, so B5b still applies cleanly and is still pending.
+  NOT on the branch (only B5 ad478593).
   B5b DONE (CM, 2026-10-25): worker-3 committed it as d588ceb0
   (US-173.md sha 22080732, matches caebf509), pushed. US-173 head
   0e0cbd38 (includes the venue YAML). UX: ACCEPTABLE, PROCEED WITH
@@ -1909,6 +1908,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - UX N2 (backlog; not needed for US-173): a dismissible web UI
     information line "Playback from <app> blocked: mugge routes
     audio itself".
+  - Backlog (Architect via worker-4, 2026-10-25): the venue YAML
+    should name its speaker profile in a machine-readable field
+    (today only a comment). worker-3's US-173 lane; until then the
+    --venue CLI takes --speaker-profile explicitly.
   - OPEN joint ruling (Architect + AE): "GM links survive a WP
     restart", option (1) or (2).
   worker-3 findings (not fixed):
@@ -2055,6 +2058,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (CM). Merge order (Architect, as given): F-363, then
   chore/rc-check-configs, then the 174b PR; US-173 merges main after
   chore/rc-check-configs. F-374 merges first per the earlier ruling.
+  Pushed (CM, 2026-10-25): US-174 head e071452b = US-174b code
+  a3bc538c (55 new tests; local 1252 passed / 1 F-363 fail; sim-e2e
+  130 passed) plus B6e. Its sandbox check stays red on the new
+  tests until #54 merges.
   Existing assets on main: src/room-correction/ (room_correction/,
   runner.py, analyze_measurement.py, gain_calibration.py,
   thermal_ceiling.py, tests/, mock/ with 3 scenarios),
@@ -2322,6 +2329,21 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   test that forces the overshoot branch; the web-ui tests pass
   unchanged (frozen function; only this branch's behaviour
   changes).
+  Data (worker-4, at the Architect's request, 2026-10-25; US-174b
+  closed loop at a3bc538c): after the step-9 re-clip (old phase
+  kept) generate_correction_filter overshoots its own -0.5 dB D-009
+  margin. Intermediate correction FIR peak: -0.35 dB (home_lab
+  sat_left), -0.41 dB (small_club sat_left), up to 0.15 dB over.
+  Deployed combined files: -0.57 to -0.60 dB in all 4 scenarios
+  (pass D-009). LATENT, not live (Architect; supersedes "live"
+  above): both callers (venue_pipeline, web-UI filter_routes) go
+  through generate_profile_filters/combine, which re-synthesizes
+  min-phase; combined residual vs min-phase -61 dB (sats), -265 dB
+  (sub), limit -40. Test impact: the US-174b test asserts the
+  intermediate at <= 0 dB, with a TODO to tighten to <= -0.5 dB
+  once F-384 lands. Staffing suggestion (Architect): worker-4 fixes
+  it as its own commit or small PR; CM and team-lead decide. Until
+  they do, the team-lead one-mission ruling above stands.
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
@@ -2468,7 +2490,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   normalization, so the cut depth follows the absolute IR level (a
   +12 dB mode is cut 29 dB at x1, 9 dB at x0.1, 49 dB at x10).
   US-174b adds correction.normalize_ir_level(...) and a max_cut_db
-  kwarg, but the web-UI path stays unfixed. Lane: worker-2 + AE (it
+  kwarg, but the web-UI path stays unfixed. Related: the step-9
+  phase handling in correction.py is F-384 (Architect via
+  worker-4). Lane: worker-2 + AE (it
   changes web-UI outputs). Rating: AE (pending). Update (CM,
   2026-10-25): stays in the backlog for a later worker, not
   worker-2.
@@ -2688,7 +2712,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (CM). CM-CHG-.89-F365 (worker-7) ABORTED safely at the clone step:
   the Pi has no git. Cleanup verified, session released. worker-7
   prepares a git-archive tarball plus a path: flake run with a
-  drvPath equality gate; needs a re-grant. Pi fact: mugge.cachix is
+  drvPath equality gate; re-grant pending worker-7's revised scripts
+  (CM). Pi fact: mugge.cachix is
   not configured, only cache.nixos.org. test-midi
   (worker-7, QE): NOT a silent skip; flake.nix copies the configs
   flat (midi/, configs/), but src/midi/tests/test_midi_daemon.py:56
