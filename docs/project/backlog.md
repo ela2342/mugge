@@ -2350,6 +2350,39 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     ruling on options (i)-(iii) PENDING; worker-3 holds. The RULE
     above (no amps-on step counts the readback as live proof) stays
     until that ruling.
+    JOINT r5 RULING FINAL (AE + Architect, via CM and team-lead,
+    2026-10-25; /tmp/w3-gate2-rulings/joint-r5-ruling-final.md sha256
+    bb52fa60, base + Addenda 1-2; PM frozen copy
+    /tmp/pm-backlog/joint-r5-ruling-final-bb52fa60.md; supersedes
+    "joint ruling PENDING" above and the Mult 0.001 / owner S-012
+    fallback in the Pi -0.0 check item, so NO owner question goes
+    out). Option (i) YES with the AE's rules a-e; (ii) YES, REQUIRED
+    (the Pi-relevant cell); (iii) NO as a fix. applied(): level within
+    0.5 dB AND peak within 0.1 dB over covered frames (Addendum 2; A2
+    withdrawn); MIN_FRAMES 48000 covered gain_b frames (A1). Gains
+    status line for Gate-2 reports, verbatim (supersedes "gains: boot
+    defaults verified; live readback unproven (r3 finding)"): "Boot
+    defaults verified; live readback proven for a node that has
+    already run (sandbox, r5 interim); suspended state and Pi
+    unproven." Amps-on use of the readback as live proof needs (ii) in
+    r6 plus the Pi check. Pi check = P-a, NO owner gate: a temporary
+    UNLINKED test filter-chain in the production daemon; (a)
+    autoconnect=false, no target.object, conf Mult 0, no stream
+    linked; (b) pw-link -l before, after the set and after the unload,
+    any device-port link = abort and unload; (c) Add read back as
+    0.000000, nothing writes Add; (d) OBSERVE the production node
+    state first, read the test chain in the same state, interpret via
+    the r6 (ii) decision table; (e) same PW version and build, same
+    daemon (T2); (f) only after the r6 (ii) result. LAST RESORT, only
+    if P-a is inconclusive: production Mult 0.000001 (-120 dB) with
+    the owner's S-012 OK and the AE's plain-language text (A4). A5: if
+    (ii-c) comes out blind, the AE co-owns a P1 against B1 / safety.md
+    check 10 and sends new interim text for D-070 rows 14-15 to the PM
+    and the TW (amps-on rows 14/15 follow). r6: gain_matrix.py
+    c3ce65ee plus sections 3-5, ONE rebuild, no pre-build review; the
+    AE and Architect review the diff with the r6 results; gate2.py
+    stays b226c0ba until (ii) needs a change. worker-3 is rebuilding
+    (CM relayed).
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -3558,6 +3591,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   unchanged; CI green at that head). Body nits for that push (same
   fix): TW "(1232 -> 1244 total)" -> "(1233 -> 1245 collected)"; QE N1
   "1233 -> 1245 collected (1244 passed / 0 failed / 1 skipped)".
+  UPDATE (CM, team-lead, 2026-10-25; supersedes "2/7"): 6/7 posted at
+  9fd7bf2b (SecSpec, UX, TW, AD, Architect, AE); QE pending; CI
+  test-and-build running. QE N2 EXPLAINED (worker-5, log
+  /tmp/worker5-f374/webui-warn-run2.log; supersedes "unexplained"): in
+  src/web-ui/tests/unit/test_collectors.py, test
+  TestFilterChainPushEventDesync::test_multiple_events_before_response:
+  a ResourceWarning (unclosed socket/transport) plus
+  PytestUnraisableExceptionWarning in _SelectorTransport.__del__ after
+  the loop is gone, ~1 of 3 runs; a mock GM server connection is still
+  open when asyncio.run closes the loop. Not from #55. QE test
+  hygiene: close the mock-server writer before the loop exits.
+  Probably the F-387 family, unconfirmed (PM asked the QE: F-387, new
+  ID or none). TW non-blocking: the #55 body line 77 "merge head
+  d0a317c3" stays as the record of where the tests ran.
   AD L3 suggested text (via CM; TW/AE tidy): "designed so the two legs
   sum flat; the shipped LR4 profile is verified within ±1 dB, LR8
   after room correction is not yet verified (F-383)" (markaudio LR4
@@ -3967,6 +4014,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   by the CM's 7/7 merge check (comment ids with the CM). The #56 item
   "Open on merge: the TW closes F-363.md" is done. Still queued for
   the TW's next defects docs PR: the QE's F-262 XPASS line.
+  #58 TALLY (CM, team-lead, 2026-10-25; supersedes "covered by the
+  CM's 7/7 merge check"): 7/7 at ff586707, the TW and QE included, all
+  posted before the merge. AE P2 proposal (2026-10-25; ID pending,
+  F-395 free): test_mute_silences_level_bridge passes vacuously,
+  because it never checks there was signal before the mute; reconcile
+  the F-270 and F-262 records (PM asked the AE which records: F-270.md
+  on main is the resolved Transfer Function tab defect).
   #56 backlog (AD, TW, 2026-10-25): AD L1 = TW (3), P3: the CLI
   scripts/drivers/validate_drivers.py and pytest need one shared
   exemption/bounds source (the CLI flags the 8 exempted records
@@ -4428,6 +4482,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   diff cmp-identical); diff-only re-check out to all 7; CI
   40242139498. Re-APPROVED at c32f416f: UX (own cmp), AD (not covering
   CI) = 2/7.
+  UPDATE (CM, team-lead, 2026-10-25; supersedes "2/7"): 6/7 posted at
+  c32f416f (SecSpec, UX, TW, AD, Architect, AE); QE pending; CI
+  test-and-build running. E2E failure views: the Architect and AE say
+  #54 did not cause it (checks-only change; the E2E closure is
+  unchanged); both suspect a race: the test reads one level line right
+  after ensure_dj_mode, no settle or retry. The AE accepts one
+  explicit rerun, a defect record either way, and a fix that polls for
+  up to ~5 s. QE ruling and the ID pending (F-394 free; PM asked the
+  QE: new F-394 or an F-262 update, because F-262.md "Partial
+  Resolution (D-249)" says this test "now passes consistently" and its
+  xfail was removed).
   Pi build queue (Architect, 2026-10-25): F-365, then the F-374
   PR-head suite, then the wireplumber-no-bypass check; each from a
   tarball at the declared SHA with sandbox=true. WP check
