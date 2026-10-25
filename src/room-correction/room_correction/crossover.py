@@ -21,6 +21,8 @@ legs sum flat and in phase.  The default (None) keeps the legacy knee
 byte-identical.
 """
 
+import numbers
+
 import numpy as np
 import scipy.signal
 
@@ -31,6 +33,9 @@ SAMPLE_RATE = dsp_utils.SAMPLE_RATE
 
 LINKWITZ_RILEY = 'linkwitz-riley'
 
+# Profile ``crossover.type`` values the generator supports (F-374).
+CROSSOVER_TYPES = (LINKWITZ_RILEY,)
+
 # LR orders that sum in phase without a polarity flip (LR4, LR8).
 LR_SLOPES_DB_PER_OCT = (24.0, 48.0)
 
@@ -40,21 +45,48 @@ _LR_LOG_FLOOR = 1e-20
 _LEGACY_LOG_FLOOR = 1e-10
 
 
+class CrossoverSpecError(ValueError):
+    """A crossover type or slope the generator cannot design (F-374)."""
+
+
+def _is_lr_slope(slope):
+    if isinstance(slope, bool) or not isinstance(slope, numbers.Real):
+        return False
+    return float(slope) in LR_SLOPES_DB_PER_OCT
+
+
 def _validate_alignment(alignment, *slopes_db_per_oct):
-    """Raise ValueError for an unknown alignment or an unsupported LR slope."""
+    """Raise CrossoverSpecError on an unknown alignment or a non-LR slope."""
     if alignment is None:
         return
     if alignment != LINKWITZ_RILEY:
-        raise ValueError(
+        raise CrossoverSpecError(
             f"Unknown crossover alignment '{alignment}'; expected "
             f"None or '{LINKWITZ_RILEY}'"
         )
     for slope in slopes_db_per_oct:
-        if float(slope) not in LR_SLOPES_DB_PER_OCT:
-            raise ValueError(
+        if not _is_lr_slope(slope):
+            shown = slope if isinstance(slope, numbers.Real) else repr(slope)
+            raise CrossoverSpecError(
                 f"Linkwitz-Riley crossover supports 24 or 48 dB/oct, "
-                f"got {slope}"
+                f"got {shown}"
             )
+
+
+def validate_crossover_spec(crossover_type, *slopes_db_per_oct):
+    """Raise CrossoverSpecError unless a profile crossover can be generated.
+
+    The single check behind the generator, the speaker editor save and the
+    measurement session start (F-374).  *crossover_type* is the profile's
+    ``crossover.type``; *slopes_db_per_oct* are every slope the generator
+    will design with it.
+    """
+    if crossover_type not in CROSSOVER_TYPES:
+        raise CrossoverSpecError(
+            f"Unknown crossover type '{crossover_type}'; expected "
+            f"'{LINKWITZ_RILEY}'"
+        )
+    _validate_alignment(crossover_type, *slopes_db_per_oct)
 
 
 def _log_floor(alignment):

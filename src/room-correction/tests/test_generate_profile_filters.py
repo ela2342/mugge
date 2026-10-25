@@ -650,6 +650,18 @@ class TestCrossoverTypePassThrough(unittest.TestCase):
             {"filter_type": "highpass"}, [200.0], 24, N_TAPS, 48000)
         self.assertFalse(np.allclose(lr, legacy))
 
+    def test_profile_output_differs_from_legacy(self):
+        """Through generate_profile_filters: the LR alignment is handed on."""
+        result = self._run(dict(self.XO, type="linkwitz-riley"))
+        dirac = np.zeros(N_TAPS)
+        dirac[0] = 1.0
+        for key, filter_type in (("sat_left", "highpass"), ("sub1", "lowpass")):
+            xo = _generate_channel_crossover(
+                {"filter_type": filter_type}, [200.0], 24, N_TAPS, 48000)
+            legacy = combine_filters(
+                dirac, xo, N_TAPS, margin_db=COMBINE_MARGIN_DB)
+            self.assertFalse(np.allclose(result[key], legacy), key)
+
     def test_unknown_type_raises(self):
         with self.assertRaises(ValueError):
             self._run(dict(self.XO, type="butterworth"))
@@ -815,6 +827,77 @@ class TestMarkaudioLr4PostCombine(unittest.TestCase):
             max_db = 20 * np.log10(mag[band].max())
             with self.subTest(key=key):
                 self.assertLessEqual(max_db, self.D009_MAX_DB)
+
+
+# Regression ceiling only, not a target; tightening or replacing it is
+# F-383/F-385; relaxing it needs joint Architect+AE approval.
+REAL_PROFILE_REGRESSION_CEILING = {
+    "phase_at_fc_deg": 35.0,
+    "phase_near_fc_deg": 75.0,   # fc/2..2fc
+    "sum_tol_db": 1.0,           # re plateau, fc/2..2fc
+    "d009_max_db": -0.5,         # absolute (D-009, hard)
+}
+_CEILING_STOP = "joint Architect+AE STOP (F-374 rule)"
+
+
+class TestMarkaudioRealProfileCeiling(unittest.TestCase):
+    """Real, unmodified markaudio profile (sat D-031 HPF kept).
+
+    Same method as TestMarkaudioLr4PostCombine.  The sat subsonic's phase
+    lead (F-385) and combine.py's per-bin clip (F-383) are why this is a
+    ceiling, not the LR4 target.
+    """
+
+    FC = 200.0
+
+    @classmethod
+    def setUpClass(cls):
+        profile, identities = _load_profile_with_identities(MARKAUDIO_PROFILE)
+        with tempfile.TemporaryDirectory() as d:
+            generate_profile_filters(profile, identities, output_dir=d)
+            cls.wavs = {
+                key: load_filter(os.path.join(d, f"combined_{key}.wav"))[0]
+                for key in profile["speakers"]
+            }
+        n_fft = 1 << 17
+        cls.freqs = np.fft.rfftfreq(n_fft, d=1.0 / 48000)
+        cls.hp = np.fft.rfft(cls.wavs["sat_left"], n=n_fft)
+        cls.lp = np.fft.rfft(cls.wavs["sub1"], n=n_fft)
+        f = cls.freqs
+        cls.i_fc = np.argmin(np.abs(f - cls.FC))
+        cls.near = (f >= cls.FC / 2) & (f <= 2 * cls.FC)
+        cls.hp_plateau = np.mean(
+            20 * np.log10(np.abs(cls.hp[(f >= 2 * cls.FC) & (f <= 20000)])))
+        cls.lp_plateau = np.mean(
+            20 * np.log10(np.abs(cls.lp[(f >= 20) & (f <= cls.FC / 2)])))
+
+    def test_phase_within_ceiling(self):
+        c = REAL_PROFILE_REGRESSION_CEILING
+        at_fc = np.degrees(np.abs(np.angle(self.hp[self.i_fc] / self.lp[self.i_fc])))
+        near = np.degrees(np.abs(np.angle(self.hp[self.near] / self.lp[self.near])))
+        print(f"markaudio real profile phase: {at_fc:.2f} deg at fc, "
+              f"{near.max():.2f} deg max fc/2..2fc")
+        self.assertLessEqual(at_fc, c["phase_at_fc_deg"], _CEILING_STOP)
+        self.assertLessEqual(near.max(), c["phase_near_fc_deg"], _CEILING_STOP)
+
+    def test_sum_within_ceiling(self):
+        tol = REAL_PROFILE_REGRESSION_CEILING["sum_tol_db"]
+        plateau = (self.hp_plateau + self.lp_plateau) / 2
+        sum_db = 20 * np.log10(np.abs(self.hp + self.lp)[self.near]) - plateau
+        print(f"markaudio real profile sum fc/2..2fc: "
+              f"{sum_db.min():.3f}..{sum_db.max():.3f} dB re plateau")
+        self.assertGreaterEqual(sum_db.min(), -tol, _CEILING_STOP)
+        self.assertLessEqual(sum_db.max(), tol, _CEILING_STOP)
+
+    def test_d009_absolute(self):
+        limit = REAL_PROFILE_REGRESSION_CEILING["d009_max_db"]
+        band = (self.freqs >= 20) & (self.freqs <= 20000)
+        for key, fir in self.wavs.items():
+            max_db = 20 * np.log10(
+                np.abs(np.fft.rfft(fir, n=len(self.freqs) * 2 - 2)[band]).max())
+            print(f"markaudio real profile max|H| {key}: {max_db:.3f} dB")
+            with self.subTest(key=key):
+                self.assertLessEqual(max_db, limit, _CEILING_STOP)
 
 
 if __name__ == "__main__":

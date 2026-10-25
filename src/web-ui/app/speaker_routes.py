@@ -26,6 +26,7 @@ import logging
 import os
 import pathlib
 import re
+import sys
 from typing import Any
 
 import yaml
@@ -240,6 +241,25 @@ def _validate_crossover(xover: Any, label: str = "crossover") -> str | None:
     return None
 
 
+def _profile_crossover_error(data: dict) -> str | None:
+    """Run the generator's own crossover check (F-374).
+
+    Returns its message, or None if the generator can design the crossover.
+    No local copy of the supported types or slopes: the generator is the
+    single source of truth.
+    """
+    rc_root = pathlib.Path(__file__).resolve().parents[2] / "room-correction"
+    if str(rc_root) not in sys.path:
+        sys.path.insert(0, str(rc_root))
+    from room_correction.crossover import CrossoverSpecError
+    from room_correction.generate_profile_filters import validate_profile_crossover
+    try:
+        validate_profile_crossover(data)
+    except CrossoverSpecError as exc:
+        return str(exc)
+    return None
+
+
 def _validate_profile(data: Any) -> str | None:
     """Validate a profile dict. Returns error string, or None if valid."""
     if not isinstance(data, dict):
@@ -305,7 +325,7 @@ def _validate_profile(data: Any) -> str | None:
             if mode not in _VALID_GM_MODES:
                 return (f"mode_constraints: '{mode}' is not a valid mode. "
                         f"Must be one of: {', '.join(sorted(_VALID_GM_MODES))}")
-    return None
+    return _profile_crossover_error(data)
 
 
 def _name_error(name: str) -> JSONResponse | None:

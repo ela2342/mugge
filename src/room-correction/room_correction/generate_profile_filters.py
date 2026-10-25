@@ -29,6 +29,7 @@ from .crossover import (
     generate_bandpass_filter,
     generate_crossover_filter,
     generate_subsonic_filter,
+    validate_crossover_spec,
 )
 from .export import export_filter
 
@@ -37,6 +38,35 @@ log = logging.getLogger(__name__)
 SAMPLE_RATE = dsp_utils.SAMPLE_RATE
 DEFAULT_N_TAPS = 16384
 COMBINE_MARGIN_DB = -0.6
+DEFAULT_SLOPE_DB_PER_OCT = 48.0
+
+
+# -- Crossover spec check ---------------------------------------------------
+
+def validate_profile_crossover(profile: dict) -> None:
+    """Raise CrossoverSpecError if the profile's crossover cannot be generated.
+
+    Shared by the generator, the speaker editor save and the measurement
+    session start (F-374).  Checks ``crossover.type`` (missing means
+    Linkwitz-Riley), the crossover slope and every bandpass driver's
+    ``high_slope_db_per_oct``.  A profile without a crossover section keeps
+    the legacy knee and passes.  A list of crossover sections is checked
+    section by section.
+    """
+    crossover_cfg = profile.get("crossover")
+    if crossover_cfg is None:
+        return
+    sections = crossover_cfg if isinstance(crossover_cfg, list) else [crossover_cfg]
+    speakers = profile.get("speakers") or {}
+    for section in sections:
+        slope = section.get("slope_db_per_oct", DEFAULT_SLOPE_DB_PER_OCT)
+        high_slopes = [
+            spk.get("high_slope_db_per_oct", slope)
+            for spk in speakers.values()
+            if isinstance(spk, dict) and spk.get("filter_type") == "bandpass"
+        ]
+        validate_crossover_spec(
+            section.get("type", LINKWITZ_RILEY), slope, *high_slopes)
 
 
 # -- Crossover frequency helpers -------------------------------------------
@@ -187,8 +217,9 @@ def generate_profile_filters(
 
     Raises
     ------
-    ValueError
-        If ``crossover.type`` is present but not ``'linkwitz-riley'``.
+    CrossoverSpecError
+        If ``crossover.type`` is present but not ``'linkwitz-riley'``, or a
+        slope is not 24 or 48 dB/oct (see ``validate_profile_crossover``).
 
     Notes
     -----
@@ -196,18 +227,12 @@ def generate_profile_filters(
     without ``type`` is Linkwitz-Riley; a profile without a crossover
     section keeps the legacy knee.
     """
+    validate_profile_crossover(profile)
     crossover_freqs = _normalize_crossover_freqs(profile)
     crossover_cfg = profile.get("crossover")
-    slope = (crossover_cfg or {}).get("slope_db_per_oct", 48.0)
-    if crossover_cfg is None:
-        alignment = None
-    else:
-        alignment = crossover_cfg.get("type", LINKWITZ_RILEY)
-        if alignment != LINKWITZ_RILEY:
-            raise ValueError(
-                f"Unknown crossover type '{alignment}'; expected "
-                f"'{LINKWITZ_RILEY}'"
-            )
+    slope = (crossover_cfg or {}).get(
+        "slope_db_per_oct", DEFAULT_SLOPE_DB_PER_OCT)
+    alignment = None if crossover_cfg is None else LINKWITZ_RILEY
     speakers = profile.get("speakers", {})
 
     if correction_filters is None:
