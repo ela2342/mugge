@@ -2679,6 +2679,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   and cannot be saved (unknown filter_type "fullrange";
   pre-existing); (c) /validate, check-mode and activate do not run
   the crossover check yet.
+  FENCE ANSWERS (via CM, 2026-10-25): AE: 96 -> 48 is correct (LR8,
+  as in meh-3way). Architect: the fence extension is OK for slope
+  only; frequencies, delay_ms, enclosure_type and all assertions
+  stay unchanged; the commit message says "fixture encoded LR96,
+  rejected since F-374 (AE ruling); value incidental to the test".
+  REQUIRED in #55: a negative U1 route test, LR 96 on save gives
+  422 + error=="validation" + the generator's message verbatim, and
+  a non-LR type is rejected too. 422 on save (existing
+  speaker_routes contract) and 400 on Generate are OK; detail shows
+  verbatim in the editor (UX checks under G1). Aligning the codes
+  is out of scope; UX may backlog it. worker-5 is cleared and
+  working.
   #55 backlog (AD, 2026-10-25): L1 a loose-bounds regression test
   on the real, unmodified markaudio profile (sum, max|H|, phase),
   tightened with F-385/F-383. L2 default_profile.yml has no
@@ -3281,7 +3293,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   selftest, 22:27 CET) during the hold (told: no more); the
   linux-builder qcow2 is 29 GiB and grows on the Mac disk;
   softwareupdated has been running ~40 min. With team-lead and the
-  owner; the CM has no sudo.
+  owner; the CM has no sudo. Later (CM): 2.5 GiB; worker-3's
+  22:27 CET nix build is still running and the CM lets it finish.
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
