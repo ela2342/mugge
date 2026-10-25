@@ -416,8 +416,8 @@
             PI_AUDIO_MOCK = "1";
           } ''
             cp -r ${./src/room-correction} room-correction
-            cp ${./src/camilladsp-test/test_config.yml} room-correction/test_camilladsp.yml
             chmod -R u+w room-correction
+            cp ${./src/camilladsp-test/test_config.yml} room-correction/test_camilladsp.yml
             cd room-correction
             python -m pytest tests/ -v --tb=short
             touch $out
