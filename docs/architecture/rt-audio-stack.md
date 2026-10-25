@@ -1,9 +1,16 @@
 # Real-Time Audio Stack Configuration
 
-This document describes the full real-time (RT) configuration of the Pi 4B
+This document describes the full real-time (RT) configuration of the Pi
 audio workstation. It covers the PREEMPT_RT kernel, thread scheduling
 priorities, PipeWire RT configuration, the PipeWire filter-chain convolver,
 buffer sizing, and verification procedures.
+
+**Board (US-163):** the deployment target is a Raspberry Pi 5 running NixOS
+since 2026-10-24. Most of this document was written and measured on the
+Raspberry Pi 4B. **All performance numbers (BM-2, GM-12, CPU budget,
+temperatures, Mixxx CPU) are Pi 4B measurements** and have not been
+repeated on the Pi 5. Pi 5 differences are marked "Pi 5" in Sections 1, 3
+and 7. Pi 5 deployment: `docs/guide/howto/nixos-upgrade.md` Section 8.
 
 **Architecture pivot (D-040, 2026-03-16):** The system has migrated from a
 dual-graph architecture (PipeWire + CamillaDSP via ALSA Loopback) to a
@@ -28,12 +35,12 @@ architecture and configuration only.
 ## Executive Summary
 
 The RT audio stack delivers deterministic, low-latency audio processing on a
-Raspberry Pi 4B driving a PA system through 4x450W amplifiers. The design
+Raspberry Pi (Pi 4B measured; Pi 5 current target) driving a PA system through 4x450W amplifiers. The design
 prioritizes scheduling determinism as a safety requirement (D-013).
 
 ### Key Performance Numbers
 
-**Current architecture (PW filter-chain, D-040):**
+**Current architecture (PW filter-chain, D-040), measured on the Pi 4B:**
 
 | Metric | DJ/PA Mode | Live Mode | Evidence |
 |--------|-----------|-----------|----------|
@@ -186,6 +193,22 @@ This selects the PREEMPT_RT variant of the 64-bit kernel. The stock
 PREEMPT kernel remains on the SD card as fallback for development and
 benchmarking.
 
+### Pi 5 Kernel and Boot (US-163)
+
+The kernel version, `apt` delivery and `kernel8_rt.img` above describe the
+Pi 4B on Raspberry Pi OS. On the Pi 5 (NixOS):
+
+- **Kernel:** PREEMPT_RT 6.12.62, built from the flake
+  (`nix/nixos/kernel-rt.nix`) on `bcm2711_defconfig` with 4K pages. Not an
+  `apt` package; updates come with a flake change and a deploy.
+- **Boot:** no U-Boot. `config.txt` sets `kernel=Image` explicitly, and its
+  `os_prefix=gens/<id>/` line selects the NixOS generation directory on the
+  FAT (`nix/nixos/boards/pi5/bootloader.nix`). Fallback is the previous
+  generation, not a second kernel image; see `nixos-upgrade.md` Section 8.4
+  and 8.5.
+- **D-013** is re-confirmed on the Pi 5 (PREEMPT_RT, PipeWire FIFO 88).
+  Decision record for the Pi 5 baseline: D-069.
+
 ### The V3D Fix (D-022)
 
 Prior to kernel `6.12.62`, PREEMPT_RT and the V3D GPU driver were
@@ -209,6 +232,11 @@ dropped from 142-166% (llvmpipe) to ~85% (hardware GL)
 
 D-022 supersedes D-021's software rendering requirement. The system now
 runs a single kernel for both DJ and live modes with hardware GL.
+
+**Pi 5:** D-022 is **not** re-confirmed. The Pi 5 firmware currently merges
+none of the `config.txt` `dtoverlay=` lines, so there is no `/dev/dri` and
+no compositor runs (F-367; fix in US-172). Hardware GL on the Pi 5 is
+unverified until US-172 lands.
 
 ---
 
@@ -336,6 +364,39 @@ systemctl --user restart pipewire.service
 
 Remove when PipeWire's RT module self-promotion is fixed upstream for
 PREEMPT_RT kernels, or when a PipeWire update resolves the issue.
+
+### Pi 5: Root Cause and Direct RT Path (F-358)
+
+On the Pi 5 NixOS image the cause of the self-promotion failure was found.
+The stock module-rt args set `nice.level = -11`. The user manager's
+`RLIMIT_NICE` is 0, so the nice step fails with EPERM, and module-rt then
+hands every thread to RTKit, which grants the data loops only SCHED_RR 20.
+`RLIMIT_RTPRIO` is 95, so the direct path works once the nice step is
+skipped.
+
+**Config file:** `configs/pipewire/05-rt-direct.conf` (installed by
+`nix/nixos/audio/pipewire.nix` into PipeWire's `pipewire.conf.d/`):
+
+| Key | Value | Effect |
+|-----|-------|--------|
+| `nice.level` | 20 | Out of range, i.e. "don't change"; skips the failing nice step |
+| `rt.prio` | 88 | Data loops at SCHED_FIFO 88 (D-013) |
+| `rt.time.soft` / `rt.time.hard` | 200000 | `RLIMIT_RTTIME` 200 ms: the kernel kills a runaway RT loop |
+| `rtkit.enabled` / `rtportal.enabled` | false | No silent fallback to RTKit RR 20 |
+
+The NixOS PipeWire user unit also keeps the F-020 setting
+(`CPUSchedulingPolicy=fifo`, priority 88), with the hardening directives
+that would force NoNewPrivileges cleared (F-291).
+
+Verified on the Pi 5 after a reboot and after a PipeWire restart: the main
+thread and `data-loop.0` at FF 88, one module-rt instance, `RLIMIT_RTTIME`
+200000/200000, no RTKit or nice errors, `NRestarts` 0
+(`docs/lab-notes/US-163-pi5-bootstrap.md`). WirePlumber still loads its own
+module-rt with stock args and logs the nice -11 EPERM; it is not in the
+audio data path (backlog).
+
+**Pi 4B:** the fragment is shared by all boards, but its runtime effect on
+the Pi 4B is unverified (US-170).
 
 ---
 
@@ -717,7 +778,7 @@ Run these on the Pi to verify the RT audio stack is correctly configured.
 ```bash
 # Check running kernel:
 uname -r
-# Expected: 6.12.62+rpt-rpi-v8-rt (or later RT kernel)
+# Expected: 6.12.62+rpt-rpi-v8-rt (Pi 4B; or later RT kernel). Pi 5: a 6.12.62 flake kernel
 
 # Confirm PREEMPT_RT:
 uname -v | grep -o 'PREEMPT_RT'
@@ -725,7 +786,11 @@ uname -v | grep -o 'PREEMPT_RT'
 
 # Check config.txt:
 grep '^kernel=' /boot/firmware/config.txt
-# Expected: kernel=kernel8_rt.img
+# Expected: kernel=kernel8_rt.img (Pi 4B); kernel=Image (Pi 5)
+
+# Pi 5 only: which generation the firmware boots
+grep -n '^os_prefix=' /boot/firmware/config.txt
+# Expected: os_prefix=gens/<id>/, where <id> matches readlink -f /run/current-system
 ```
 
 ### PipeWire Scheduling

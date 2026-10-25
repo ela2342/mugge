@@ -95,7 +95,7 @@ jobs:
   # -----------------------------------------------------------
   nixos-eval:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6 (= v6.1.0)
 
@@ -124,6 +124,20 @@ jobs:
         run: |
           drv=$(nix eval .#nixosConfigurations.mugge.config.system.build.toplevel.drvPath)
           echo "NixOS toplevel derivation: $drv"
+
+      # US-163: structural assertions over all Pi 4 and Pi 5 configurations.
+      - name: Board guard (eval-only)
+        run: |
+          set -euo pipefail
+          out=$(nix build --no-link --print-out-paths .#checks.x86_64-linux.board-guard)
+          cat "$out"
+
+      # US-163 AC2a: offline test of the Pi 5 FAT generation prune.
+      - name: Pi 5 generation prune (offline)
+        run: |
+          set -euo pipefail
+          out=$(nix build --no-link --print-out-paths -L .#checks.x86_64-linux.pi5-prune-gens)
+          cat "$out"
 
   # -----------------------------------------------------------
   # T1 + T2 — Tests (single ARM runner)

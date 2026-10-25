@@ -10,7 +10,10 @@
 # workstation on PREEMPT_RT, no untrusted users, no starvation risk.
 { config, lib, pkgs, ... }:
 
-{
+# US-163: only on the PREEMPT_RT kernel. On the non-RT bootstrap kernel
+# ("rpi-cached") the RT throttle stays at its default: the starvation
+# argument below only holds on PREEMPT_RT.
+lib.mkIf (config.mugge.board.kernel.variant == "rt") {
   # ── RT throttle: disabled ───────────────────────────────────────────
   # Default: 950000 (95% of each 1s period). A safety net for non-RT
   # kernels to prevent a runaway FIFO task from starving the system.

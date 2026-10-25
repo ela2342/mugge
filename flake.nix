@@ -384,6 +384,19 @@
         # Checks — sandboxed test derivations for `nix flake check`
         # -----------------------------------------------------------------
         checks = {
+          # US-163: eval-only structural assertions over all NixOS configs.
+          board-guard = import ./nix/checks/board-guard.nix {
+            inherit pkgs;
+            inherit (self) nixosConfigurations;
+            cachedKernel = (import nixpkgs { system = "aarch64-linux"; }).linuxPackages_rpi4.kernel;
+          };
+
+          # US-163 AC2a: offline test of the Pi 5 FAT generation prune.
+          pi5-prune-gens = import ./nix/checks/pi5-prune-gens.nix {
+            inherit pkgs;
+            target = self.nixosConfigurations.mugge-pi5-deploy.config.system.build.pi5PruneGens;
+          };
+
           app-source-paths = appSourceCheck;
 
           test-web-ui = pkgs.runCommand "test-web-ui" {
@@ -869,9 +882,21 @@
           };
 
           # Shared modules for both configurations.
+          # US-163: board-specific modules live in nix/nixos/boards/<board>/.
           sharedModules = [
             nixos-hardware.nixosModules.raspberry-pi-4
             ./nix/nixos/configuration.nix
+            ./nix/nixos/boards/pi4
+            ./nix/nixos/lab/us156-route.nix
+          ];
+
+          # US-163: Pi 5 modules. No nixos-hardware (it targets the Pi 4)
+          # and no US-156 lab route.
+          pi5Modules = [
+            ./nix/nixos/boards/pi5
+            disko.nixosModules.disko
+            ./nix/nixos/boards/pi5/disko.nix
+            { system.configurationRevision = self.rev or self.dirtyRev or "unknown"; }
           ];
         in
         {
@@ -884,7 +909,7 @@
             inherit system;
             specialArgs = sharedSpecialArgs;
             modules = sharedModules ++ [
-              ./nix/nixos/repart-image.nix
+              ./nix/nixos/boards/pi4/repart-image.nix
             ];
           };
 
@@ -897,8 +922,43 @@
             specialArgs = sharedSpecialArgs;
             modules = sharedModules ++ [
               disko.nixosModules.disko
-              ./nix/nixos/disko.nix
+              ./nix/nixos/boards/pi4/disko.nix
             ];
+          };
+
+          # Pi 5 first system (US-163): base system only, no audio stack,
+          # on the nixpkgs linux_rpi4 kernel substituted from cache.nixos.org,
+          # so nixos-anywhere can install it without a local kernel build.
+          # Usage: nixos-anywhere --build-on remote --phases disko,install \
+          #          --flake .#mugge-pi5-bootstrap root@<installer-host>
+          # (Without the kexec phase nixos-anywhere connects as root@; the
+          # installer allows root with the users.nix keys only. The first
+          # reboot is a separate, announced step.)
+          mugge-pi5-bootstrap = nixpkgs.lib.nixosSystem {
+            inherit system;
+            modules = [
+              ./nix/nixos/base.nix
+              {
+                mugge.bootstrap.minimal = true;
+                mugge.board.kernel.variant = "rpi-cached";
+              }
+            ] ++ pi5Modules;
+          };
+
+          # Pi 5 RAM installer for the tryboot install path (US-163).
+          # Usage: nix build .#nixosConfigurations.pi5-installer.config.system.build.pi5TrybootBundle
+          pi5-installer = nixpkgs.lib.nixosSystem {
+            inherit system;
+            modules = [ ./nix/nixos/boards/pi5/installer.nix ];
+          };
+
+          # Pi 5 full system: audio stack and the PREEMPT_RT kernel (D-013),
+          # built natively on the Pi after the bootstrap.
+          # Usage (on the Pi): nixos-rebuild switch --flake .#mugge-pi5-deploy
+          mugge-pi5-deploy = nixpkgs.lib.nixosSystem {
+            inherit system;
+            specialArgs = sharedSpecialArgs;
+            modules = [ ./nix/nixos/configuration.nix ] ++ pi5Modules;
           };
         };
 

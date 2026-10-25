@@ -1,13 +1,89 @@
 # Safety Operations Manual
 
 This document is the single authoritative reference for all safety constraints
-on the Pi 4B audio workstation. Every team member -- human and automated --
+on the Pi audio workstation (the Raspberry Pi 5 since 2026-10-24; sections
+written for the Pi 4B still apply unless the Pi 5 section below says
+otherwise). Every team member -- human and automated --
 must follow these rules. CLAUDE.md points here; architecture docs cross-reference
 here.
 
 **Scope:** Physical safety of speakers, amplifiers, and human hearing. This is
 not about data loss or software correctness -- it is about preventing hardware
 damage and hearing injury.
+
+---
+
+## Pi 5 Platform Status (US-163)
+
+The Pi 5 (`ela@192.168.178.89`) runs a **bootstrap/dev image. It is NOT
+gig-capable.** Evidence: `docs/lab-notes/US-163-pi5-bootstrap.md`.
+
+**No amps, headphones or IEM, and no signal-gen measurement use,** until
+every item of the AMPS-ON PRECONDITION LIST (Pi 5) below holds. The PM
+keeps the list in the backlog, using the same item numbers; if the
+backlog adds an item, this table must be updated too. At US-163 (PR #50)
+the list has 13 items, and ALL of them must hold. For a defect row,
+"holds" means the defect is closed and its fix verified on the Pi 5.
+
+| # | Item | What must hold, and why |
+|---|------|-------------------------|
+| 1 | Owner | The owner re-confirms amps-on, and the Section 5 pre-flight (with S-012, Section 7) passes |
+| 2 | F-341 AC3 | The pre-flight `nc` commands (Section 5, checks #3 and #6) are verified on the Pi 5 NixOS image. Until then, no signal-gen measurement session on the Pi 5 |
+| 3 | US-172 | The HiFiBerry block is back to three working layers: layer (a) (`force_eeprom_read=0`) is verified to take effect, or the AE re-rules. The two-layer state is accepted only while nothing is connected to the HAT output (see "Outputs" below) |
+| 4 | US-170 | Pi 4 only: the F-358 runtime check on the Pi 4 before any Pi 4 audio use. Not a Pi 5 item |
+| 5 | F2 | Metering bridge nodes come back after a PipeWire restart. Until then, the F2 rule below |
+| 6 | F-037 | Web UI on 8080 has no authentication. It is open on the LAN by owner ruling, accepted only while nothing is connected to any Pi output |
+| 7 | F-361 | The link audit protects only ports named `playback_AUX0..7` |
+| 8 | F-373 | After a USB re-enumeration the USBStreamer sink recovers without a PipeWire restart. The fix is re-tested with a physical replug: afterwards the USBStreamer hardware mixer reads no higher than before, all 16 gain values are 0 and the gate is closed (AE) |
+| 9 | F-317, F-318, F-352, F-354, F-355 | RT throttle off with no watchdog backstop (F-317); non-JACK streams may auto-link to the USBStreamer (F-318); the gain API can pass a NaN Mult (F-352) or splice a name into a command (F-354); the thermal limiter can latch a NaN level (F-355) |
+| 10 | Thermal soak | A 60-minute flight-case thermal soak passes (passive cooling only, see "Thermal" below) |
+| 11 | F-372 | The S-001 path check is a string-prefix test, and the profile name is not sanitised |
+| 12 | RTTIME | A PipeWire RT overrun is SIGKILLed with no warning first (see "Unannounced PipeWire kill" below) |
+| 13 | US-159 G16 (F-373) | Any re-adoption of the USBStreamer sink after a re-enumeration (by GraphManager or WirePlumber) comes up gated: gains 0, gate closed, and audio returns only when the operator re-opens it through the D-063 ramp. Tested (AE) |
+
+Until the list is closed, these rules apply on the Pi 5:
+
+- **F2 rule:** after any PipeWire restart, restart pcm-bridge and
+  level-bridge and confirm live meters before any amp goes on.
+- **Unannounced PipeWire kill:** `RLIMIT_RTTIME` is 200 ms soft and hard
+  (F-358), so a runaway RT loop gets PipeWire SIGKILLed with no SIGXCPU
+  warning first. An unannounced PipeWire SIGKILL or restart is a
+  USBStreamer interruption (Section 1). Follow the F2 procedure (restart
+  pcm-bridge and level-bridge, confirm live meters) before amps on.
+- **F-373 rule (USB glitch = silent output):** if the USBStreamer drops
+  off the USB bus and comes back (a cable bump, a replug, a hub or power
+  glitch), PipeWire does not reopen it. The output stays silent, the sink
+  still shows "running", and nothing else signals a fault. Do NOT raise
+  any gain to compensate: not in the software, not on the USBStreamer
+  mixer, and not on the amplifier knobs. Recovery is a PipeWire restart,
+  which is itself a USBStreamer interruption (Section 1): amps off first,
+  and headphones/IEM off and not worn, then the F2 procedure. Before amps
+  on, check that all gains read 0, the gate is closed, and the amp knobs
+  are back at their staged positions; then re-open the gate through the
+  normal ramp.
+- **F-341 rule:** do not rely on pre-flight checks #3 and #6 as written on
+  the Pi 5; treat their result as unverified.
+- **Gains at boot:** all 8 linear gain nodes boot with Mult and Add exactly
+  0 (16 values). Check from `pw-dump` JSON, not from `pw-cli`'s six-decimal
+  output. Any other value after a boot is a FAIL: stop and report.
+- **Gate:** the GraphManager gate boots closed. Do not open it while any
+  item of the list above is open.
+- **Outputs:** the WirePlumber allowlist disables every ALSA card except the
+  USBStreamer (and the UMIK-1 capture). The HiFiBerry DAC+ HAT is blocked on
+  2 layers (allowlist and module blacklist). The third layer
+  (`force_eeprom_read=0`) has no effect, because the firmware merges no
+  `config.txt` overlays (US-172). Accepted only while nothing is connected
+  to the HAT.
+- **Reboots:** Section 1 applies unchanged. While the owner's standing
+  statement that nothing is connected to any Pi output holds, announce
+  every reboot, power cycle, tryboot or PipeWire restart; if anything has
+  been connected since, wait for the owner's go.
+- **Thermal:** passive cooling only (metal case, no fan). During load runs,
+  sample the SoC temperature every 10 s. At 75 °C or more, warn the owner
+  and keep running. At 80 °C or more, STOP (the firmware starts throttling
+  there). Sustained DJ load is expected to cross 80 °C without a fan.
+- **RT (Section 6):** D-013 is re-confirmed on the Pi 5 (D-069): PREEMPT_RT
+  6.12.62, PipeWire at SCHED_FIFO 88 without RTKit (F-358 fix).
 
 ---
 
@@ -398,10 +474,22 @@ explicitly rejected it as a safety risk.
 
 **Why it is dangerous:**
 
-Production gain values attenuate the signal by 54-64 dB (Mult 0.001 = -60 dB
-mains, Mult 0.000631 = -64 dB subs). Setting these to unity while speakers
-are connected would send full-scale audio through the 4x450W amplifier chain.
-Even momentarily, this can damage drivers and ears.
+All 8 gain nodes boot at Mult 0 (D-063 universal gate). Opening the gate ramps
+each channel to the active venue profile's `gain_db` (D-009 hard cap 0 dB).
+Own-speaker profiles attenuate the speaker channels heavily (for example
+`configs/venues/markaudio-ultimax-200hz.yml`: -60 dB mains, -64 dB sub 1, -120
+dB sub 2). In `production.yml` and `markaudio-ultimax-200hz.yml` the headphone
+and IEM channels are at 0 dB, so their level is set only by the headphone/IEM
+amplifiers: turn those down before opening the gate. `foh-passthrough.yml` is
+0 dB on all 8 channels with Dirac coefficients, so there is no crossover and
+no subsonic protection (D-031). It is only for feeding a venue FoH system that
+does its own gain staging, never our own 4x450W amps. The old fixed defaults
+0.001 (-60 dB mains) and 0.000631 (-64 dB subs) are pre-D-063; they survive
+only in the watchdog unlatch restore table (defect F-320). Setting a
+speaker-channel gain node to unity while our speakers are connected, whether
+by `pw-cli` or by opening the gate on the wrong profile, sends full-scale
+audio through the 4x450W amplifier chain. Even momentarily, this can damage
+drivers and ears.
 
 **The safe alternative:** Display-side compensation. The spectrum analyzer
 uses an auto-ranging Y axis (D-048) that adapts to the signal level at any

@@ -50,7 +50,9 @@
 
 ## Validation Rules
 
-This project targets a Raspberry Pi 4B running NixOS (flake-based SD card image).
+This project targets a Raspberry Pi 5 running NixOS (flake configuration
+`mugge-pi5-deploy`, US-163). The Pi 4B (`mugge-deploy`) is historical and
+unreachable; its configuration is kept as the US-164 baseline.
 Most validation is hardware-dependent and cannot be run in CI. Validation categories:
 
 | Category | Method | When |
@@ -59,7 +61,7 @@ Most validation is hardware-dependent and cannot be run in CI. Validation catego
 | YAML validity | `python -c "import yaml; yaml.safe_load(open(...))"` | Before commit |
 | Config consistency | Manual review — PipeWire filter-chain config matches documented channel assignments | Before commit |
 | DSP correctness | Audio engineer reviews filter parameters, crossover design, latency budget | Before commit |
-| Hardware validation | Test plan T1-T5 on actual Pi 4B hardware | Before deployment to hardware |
+| Hardware validation | Test plan T1-T5 on the actual Pi 5 (Pi 4B results are historical) | Before deployment to hardware |
 | Documentation accuracy | Technical writer verifies docs match implementation | Before commit |
 
 ## Test Suite Mapping (Gate 1)
@@ -130,9 +132,11 @@ See `docs/project/testing-process.md` Section 8 for full gate definitions.
 | Property | Value |
 |----------|-------|
 | Name | Pi audio workstation |
-| Type | Embedded device (Raspberry Pi 4B) |
-| Access mechanism | SSH (`ela@192.168.178.185`, hostname: mugge) |
-| Auth | Key-based, passwordless sudo |
+| Type | Embedded device (Raspberry Pi 5, NixOS, since 2026-10-24) |
+| Access mechanism | SSH (`ela@192.168.178.89`, hostname: mugge). The IP is a DHCP lease pinned to the MAC and is canonical. `mugge.lab.andreas.org` is an alias only (LAN DNS); use it only with `HostKeyAlias` to the same pinned entry |
+| Identity | ED25519 host key `SHA256:a5kILUyr7XhT3D5Vdm4Z0lBDtitGOW2gb33socC/xSE` + MAC `88:a2:9e:8c:8d:4e`, pinned `known_hosts`, `StrictHostKeyChecking=yes` (never `accept-new`) |
+| Auth | Key-based, passwordless sudo; root login disabled |
+| Previous target | Raspberry Pi 4B, `ela@192.168.178.185`: unreachable since 2026-10-24, historical |
 | Access controller | Change Manager |
 | OBSERVE timeout | 10 minutes |
 | CHANGE/DEPLOY unresponsive timeout | 5 minutes |
@@ -160,6 +164,15 @@ protocol (DEPLOY tier). Workers execute deployment under a CM-granted session
 | Deploy/test scripts | `scripts/` | `/home/ela/bin/` or `/tmp/` |
 
 ### Deploy procedure
+
+**On the Pi 5 (NixOS), the deployment unit is the whole system configuration,
+not individual files.** Deploy with `nixos-rebuild boot` from the Mac plus one
+announced reboot; never `switch`, and never scp/rsync files into a NixOS
+system. Procedure, verification and rollback:
+`docs/guide/howto/nixos-upgrade.md` Section 8. The artifact table above lists
+where each artifact comes from in the repo; on NixOS the flake installs it.
+The file-copy steps below are the historical Pi 4B procedure; steps 1 and 4
+(commit first, record) still apply.
 
 1. **Commit first.** All changes must be committed to the repo before deployment.
    The deployed commit hash is recorded in the lab note.
@@ -206,7 +219,12 @@ After deployment, the worker runs these checks (proportionate to what changed):
 
 ### Rollback
 
-Rollback is manual: re-deploy the previous version of the affected file(s) from
+**Pi 5 (NixOS):** switch the system profile to the previous generation, run
+`switch-to-configuration boot`, then one announced reboot (tested in US-163
+T54/T54b). If the Pi does not boot, use the card-reader recovery. Both are in
+`docs/guide/howto/nixos-upgrade.md` Section 8.5.
+
+**Pi 4B (historical):** rollback is manual: re-deploy the previous version of the affected file(s) from
 the repo's git history. For PipeWire filter-chain config, restart PipeWire after
 restoring the file. For services, redeploy and restart the systemd unit.
 
