@@ -19,12 +19,13 @@ The Pi 5 (`ela@192.168.178.89`) runs a **bootstrap/dev image. It is NOT
 gig-capable.** Evidence: `docs/lab-notes/US-163-pi5-bootstrap.md`.
 
 **No amps, headphones or IEM, and no signal-gen measurement use,** until
-every item of the AMPS-ON PRECONDITION LIST (Pi 5) below holds. The PM
-keeps the list in the backlog, using the same item numbers; if the
+every Pi 5 row of the AMPS-ON PRECONDITION LIST (Pi 5) below holds. The
+PM keeps the list in the backlog, using the same item numbers; if the
 backlog adds an item, this table must be updated too. The list has 14
 rows. On the Pi 5, rows 1-3 and 5-14 must ALL hold; row 4 applies to the
-Pi 4 only. For a defect row,
-"holds" means the defect is closed and its fix verified on the Pi 5.
+Pi 4 only. For a defect row, "holds" means the defect is closed and its
+fix verified on the Pi 5, unless the row itself names an alternative
+(row 14).
 
 | # | Item | What must hold, and why |
 |---|------|-------------------------|
@@ -41,7 +42,7 @@ Pi 4 only. For a defect row,
 | 11 | F-372 | The S-001 path check is a string-prefix test, and the profile name is not sanitised |
 | 12 | RTTIME | A PipeWire RT overrun is SIGKILLed with no warning first (see "Unannounced PipeWire kill" below) |
 | 13 | US-159 G16 (F-373) | Any re-adoption of the USBStreamer sink after a re-enumeration (by GraphManager or WirePlumber) comes up gated: gains 0, gate closed, and audio returns only when the operator re-opens it through the D-063 ramp. Tested (AE) |
-| 14 | Gate-authority defects (AD M4) | F-320, F-314, F-325, F-338, F-339 and F-349 are closed, or each has an interim operating rule in the merged safety.md (planned in PR #45) that is followed. For the two Critical ones (F-314, F-349) the interim rule must be AE-accepted. For any own-speaker venue (e.g. CHN-50P), F-321 and F-322 are also closed |
+| 14 | Gate-authority defects (AD M4) | F-338 and F-339 are closed (no interim rule: theirs would rely on the gate controls they break). F-320, F-314, F-325 and F-349 are closed, or each has an interim operating rule in the merged safety.md (planned in PR #45) that is followed. For the two Critical ones (F-314, F-349) the interim rule must be AE-accepted. For any own-speaker venue (e.g. CHN-50P), F-321 and F-322 are also closed |
 
 Until the list is closed, these rules apply on the Pi 5:
 
@@ -69,7 +70,7 @@ Until the list is closed, these rules apply on the Pi 5:
   0 (16 values). Check from `pw-dump` JSON, not from `pw-cli`'s six-decimal
   output. Any other value after a boot is a FAIL: stop and report.
 - **Gate:** the GraphManager gate boots closed. Do not open it while any
-  item of the list above is open.
+  Pi 5 row (1-3, 5-14) of the list above is open.
 - **Outputs:** the WirePlumber allowlist disables every ALSA card except the
   USBStreamer (and the UMIK-1 capture). The HiFiBerry DAC+ HAT is blocked on
   2 layers (allowlist and module blacklist). The third layer
