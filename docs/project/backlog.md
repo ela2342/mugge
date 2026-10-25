@@ -47,8 +47,11 @@ free across main, origin and all worktrees, 2026-10-25); F-392
 (P2, unequal LR orders at one crossover point; AE; PM checked free
 across main, origin and all worktrees, 2026-10-25); F-393 (P2,
 check-sandbox guard misses configs/drivers; AD L1 + QE on #54; PM
-checked free across main, origin and all worktrees, 2026-10-25).
-Next free: F-394, US-176, D-071, T66.
+checked free across main, origin and all worktrees, 2026-10-25);
+F-394 (High, DJ-mode E2E group skips or fails, mute unproven; QE,
+AE confirms; PM checked free across main, origin and all worktrees,
+2026-10-25).
+Next free: F-395, US-176, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -2383,6 +2386,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     AE and Architect review the diff with the r6 results; gate2.py
     stays b226c0ba until (ii) needs a change. worker-3 is rebuilding
     (CM relayed).
+    UPDATE (CM, 2026-10-25; supersedes "r6: gain_matrix.py c3ce65ee
+    plus sections 3-5" above): r6 is NON-COUNTING. worker-3 ran
+    gain_matrix c3ce65ee BEFORE the final ruling reached them (SUMS
+    a84e6ed8). All validity conditions held; T2 running gave 0.5 at
+    -26.02 dB and 1.0 at -20.00 dB; the other cells were lost to
+    dropouts of up to 95%. r7 = c3ce65ee plus ruling items 3-5: the
+    one cleared build, pending. Read every "r6" in the ruling above
+    (the (ii) decision table, condition (f), the AE/Architect diff
+    review) as r7.
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -2912,12 +2924,26 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   test_gm_mode_transitions_during_happy_path. The mock GM returns
   None at session.py:480, then a starlette CancelledError at
   shutdown. 1 in 15 runs at base b0666c02. Low.
+  UPDATE (QE, via CM, 2026-10-25; extends F-387, no new ID): retitled
+  "web-ui unit tests: mock GM teardown hygiene (ERROR / unraisable
+  warnings)". Same family (the mock GM server's lifecycle at
+  event-loop shutdown). Second symptom: in test_collectors.py, test
+  TestFilterChainPushEventDesync::
+  test_multiple_events_before_response: an unclosed socket
+  ResourceWarning plus PytestUnraisableExceptionWarning in
+  _SelectorTransport.__del__, ~1 in 3 runs at #55 d0a317c3 (worker-5
+  log /tmp/worker5-f374/webui-warn-run2.log). Stays Low. Closes QE N2
+  on #55.
 - **F-388** Xmax definition in the excursion-mask derivation (P2;
   AE-owned; 2026-10-25; ID at the AE's request): the
   D-031/excursion-mask derivation must record which Xmax definition
   each driver record carries ("mathematical"/overhang vs measured
   linear, e.g. a 10% THD or 70% BL point) and derate a
   "mathematical" Xmax instead of using it as a linear limit.
+  UPDATE (QE FYI, 2026-10-25; supersedes "derate" in this paragraph):
+  the record merged via #58 says the opposite: no percentage derate
+  factors; a "mathematical" Xmax is re-derived as plain overhang, or
+  rejected (AE M2 below).
   Trigger: F-363 corrects PRV 10MR2000-NDY xmax 5.0 -> 7.15 mm to
   the sheet's printed "mathematical" value. Precondition for F-385
   option (i'); related to the fail-closed T/S follow-up under
@@ -3605,6 +3631,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Probably the F-387 family, unconfirmed (PM asked the QE: F-387, new
   ID or none). TW non-blocking: the #55 body line 77 "merge head
   d0a317c3" stays as the record of where the tests ran.
+  UPDATE (CM, 2026-10-25; supersedes "6/7", "QE pending" and "Probably
+  the F-387 family, unconfirmed"): 7/7 posted at 9fd7bf2b, the QE
+  approving, conditional on CI 40242141720 (test-and-build running).
+  QE N2 closed for #55 as F-387 (extended, see F-387). The post-#54
+  update and its diff-only re-check by all 7 still apply.
   AD L3 suggested text (via CM; TW/AE tidy): "designed so the two legs
   sum flat; the shipped LR4 profile is verified within ±1 dB, LR8
   after room correction is not yet verified (F-383)" (markaudio LR4
@@ -3653,6 +3684,57 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   full-set gate) would skip silently. Fix (AD, QE): add
   configs/drivers to the guard. Related: F-380 (CI builds no
   checks.*).
+  UPDATE (QE, 2026-10-25; supersedes "PM provisional, QE to confirm"):
+  P2 confirmed. A silent-skip pattern (F-362 family). Fix: add `test
+  -d configs/drivers` to the guard, or assert the skip set by name
+  once F-380 gates checks.
+- **F-394** DJ-mode E2E group: ensure_dj_mode skips on mode-switch
+  failure and the level-bridge signal test fails whenever it does run
+  (High, QE; AE confirms: safety-relevant, CI has never shown signal
+  on the app tap or that mute silences the output; QE owns the record,
+  AE reviews; via CM 2026-10-25; NOT an F-262 update; replaces the
+  AE's F-395 proposal, F-395 not allocated). Evidence (QE, last 23 CI
+  runs): test_level_bridge_sw_has_signal SKIPPED 8, FAILED 2
+  (40240718064 #54, 40231575303 US-172), never PASSED. Mechanism:
+  ensure_dj_mode (src/web-ui/tests/fixtures/backend.py:389) calls
+  pytest.skip when set_mode fails; otherwise the test reads one
+  snapshot ~0.15 s after the switch. ACs (QE ruling + addendum, AE):
+  - (i) ensure_dj_mode FAILS instead of skipping (the AE's (vii) is
+    the same AC).
+  - (ii) root-cause set_mode dj failing in the CI local-demo.
+  - (iii) diagnose why level-bridge-sw is silent in DJ mode (missing
+    stimulus or missing link); polling after settle is only a
+    robustness detail; the race hypothesis is withdrawn (supersedes
+    the AE's ~5 s poll and the Architect/AE race views in the #54
+    notes).
+  - (iv) N>=5 consecutive CI runs with the DJ group PASSED (-rs output
+    saved).
+  - (v) correct F-262's D-249 paragraph ("passes consistently" is not
+    supported by CI) and reconcile the F-270 xfail:
+    test_mute_e2e.py:90 (test_unmute_restores_levels) cites "F-270:
+    ... no audio stimulus in local-demo", but F-270 is the Transfer
+    Function tab record, so the citation is wrong, and its claim
+    contradicts test_level_bridge_sw_has_signal; re-point the xfail
+    reason to F-394 (AE).
+  - (vi) the mute E2E tests are vacuous (AE P2, folded):
+    test_mute_silences_level_bridge only checks that level data
+    arrives before the mute, never that there is signal; in CI
+    40240718064 the sw tap was silent and the mute test still PASSED.
+    (1) establish whether local-demo DJ mode carries a stimulus on the
+    sw tap; (2) if it does, the mute and unmute tests assert pre-mute
+    signal above -100 dB on the same tap and FAIL without it, and the
+    xfail is removed; (3) if it doesn't, the sw signal test and the
+    mute tests get a stimulus added.
+  - (viii) the fix PR removes the quarantine marker, if one was added.
+  Rules (QE, AE; via CM 2026-10-25): no quarantine marker in #54 or
+  #55; one logged rerun only if this test is the sole failure; a green
+  E2E most likely means the group was skipped; later PRs touching GM,
+  mute or level-bridge are held to (iv). HARD RULE: nothing may
+  describe mute as verified until AC (vi) passes. If #54's E2E fails
+  again (QE + AE; the Architect may object): no reruns and no
+  indefinite hold; a separate test-only PR puts a strict xfail on
+  test_level_bridge_sw_has_signal, reason F-394, through Rule 13; then
+  update-branch on #54/#55 and diff-only re-checks.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
@@ -4021,6 +4103,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   because it never checks there was signal before the mute; reconcile
   the F-270 and F-262 records (PM asked the AE which records: F-270.md
   on main is the resolved Transfer Function tab defect).
+  UPDATE (AE, QE, 2026-10-25; supersedes "ID pending, F-395 free"):
+  folded into F-394 as AC (vi); the F-270 reference is the wrong
+  citation in the xfail at test_mute_e2e.py:90, reconciled under F-394
+  AC (v). F-395 is not allocated.
   #56 backlog (AD, TW, 2026-10-25): AD L1 = TW (3), P3: the CLI
   scripts/drivers/validate_drivers.py and pytest need one shared
   exemption/bounds source (the CLI flags the 8 exempted records
@@ -4493,6 +4579,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   QE: new F-394 or an F-262 update, because F-262.md "Partial
   Resolution (D-249)" says this test "now passes consistently" and its
   xfail was removed).
+  UPDATE (CM, 2026-10-25; supersedes "6/7", "QE pending" and "ID
+  pending"): 7/7 posted at c32f416f, the QE approving, conditional on
+  CI 40242139498 (test-and-build running). The E2E failure is F-394
+  (High; see the F-394 entry for the rules and the fail-again plan;
+  the race hypothesis is withdrawn). CM drvPath proof (posted): the
+  test-e2e drvPath differs between dfb81cd7 and c32f416f only via
+  LOCAL_DEMO_REPO_DIR="${self}"; all input derivations are identical.
   Pi build queue (Architect, 2026-10-25): F-365, then the F-374
   PR-head suite, then the wireplumber-no-bypass check; each from a
   tarball at the declared SHA with sandbox=true. WP check
