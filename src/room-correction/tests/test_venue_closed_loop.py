@@ -45,6 +45,14 @@ VENUE = REPO_ROOT / "configs" / "venues" / "markaudio-ultimax-200hz.yml"
 PROFILE = REPO_ROOT / "configs" / "speakers" / "profiles" / "2way-200hz-markaudio-ultimax.yml"
 
 SCENARIOS = ["home_lab", "small_club", "large_hall", "outdoor_tent"]
+# QE: the residual bar only counts where it can bite. In large_hall and
+# outdoor_tent every channel is already within MAX_POSITIVE_DEVIATION_DB
+# uncorrected (worst +2.8 / +2.2 dB, sub), so they add no residual coverage
+# and are excluded from it; test_excluded_scenarios_are_vacuous keeps that
+# honest if the simulator changes.
+RESIDUAL_SCENARIOS = ["home_lab", "small_club"]
+VACUOUS_SCENARIOS = [s for s in SCENARIOS if s not in RESIDUAL_SCENARIOS]
+NON_VACUOUS_UNCORRECTED_DB = 6.0
 
 # AE: per-channel residual bands (clear of the 200 Hz crossover).
 RESIDUAL_BANDS_HZ = {"highpass": (250.0, 500.0), "lowpass": (30.0, 200.0)}
@@ -60,7 +68,8 @@ MAX_OVER_CUT_DB = 1.0
 MAX_FAR_FIELD_DB = 0.1
 FAR_OCTAVES = 1.0 / 3.0
 # The D-009 margin the correction stage applies everywhere. combine has no
-# logged margin scalar yet; when F-374 adds one, read m from there (AE).
+# logged margin scalar yet; when F-383 adds one, read m from there (AE),
+# then re-run and report the over-cut to the AE before widening anything.
 CORRECTION_MARGIN_DB = correction.D009_MARGIN_DB
 
 EXPECTED_FILES = {
@@ -87,9 +96,23 @@ def _simulate(bundle, name, noise_db=GATED_NOISE_DB):
 @pytest.fixture(scope="module", params=SCENARIOS)
 def run(request, bundle):
     """(scenario name, SimulatedMeasurement, VenueFilterResult) at the gated noise."""
-    name = request.param
-    sim = _simulate(bundle, name)
-    return name, sim, vp.generate_venue_filters(bundle, sim.measured_irs)
+    return _run(bundle, request.param)
+
+
+@pytest.fixture(scope="module", params=RESIDUAL_SCENARIOS)
+def residual_run(request, bundle):
+    return _run(bundle, request.param)
+
+
+_RUNS = {}
+
+
+def _run(bundle, name):
+    # Shared by run and residual_run so each scenario is simulated once.
+    if name not in _RUNS:
+        sim = _simulate(bundle, name)
+        _RUNS[name] = (name, sim, vp.generate_venue_filters(bundle, sim.measured_irs))
+    return _RUNS[name]
 
 
 @pytest.fixture(scope="module")
@@ -361,8 +384,8 @@ def _below_target(bundle, sim, result, spk):
 class TestResidualPerChannel:
     """Correction alone vs flat (target at the reference level); crossover excluded (F-374)."""
 
-    def test_max_positive_deviation(self, bundle, run):
-        name, sim, result = run
+    def test_max_positive_deviation(self, bundle, residual_run):
+        name, sim, result = residual_run
         for spk in result.corrections:
             _, cor, _ = _corrected_and_uncorrected(bundle, sim, result, spk)
             dev = closed_loop.max_positive_deviation_db(cor, np.zeros_like(cor))
@@ -400,12 +423,28 @@ class TestResidualPerChannel:
         assert r["raised"] < 0 and r["over_cut"] <= MAX_OVER_CUT_DB
         assert r["far_field"] > MAX_FAR_FIELD_DB
 
-    def test_home_lab_sub_is_not_vacuous(self, bundle, home_lab):
-        sim, result = home_lab
-        _, cor, unc = _corrected_and_uncorrected(bundle, sim, result, "sub1")
-        zero = np.zeros_like(unc)
-        assert closed_loop.max_positive_deviation_db(unc, zero) > 10.0
-        assert closed_loop.max_positive_deviation_db(cor, zero) <= MAX_POSITIVE_DEVIATION_DB
+    def test_scenario_is_not_vacuous(self, bundle, residual_run):
+        # QE: in every residual scenario some channel starts well above the
+        # bar and the correction brings it under.
+        name, sim, result = residual_run
+        biting = []
+        for spk in result.corrections:
+            _, cor, unc = _corrected_and_uncorrected(bundle, sim, result, spk)
+            zero = np.zeros_like(unc)
+            if (closed_loop.max_positive_deviation_db(unc, zero) > NON_VACUOUS_UNCORRECTED_DB
+                    and closed_loop.max_positive_deviation_db(cor, zero)
+                    <= MAX_POSITIVE_DEVIATION_DB):
+                biting.append(spk)
+        assert biting, f"{name}: no channel where the residual bar bites"
+
+    @pytest.mark.parametrize("name", VACUOUS_SCENARIOS)
+    def test_excluded_scenarios_are_vacuous(self, bundle, name):
+        # If this fails the scenario now has coverage: add it to RESIDUAL_SCENARIOS.
+        _, sim, result = _run(bundle, name)
+        for spk in result.corrections:
+            _, _, unc = _corrected_and_uncorrected(bundle, sim, result, spk)
+            dev = closed_loop.max_positive_deviation_db(unc, np.zeros_like(unc))
+            assert dev <= MAX_POSITIVE_DEVIATION_DB, f"{name} {spk}: {dev:+.2f} dB"
 
 
 # -- AC6a: noise robustness -------------------------------------------------
