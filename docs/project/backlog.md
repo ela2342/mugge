@@ -1872,6 +1872,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   us172-recovery.sh (bf33e6e1...) is under Architect + QE review.
   Result (CM, 2026-10-25): CHANGES REQUESTED by both; fixed at
   2832a5c6 and back with both for a re-check. The Pi is still down.
+  Architect and QE APPROVED us172-recovery.sh 2832a5c6 (CM,
+  2026-10-25). Architect note: a missing "reboot: Restarting
+  system" at the end of OLD is recorded as "not seen", not as
+  "hung in shutdown". The Pi is still down.
   HDMI and UART stay list-only until run 3 is approved (CM: not to
   team-lead now). H1 may pre-empt
   the Pi
@@ -2327,7 +2331,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   failed / 1266 passed / 1 skipped (the 1 F is
   test_sample_real_drivers_pass, the F-363 darwin case);
   test-room-sim-e2e 75 passed / 1 skipped, exit 0. Both with the
-  QE.
+  QE. QE APPROVED R1 at bcc353ed (CM, 2026-10-25): the test-side
+  items are met at branch level; worker-4 is drafting the PR body.
   Measurement SNR check (AE, P2, AE-owned; 2026-10-25): US-174b
   shows the correction raises up to +0.67 dB in below-target
   regions at -40 dB noise re peak, clean at -60. The sweep capture
@@ -2663,6 +2668,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   allocated); N3 F-383 cites the +/-0.7 test. worker-5's interim
   aec7b604 (Architect N1 LR4 phase <= 5 deg, UX N1 wording) is not
   pushed; it goes into the complete head.
+  FENCE QUESTION (worker-5 stopped; via CM, 2026-10-25): 3 web-ui
+  fixtures use LR slope 96; proposal 48, pending the Architect and
+  AE. The 422 (save) vs 400 (Generate) split is with the
+  Architect. The rest of the head is green and uncommitted on top
+  of aec7b604.
+  #55 backlog (worker-5, via CM, 2026-10-25; not in #55): (a)
+  session/CP-5 load the repo configs while the editor prefers
+  /etc/pi4audio; (b) workshop-xrk10f-fullrange has no crossover
+  and cannot be saved (unknown filter_type "fullrange";
+  pre-existing); (c) /validate, check-mode and activate do not run
+  the crossover check yet.
   #55 backlog (AD, 2026-10-25): L1 a loose-bounds regression test
   on the real, unmodified markaudio profile (sum, max|H|, phase),
   tightened with F-385/F-383. L2 default_profile.yml has no
@@ -3260,14 +3276,22 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   run is HELD; pytest in the dev shell continues. Nix GC is banned
   below 4 GiB; freeing space is the owner's call (CM reported it to
   team-lead). Later (CM): 2.9 GiB, still falling with no team job
-  running; the hold stays.
+  running; the hold stays. Later (CM, 2026-10-25): 2.69 GiB. Cause
+  (CM, read-only checks): worker-3 ran a `nix build` (US-173 Gate-2
+  selftest, 22:27 CET) during the hold (told: no more); the
+  linux-builder qcow2 is 29 GiB and grows on the Mac disk;
+  softwareupdated has been running ~40 min. With team-lead and the
+  owner; the CM has no sudo.
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
   Mac free 16 -> 4 GiB stopped CM-MAC-BUILD-2 run 2 at 20:58Z on the
   5 GiB line; owner lowered it to 2 GiB for that build). Fix lives in
   the owner's nix-darwin linux-builder config, not mugge.
-  Owner-requested, not blocking (CM).
+  Owner-requested, not blocking (CM). Update (CM, 2026-10-25):
+  now 29 GiB. Low gap: the qcow2 grows without bound, so any
+  aarch64 build eats Mac disk for good, and nothing in our disk
+  rule (abort lines, GC ban below 4 GiB) covers the image itself.
 - **F-365** Hermetic nix checks broken in the sandbox (pre-existing; found in
   T57 by worker-1; CI never builds checks.*): checks.<sys>.test-midi
   (../../../configs resolves to /), test-room-correction (cp
