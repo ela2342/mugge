@@ -1867,6 +1867,24 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   SecSpec (2026-10-25): F-318 (a), the WP rule, is accepted ALONE as
   the interim for the supervised session; F-318 stays OPEN until
   layer (b), now US-175 (P1 below). The amps call is the AE's.
+  F-318 (a) pushed (worker-3, CM 2026-10-25): story/US-173-first-dj-
+  session = 695f69af, 8 files; F-318 stays OPEN. aarch64-linux check
+  green; Lua 18/18 with 4 mutants killed; integration 17/17; the
+  negative control fails 14/17 as required. Implementation reviews
+  open: Architect, SecSpec, UX. B5b (caebf509) was relayed but is
+  NOT on the branch (only B5 ad478593); US-173.md is unchanged at
+  695f69af, so B5b still applies cleanly and is still pending.
+  worker-3 findings (not fixed):
+  - a) A WirePlumber restart re-creates the ports of nodes it adopts
+    and drops their links, even with the policy disabled;
+    GraphManager must re-link. Untested; relevant to the Pi Gate-2
+    item "GM links 24 unchanged after a WP restart".
+  - b) Stock WP logs "wp_event_dispatcher_unregister_hook: assertion
+    failed" 4 times per start; looks harmless.
+  - c) Wanted outside worker-3's fence: a CI step for
+    checks.aarch64-linux.wireplumber-no-bypass plus a
+    development.md line. The CM routes it to the Architect; likely
+    part of F-380.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -2171,14 +2189,25 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the satellite's mandatory 80 Hz subsonic, not the crossover. With
   the Architect and the AE; a new defect is likely (PM assigns the
   ID on request).
-  JOINT RULING FINAL (Architect + AE, relayed to worker-5 by the CM,
-  2026-10-25): worker-5's option (a) accepted. The post-combine gate
-  uses an in-test copy without the sat HPF, thresholds unchanged.
-  Real-profile regression guard: +/-1 dB sum, max|H| <= -0.5 dB, fc
-  phase difference <= 30 deg, D-031 present (0.3 deg margin; F-383
-  crossing it is a STOP). The limitation goes in the PR body, no
-  xfails. Deployable for the supervised US-173 session (sound
-  quality, not safety). The subsonic interaction is filed as F-385.
+  JOINT RULING FINAL (AE 20:32:02, Architect concurring
+  20:31:56-20:32:04, 2026-10-25): worker-5's option (a) accepted.
+  The post-combine gate uses an in-test copy without the sat HPF,
+  thresholds unchanged. NO phase, sum or max|H| test on the real
+  Markaudio profile. Its only test is protection-present (AE
+  threshold): on the unmodified markaudio profile the sat
+  mandatory_hpf_hz is set, and the exported sat WAV is at least
+  18 dB below the HPF-removed copy at mandatory_hpf_hz/2; worker-5
+  reports the measured value. WITHDRAWN before it reached worker-5
+  (Architect): the pinned real-profile guard (+/-1 dB sum, max|H|
+  <= -0.5 dB, fc phase <= 30 deg, 0.3 deg margin); it would have
+  locked in the defect. A CM-relayed variant (>= 2.5 dB down AT
+  mandatory_hpf_hz) is superseded by the Architect's direct
+  18 dB-at-half-corner wording (PM asked the CM to confirm what
+  worker-5 has). The baseline numbers go in the F-374 PR body and
+  in F-385. Regression rule: see F-385 (review rule, not a test).
+  The limitation goes in the PR body, no xfails. Deployable for the
+  supervised US-173 session (sound quality, not safety). The
+  subsonic interaction is filed as F-385.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
@@ -2246,24 +2275,36 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
-  <= 30 deg sat-sub budget at 200 Hz. Direction (Architect,
-  verbatim):
-  - D-031 is NOT moved or removed for phase reasons alone. It is
-    redefined as a per-driver excursion mask |H_sat(f)| <= mask(f),
-    derived from Xmax at full amp output using the F-363 T/S
-    records. The mask is asserted fail-closed on every exported sat
-    WAV.
-  - A separate subsonic is added only where the crossover HP alone
-    violates the mask, at the lowest order and corner that satisfy
-    it. At 200 Hz LR4 the AE expects none to be needed.
-  - Fallback: a documented intentional electrical sat delay (~0.4 ms
-    at fc). That needs a defined offset in 174b's +/-0.2 ms
-    geometric delay AC.
-  - No allpass compensation: a causal allpass only adds lag, and it
-    would also break the F-383 min-phase check.
-  - Sequenced after F-383, before 174b's alignment ACs are judged:
-    29.7 deg uses up the whole <= 30 deg sat-sub budget at 200 Hz.
+  <= 30 deg sat-sub budget at 200 Hz. D-031 is NOT moved or removed
+  for phase reasons alone. Options as the AE finalised them
+  (Architect concurring, 2026-10-25):
+  - (i') D-031 becomes a per-driver excursion mask |H_sat(f)| <=
+    mask(f), derived from Xmax at full amp output (F-363 T/S
+    records), asserted fail-closed on every exported sat WAV. A
+    subsonic is added only where the crossover HP violates the
+    mask, at the lowest order and corner that satisfy it. Preferred.
+  - (ii) A lag allpass on the SAT leg (an allpass can only add lag;
+    never the sub). Not min-phase, so it conflicts with F-383 and
+    needs the Architect's scoped exception. Low preference.
+  - (iii) Documented limitation as the interim state.
+  - (iv) A deliberate electrical sat delay (~0.4 ms at fc), which
+    needs a defined offset in 174b's +/-0.2 ms delay AC.
+  - Rejected: a fixed fc/4 subsonic rule (BW4 at 50 Hz still adds
+    about 38 deg at 200 Hz).
+  - Sequencing: after F-383. 174b alignment is not judged on this
+    profile until (i') lands.
   - The AE derives the mask once the CHN-50P record is final.
+  - Baseline (F-374, real markaudio 200 Hz LR4 profile): 29.7 deg at
+    fc, 68.8 deg max, sum -0.68..-0.01 dB, max|H| -0.60 dB; also in
+    the F-374 PR body.
+  - Review rule (Architect + AE, 2026-10-25): if F-383 or any later
+    change makes the baseline worse, the AE and the Architect both
+    rule before it proceeds (joint STOP). A review rule, not a test
+    assertion; no pinned guard exists.
+  - Superseded wording: the first relayed direction ("no allpass
+    compensation", delay fallback dropped) and the CM's amendment
+    without (iv); the Architect's direct message re-lists (iv) as
+    the AE's.
 
 ## P2
 
