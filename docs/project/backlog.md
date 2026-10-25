@@ -457,7 +457,26 @@ Next free: F-371, US-173, D-069, T66.
     verdict) -> PR opens -> AC17. QE expectation for AC1a: only F-358
     (05-rt-direct.conf) plus configurationRevision; anything else
     needs a per-item disposition (CM passed to the Architect: the PO
-    criterion lists only 05-rt-direct.conf).
+    criterion lists only 05-rt-direct.conf). [SUPERSEDED (CM,
+    2026-10-25): the Architect ruled that configurationRevision is set
+    only in pi5Modules (flake.nix:827 at f0fbefd1), so it is not in
+    the Pi 4 toplevel. The AC1a criterion is exactly
+    05-rt-direct.conf; anything else FAILS; no advance PO amendment.
+    QE concurs and verified it ("my expectation was wrong").]
+    AC1a RE-RUN ON M: **PASS** (Architect, checked the file
+    personally). Evidence (worker-1, CM cross-checked):
+    ac1a-nixdiff-289390bf-vs-f0fbefd1.txt; Pi 4 toplevel 8nv9psc1
+    (289390bf) vs j2ykkiil (f0fbefd1), the same drvPath as at
+    bbff469e; kernel hsf3x9wz identical; nix-diff rc=0, only etc ->
+    pipewire-configs -> pi4audio-pipewire-configs
+    (+05-rt-direct.conf); 0 hits for configurationRevision, revision
+    or the SHAs; no other inputs; the raw diff body is identical to
+    the bbff469e run. PR: attach
+    ac1a-nixdiff-289390bf-vs-f0fbefd1.txt as the raw AC1a evidence.
+    Still open: the Pi 4 AC13 A1 precondition before amps-on (Pi 4
+    runtime unverified, US-170). NEXT: the PR opens (worker-1 is
+    finalising the body; PM status list us163-ac-status-v1.md, sha256
+    d291a9ed...) -> AC17.
     1. PASS (QE + SecSpec; CM-OBS-.89-T53, T53b, T53c): T53-on-deploy,
        ONE read-only OBSERVE on the running deploy. NO external port
        scan (owner directive, see the test-process rule below); the
@@ -567,7 +586,8 @@ Next free: F-371, US-173, D-069, T66.
        pi4audio-pipewire-configs (+05-rt-direct.conf, store path
        c6ry7vzk...); raw diff ac1a-nixdiff-289390bf-vs-bbff469e.txt
        (worker-1). Pending: re-run on M, same criterion; raw diff
-       attached to the PR (QE). (v59's "DONE at j2ykkiil" was
+       attached to the PR (QE). DONE: re-run on M PASS (Architect;
+       see the AC18b status above). (v59's "DONE at j2ykkiil" was
        premature; the earlier eval was vs local 8nv9psc1.)
        AMENDED (PO, verbatim): "The Pi 4
        drvPath differs from main only by intended all-board changes
