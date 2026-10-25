@@ -1470,6 +1470,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      rows", "rows 1-3 and 5-14") and the Gate rule ("1-3, 5-14")
      change with this row; the TW updates them in the same batch,
      and this list then follows the merged safety.md wording.
+     WORDING NOT FINAL (TW, 2026-10-25): the AE has since ruled that
+     "unchanged" is a FAIL, so "gains unchanged or 0" above is
+     superseded; the TW asked the AE for corrected text. Do not act
+     on the quoted text; this row is replaced by the TW's final
+     wording. The TW's batch carries the lead-in, the Gate rule
+     "(1-3, 5-15)" and the table row, plus a D-070 row 15 interim
+     entry and a Section 5 pre-flight check #11 (F-318 routing).
+     Applied once the CM gives the TW the US-173 head with main/#51
+     merged (before that the branch has no row 14).
   NEXT safety.md TOUCH (#51 reviews, non-blocking, fail safe; TW
   drafts, AE owns the wording, this list follows per the mirror
   rule): (1) AD L1 = UX (a): the lead-in "holds" (closed and
@@ -1755,6 +1764,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   only reviewed excerpts quoted; (6) a one-off diagnostic, not a
   mechanism. Debug-UART capture needs the owner's hands: last
   resort.
+  H1 QE conditions (a)-(d) adopted (CM, 2026-10-25): copy sha256 and
+  path length shown before the reboot; DT status is the primary
+  oracle, dmesg and /dev/dri secondary; RESTORED = o/ gone +
+  manifest == PRE + marker 0; a mixed state or marker 0 = STOP.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -1965,7 +1978,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     Sound Output" is fixed IN this batch with AE text (step 6
     opened the gate with no checks; step 7 ran speaker-test
     straight to hw:1,0; step 1 `aplay -l` becomes `cat
-    /proc/asound/cards`). Not a backlog item. TW has 3 open
+    /proc/asound/cards`). Not a backlog item. Team-lead and UX
+    concur (steps 6 and 7 replaced); PM asked the AE to confirm
+    directly. TW has 3 open
     questions to the AE on the C2 bullet; row 15 number and text
     may still change.
   - UX N2 (backlog; not needed for US-173): a dismissible web UI
@@ -2507,7 +2522,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   wording: HP/IEM routed through the convolver per D-063, channels
   7-8 to match the channel table. Owner TW: one docs PR, normal
   Rule 13 review. CLAUDE.md is the owner's file: team-lead tells the
-  owner; if the owner objects, that part waits. Not urgent. Needs
+  owner; if the owner objects, that part waits. Team-lead has told
+  the owner (2026-10-25); nothing more to send. Not urgent. Needs
   AE review (AE, via TW, 2026-10-25).
 - **SETUP-MANUAL `aplay -l`** (AE, via TW, 2026-10-25; docs, small):
   SETUP-MANUAL.md:530 and :1845 still use `aplay -l`, which does
@@ -2651,7 +2667,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   checks.aarch64-linux.wireplumber-no-bypass plus a development.md
   line (US-173 worker-3 finding c) belong here, not in US-173; the
   earlier "worker-3's ci.yml T1 step" note is superseded for that
-  step.
+  step. CM, 2026-10-25: worker-3's ci.yml T1 step and the
+  development.md command line move from US-173 to F-380 (text to
+  follow from worker-3). F-365's Linux leg is also deferred to
+  step 1 here (a Linux failure reopens F-365 at High).
 - US-159 G16 with AE amendments a-e and architect additions 1-3; test
   T65 (not T62). Medium; re-rate on (i) volume after replug, (ii) relink
   with gate_open true. Match by node and direction.
@@ -2807,6 +2826,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Re-raised (Architect, via CM, 2026-10-25): add raspberrypi-utils
   / libraspberrypi to the Pi 5 closure as a diagnostic tool
   (vcgencmd, vclog). Not part of US-172.
+- mugge.cachix stays OFF the Pi 5 (SecSpec + Architect, via CM,
+  2026-10-25). Adding it would be a substituter config change; not
+  done ad hoc. The Pi substitutes from cache.nixos.org only;
+  anything else it needs is built there (F-365 fallback rules).
 - Nix on the installer is nixpkgs 2.31.2, below the 2026-10-13
   advisory fixes (2.34.9/2.35.3). If the final systems ship it too:
   bump nix.package or nixpkgs. LOW for now (local nix-daemon only, ela
@@ -2825,7 +2848,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   worktrees or builds (backlog commits continue). Team-lead
   accepted the stop; the owner was asked to free space. Pytest-only
   runs continue; the CM asked the Architect and QE whether queued
-  Mac builds can run on the Pi.
+  Mac builds can run on the Pi. CM measured 3 GiB free
+  (2026-10-25), BELOW the 4 GiB line: still no new worktrees or
+  builds; backlog commits continue.
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
@@ -2869,11 +2894,24 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   reported; progress to the QE every 30 min; audio stack untouched;
   outputs kept for follow-on builds. QE concurrence pending;
   worker-7 prepares v3.
+  SUPERSEDED (CM-confirmed, 2026-10-25; replaces the option (a)
+  RULING above): the Architect and QE converged on option (c). The
+  PR body records drvPath 909sn50k (the identical build recipe on
+  both platforms) and the darwin counts 1/1197/1; CI green at the
+  merged head. The Linux leg is deferred to F-380 step 1; a Linux
+  failure there reopens F-365 at High. (a), the Pi-native build,
+  is a fallback only (its conditions above apply if used). CM
+  option: a scratch-branch workflow_dispatch on the ARM runner that
+  builds only that check (not release.yml).
   Pi build queue (Architect, 2026-10-25): F-365, then the F-374
   PR-head suite, then the wireplumber-no-bypass check; each from a
   tarball at the declared SHA with sandbox=true. WP check
   post-condition: live PW/WP pids unchanged, no new USBStreamer
-  links. US-172 H1 may pre-empt between derivations. test-midi
+  links. US-172 H1 may pre-empt between derivations.
+  Pi as builder (CM, 2026-10-25): sandboxed `nix build
+  .#checks.*` only, with sandbox=true recorded and the thermal rule
+  applied; never `nix run .#test-*` on the Pi; GC after the queue
+  finishes. test-midi
   (worker-7, QE): NOT a silent skip; flake.nix copies the configs
   flat (midi/, configs/), but src/midi/tests/test_midi_daemon.py:56
   resolves tests/../../../configs, so 6 tests (lines 93, 123, 132,
@@ -3124,5 +3162,14 @@ merge needs update-branch and 7 reconfirmations at the new head.
   release or tag dispatch, permission-system blocks. Vetoes and
   safety rules are unchanged.
 - #43, #45, #44: need #49 on main and real green CI; #45 before #44.
+- #45 dangling citations (TW, 2026-10-25): AC14, F-320, F-338 and
+  F-347 cite "pre-flight #10 (PR #45)". #45 (docs/safety-d063-gate,
+  76b61347) is unmerged, so on main those citations point at
+  nothing. Resolve when #45 merges or re-point them. Owner TW.
+- #45 gain read method (TW, 2026-10-25; needs an AE ruling before #45
+  merges): #45's pre-flight #10 reads gains with `pw-cli
+  enum-params` (pw-dump hides NaN), while main's "Gains at boot"
+  rule and the F-318 batch's C2 read them from pw-dump. One method
+  must be chosen and used consistently.
 - #36, #40: no Rule 13 review; owner direction needed (#40 IDs clash).
 - chore/backlog (this file): no PR yet; docs-only.
