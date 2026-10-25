@@ -10,9 +10,10 @@ land here. Maintained by the PM; the CM commits changes.
 
 Taken (not yet filed as records): F-361, F-362, F-363, F-364 (below);
 F-365; F-366, F-367 (US-163 section); D-068 (T57 gate dropped); T65 =
-US-159 G16 reconciler test. F-368 WITHDRAWN, never to be reused (was a
+US-159 G16 reconciler test; US-172 (P1, Pi 5
+local display). F-368 WITHDRAWN, never to be reused (was a
 duplicate of the existing F-358 for AC13).
-Next free: F-369, US-172, D-069, T66.
+Next free: F-369, US-173, D-069, T66.
 
 ## US-163 text updates (critical path; one tracking batch before the PR)
 
@@ -55,8 +56,9 @@ Next free: F-369, US-172, D-069, T66.
     nftables default DROP and the v4/v6 scan stay.
   - AC15: "HTTPS reachable from the LAN"; allowlist part dropped.
   - AC20: F-037 accepted as known risk; the Pi 5 is not gig-ready; no
-    amps or HP/IEM connected while F-037 is open. Also list "F-358
-    (AC13 FAIL)" alongside F-037 (PO, 2026-10-25).
+    amps or HP/IEM connected while F-037 is open. F-358 now blocks
+    US-163 (AC13 must PASS); list it next to F-037 only if the
+    Architect's fallback applies (AC13 FAIL) (PO, 2026-10-25).
   - AC21: drop the allowlist runbook part.
   - T53: negative case is "5900 refused (v4 and v6)".
   - The allowlist fail-closed + IPv6 AC moves to the backlog with F-037.
@@ -163,36 +165,88 @@ Next free: F-369, US-172, D-069, T66.
     kz0j0c6f, PREEMPT_RT 6.12.62). Test text changes to `--no-trust`;
     `--sigs-needed 0` is wrong (it does not skip the trust check on
     this Nix).
-  - **F-358** re-rated HIGH (AE; worker-1 agrees): AC13 FAIL,
+  - **F-358** HIGH, BLOCKS US-163 (AE; worker-1 agrees): AC13 FAIL,
     PipeWire data-loop.0 at RR/20, not FIFO 88 (no daemon-reload
-    involved). Blocks amps-on and gig use (D-013); does NOT block the
-    US-163 bring-up PR. Fix: the separate port of #40's F-291 RT fix.
-    PO RULING (2026-10-25; Architect may object in one line): US-163
-    goes to the PR without waiting for the port; AC13 stays an honest
-    FAIL (never reworded to PASS); the lab note carries the raw
-    `ps -L`/chrt output; the PR description lists it as a known
-    deviation linked to F-358; the owner decides acceptance at the
-    PR. Interim: no amps-on use of the Pi 5 until F-358 is fixed
-    (already so via F-037/AC20). PO advice: the F-358/F-291 port is
-    the next active priority after US-163 (shortest path to an
-    audio-capable Pi 5; re-verifies AC13) -- owner sets priority.
-    Update the F-358 record and status.md (still say Medium).
+    involved). PO RULING (2026-10-25, supersedes the earlier "known
+    deviation" ruling): "F-358 is High and BLOCKS US-163. AC13 must
+    PASS, with a minimal fix on the story branch (architect ruling,
+    which I accept). It's no longer a 'known deviation'. Fallback,
+    only if the architect rules it after diagnosis: AC13 as FAIL and
+    the F-291 port as a separate change." PO advice "F-291 port next
+    after US-163" applies only in that fallback.
+    Security condition (SecSpec; reviewed in Rule 13 on the PR): "limited
+    to the PipeWire user service units, LimitRTPRIO capped at 88-95
+    (not unlimited), no global PAM/limits.conf change and no @audio
+    rtprio for ela".
+    AE AC13 conditions (AE co-ruling 2026-10-25 ~08:29Z + follow-up,
+    via CM):
+    A1: every data-loop thread of a single pipewire PID shows FF/88 in
+    `ps -L`, after a cold boot AND again after one announced PW
+    restart; the pipewire journal has no RTKit lines for this boot.
+    Also record the main thread's scheduling class (confirms rtkit no
+    longer demotes it).
+    A2: record the USB interrupt thread priority, to show 88 sits
+    above it; for information, not pass/fail (recorded: USB IRQs at
+    FIFO/50).
+    A3: the restart interrupts the USBStreamer, so announce it to the
+    owner first; under the standing "nothing is connected" statement
+    an announcement is enough, no ack wait.
+    A4: the fix is its own commit on the US-163 branch; AE reviews the
+    diff before deploy. Pi 4 recorded as unverified (unreachable),
+    under F-358.
+    AC13 acceptance (PO, 2026-10-25): AE's complete A1-A4, raw output
+    recorded. Until PASS: no amps-on, HP or IEM use of the Pi 5. In the
+    fallback the ban lasts until the F-291 port is merged and A1/A2
+    pass.
+    Fix placement agreed (PO + Architect; team-lead hold lifted; CM
+    told worker-1 08:31Z): on story/US-163. Architect rule: user@ hard
+    RTPRIO >= 88 -> drop-in on the pipewire user unit; 0 -> the
+    user@<uid> instance only, SecSpec OK first; otherwise the fallback.
+    Fix shape: not yet ruled; the Architect names it after diagnosis.
+    Update the F-358 record (High) and status.md.
   - **F-367** T49 FAIL: greetd crash-loops every ~10 s (~45 restarts
     in 8 min, not marked failed): no DRM device (vc4/v3d =m but not
     loaded, /sys/class/drm empty), so the labwc greeter cannot start.
-    Architect ruling on cause and whether it blocks US-163. Amend the
-    T49 criterion: no failed units AND NRestarts <= 3 per service.
-  - AC12 FAIL as written (8in/8out, QE): PipeWire has no USBStreamer
-    capture node although ALSA pcmC1D0c exists; level-bridge-hw-in is
-    unlinked. Not a new ID: this is the existing **F-328** (ada8200-in
-    capture node no longer deployed since 991ff456; High) plus
-    **F-319** (level-bridge hw-in targets the removed node). Blocks
-    US-163 unless the PO amends AC12; Architect + AE diagnose.
+    Medium. PO RULING (2026-10-25): guard on US-163, real fix in
+    US-172 (P1). Amend the T49 criterion: no failed units AND
+    NRestarts <= 3 per service. New US-163 AC "no-crashloop" (PO):
+    after boot no systemd unit (system or user) is failed or
+    restart-looping; the display stack is disabled or guarded on this
+    image while no DRM device exists; checked before Gate 2. A working
+    display is NOT a US-163 AC.
+  - AC12 FAIL as originally written (8in/8out, QE): PipeWire has no
+    USBStreamer capture node although ALSA pcmC1D0c exists;
+    level-bridge-hw-in is unlinked (existing **F-328** + **F-319**).
+    PO RULING (2026-10-25; AC12 AMENDED, not waived; QE + AE agree;
+    by design per F-295, not a Pi 5 regression, per the Architect):
+    "AC12 (amended): Playback: 8 channels via PipeWire, profile
+    pro-audio, ports playback_AUX0..7 (unchanged; anything else
+    FAILS). Capture: the USBStreamer capture PCM exists at ALSA level
+    with 8 channels (record the device name, e.g. pcmC?D0c, and
+    `cat .../hw_params` or `arecord --dump-hw-params` output).
+    PipeWire capture node: deferred per F-295 (ACP deliberately
+    disabled, 20-usbstreamer.conf not deployed; GraphManager brings
+    it in for Live mode). Its absence is NOT a FAIL in US-163. Its
+    presence without GraphManager would be a deviation that must be
+    explained." No longer blocks US-163. Live mode on the Pi 5 still
+    needs the capture path: backlog with F-295/Live mode.
+    OPEN (QE): reconcile F-328 (High, "capture node no longer
+    deployed") with the "by design per F-295" ruling so the records
+    don't contradict; Architect/QE to word the F-328 update.
   - AE check #10 PASS (enum-params; 1+1 convolver nodes, 8 gains
-    0/0). AC12a full PASS. AC14 PASS via pw-cli; quantum reading
-    still to record. AC13 (F-358) is the only open AE item.
+    0/0). AC12a full PASS. AC14 PASS, complete (quantum base 256,
+    force 1024). AC13 (F-358) is the only open AE item.
   - T50 PASS (61.2C, no throttle).
   - Pending: T48 cold boot (needs an owner power cycle).
+  - US-163 waits on (team-lead, 2026-10-25): the Architect naming the
+    F-358 fix; worker-1's F-367 guard (CM cleared); reviews of both
+    diffs; the deploy; then the owner's cold boot for T48 and AC13.
+  - Pi 5 cooling (Architect via CM): the cooling_fan DT node is
+    "disabled" and there is no fan hwmon, so an Active Cooler would
+    not spin. OPEN owner question: is a fan fitted? If yes: small Pi 5
+    config fix by worker-1, AE + Architect review. Interim rule for
+    every Pi load test (T48-T55, T57): record thermal_zone0, STOP at
+    >= 80 C.
   - QE request: commit a SecSpec-vetted subset of the deploy evidence
     into the US-163 PR.
 - 2026-10-24 20:28:03: Pi 5 restart CONFIRMED as the owner's power
@@ -260,6 +314,11 @@ Next free: F-369, US-172, D-069, T66.
 
 ## P1
 
+- **US-172** Pi 5 local display (D-022): vc4/DRM on the Pi 5,
+  greetd/labwc up, Mixxx usable on HDMI. Prerequisite for DJ mode on
+  the Pi 5; sits next to the F-358/F-291 work. Starting point: the
+  F-367 crash loop from the US-163 deploy (vc4 not loaded, no DRM
+  device). (PO, 2026-10-25)
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -420,7 +479,10 @@ Next free: F-369, US-172, D-069, T66.
   deprecated (migrate per disko's table-to-gpt guide). Check whether
   MBR is intentional for the Pi 5 FAT/firmware, else migrate before
   upstream removes the legacy type. Predates F-366; the install was
-  not affected. (worker-1, re-reported via CM)
+  not affected. (worker-1, re-reported via CM) Update 2026-10-25
+  (worker-1): seen on every `nix eval` of BOTH mugge-pi5-deploy and
+  mugge-deploy, sometimes with a "read-only, set multiple times"
+  error. Not blocking; not US-163 scope. Owner: Architect.
 - US-170: Pi 4 allowlist and configurationRevision (AC1); Pi 4 WP ALSA
   rule; drvPath pin removal.
 
