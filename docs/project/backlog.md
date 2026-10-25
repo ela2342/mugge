@@ -689,6 +689,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       USB-POWER bmAttributes/bMaxPower read, and an ssh
       ServerAlive option in pi.sh so a poll doesn't hang when the
       power is cut.
+      UPDATE (2026-10-26): the "16 gains came up at 0" read in step
+      (c) is NOT VERIFIABLE under F-395 (fc/fc-out node state not
+      logged; not a FAIL; AE ruling on the QE's AC (c) list,
+      2026-10-26); re-run pending (F-395 AC (c)). Also step (a) and
+      the step (b) baseline (QE list rows 4, 5, 7).
     - AE (non-blocking): after each cold boot, a read-only ps -L
       check (PW main and data-loop.0 at FF 88, RTTIME
       200000/200000) confirms F-358 survives a real cold boot.
@@ -720,6 +725,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       63.9 C. CM-CHG-.89-5 released 15:30Z. The owner is done at the
       Pi; no more physical steps for US-163 (CM). QE ruling on AC17
       pending.
+      UPDATE (2026-10-26): the "gains 0" read in cold cycles 1 and 2
+      is NOT VERIFIABLE under F-395 (fc/fc-out node state not logged;
+      not a FAIL; AE ruling on the QE's AC (c) list, 2026-10-26);
+      re-run pending (F-395 AC (c)). The design fact stands: the gains
+      start at Mult 0 at power-on because the conf defaults say so; it
+      rests on the conf defaults alone until the re-run (AE).
     - Evidence limits (CM, recorded): the USB devnum stays 2 on a
       fresh enumeration, so the proof of a cold cycle is the owner's
       pull plus the down windows. Early-boot journal timestamps come
@@ -3068,6 +3079,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   exactly 0 and the gate is closed (D-063); levels return only
   through a deliberate gate open/ramp. Meters recover (F2). There is
   never an abrupt resume at the previous gain."
+  UPDATE (AE, 2026-10-26; F-395 AC (c)): "verified in AC17-B step (c)"
+  above is NOT VERIFIABLE under F-395 (fc/fc-out node state not
+  logged; not a FAIL; AE ruling on the QE's AC (c) list, 2026-10-26);
+  re-run pending (F-395 AC (c)). The procedure stays as the interim
+  workaround. New AC2 addition (AE, verbatim): "the gains read set
+  includes the fc and fc-out node state immediately before and after
+  the read (D-070 row 14)." The re-run covers the F-373 recovery (PW
+  restart plus bridge restart) if it differs from the plain PW
+  restart.
   AC addition (AD L6, #50 review): the web UI and GraphManager must
   not show a zombie sink as "running" or with live levels.
   UX P1 (amps-on, also US-159 G16): a red web UI state "OUTPUT
@@ -3830,6 +3850,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   #54's result; the F-394 fail-again plan most likely applies
   (strict-xfail test-only PR, then update-branch, then diff-only
   re-checks).
+  UPDATE (CM, 2026-10-26): #55 is HELD. QE ruling pending between (a)
+  the update-branch run onto main ba5cc200 counting as its single
+  attempt, or (b) the F-394 strict-xfail quarantine PR first.
   AD L3 suggested text (via CM; TW/AE tidy): "designed so the two legs
   sum flat; the shipped LR4 profile is verified within ±1 dB, LR8
   after room correction is not yet verified (F-383)" (markaudio LR4
@@ -3998,6 +4021,55 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (worker-3 implementing); AC (d) is the Pi step 1 OBSERVE and the
   amended P-a (deferred while .89 is down). Follow-ups: US-176
   (canary), F-397 (readback consumer audit).
+  AC (c) LIST COMPLETE (QE, 2026-10-26; searched main dfdbbbd6 and all
+  local and gh branches; supersedes "PM candidates ... for the QE to
+  complete" above). None of these records logs the fc or fc-out node
+  state at the reading, so all 9 are NOT VERIFIABLE under the AE
+  ruling, not FAIL (conf defaults were 0); a logged "sink running" is
+  the USBStreamer sink and doesn't count. Lab note =
+  docs/lab-notes/US-163-pi5-bootstrap.md:
+  - (1) US-163 AE check #10 PASS (enum-params, 8 gains 0/0);
+  - (2) US-163 AC14 PASS, CM-DEP-.89-2 (lab note l.178 and the l.229
+    note);
+  - (3) l.276, T54 after return, "16 gain-relevant values exactly 0
+    (pw-dump)";
+  - (4) l.406, AC17 Session B step (a);
+  - (5) l.412, AC17-B step (c), the post-PW-restart recovery read;
+  - (6) l.418, cold cycles 1 and 2;
+  - (7) l.465, step (b) baseline;
+  - (8) l.529, AC19 redeploy of merged main (CM-DEP-.89-AC19);
+  - (9) docs/project/defects/F-373.md l.38, the interim recovery
+    procedure (same evidence as 5).
+  Deliberately not listed (QE; the AE agrees): the Pi 4 era records
+  (C-009, TK-249, S-005, TK-039: listening tests on running nodes or
+  CamillaDSP mixer reads on retired hardware); F-298 A6, safety.md
+  check 10 and amps-on item 8 (criteria, not records); the gate
+  "closed / no pending gains" PASSes (GM API reads, not gain
+  readbacks).
+  AE RULING on the list (2026-10-26): the list is complete as given.
+  (i) The AE checked main dfdbbbd6 and TW batch v17: neither
+  safety.md, D-070 nor v17 cites AC17-B or the cold cycles as gains
+  evidence; safety.md items 8 and 13 are acceptance criteria still to
+  be tested, so the TW changes nothing there. The two facts the QE
+  names (output safety at power-on from the D-063 gains starting at
+  Mult 0; the F-373 interim recovery with the gains at 0) stay as
+  design facts but lose the readback proof; until the re-run they rest
+  on the conf defaults alone. Records are annotated APPEND-ONLY, never
+  rewritten (history): the TW adds one dated line to each of the 9
+  entries (lab note l.178/229/276/406/412/418/465/529 and F-373.md
+  l.38), verbatim: "2026-10-26: gains result NOT VERIFIABLE under
+  F-395 (fc/fc-out node state not logged); re-run pending (F-395 AC
+  c)." Plus the F-373 AC2 addition (see F-373). Vehicle: a small
+  docs-only PR or part of the F-318 batch (PM and TW choose). (ii)
+  Re-run scope ACCEPTED: one read per context, fc/fc-out state logged
+  before and after: after boot, after a PW restart, after a cold
+  cycle; plus after a WirePlumber restart (D-070 row 15 relies on it)
+  and after the F-373 recovery (PW plus bridge restart) if it differs
+  from the plain PW restart. Precondition: the step 1 OBSERVE. If it
+  shows fc or fc-out suspended or never run in a context, that
+  context's re-run can't produce a PASS; it waits for US-176 or F-396
+  (Addendum 1 B) and is not a FAIL meanwhile. The cold cycle waits
+  until the owner says they're available and blocks nothing.
 - **F-396** Production must never suspend the filter-chain or the
   USBStreamer node (P1 unless the Architect rules otherwise; AE,
   2026-10-26, from the r6b ruling draft section 4): a suspend of the
@@ -4907,6 +4979,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the race hypothesis is withdrawn). CM drvPath proof (posted): the
   test-e2e drvPath differs between dfb81cd7 and c32f416f only via
   LOCAL_DEMO_REPO_DIR="${self}"; all input derivations are identical.
+  #54 MERGED (CM, standing owner permission, 2026-10-26): merge commit
+  ba5cc200 at 23:33:47Z; 7/7 at c32f416f; CI 40242139498 green. The
+  F-394 test was SKIPPED and nothing was red, so the run is green
+  under the QE rule; per the QE it most likely means the DJ group was
+  skipped (F-394), so the merge says nothing about DJ mode.
   Pi build queue (Architect, 2026-10-25): F-365, then the F-374
   PR-head suite, then the wireplumber-no-bypass check; each from a
   tarball at the declared SHA with sandbox=true. WP check
