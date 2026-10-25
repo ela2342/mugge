@@ -22,6 +22,8 @@ position and position-independent room modes, so off-position robustness
 (AC4) cannot be evaluated yet; that is slice 174b-sim.
 """
 
+import math
+
 import numpy as np
 
 from . import dsp_utils
@@ -115,16 +117,40 @@ def system_response(acoustic_ir, fir):
 
 
 def max_positive_deviation_db(response_db, target_db):
-    """
-    Largest amount (dB) by which the response exceeds the target.
+    """Largest amount (dB) by which the response exceeds the target."""
+    return float(np.max(np.asarray(response_db) - np.asarray(target_db)))
 
-    Fails closed (AE): non-finite input raises ValueError. A NaN result
-    compares False both ways, so a ``dev > limit`` check would let it pass.
+
+def deviation_within_limit(dev_db, *, limit=MAX_POSITIVE_DEVIATION_DB):
     """
-    diff = np.asarray(response_db, dtype=float) - np.asarray(target_db, dtype=float)
-    if not np.all(np.isfinite(diff)):
-        raise ValueError("max_positive_deviation_db: non-finite response or target")
-    return float(np.max(diff))
+    The residual gate's only comparison. Fails closed (AE): a non-finite
+    deviation or limit, or a negative limit, is False.
+
+    ``limit`` is keyword-only and for tests; product code uses the default.
+    """
+    return (math.isfinite(dev_db) and math.isfinite(limit) and limit >= 0.0
+            and dev_db <= limit)
+
+
+def passes_residual_gate(response_db, target_db, *, limit=MAX_POSITIVE_DEVIATION_DB):
+    """
+    Residual gate (Architect + AE, 2026-10-25): True when the response
+    exceeds the target by at most ``limit`` dB everywhere.
+
+    Fails closed: empty input, or any non-finite value in either array, is
+    False. The check runs on the inputs as given, before any reduction,
+    because max() ignores -inf in the response and so would hide it.
+    A shape mismatch raises ValueError.
+    """
+    response = np.asarray(response_db, dtype=float)
+    target = np.asarray(target_db, dtype=float)
+    if response.shape != target.shape:
+        raise ValueError(f"passes_residual_gate: shape {response.shape} != {target.shape}")
+    if response.size == 0:
+        return False
+    if not (np.all(np.isfinite(response)) and np.all(np.isfinite(target))):
+        return False
+    return deviation_within_limit(max_positive_deviation_db(response, target), limit=limit)
 
 
 def below_target_report(freqs, corrected_db, uncorrected_db, target_db, margin_db,

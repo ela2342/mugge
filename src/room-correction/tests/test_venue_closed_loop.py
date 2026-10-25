@@ -20,7 +20,9 @@ Not covered here, on purpose:
 Acceptance values: AE, 2026-10-25.
 """
 
+import ast
 import inspect
+import math
 import os
 import subprocess
 import sys
@@ -393,7 +395,8 @@ class TestResidualPerChannel:
         for spk in result.corrections:
             _, cor, _ = _corrected_and_uncorrected(bundle, sim, result, spk)
             dev = closed_loop.max_positive_deviation_db(cor, np.zeros_like(cor))
-            assert dev <= MAX_POSITIVE_DEVIATION_DB, f"{name} {spk}: {dev:+.2f} dB"
+            assert closed_loop.passes_residual_gate(cor, np.zeros_like(cor)), \
+                f"{name} {spk}: {dev:+.2f} dB"
 
     def test_below_target(self, bundle, run, capsys):
         # AE ruling: never raised; over-cut near peaks bounded; far from
@@ -436,30 +439,76 @@ class TestResidualPerChannel:
             _, cor, unc = _corrected_and_uncorrected(bundle, sim, result, spk)
             zero = np.zeros_like(unc)
             if (closed_loop.max_positive_deviation_db(unc, zero) > NON_VACUOUS_UNCORRECTED_DB
-                    and closed_loop.max_positive_deviation_db(cor, zero)
-                    <= MAX_POSITIVE_DEVIATION_DB):
+                    and closed_loop.passes_residual_gate(cor, zero)):
                 biting.append(spk)
         assert biting, f"{name}: no channel where the residual bar bites"
 
-    @pytest.mark.parametrize("offset_db, passes", [(MAX_POSITIVE_DEVIATION_DB, True),
-                                                   (MAX_POSITIVE_DEVIATION_DB + 0.01, False)])
-    def test_gate_boundary(self, offset_db, passes):
-        # AE: exactly at the limit passes, 0.01 dB over fails (gate is dev <= MAX).
-        target = np.array([-2.0, -0.5, 0.0, 1.0, 2.5])
-        response = target.copy()
-        response[2] += offset_db
-        dev = closed_loop.max_positive_deviation_db(response, target)
-        assert (dev <= MAX_POSITIVE_DEVIATION_DB) is passes, f"{dev!r}"
+    @pytest.mark.parametrize("dev_db, limit, passes", [
+        (MAX_POSITIVE_DEVIATION_DB, MAX_POSITIVE_DEVIATION_DB, True),
+        (MAX_POSITIVE_DEVIATION_DB + 0.01, MAX_POSITIVE_DEVIATION_DB, False),
+        (math.nan, MAX_POSITIVE_DEVIATION_DB, False),
+        (math.inf, MAX_POSITIVE_DEVIATION_DB, False),
+        (-math.inf, MAX_POSITIVE_DEVIATION_DB, False),
+        (0.0, math.nan, False),
+        (0.0, math.inf, False),
+        (-2 * MAX_POSITIVE_DEVIATION_DB, -MAX_POSITIVE_DEVIATION_DB, False),
+    ], ids=["at-limit", "over-0.01", "nan", "+inf", "-inf", "nan-limit", "inf-limit", "negative-limit"])
+    def test_deviation_within_limit(self, dev_db, limit, passes):
+        # AE (b): the gate's one comparison, at and around its boundary;
+        # anything non-finite fails closed.
+        assert closed_loop.deviation_within_limit(dev_db, limit=limit) is passes
 
-    @pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
-    @pytest.mark.parametrize("where", ["response", "target"])
-    def test_gate_fails_closed_on_non_finite(self, bad, where):
-        # AE: a NaN must FAIL the gate, never compare its way through.
+    def test_deviation_within_limit_default_is_the_gate(self):
+        assert closed_loop.deviation_within_limit(MAX_POSITIVE_DEVIATION_DB) is True
+        assert closed_loop.deviation_within_limit(MAX_POSITIVE_DEVIATION_DB + 0.01) is False
+
+    @pytest.mark.parametrize("where, bad", [("response", math.nan), ("response", -math.inf),
+                                            ("target", math.inf)],
+                             ids=["response-nan", "response--inf", "target-+inf"])
+    def test_residual_gate_fails_closed_on_non_finite(self, where, bad):
+        # AE (b): checked on the arrays before max(), which drops a -inf
+        # response bin (or +inf target bin) and would otherwise pass.
         target = np.zeros(5)
         response = np.zeros(5)
         (response if where == "response" else target)[3] = bad
-        with pytest.raises(ValueError, match="non-finite"):
-            closed_loop.max_positive_deviation_db(response, target)
+        assert closed_loop.passes_residual_gate(response, target) is False
+
+    def test_residual_gate_fails_closed_on_empty(self):
+        assert closed_loop.passes_residual_gate(np.array([]), np.array([])) is False
+
+    def test_residual_gate_boundary(self):
+        target = np.array([-2.0, -0.5, 0.0, 1.0, 2.5])
+        at, over = target.copy(), target.copy()
+        at[2] += MAX_POSITIVE_DEVIATION_DB
+        over[2] += MAX_POSITIVE_DEVIATION_DB + 0.01
+        assert closed_loop.passes_residual_gate(at, target) is True
+        assert closed_loop.passes_residual_gate(over, target) is False
+
+    def test_no_product_caller_overrides_the_limit(self):
+        # Architect: `limit=` is for tests only. Scan every non-test Python
+        # file for a call to the gate functions that passes it; the only
+        # allowed one is the wrapper forwarding its own `limit`.
+        gate_fns = {"passes_residual_gate", "deviation_within_limit"}
+        overrides, forwards = [], []
+        for path in sorted((REPO_ROOT / "src").rglob("*.py")) + sorted((REPO_ROOT / "scripts").rglob("*.py")):
+            if ("tests" in path.parts or path.name.startswith("test_")
+                    or path.name == "conftest.py" or "node_modules" in path.parts):
+                continue
+            for node in ast.walk(ast.parse(path.read_text(), str(path))):
+                if not isinstance(node, ast.Call):
+                    continue
+                fn = node.func.attr if isinstance(node.func, ast.Attribute) else getattr(node.func, "id", None)
+                if fn not in gate_fns:
+                    continue
+                for kw in node.keywords:
+                    if kw.arg == "limit":
+                        if (path.name == "closed_loop.py" and isinstance(kw.value, ast.Name)
+                                and kw.value.id == "limit"):
+                            forwards.append(path)
+                        else:
+                            overrides.append(f"{path.relative_to(REPO_ROOT)}:{node.lineno}")
+        assert forwards, "scanner did not find the wrapper's own forwarding call"
+        assert not overrides, overrides
 
     def test_gate_has_teeth(self, bundle, home_lab, capsys):
         # Architect/AE/QE: same chain as the venue asserts, only the correction
@@ -477,10 +526,12 @@ class TestResidualPerChannel:
                   f"{freqs[np.argmax(weak_cor)]:.1f} Hz, real {real_dev:+.2f} dB", end="")
         verify_default = inspect.signature(
             verify.verify_target_deviation).parameters["tolerance_db"].default
-        assert MAX_POSITIVE_DEVIATION_DB < weak_dev <= verify_default, \
-            f"weak case drifted: {weak_dev:+.2f} dB"
-        assert weak_dev > MAX_POSITIVE_DEVIATION_DB
-        assert real_dev <= MAX_POSITIVE_DEVIATION_DB
+        zero = np.zeros_like(weak_cor)
+        assert closed_loop.deviation_within_limit(weak_dev, limit=verify_default), \
+            f"weak case drifted above verify's default: {weak_dev:+.2f} dB"
+        assert not closed_loop.passes_residual_gate(weak_cor, zero), \
+            f"weak case passes the gate: {weak_dev:+.2f} dB"
+        assert closed_loop.passes_residual_gate(real_cor, zero), f"real: {real_dev:+.2f} dB"
 
     @pytest.mark.parametrize("name", VACUOUS_SCENARIOS)
     def test_excluded_scenarios_are_vacuous(self, bundle, name):
@@ -490,9 +541,11 @@ class TestResidualPerChannel:
         for spk in result.corrections:
             _, cor, unc = _corrected_and_uncorrected(bundle, sim, result, spk)
             dev = closed_loop.max_positive_deviation_db(unc, np.zeros_like(unc))
-            assert dev <= MAX_POSITIVE_DEVIATION_DB, f"{name} {spk}: {dev:+.2f} dB"
+            assert closed_loop.passes_residual_gate(unc, np.zeros_like(unc)), \
+                f"{name} {spk}: {dev:+.2f} dB"
             harm = closed_loop.max_positive_deviation_db(cor, np.zeros_like(cor))
-            assert harm <= MAX_POSITIVE_DEVIATION_DB, f"{name} {spk}: {harm:+.2f} dB corrected"
+            assert closed_loop.passes_residual_gate(cor, np.zeros_like(cor)), \
+                f"{name} {spk}: {harm:+.2f} dB corrected"
 
 
 # -- AC6a: noise robustness -------------------------------------------------
@@ -599,13 +652,15 @@ class TestAC7Identity:
         path = sim.true_paths["sat_right"]
         level = ref.reference_levels_db["sat_right"]
 
-        def dev(filename):
-            _, resp = closed_loop.smoothed_response_db(
-                closed_loop.system_response(path, ref.filters[filename]), lo, hi)
-            return float(np.max(resp - level))
+        def resp(filename):
+            return closed_loop.smoothed_response_db(
+                closed_loop.system_response(path, ref.filters[filename]), lo, hi)[1]
 
-        own, other = dev("combined_right_hp.wav"), dev("combined_left_hp.wav")
-        assert own <= MAX_POSITIVE_DEVIATION_DB
+        own_resp, other_resp = resp("combined_right_hp.wav"), resp("combined_left_hp.wav")
+        target = np.full_like(own_resp, level)
+        own = closed_loop.max_positive_deviation_db(own_resp, target)
+        other = closed_loop.max_positive_deviation_db(other_resp, target)
+        assert closed_loop.passes_residual_gate(own_resp, target), f"{own:+.2f} dB"
         assert own < other - 1.0, (own, other)
 
     def test_left_and_right_differ(self, home_lab):
