@@ -54,7 +54,9 @@ SCENARIOS = ["home_lab", "small_club", "large_hall", "outdoor_tent"]
 RESIDUAL_SCENARIOS = ["home_lab", "small_club"]
 VACUOUS_SCENARIOS = [s for s in SCENARIOS if s not in RESIDUAL_SCENARIOS]
 NON_VACUOUS_UNCORRECTED_DB = 6.0
-WEAK_CUT_DB = 10.0   # teeth test: home_lab sub1 lands at about +5.7 dB
+# Teeth test degradation (one line, deterministic): the correction's cut depth
+# is limited to half the pipeline's cap.
+WEAK_CUT_DB = vp.MAX_CUT_DB / 2
 
 # AE: per-channel residual bands (clear of the 200 Hz crossover).
 RESIDUAL_BANDS_HZ = {"highpass": (250.0, 500.0), "lowpass": (30.0, 200.0)}
@@ -439,17 +441,19 @@ class TestResidualPerChannel:
         assert biting, f"{name}: no channel where the residual bar bites"
 
     def test_gate_has_teeth(self, bundle, home_lab, capsys):
-        # Architect/AE: a correction cut too shallow (WEAK_CUT_DB cap instead
-        # of the pipeline's 18 dB) leaves home_lab sub1 between the gate and
-        # verify_target_deviation's 8 dB default; the gate must fail it.
+        # Architect/AE/QE: same chain as the venue asserts, only the correction
+        # is degraded (cut depth capped at WEAK_CUT_DB). The residual lands
+        # between the gate and verify_target_deviation's 8 dB default and
+        # must fail the gate; the real correction passes.
         sim, real = home_lab
         weak = vp.generate_venue_filters(bundle, sim.measured_irs, max_cut_db=WEAK_CUT_DB)
-        _, weak_cor, _ = _corrected_and_uncorrected(bundle, sim, weak, "sub1")
+        freqs, weak_cor, _ = _corrected_and_uncorrected(bundle, sim, weak, "sub1")
         _, real_cor, _ = _corrected_and_uncorrected(bundle, sim, real, "sub1")
         weak_dev = closed_loop.max_positive_deviation_db(weak_cor, np.zeros_like(weak_cor))
         real_dev = closed_loop.max_positive_deviation_db(real_cor, np.zeros_like(real_cor))
         with capsys.disabled():
-            print(f"\n  teeth home_lab sub1: weak {weak_dev:+.2f} dB, real {real_dev:+.2f} dB", end="")
+            print(f"\n  teeth home_lab sub1 (30-200 Hz): weak {weak_dev:+.2f} dB at "
+                  f"{freqs[np.argmax(weak_cor)]:.1f} Hz, real {real_dev:+.2f} dB", end="")
         assert 3.0 < weak_dev <= 8.0, f"weak case drifted: {weak_dev:+.2f} dB"
         assert weak_dev > MAX_POSITIVE_DEVIATION_DB
         assert real_dev <= MAX_POSITIVE_DEVIATION_DB
