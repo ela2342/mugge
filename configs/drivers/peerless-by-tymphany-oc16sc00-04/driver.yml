@@ -21,19 +21,19 @@ metadata:
   datasheet_file: data/264-1522--tymphany-oc16sc00-04-spec-sheet.pdf
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: re_ohm, fs_hz, qms, qes, qts replaced as one set from https://www.parts-express.com/pedocs/specs/264-1522--tymphany-oc16sc00-04-spec-sheet.pdf (Tymphany sheet Rev 1, last update 2017-03-03), retrieved 2026-10-25: Revc 3.93, Fs 1967.77, Qms 2.62, Qes 4.04, Qts 1.59. The old qts 1294.83 was an Fs/Qts ratio, not a Q value. The replaced values (Re 3.89, Fs 2082.09, Qms 2.66, Qes 4.08) came from the parts-express.com product page, a different set from the sheet.'
   notes: 'Scraped from parts-express.com. Part number: 264-1522.'
   quantity_owned: null
   serial_numbers: []
   purchase_date: null
   condition: null
 thiele_small:
-  fs_hz: 2082.09
-  re_ohm: 3.89
+  fs_hz: 1967.77
+  re_ohm: 3.93
   z_nom_ohm: 4
-  qts: 1294.83
-  qes: 4.08
-  qms: 2.66
+  qts: 1.59
+  qes: 4.04
+  qms: 2.62
   vas_liters: null
   cms_m_per_n: null
   xmax_mm: null

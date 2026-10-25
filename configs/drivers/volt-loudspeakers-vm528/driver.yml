@@ -21,7 +21,7 @@ metadata:
   datasheet_file: VM528-Datasheet.pdf
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: le_mh 0.0 -> null; https://voltloudspeakers.co.uk/wp-content/uploads/VM528_v1.1.pdf (Revision 1.1, 01/12/25) prints 0.00 placeholders for Qms/Qes/Qts/VAS/Le, retrieved 2026-10-25.'
   notes: Scraped from soundimports.eu.
   quantity_owned: null
   serial_numbers: []
@@ -38,7 +38,7 @@ thiele_small:
   cms_m_per_n: null
   xmax_mm: null
   xmech_mm: null
-  le_mh: 0.0
+  le_mh: null
   bl_tm: null
   mms_g: null
   mmd_g: null

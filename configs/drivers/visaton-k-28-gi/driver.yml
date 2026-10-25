@@ -10,7 +10,7 @@ metadata:
   cone_material: null
   surround_material: null
   voice_coil_diameter_mm: null
-  weight_kg: 0.0
+  weight_kg: 0.006
   mounting:
     cutout_diameter_mm: null
     bolt_circle_diameter_mm: null
@@ -21,7 +21,7 @@ metadata:
   datasheet_file: data/292-7829--visaton-k28gi8-spec-sheet.pdf
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: weight_kg 0.0 -> 0.006 (net weight 6 g) per https://www.parts-express.com/pedocs/specs/292-7829--visaton-k28gi8-spec-sheet.pdf (no revision printed), retrieved 2026-10-25.'
   notes: 'Scraped from parts-express.com. Part number: 292-7829.'
   quantity_owned: null
   serial_numbers: []

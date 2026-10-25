@@ -21,7 +21,8 @@ metadata:
   datasheet_file: pdf_monacor_SPH-30X4SW_1.pdf
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: datasheet-inconsistent. https://doc.soundimports.nl/pdf/brands/Monacor/SPH-30X4SW/pdf_monacor_SPH-30X4SW_1.pdf (no revision printed) prints Qts 0.42, Qes 0.39, Qms 9.35 (Qts > Qes is impossible), retrieved 2026-10-25. Values kept as printed.'
+  ts_consistency: datasheet-inconsistent
   notes: Scraped from soundimports.eu.
   quantity_owned: null
   serial_numbers: []
