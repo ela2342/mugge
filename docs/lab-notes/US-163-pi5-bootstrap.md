@@ -103,8 +103,8 @@ $ cat /boot/firmware/gens/MAP.txt
 ```
 
 Recovery via card reader: set line 16 to
-`os_prefix=gens/nkifli3rxayxxmrndqw3a3ic0jj5fix8/`. Since AC18a this is the
-only generation on the firmware partition (see "FAT generations" below).
+`os_prefix=gens/nkifli3rxayxxmrndqw3a3ic0jj5fix8/`. For the current
+generations and recovery line, see "FAT generations" below.
 
 ```bash
 # Step 3: one announced reboot (warm, not a power cycle)
@@ -298,20 +298,26 @@ it never recreates them, so `gens/x83…/` stays pruned until a deploy
 writes it again. The offline check `checks.<system>.pi5-prune-gens` runs
 the same script against fake directories.
 
-After AC18a the firmware partition holds only `gens/nkifli3rxayxxmrndqw3a3ic0jj5fix8/`:
+After AC18a the firmware partition held only
+`gens/nkifli3rxayxxmrndqw3a3ic0jj5fix8/`. After CM-DEP-.89-3 (deploy of
+`f0fbefd1`, AC18b, AC18c and T54b) it holds two complete generations,
+`2wf21ydgfyqsz35iqy5hfjlyp37jrsqn` (system-4, booted) and
+`nkifli3rxayxxmrndqw3a3ic0jj5fix8` (system-3):
 
 ```bash
 $ cat /boot/firmware/gens/MAP.txt
 1 p9mzphhydmf7p1kjqjkc76dvcij2y99i pruned
 2 x83m7bircd4b7j8wchx9k1mnilzi8kl4 pruned
 3 nkifli3rxayxxmrndqw3a3ic0jj5fix8 present
+4 2wf21ydgfyqsz35iqy5hfjlyp37jrsqn present
 $ grep -n os_prefix /boot/firmware/config.txt
-16:os_prefix=gens/nkifli3rxayxxmrndqw3a3ic0jj5fix8/
+16:os_prefix=gens/2wf21ydgfyqsz35iqy5hfjlyp37jrsqn/
 ```
 
-Recovery via card reader: `os_prefix=gens/nkifli3rxayxxmrndqw3a3ic0jj5fix8/`.
-The x83 store path and `system-2-link` remain, so the T54 method rewrites
-`gens/x83…/` from the store if a rollback is needed.
+Recovery via card reader: set line 16 to
+`os_prefix=gens/nkifli3rxayxxmrndqw3a3ic0jj5fix8/` (the previous
+generation). The x83 store path and `system-2-link` remain, so the T54
+method rewrites `gens/x83…/` from the store if a rollback to it is needed.
 
 ### Deviations from Plan
 
