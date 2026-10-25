@@ -2219,6 +2219,42 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     unreadable-state cases). worker-3 adds S1/S2, then runs the fresh
     selftest. The disk hold on the selftest is lifted (5.3 GiB free;
     CM cleared worker-3).
+    Gate-2 r3 selftest at 9d941567 did NOT pass (CM, 2026-10-25;
+    evidence /tmp/w3-gate2/selftest-r3-result/, sums 631930a2,
+    verified). P1, a real finding: `pw-cli s ... Props gain_a:Mult
+    0.5` exited 0, but enum-params AND pw-dump both still read 0.0.
+    worker-3 withdraws the "enum-params verified live" claim; this
+    affects AE B1. P2, a selftest bug: the setparam run's WirePlumber
+    restart dropped the GM stand-in link, so C1b, Perturb and
+    FailReplay were not exercised yet.
+    Joint AE + Architect ruling (via CM, 2026-10-25; verbatim
+    /tmp/w3-gate2-rulings/joint-AE-Architect-r3-gain-readback.md,
+    sha256 c6dd26c2; PM frozen copy
+    /tmp/pm-backlog/joint-r3-gain-readback-c6dd26c2.md): H1 the set
+    never applied, or H2 the readers don't see runtime sets; the
+    readback alone can't tell them apart. r4 is selftest only
+    (gate2.py stays b226c0ba): (a) re-create the GM link per run; (c)
+    setparam fails early if its gains read 0; Architect S1/S2; plus a
+    sandbox matrix T1 (separate client) and T2 (in-daemon, the Pi
+    topology), each idle and with a stream, recording per cell pw-cli,
+    the enum-params poll, pw-dump, the output RMS via a sine (b5) and
+    a -0.0 print control (b6). T2 decides: the set applies AND the
+    readers see it -> H2 false for the Pi topology (T1 blindness is a
+    sandbox artefact; the negative setparam case moves to T2); the set
+    applies but the readers stay 0 -> H2 true, a P1 AE finding against
+    safety.md check 10 / AE B1 (fallback reader: the US-159 raw-bits
+    reader or an output-level check). F-ID held until T2 classifies
+    it. (b) set-param diagnostics and the build waited for this
+    ruling.
+    B1 rule unchanged. The Gate-2 report must say "gains: boot
+    defaults verified; live readback unproven (r3 finding)". The
+    Gate-2 Pi run may proceed once the r4 selftest passes; it stays
+    silent, with no gain writes. RULE: no amps-on step counts the
+    gains readback as live proof until T2 shows H2 false AND the Pi
+    -0.0 readback check (below) has passed. The TW is told to hold or
+    caveat the safety.md "Gains at boot" bullet (F-318 v10); the
+    amps-on list here follows the merged safety.md wording. Disk 5.2
+    GiB after one ~8 MB build.
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -4414,5 +4450,17 @@ merge needs update-branch and 7 reconfirmations at the new head.
   case passes. (2) safety.md:69-71 on the US-173 branch says
   pw-dump, not pw-cli, for gains, contradicting the AE's
   enum-params rule; the AE is ruling and the TW fixes it.
+  (3) Gate-2 r3 (2026-10-25): a sandbox runtime set showed in neither
+  enum-params nor pw-dump; the joint AE + Architect ruling and the r4
+  T1/T2 matrix are under US-173 (Gate-2). Until T2 shows H2 false and
+  the Pi -0.0 check passes, no reader counts as live proof.
+- Pi -0.0 gain readback check (joint AE + Architect ruling, point 3,
+  2026-10-25): a small separate CHANGE session, nothing connected,
+  after the sandbox (r4 T2) result, with the Pi back up first. Set ONE
+  gain_*:Mult to -0.0, read it (expect -0.000000), restore 0.0 and
+  read it (expect 0.000000). No gain increase, so S-012 doesn't apply,
+  and no PW restart. If the Pi doesn't print -0.000000, enum-params is
+  blind to runtime sets on the Pi: an AE finding that blocks B1 as
+  live proof.
 - #36, #40: no Rule 13 review; owner direction needed (#40 IDs clash).
 - chore/backlog (this file): no PR yet; docs-only.
