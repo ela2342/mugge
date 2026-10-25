@@ -1776,7 +1776,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   522e5571, drm-reads 0da219b4, with QE R1-R3 and Architect N1
   implemented; re-review with the QE and Architect. worker-2's Mac
   harness passed the oracle cases; the us172.sh changes were only
-  checked with bash -n and shellcheck. H1 may pre-empt the Pi
+  checked with bash -n and shellcheck. QE APPROVE and Architect
+  APPROVE at 522e5571/0da219b4 (CM, 2026-10-25). CM-CHG-.89-US172c
+  granted to worker-2 (two announced reboots). QE non-blocking:
+  US172_CM_GO set per command only; the run report notes that
+  disarm is untested. Architect note: a failed first tb-reboot also
+  locks the run until the CM releases it (intended). H1 may pre-empt
+  the Pi
   build queue between derivations once reviewed; US-173 Gate-2
   follows H1.
   /dev/mem firmware-log read: DEFERRED. Eligible only if H1 is
@@ -2205,7 +2211,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Pushed (CM, 2026-10-25, later): story/US-174-room-correction =
   d595613f (US-174b). worker-4 hit one classifier denial (PII Data
   Handling, a read under /tmp/claude-503); team-lead reports it to
-  the owner.
+  the owner. Pushed (CM, 2026-10-25): f515f99d with per-scenario
+  non-vacuity, the large_hall/outdoor_tent exclusions with a
+  guard, the rename to test_venue_closed_loop.py and the F-383
+  margin comment; 68 passed, e2e 76. Waiting on the QE's verdict.
   Measurement SNR check (AE, P2, AE-owned; 2026-10-25): US-174b
   shows the correction raises up to +0.67 dB in below-target
   regions at -40 dB noise re peak, clean at -60. The sweep capture
@@ -2788,6 +2797,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   The US-174 head 0b412fde changes nothing under configs/drivers or
   src/room-correction vs main b0666c02, so the US-174 T1 ruling
   above stands.
+  New evidence (QE, 2026-10-25): test_sample_real_drivers_pass is
+  red on darwin (Purifi sampled) and green on aarch64-linux CI (run
+  40232728057, same drv 909sn50k), so it hid F-363 from Linux CI;
+  it only ever covers 20 of ~2345 records. Fix inside the F-363 PR
+  (worker-6): delete it in favour of the full-set test, or sort it.
+  Medium; closes with the F-363 PR. Whether this gets its own ID or
+  stays under F-363 (PM: same test as the title and AC (1)) is with
+  the QE. F-380 step 1 follow-up: grep the test suites for other
+  unsorted iterdir/glob/listdir slicing.
   Follow-ups outside worker-6's fence (QE and AE via worker-6,
   2026-10-25; not in the F-363 PR):
   - Re-scrape risk (QE): the driver scrapers would undo the F-363
@@ -3117,7 +3135,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   github.com/ela2342/mugge/actions/runs/40232728057, in progress;
   expected red on F-363 alone. The CM deletes the branch after the
   result. worker-7's F-365 v3 Pi scripts are shelved, unhashed
-  (fallback only).
+  (fallback only). RESULT (CM, 2026-10-25): GREEN, 1198 passed / 1
+  skipped, not the expected red on F-363 (explained by F-363's
+  order-dependent sample, see there). The QE is ruling; worker-7
+  updates the #54 body; the scratch branch is deleted.
   Pi build queue (Architect, 2026-10-25): F-365, then the F-374
   PR-head suite, then the wireplumber-no-bypass check; each from a
   tarball at the declared SHA with sandbox=true. WP check
