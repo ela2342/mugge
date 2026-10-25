@@ -32,8 +32,10 @@ checks.*); F-381 (P3, driver datasheet_file paths); F-382 (P3,
 deploy-src git export ref); F-383 (P1, combine destroys LR8
 phase); F-384 (P1, correction.py step 9 re-clip); F-385 (P1, D-031
 subsonic vs crossover phase; PM checked free across main, origin
-and all worktrees, 2026-10-25).
-Next free: F-386, US-176, D-071, T66.
+and all worktrees, 2026-10-25); F-386 (P2, gain values read from
+pw-dump; PM checked free across main, origin and all worktrees,
+2026-10-25).
+Next free: F-387, US-176, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -1470,7 +1472,21 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      rows", "rows 1-3 and 5-14") and the Gate rule ("1-3, 5-14")
      change with this row; the TW updates them in the same batch,
      and this list then follows the merged safety.md wording.
-     WORDING NOT FINAL (TW, 2026-10-25): the AE has since ruled that
+     FINAL TEXT (AE ADDENDUM 5, via TW, 2026-10-25; this list takes
+     it verbatim once the F-318 batch merges, mirror rule): "US-175:
+     GraphManager re-link after a WirePlumber restart verified to
+     come back with the gate closed and all 8 gain nodes at Mult and
+     Add 0 (GraphManager may hold the venue gains as pending, but not
+     live on the nodes), no automatic resume. Until verified: the
+     operator check in the safety.md WirePlumber-restart rule after
+     every WirePlumber restart." Pending row 14 changes, same batch
+     (AE ADDENDUM 5, applied here on merge): "'muted' is proven only
+     by all 16 gain values reading 0 in pw-dump" becomes "'muted' is
+     proven only by all 16 gain values reading exactly 0.000000 via
+     `pw-cli enum-params <pi4audio-convolver id> Props` (see Gains
+     at boot)"; "able to run the pw-dump read" becomes "able to run
+     that `pw-cli` read".
+     Earlier note, superseded by the final text: the AE has since ruled that
      "unchanged" is a FAIL, so "gains unchanged or 0" above is
      superseded; the TW asked the AE for corrected text. Do not act
      on the quoted text; this row is replaced by the TW's final
@@ -1980,7 +1996,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     straight to hw:1,0; step 1 `aplay -l` becomes `cat
     /proc/asound/cards`). Not a backlog item. Team-lead and UX
     concur (steps 6 and 7 replaced); PM asked the AE to confirm
-    directly. TW has 3 open
+    directly. CONFIRMED (AE, 2026-10-25; text in the AE review file,
+    Q2): step 6 checks the gate state read-only (a closed gate is
+    the safe default, never opened as a troubleshooting step); step
+    7 is read-only `cat /proc/asound/cards`, never playing straight
+    to hw:; step 1 merges into or points to step 7 (TW's choice).
+    TW has 3 open
     questions to the AE on the C2 bullet; row 15 number and text
     may still change.
   - UX N2 (backlog; not needed for US-173): a dismissible web UI
@@ -2902,12 +2923,28 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   failure there reopens F-365 at High. (a), the Pi-native build,
   is a fallback only (its conditions above apply if used). CM
   option: a scratch-branch workflow_dispatch on the ARM runner that
-  builds only that check (not release.yml).
+  builds only that check (not release.yml). CM, 2026-10-25: the
+  Architect withdrew (a) to fallback-only and took the QE's (c)
+  with the QE's conditions (Architect's own words to the QE); the
+  "(c) rejected" in the RULING above is void.
+  QE fallback conditions for (a), for the record (only if the
+  fallback is ever used): (1) sandbox=true recorded; (2) full -L
+  log, compared per test with worker-7's darwin state file at
+  320c3ae6; (3) a rerun at the merged head after F-363, with GC
+  roots removed afterwards; (4) no overlap with US-172 H1; an
+  interrupted build restarts at the dry-run gate; (5) WP canary:
+  the 16 gains still 0 and the gate closed, besides the pids and
+  links; any change = STOP to the QE and Architect.
   Pi build queue (Architect, 2026-10-25): F-365, then the F-374
   PR-head suite, then the wireplumber-no-bypass check; each from a
   tarball at the declared SHA with sandbox=true. WP check
   post-condition: live PW/WP pids unchanged, no new USBStreamer
   links. US-172 H1 may pre-empt between derivations.
+  Queue update (CM, 2026-10-25; supersedes the order above): F-365
+  is REMOVED from the Pi queue (fallback only, see above). The
+  queue is the F-374 PR-head suite, expressed as `nix build
+  .#checks.*` (never `nix run` apps), then the wireplumber-no-bypass
+  check.
   Pi as builder (CM, 2026-10-25): sandboxed `nix build
   .#checks.*` only, with sandbox=true recorded and the thermal rule
   applied; never `nix run .#test-*` on the Pi; GC after the queue
@@ -3162,14 +3199,28 @@ merge needs update-branch and 7 reconfirmations at the new head.
   release or tag dispatch, permission-system blocks. Vetoes and
   safety rules are unchanged.
 - #43, #45, #44: need #49 on main and real green CI; #45 before #44.
-- #45 dangling citations (TW, 2026-10-25): AC14, F-320, F-338 and
-  F-347 cite "pre-flight #10 (PR #45)". #45 (docs/safety-d063-gate,
+- #45 dangling citations (TW, 2026-10-25): AC14, F-320, F-338,
+  F-339 and F-347 cite "pre-flight #10 (PR #45)". #45
+  (docs/safety-d063-gate,
   76b61347) is unmerged, so on main those citations point at
   nothing. Resolve when #45 merges or re-point them. Owner TW.
 - #45 gain read method (TW, 2026-10-25; needs an AE ruling before #45
   merges): #45's pre-flight #10 reads gains with `pw-cli
   enum-params` (pw-dump hides NaN), while main's "Gains at boot"
   rule and the F-318 batch's C2 read them from pw-dump. One method
-  must be chosen and used consistently.
+  must be chosen and used consistently. CLOSED (AE ruling,
+  2026-10-25): #45 check 10 is correct as written, no change. The
+  contradiction was on the main/F-318 side and is fixed in the F-318
+  batch ("Gains at boot", C2, amps-on row 14, D-070 row 14 entry;
+  AE ADDENDUM 4/5). Follow-ups: F-386.
+- **F-386** Gain values read from pw-dump (AE, P2, AE-owned review;
+  2026-10-25). AE ruling: gain VALUES are read only with `pw-cli
+  enum-params <pi4audio-convolver id> Props`; pw-dump is for
+  structure only (node counts and names), because it prints
+  NaN/-Inf/subnormal as 0.000000. Review the remaining pw-dump value
+  readers outside the F-318 batch, e.g. safety.md's audit polling
+  "via pw-dump every 30 s" and audio_mute.py. Node discovery via
+  pw-dump is fine; no value check may trust pw-dump for
+  NaN/-Inf/subnormal.
 - #36, #40: no Rule 13 review; owner direction needed (#40 IDs clash).
 - chore/backlog (this file): no PR yet; docs-only.
