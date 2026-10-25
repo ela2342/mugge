@@ -31,6 +31,10 @@ from . import target_curves as tc
 SAMPLE_RATE = dsp_utils.SAMPLE_RATE
 EVAL_N_FFT = 1 << 17          # 0.37 Hz bins at 48 kHz, fine enough for Q~10 modes
 POINTS_PER_OCTAVE = 48
+# Residual gate (AE): max positive deviation of the corrected response from
+# the target, 1/6 octave, per channel. AE value for the simulated-scenario
+# gate; US-174d revisits it for real measurements.
+MAX_POSITIVE_DEVIATION_DB = 3.0
 
 
 def log_grid(f_low, f_high, points_per_octave=POINTS_PER_OCTAVE):
