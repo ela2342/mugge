@@ -1711,6 +1711,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   greetd-only does not go out either. fdtoverlay is GO, plus Mac
   checks: (a) which file tryboot reads, (b) the overlay path and
   names, (c) which base dtb.
+  Marker spec (CM, 2026-10-25): `disable_splash=1` in tryboot.txt
+  only, read with vcgencmd get_config. The 3-state bt oracle also
+  prints the base-DTB model and compatible. Order: Mac results,
+  then the revised step 2 reviewed by the Architect and the QE,
+  then the CM's grant.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -1914,6 +1919,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     --venue CLI takes --speaker-profile explicitly.
   - OPEN joint ruling (Architect + AE): "GM links survive a WP
     restart", option (1) or (2).
+    RULED (Architect + AE, CM 2026-10-25): the US-173 evidence item
+    is reworded to "F-318 never removes GM-created links; after a
+    WP restart GM re-links (US-175)". worker-3 makes no change. The
+    re-link requirement goes to US-175 (see there).
+  - No null sink in F-318 (AE and Architect, 2026-10-25).
+  - Gate-2 amps call (AE, for worker-3, 2026-10-25): amps OFF, no
+    HP/IEM; restarts are announce-only; D-070 NOT in effect.
+    Optional F-321(f) tone check, digital only, gains at or below
+    the venue draft (sats -12, sub -20, ch 4 and HP/IEM -120); then
+    the gate closed, gains back to 0 and AC14 read back.
   worker-3 findings (not fixed):
   - a) A WirePlumber restart re-creates the ports of nodes it adopts
     and drops their links, even with the policy disabled;
@@ -2265,6 +2280,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   subsonic interaction is filed as F-385.
   OPEN joint ruling (Architect + AE, CM 2026-10-25): the F-374
   post-combine gate, issue 1 (lifting the combine.py per-bin clip).
+  RULED (Architect + AE final, relayed to worker-5 by the CM,
+  2026-10-25; closes the open ruling above): the post-combine gate
+  runs on the no-HPF copy with combine unchanged.
+  - Crossover level, unchanged: sum +/-0.05 dB, legs -6 +/-0.5 dB,
+    phase <= 5 deg at fc and <= 10 deg over fc/2..2fc.
+  - Post-combine interim, RELATIVE to each WAV's plateau: legs -6
+    +/-0.7 dB, sum +/-0.7 dB over fc/2..2fc, phase <= 5 deg at fc
+    and <= 10 deg over fc/2..2fc; max|H| <= -0.5 dB absolute.
+  - The PR body records the +0.6 dB per-bin-clip lift.
+  - Tightening is a new F-383 AC (see F-383).
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
@@ -2274,6 +2299,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   src/graph-manager only, disjoint from worker-4's US-174b fence
   and US-173's F-318 WP files. Owner unassigned. Team-lead pauses new
   workers because of the Mac disk (5.0 GiB free, CM, 2026-10-25).
+  NEW requirement (Architect + AE, CM 2026-10-25): GM detects node
+  and port re-creation and restores the mode's links. AE safety
+  conditions:
+  - (a) A WP restart destroys and re-creates the USBStreamer node,
+    so it is a USBStreamer interruption: announce it, and the amps
+    rule applies as for a PW restart. TW adds this to safety.md
+    (PM relayed to the TW).
+  - (b) GM's automatic re-link comes back with the D-063 gate
+    CLOSED and the gains unchanged or at 0. It never resumes audio
+    on its own; reopening is an explicit operator action.
 - **F-383** (Architect, AE; 2026-10-25) combine_filters: the D-009
   magnitude clip plus the minimum-phase re-synthesis destroys the
   LR8 crossover phase (76/64 deg HP/LP over fc/2..2fc, sum down to
@@ -2312,6 +2347,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   channel's scalar deviates from -0.5 dB by more than 0.1 dB (AE
   condition, moved here from F-374); tail check as above; full
   room-correction and web-ui runs.
+  NEW AC (Architect + AE, 2026-10-25, from F-374; the Architect's
+  named OK for the test change): once the scalar gain replaces the
+  per-bin clip, tighten the F-374 post-combine gate to legs -6
+  +/-0.5 dB relative and sum +/-0.1 dB relative.
 - **F-384** (Architect; AE confirms the priority; P1; 2026-10-25)
   correction.py step 9 (main b0666c02,
   src/room-correction/room_correction/correction.py:130-143): the
