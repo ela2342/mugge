@@ -30,8 +30,10 @@ items.
 F-379 (P2, web-UI correction level defect); F-380 (P2, CI builds no
 checks.*); F-381 (P3, driver datasheet_file paths); F-382 (P3,
 deploy-src git export ref); F-383 (P1, combine destroys LR8
-phase); F-384 (P1, correction.py step 9 re-clip).
-Next free: F-385, US-176, D-071, T66.
+phase); F-384 (P1, correction.py step 9 re-clip); F-385 (P1, D-031
+subsonic vs crossover phase; PM checked free across main, origin
+and all worktrees, 2026-10-25).
+Next free: F-386, US-176, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -1690,6 +1692,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   it after their session. Harness gap (worker-2): us172.sh
   tb-reboot should check the transient reboot unit's result after
   the 5 s timer instead of polling for 900 s.
+  tb-post (worker-2, CM 2026-10-25): the tryboot itself worked and
+  audio/safety passed, but os_prefix order is NOT the cause (the
+  tryboot falsified the order theory). Root cause still open,
+  pending the firmware log; the CM gave the go for the firmware-log
+  read on that boot. B4e verified by the CM (diff vs 381ef984 =
+  step-1 lines 57-60 only), held until worker-2's session closes.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -2163,6 +2171,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the satellite's mandatory 80 Hz subsonic, not the crossover. With
   the Architect and the AE; a new defect is likely (PM assigns the
   ID on request).
+  JOINT RULING FINAL (Architect + AE, relayed to worker-5 by the CM,
+  2026-10-25): worker-5's option (a) accepted. The post-combine gate
+  uses an in-test copy without the sat HPF, thresholds unchanged.
+  Real-profile regression guard: +/-1 dB sum, max|H| <= -0.5 dB, fc
+  phase difference <= 30 deg, D-031 present (0.3 deg margin; F-383
+  crossing it is a STOP). The limitation goes in the PR body, no
+  xfails. Deployable for the supervised US-173 session (sound
+  quality, not safety). The subsonic interaction is filed as F-385.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
@@ -2227,6 +2243,27 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   test that forces the overshoot branch; the web-ui tests pass
   unchanged (frozen function; only this branch's behaviour
   changes).
+- **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
+  subsonic vs crossover phase interaction". Origin: F-374, where
+  the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
+  <= 30 deg sat-sub budget at 200 Hz. Direction (Architect,
+  verbatim):
+  - D-031 is NOT moved or removed for phase reasons alone. It is
+    redefined as a per-driver excursion mask |H_sat(f)| <= mask(f),
+    derived from Xmax at full amp output using the F-363 T/S
+    records. The mask is asserted fail-closed on every exported sat
+    WAV.
+  - A separate subsonic is added only where the crossover HP alone
+    violates the mask, at the lowest order and corner that satisfy
+    it. At 200 Hz LR4 the AE expects none to be needed.
+  - Fallback: a documented intentional electrical sat delay (~0.4 ms
+    at fc). That needs a defined offset in 174b's +/-0.2 ms
+    geometric delay AC.
+  - No allpass compensation: a causal allpass only adds lag, and it
+    would also break the F-383 min-phase check.
+  - Sequenced after F-383, before 174b's alignment ACs are judged:
+    29.7 deg uses up the whole <= 30 deg sat-sub budget at 200 Hz.
+  - The AE derives the mask once the CHN-50P record is final.
 
 ## P2
 
