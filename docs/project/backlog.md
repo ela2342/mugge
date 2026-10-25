@@ -375,7 +375,8 @@ Next free: F-370, US-173, D-069, T66.
     all counts > 0), all green except F-363 (pre-existing, not US-163
     scope). Lab note 9b2879eb, SecSpec OK, no cuts; story/US-163 now
     bbff469e (CM, 2026-10-25). Later: story/US-163 = 976ed8c5
-    (lab-note docs commit, pushed; CM).
+    (lab-note docs commit, pushed; CM). Then story/US-163 = 96b4246c
+    (F-369 fix, parent 976ed8c5; pushed, ls-remote verified; CM).
   - Recovery (Architect): the firmware partition keeps 2 gens, now
     nkifli3r + x83m7bir; p9mz... was pruned. The PR text and recovery
     notes use gens/x83m7bircd4b7j8wchx9k1mnilzi8kl4/ as the fallback
@@ -414,7 +415,8 @@ Next free: F-370, US-173, D-069, T66.
     recorded keeps AC18b/AC17 valid; any non-docs change reruns both.
     Status (CM, 2026-10-25): T53 PASS, T54 ACCEPTED, AC18a PASS.
     AC18b NOT GRANTED: held until the F-369 fix is deployed (PO;
-    item 7).
+    item 7). HELD for worker-1's follow-up commit + QE acceptance;
+    then (CM) merge origin/main 289390bf into the branch -> DEPLOY.
     1. PASS (QE + SecSpec; CM-OBS-.89-T53, T53b, T53c): T53-on-deploy,
        ONE read-only OBSERVE on the running deploy. NO external port
        scan (owner directive, see the test-process rule below); the
@@ -592,7 +594,57 @@ Next free: F-370, US-173, D-069, T66.
        gens/<id>/ layout byte-for-byte unchanged in the diff. The
        Architect's review confirms the diff touches
        only prune/retention, not the pointer write, boot selection or
-       FAT layout (normal review item; PO). New **AC18c** (PO): "A no-op
+       FAT layout (normal review item; PO).
+       F-369 STATUS (CM, 2026-10-25): fix committed at 96b4246c
+       (story/US-163). Review record:
+       - Architect APPROVE 96b4246c, no changes requested. Item E
+         (empty prev/booted) and findutils CLOSED, no action: a
+         directory name is never empty; the hook uses only coreutils
+         and gnused.
+       - QE: cases 1-7, 1b and the negative controls reviewed, fine.
+         DROPPED by QE: the same-store-path proof (hook and check both
+         import prune-gens.nix) and the non-matching-entry part of
+         case 10.
+       - Design (unchanged): keep set {new, prev, booted, alt}; alt =
+         the highest-numbered system-*-link id != new whose
+         gens/<id>/.complete exists; keep only, never recreate
+         (Architect). Offline check pi5-prune-gens (pure bash
+         runCommand, no VM). Pi 4 drvPaths unchanged, board-guard
+         green (Architect item 6); a new Pi 5 toplevel is expected.
+       - STILL REQUIRED in worker-1's follow-up commit (via CM): (i) a
+         CI step building checks.x86_64-linux.pi5-prune-gens (the
+         gating item); (ii) an "N/N cases passed" line; (iii) case 8:
+         a booted gen with no profile link is kept; (iv) case 9:
+         idempotence (a second run changes nothing), plus a plain
+         `system` symlink in setup(). QE accepts on a local log with a
+         non-zero count; CI confirms on the PR.
+       AC18b/AC18c/T54b PASS CRITERIA (joint Architect + QE ruling,
+       FINAL; N = nkifli3r, M = the deployed head, which must contain
+       96b4246c):
+       - Precondition: {N} only, pointer at N, x83 pruned (left by
+         AC18a under the old hook). This is F-369 as observed: a
+         precondition, not a new defect.
+       - Steps: (a) deploy M -> {M, N}, pointer at M; (b) reboot ->
+         unchanged, booted M; (c) AC18c no-op redeploy -> {M, N}, no
+         new profile link; (d) T54b step 1, rollback via
+         switch-generation k -> pointer at N, booted N after the
+         reboot; (e) T54b step 2, switch-generation k+1 -> pointer at
+         M, booted M after the reboot. A fresh deploy of M in (e) also
+         PASSES (links k+1 and k+2 both point to M).
+       - At every step (a)-(e): exactly 2 complete generations (M and
+         N), the booted generation and the os_prefix target among
+         them, no gens/*.tmp. 1 generation or a missing .complete =
+         FAIL and STOP.
+       - (c) is the F-369 regression proof.
+       - Restriction: no no-op deploy while N is active (N's old hook
+         would collapse the FAT to 1 generation).
+       - Evidence at each step (QE; part of the DEPLOY grant):
+         ls -la gens/*/; the config.txt os_prefix line; MAP.txt;
+         readlink /run/booted-system; ls -l
+         /nix/var/nix/profiles/system*.
+       - worker-1's item 5 (1 generation after a no-op deploy) is a
+         misreading, not a new defect.
+       New **AC18c** (PO): "A no-op
        redeploy (boot at the same SHA) leaves >= 2 complete
        generations on the FAT, and the booted generation is among
        them." QE AC18b criteria: (i) MAP shows >= 2 present (M +
