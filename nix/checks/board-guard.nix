@@ -67,6 +67,21 @@ let
   # F-366: NVMe-oF selects TLS and breaks TLS=no on every RT kernel.
   nvmeFabricsStripped = c: lib.all (k: kconf c k == "n") [ "NVME_FC" "NVME_TCP" "NVME_TARGET" ];
 
+  # F-358: module-rt direct path, shared by all boards. The fragment is
+  # checked in source (eval-only, no build) and must be the one copied into
+  # the PipeWire config package.
+  rtFragment = let
+    lines = lib.splitString "\n" (builtins.readFile ../../configs/pipewire/05-rt-direct.conf);
+    code = builtins.filter (l: builtins.match "[[:space:]]*#.*" l == null) lines;
+  in lib.concatStringsSep " " (builtins.filter (t: builtins.isString t && t != "")
+    (builtins.split "[[:space:]]+" (lib.concatStringsSep " " code)));
+  rtDirect = c: builtins.length (lib.splitString "libpipewire-module-rt" rtFragment) == 2
+    && lib.all (kv: lib.hasInfix kv rtFragment) [
+      "module.rt = false" "nice.level = 20" "rt.prio = 88"
+      "rtkit.enabled = false" "rtportal.enabled = false" ]
+    && builtins.any (p: lib.hasInfix "pipewire.conf.d/05-rt-direct.conf" (p.buildCommand or ""))
+      c.services.pipewire.configPackages;
+
   pi4 = conf:
     let c = cfg conf; in map (a: check conf a.name a.ok) [
       { name = "board is pi4"; ok = c.mugge.board.name == "pi4"; }
@@ -79,6 +94,7 @@ let
       { name = "5900/8080 open (allowlist is a follow-up)"; ok = builtins.elem 8080 (tcpPorts c) && builtins.elem 5900 (tcpPorts c); }
       { name = "US-156 lab route present"; ok = hasUs156Route c; }
       { name = "PipeWire enabled"; ok = c.services.pipewire.enable; }
+      { name = "module-rt direct, RTKit off (F-358)"; ok = rtDirect c; }
       { name = "no ALSA card-block rule (Pi 4 follow-up)"; ok = !hasCardBlock c; }
     ];
 
@@ -134,6 +150,7 @@ let
       { name = "bootstrap.minimal unset"; ok = !c.mugge.bootstrap.minimal; }
       { name = "vc4-kms overlay with noaudio"; ok = lib.hasInfix "dtoverlay=vc4-kms-v3d-pi5,noaudio" (configTxt c); }
       { name = "PipeWire enabled"; ok = c.services.pipewire.enable; }
+      { name = "module-rt direct, RTKit off (F-358)"; ok = rtDirect c; }
       { name = "WirePlumber disables other ALSA cards"; ok = hasCardBlock c; }
       { name = "8080 open on the LAN (owner ruling, F-037)"; ok = builtins.elem 8080 (tcpPorts c); }
       { name = "TCP inbound exactly [22 8080]"; ok = lib.sort lib.lessThan (allTcpPorts c) == [ 22 8080 ] && allTcpRanges c == [ ]; }
