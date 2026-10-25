@@ -1797,7 +1797,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the session kept. Once the Pi is back: CM host-key/MAC check,
   worker-2's read-only state record, then the restore path,
   reviewed by the QE and Architect, before tb-restore. The Pi queue
-  (US-173 Gate-2, the WP check) waits behind it. H1 may pre-empt
+  (US-173 Gate-2, the WP check) waits behind it. STOP confirmed
+  (worker-2 via CM): tb-reboot verdict FAIL at 21:18:49Z, not back
+  within 900 s (run 1's tryboot took 36 s); tryboot.txt consumed
+  (one-shot), config.txt untouched, o/ present. Recovery proposal
+  (worker-2), with the Architect and QE for a ruling: a read-only
+  state record (boot_id, tryboot flag, gen, journalctl -b -1); skip
+  tb-post (marker 0 on a normal boot STOPs by design); tb-restore
+  FAT-only; a RESTORED check, with no tb-normal reboot if the boot
+  is already normal. Whether the hang gets its own F (F-389) is
+  with them too. H1 may pre-empt
   the Pi
   build queue between derivations once reviewed; US-173 Gate-2
   follows H1.
