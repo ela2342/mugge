@@ -1495,6 +1495,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      `pw-cli enum-params <pi4audio-convolver id> Props` (see Gains
      at boot)"; "able to run the pw-dump read" becomes "able to run
      that `pw-cli` read".
+     safety.md gains text (CM, 2026-10-25): the AE's text is final as
+     TW v10, applied in /tmp/tw-f318-applied-v10.diff; the version the
+     CM relayed earlier is superseded. This list mirrors the merged
+     safety.md wording.
      Earlier note, superseded by the final text: the AE has since ruled that
      "unchanged" is a FAIL, so "gains unchanged or 0" above is
      superseded; the TW asked the AE for corrected text. Do not act
@@ -2201,6 +2205,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     in: any Gate-2 run without summary.txt or with a traceback counts
     as STOP; the CM checks sink, target.object, the 16 gains and the
     gate before releasing the lock.
+    Gate-2 r2 AE CHANGES (via CM, 2026-10-25): R2b a restore failure
+    in the finally block must still STOP and still run the checks; E1
+    a fresh selftest. worker-3 is fixing (with SecSpec's LOW and the
+    Architect's C1a/C1b).
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -2497,6 +2505,23 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (no literals). The AE boundary line replaces the deleted 2.9/3.1
   line. worker-4 implements all of it plus QE O1-O3 in one follow-up
   commit; the CM holds B6m for that SHA.
+  B6n (PM, MANIFEST bddbe5c8, base US-174.md sha256 32260961)
+  supersedes B6m (never applied). Gate API (Architect APPROVED, fits
+  option (A); via CM, 2026-10-25): two layers in closed_loop,
+  deviation_within_limit(dev_db, *, limit=MAX_POSITIVE_DEVIATION_DB)
+  as the scalar predicate and passes_residual_gate(response_db,
+  target_db, *, limit=...), False on any non-finite input checked
+  before smoothing; limit keyword-only, tests only; the venue and
+  teeth asserts use passes_residual_gate, no second `<=`;
+  max_positive_deviation_db stays honest (NaN in, NaN out). AE:
+  non-finite input returns False and never raises; a non-finite or
+  negative limit and an empty input also return False; a shape
+  mismatch may raise ValueError. AC2 boundary line (QE wording,
+  adjusted): "Boundary (AE): +3.00 dB passes, +3.01 dB fails,
+  NaN/+inf/-inf and a NaN limit fail — via
+  closed_loop.deviation_within_limit / passes_residual_gate (QE,
+  Architect)". worker-4's 27d8ff11 (QE T1-T6 done; degraded +6.66 dB;
+  mutation (c) reds 3 tests) is held for AE (a)/(c) (CM, 2026-10-25).
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -2916,10 +2941,79 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - Open for the AE: the slope, the R6(a) bound, the d031_exception
     field definition, and whether a deployed-coeff HPF verifier is
     wanted.
+  - Ruling texts: Architect /tmp/f391-architect-ruling.md (CM saved,
+    2026-10-25); AE final /tmp/ae-f391-ruling.md, sha256
+    e6e8a9a3...cdc1 (PM frozen copy
+    /tmp/pm-backlog/ae-f391-ruling-e6e8a9a3.md), which includes the
+    Architect A2 addendum. The AE text closes the open points above;
+    the AE wants the verifier (P2, below). Lane (CM, 2026-10-25):
+    worker-5, F-390 then F-391, after #55 merges.
+  - AE ruling (exact text in the file; summary): route (A) accepted;
+    gain-cal f_low = max(100, hpf); interim = Architect R7 plus AE
+    condition (d).
+  - AE 1 SLOPE: the stimulus low edge is at least 48 dB/oct (24 is not
+    enough), applied offline to the stimulus array (D-055 bans IIR on
+    the signal chain, not offline stimulus shaping; frequency-domain
+    shaping is OK). Covers the log sweep, the verification sweep
+    (session.py:1353), the gain-cal pink noise (today butter(4), 24
+    dB/oct, gain_calibration.py:185-190) and measure_nearfield.
+  - AE 2 BOUNDS on the EXACT played array (after level scaling and
+    fades), on the tilt-compensated magnitude L(f) = 20*log10|X(f)| +
+    10*log10(f / f_ref); reference = median of L over [2*hpf, 4*hpf].
+    (a) every bin <= hpf/2: L <= ref - 40 dB; (b) every bin <= hpf/4:
+    L <= ref - 60 dB; (c) total energy below hpf/2 <= -40 dB re total
+    energy; (f) a raised-cosine taper of at least 10 ms at start and
+    end, first and last samples 0. Teeth: a 24 dB/oct stimulus FAILS
+    (a); a sweep without the taper FAILS (f). Same bounds for the
+    gain-cal noise (hpf := f_low), the verification sweep and
+    measure_nearfield. Supersedes the Architect's example bound in
+    R6(a) and the AE's first version (linear-bin median over [2*hpf,
+    0.5*f_end], which would fail a correct 48 dB/oct stimulus).
+  - AE 3 DECONVOLUTION: deconvolve() takes the same filtered array
+    that was played as its reference, and nothing else.
+  - AE 4 NO BOOST BELOW THE HPF: correction never inverts the roll-off
+    below the HPF. Test, at every bin below hpf: |combined| <=
+    max(|HPF-only| * 10^(0.1/20), 10^(-80/20) * passband peak of
+    combined). A red result on current code is an AE finding, fixed
+    within F-391.
+  - AE 5 d031_exception: a mapping; required keys reason (non-empty),
+    directive (e.g. "owner"), date (ISO), min_stimulus_hz (number, >=
+    20). A null mandatory_hpf_hz with no valid d031_exception is
+    REFUSED (editor, session, generator: one shared validator);
+    d031_exception together with a non-null mandatory_hpf_hz is
+    REFUSED; with an exception the stimulus floor is min_stimulus_hz
+    and the bounds apply with hpf := min_stimulus_hz. Today only
+    dayton-ultimax-umii18-22-sealed-120l qualifies (directive "owner",
+    min_stimulus_hz 20, reason from its comment block). The exception
+    waives the HPF only; the F-388 excursion check still applies once
+    it exists.
+  - Architect A2 addendum (AE accepted): stimulus build order: sweep
+    with its Hann fades -> zero-pad >= 0.5 s on each side ->
+    zero-phase HPF >= 48 dB/oct -> outer raised-cosine taper >= 10 ms
+    (end samples exactly 0) -> scale. The padded array is both the
+    played signal and the deconvolution reference. The DC bin is
+    skipped in the tilt term, f_ref = hpf. Gain cal uses hpf := f_low
+    = max(100, hpf); the exception case hpf := min_stimulus_hz. Added
+    AE checks: (i) at hpf = 20 Hz, the samples in the outer 10 ms
+    taper zone, before tapering, are <= -60 dB re the array peak; if
+    not, use a longer pad, never loosen the bound; (ii) the gain-cal
+    level uses the RMS of the shaped array actually played; test at
+    f_low = 800 within 0.1 dB.
+  - Architect A1 addendum (via CM): partly superseded by the
+    AE/Architect correction above; recorded when the Architect's
+    updated A1 text arrives.
 - Deployed-coeff HPF verifier (Architect R5 under F-391;
   AE-conditional, only if the AE wants it): check that the coeff WAVs
   deployed in the convolver carry each channel's D-031 HPF. Not F-391
   scope.
+  AE (2026-10-25): YES, P2. AE text: "At session start and before each
+  deploy, read the coefficient WAVs that are actually deployed. Verify
+  that each channel's magnitude response meets its identity's
+  mandatory_hpf_hz, with the same tilt-free bound as F-391 (a)/(b). On
+  a FAIL the session or deploy is refused." Why: after F-391 the
+  stimulus is protected, but music playback still depends only on the
+  deployed FIR; the hash record (B) proves which file is deployed, not
+  that it contains the HPF. Supersedes "AE-conditional" above.
 - Speaker-config reset-to-default action (Architect R4 under F-390;
   not F-390 scope).
 - Docs (TW; via CM, 2026-10-25): flake test apps run on a /nix/store
@@ -3163,6 +3257,41 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   in test_generate_profile_filters covers only 20 Hz..20 kHz;
   extend it to 0..Nyquist and also assert it on the real markaudio
   WAVs, not only the HPF-removed copy. P2, AE-owned.
+  #55 TW fix (CM, 2026-10-25): a4ef9abc (TW docs fix) verified, held
+  for the AE's two wording edits, then pushed for a diff-only re-check
+  by all 7; the main merge comes after #56. At ce872e30 (2 docs
+  commits, diff-only re-check): UX APPROVED (docs match the code
+  verified at 2e29f82e); AD APPROVED (does not cover CI; lapses on a
+  head move; full verdict with the CM).
+  #55 backlog (worker-5, via CM, 2026-10-25; outside the #55 fence):
+  (1) story ACs disagreed with F-374 (only LR 24/48): US-011.md:17 and
+  user-stories.md:761 said "48-96 dB/oct", US-091.md:34 and
+  user-stories.md:6831 "24/48/96 dB/oct". PO RULING (2026-10-25):
+  narrow to LR 24 or 48 dB/oct, default 48 from the speaker profile,
+  each marked "(narrowed per F-374, PO 2026-10-25)"; PM draft story
+  batch /tmp/pm-bs1/ (base main dfdbbbd6), AE wording check pending;
+  if the AE says the default should not be 48, the AE value applies
+  with no extra PO round. (2) the user-journeys.md crossover journey
+  step 4 runs runner.py, still on the legacy alignment (also in the
+  #55 body backlog list). (3) TW non-blocking: a profile schema doc
+  and a min-phase FIR vs IIR clarification (= the TW non-blocking item
+  above).
+  #55 TW backlog (UX, ce872e30, non-blocking): user-journeys.md should
+  say where a refused slope or type is reported: the "Not supported"
+  note in the editor and the "Profile X: ... Fix it in the speaker
+  editor." message.
+  #55 TW backlog (AD L3/L4, low, wording, ce872e30): L3 user-journeys
+  "two legs sum flat" overclaims: the LR8 post-combine is not gated
+  (F-383), and the LR4 profile is verified only within the +/-1 dB
+  ceiling. L4 "the session start is refused" overclaims: profiles that
+  exist only under /etc are skipped (backlog (a) = F-390) and deep
+  validation does not run the check (backlog (c)).
+- Steeper crossover slopes (96 dB/oct LR and up; PO, 2026-10-25;
+  Low/P3, future work): steeper slopes as minimum-phase FIR. AC (AE):
+  the AE first evaluates the group delay and pre-echo behaviour at the
+  crossover frequency. If the AE sees a real need (e.g. driver
+  protection near a tweeter's Fs), the AE may raise the priority; that
+  ruling goes back to the PO.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
