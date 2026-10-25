@@ -473,7 +473,16 @@ louder, and the gate stayed closed.
   down (15:19:35Z vs 15:20:20Z, 15:24:59Z vs 15:26:12Z). The likely cause
   is a clock that was not yet set at boot. The timeline above uses the
   Mac-side poll times.
-- **PipeWire main thread at FF 88.** After both power cycles the
-  `pipewire` main thread runs SCHED_FIFO 88, like `data-loop.0`. This
-  differs from P2 in the image status notes (main thread SCHED_OTHER). The
-  AE and Architect decide whether P2 still holds.
+- **PipeWire main thread at FF 88 (AE ruling).** Current: PW main thread
+  and data-loop.0 both SCHED_FIFO 88 (main thread via F-020 unit, data loop
+  via module-rt / 05-rt-direct.conf), verified on 2 cold boots. Backlog P2
+  (not US-163): return the main thread to SCHED_OTHER so only the data loop
+  runs at 88.
+- **Mixer state after a cold boot (AE).** The `amixer` dumps after both
+  power cycles are byte-identical to the dump taken before step (a)
+  (sha256 `29d42498…`). The USBStreamer powers up at hardware 0 dB, so the
+  re-open trigger (iii) stands.
+- **Scope of the power cycles (AE).** A cold boot enumerates the
+  USBStreamer before PipeWire starts, so the cycles do not exercise the
+  F-373 hot-replug path. That is scope, not a gap: hot replug stays with
+  F-373.
