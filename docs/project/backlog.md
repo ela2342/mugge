@@ -1698,6 +1698,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   pending the firmware log; the CM gave the go for the firmware-log
   read on that boot. B4e verified by the CM (diff vs 381ef984 =
   step-1 lines 57-60 only), held until worker-2's session closes.
+  UPDATE (CM, 2026-10-25; supersedes "pending the firmware log",
+  "held" and "falsified" above): the firmware-log fallback ABORTED
+  at the iomem guard (chosen/log is not in /proc/iomem;
+  STRICT_DEVMEM=y); no read happened and this route is CLOSED.
+  Restore and the normal reboot PASSED on rcyg67wd.
+  CM-CHG-.89-US172a CLOSED. B4e committed as 27e90a0d and pushed.
+  QE does NOT accept "falsified": the order theory is "not supported
+  by step 1 (no positive control)". The next run needs a
+  tryboot-only marker, and the bt oracle is split into
+  absent/okay/disabled. Architect: the step-2 reorder is DROPPED;
+  greetd-only does not go out either. fdtoverlay is GO, plus Mac
+  checks: (a) which file tryboot reads, (b) the overlay path and
+  names, (c) which base dtb.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -1874,11 +1887,36 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   open: Architect, SecSpec, UX. B5b (caebf509) was relayed but is
   NOT on the branch (only B5 ad478593); US-173.md is unchanged at
   695f69af, so B5b still applies cleanly and is still pending.
+  B5b DONE (CM, 2026-10-25): worker-3 committed it as d588ceb0
+  (US-173.md sha 22080732, matches caebf509), pushed. US-173 head
+  0e0cbd38 (includes the venue YAML). UX: ACCEPTABLE, PROCEED WITH
+  NOTES (fail-closed denial: pw-play and paplay get "no target node
+  available" and exit). Architect N1 for F-318: a static nix check
+  that the deny hook's `after` names exist in WP's scripts;
+  worker-3 does it in-branch if it fits the fence, else a backlog
+  item (CM says which). The ci.yml step and the development.md line
+  (finding c) go to F-380, not US-173 (CM). Gate-2 on the Pi
+  (worker-3) is queued after CM-CHG-.89-F365.
+  - UX N1 (MUST land before the US-173 PR merges; TW-owned docs, on
+    the US-173 branch, worker-3 commits): an operator note in
+    troubleshooting and next to the F-373 rule in safety.md: (1) "no
+    target node available" from pw-play, paplay or a browser is
+    expected; mugge never auto-routes playback (F-318); (2) make
+    sound with the signal-gen web UI, or Mixxx/Reaper via the
+    GM-linked JACK path; (3) confirm with `journalctl --user -u
+    wireplumber | grep F-318`; (4) never pw-link to the USBStreamer
+    by hand.
+  - UX N2 (backlog; not needed for US-173): a dismissible web UI
+    information line "Playback from <app> blocked: mugge routes
+    audio itself".
+  - OPEN joint ruling (Architect + AE): "GM links survive a WP
+    restart", option (1) or (2).
   worker-3 findings (not fixed):
   - a) A WirePlumber restart re-creates the ports of nodes it adopts
     and drops their links, even with the policy disabled;
     GraphManager must re-link. Untested; relevant to the Pi Gate-2
-    item "GM links 24 unchanged after a WP restart".
+    item "GM links 24 unchanged after a WP restart". UX N3: see the
+    OUTPUT DEVICE LOST item.
   - b) Stock WP logs "wp_event_dispatcher_unregister_hook: assertion
     failed" 4 times per start; looks harmless.
   - c) Wanted outside worker-3's fence: a CI step for
@@ -2124,6 +2162,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   backend-driven (PCM closed or spa.alsa errors), never inferred
   from meters; recovery offered only through the D-063 gate; U8
   order just below CLOSE FAILED. Design follows from UX.
+  UX N3 (2026-10-25): add a "routing lost" indicator here. After a
+  WirePlumber restart the links drop until GraphManager re-links
+  (seen in the 695f69af test, not caused by F-318; = worker-3
+  finding a under US-173); until then output is silent with no
+  visible cause.
 - **F-372** (SecSpec, MEDIUM; amps-on/gig blocker class next to
   F-037): the S-001 fix is weak. filter_routes.py:545 tests
   abspath(output_dir).startswith(abspath(DEFAULT_OUTPUT_DIR)), a
@@ -2139,6 +2182,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
 - Skip reasons invisible (QE): the integration-browser run shows 10
   skips with no reasons in the log (no -rs). Make skip reasons
   visible (cf. F-362). Low.
+- Flaky web-ui unit test (worker-5, 2026-10-25): nondeterministic
+  PytestUnraisableExceptionWarning in tests/unit/test_collectors.py
+  ::TestPipeWireCollectorRPC::test_backoff_resets_on_connect, an
+  asyncio _SelectorTransport.__del__ GC race. Does not touch
+  room_correction. Low.
 - **GIG-READINESS PRECONDITION: Pi 5 cooling / thermal soak** (AE +
   Architect, merged; AE criteria supersede the Architect's 30 min /
   < 80 C; not US-163). Owner: no fan, metal case; boot/idle peak
@@ -2208,6 +2256,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   The limitation goes in the PR body, no xfails. Deployable for the
   supervised US-173 session (sound quality, not safety). The
   subsonic interaction is filed as F-385.
+  OPEN joint ruling (Architect + AE, CM 2026-10-25): the F-374
+  post-combine gate, issue 1 (lifting the combine.py per-bin clip).
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
@@ -2439,6 +2489,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   chore/rc-check-configs PR merges and the Mac has at least 8 GiB
   free; then team-lead spawns worker-8, building from the pinned
   main ref with no worktree.
+  Added (CM, 2026-10-25): a CI step for
+  checks.aarch64-linux.wireplumber-no-bypass plus a development.md
+  line (US-173 worker-3 finding c) belong here, not in US-173; the
+  earlier "worker-3's ci.yml T1 step" note is superseded for that
+  step.
 - US-159 G16 with AE amendments a-e and architect additions 1-3; test
   T65 (not T62). Medium; re-rate on (i) volume after replug, (ii) relink
   with gate_open true. Match by node and direction.
@@ -2630,7 +2685,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   approved (Architect, QE) with conditions: sandbox=true, a dry-run
   that builds only the check, the thermal rules, and a rerun on the
   merged head after F-363. Queued behind worker-2's CHANGE session
-  (CM). test-midi
+  (CM). CM-CHG-.89-F365 (worker-7) ABORTED safely at the clone step:
+  the Pi has no git. Cleanup verified, session released. worker-7
+  prepares a git-archive tarball plus a path: flake run with a
+  drvPath equality gate; needs a re-grant. Pi fact: mugge.cachix is
+  not configured, only cache.nixos.org. test-midi
   (worker-7, QE): NOT a silent skip; flake.nix copies the configs
   flat (midi/, configs/), but src/midi/tests/test_midi_daemon.py:56
   resolves tests/../../../configs, so 6 tests (lines 93, 123, 132,
