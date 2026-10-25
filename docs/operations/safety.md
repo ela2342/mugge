@@ -1,13 +1,70 @@
 # Safety Operations Manual
 
 This document is the single authoritative reference for all safety constraints
-on the Pi 4B audio workstation. Every team member -- human and automated --
+on the Pi audio workstation (the Raspberry Pi 5 since 2026-10-24; sections
+written for the Pi 4B still apply unless the Pi 5 section below says
+otherwise). Every team member -- human and automated --
 must follow these rules. CLAUDE.md points here; architecture docs cross-reference
 here.
 
 **Scope:** Physical safety of speakers, amplifiers, and human hearing. This is
 not about data loss or software correctness -- it is about preventing hardware
 damage and hearing injury.
+
+---
+
+## Pi 5 Platform Status (US-163)
+
+The Pi 5 (`ela@192.168.178.89`) runs a **bootstrap/dev image. It is NOT
+gig-capable.** Evidence: `docs/lab-notes/US-163-pi5-bootstrap.md`.
+
+**No amps, headphones or IEM, and no signal-gen measurement use,** until
+every item on the backlog's AMPS-ON PRECONDITION LIST (Pi 5) is closed.
+At US-163 that list holds:
+
+| Item | Risk |
+|------|------|
+| F-317 | RT throttle disabled (`sched_rt_runtime_us=-1`) with no configured watchdog backstop |
+| F-318 | Non-JACK streams may auto-link straight to the USBStreamer since D-065 |
+| F-352 | Config gain API can pass a NaN Mult to PipeWire |
+| F-354 | Config gain API splices the gain name into a command |
+| F-355 | Thermal limiter can latch a NaN level |
+| F-037 | Web UI on 8080 has no authentication; it is open on the LAN by owner ruling, accepted only while nothing is connected to any Pi output |
+| F2 | Metering bridge nodes do not come back after a PipeWire restart, so dead meters look like "no signal" |
+| F-341 AC3 | The pre-flight `nc` commands (Section 5, checks #3 and #6) are not yet verified on the Pi 5 NixOS image |
+
+Until the list is closed, these rules apply on the Pi 5:
+
+- **F2 rule:** after any PipeWire restart, restart pcm-bridge and
+  level-bridge and confirm live meters before any amp goes on.
+- **Unannounced PipeWire kill:** `RLIMIT_RTTIME` is 200 ms soft and hard
+  (F-358), so a runaway RT loop gets PipeWire SIGKILLed with no SIGXCPU
+  warning first. An unannounced PipeWire SIGKILL or restart is a
+  USBStreamer interruption (Section 1). Follow the F2 procedure (restart
+  pcm-bridge and level-bridge, confirm live meters) before amps on.
+- **F-341 rule:** do not rely on pre-flight checks #3 and #6 as written on
+  the Pi 5; treat their result as unverified.
+- **Gains at boot:** all 8 linear gain nodes boot with Mult and Add exactly
+  0 (16 values). Check from `pw-dump` JSON, not from `pw-cli`'s six-decimal
+  output. Any other value after a boot is a FAIL: stop and report.
+- **Gate:** the GraphManager gate boots closed. Do not open it while any
+  item above is open.
+- **Outputs:** the WirePlumber allowlist disables every ALSA card except the
+  USBStreamer (and the UMIK-1 capture). The HiFiBerry DAC+ HAT is blocked on
+  2 layers (allowlist and module blacklist). The third layer
+  (`force_eeprom_read=0`) has no effect, because the firmware merges no
+  `config.txt` overlays (US-172). Accepted only while nothing is connected
+  to the HAT.
+- **Reboots:** Section 1 applies unchanged. While the owner's standing
+  statement that nothing is connected to any Pi output holds, announce
+  every reboot, power cycle, tryboot or PipeWire restart; if anything has
+  been connected since, wait for the owner's go.
+- **Thermal:** passive cooling only (metal case, no fan). During load runs,
+  sample the SoC temperature every 10 s. At 75 °C or more, warn the owner
+  and keep running. At 80 °C or more, STOP (the firmware starts throttling
+  there). Sustained DJ load is expected to cross 80 °C without a fan.
+- **RT (Section 6):** D-013 is re-confirmed on the Pi 5: PREEMPT_RT
+  6.12.62, PipeWire at SCHED_FIFO 88 without RTKit (F-358 fix).
 
 ---
 
