@@ -1679,6 +1679,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   CM-CHG-.89-US172a granted to worker-2 (CM, after the AC19 PASS).
   B4d relayed to worker-2 as current (CM). The standby owner step
   for a test-boot hang (power cycle) is in team-lead's batch (CM).
+  Head 381ef984 (B4c+B4d pushed, CM). The step 1 tryboot reboot
+  failed harmlessly: on NixOS (systemd 258) the verb must be
+  `systemctl reboot --reboot-argument='0 tryboot'`, not
+  `reboot '0 tryboot'` (worker-2). installer.nix:11/34 and
+  nixos-upgrade.md:387 are Raspbian contexts and stay as written.
+  Step 1 re-granted at us172.sh 78bff43e. Story batch B4e (PM, base
+  381ef984, MANIFEST 6df707bf; US-172.md only, whole-file superset
+  of B4d, index row unchanged) fixes US-172.md:57; worker-2 commits
+  it after their session. Harness gap (worker-2): us172.sh
+  tb-reboot should check the transient reboot unit's result after
+  the 5 s timer instead of polling for 900 s.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -2147,6 +2158,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   relays). F-374 keeps the crossover-level gate (all 4 cases, exact
   digital LR) plus LR4 post-combine through the UNCHANGED combine;
   LR4 already passes there (4.1/7.4 deg, max|H| -0.499 dB).
+  STOPPED (worker-5, CM 2026-10-25): with the real LR4 profile the
+  post-combine phase AC fails (68.8 deg max, 29.7 deg at fc). Cause:
+  the satellite's mandatory 80 Hz subsonic, not the crossover. With
+  the Architect and the AE; a new defect is likely (PM assigns the
+  ID on request).
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
@@ -2532,7 +2548,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   d86451eb pushed, CM 2026-10-25; open as PR #54, head 320c3ae6,
   red on the F-363 test until F-363 merges; needs aarch64-linux
   evidence before merge (QE); CM asked the Architect to choose a CI
-  step, a Pi 5 build or a later local build). test-midi
+  step, a Pi 5 build or a later local build). Pi 5 native build
+  approved (Architect, QE) with conditions: sandbox=true, a dry-run
+  that builds only the check, the thermal rules, and a rerun on the
+  merged head after F-363. Queued behind worker-2's CHANGE session
+  (CM). test-midi
   (worker-7, QE): NOT a silent skip; flake.nix copies the configs
   flat (midi/, configs/), but src/midi/tests/test_midi_daemon.py:56
   resolves tests/../../../configs, so 6 tests (lines 93, 123, 132,
@@ -2726,6 +2746,17 @@ merge needs update-branch and 7 reconfirmations at the new head.
   default and by config); 30 ticked, AC21 not (amended). All 7
   reviewers and the PO asked at 55ee9dc9 (bundle
   /tmp/pr53-review-55ee9dc9/).
+  At 55ee9dc9: UX APPROVED (no concerns; both ec4508cb notes
+  resolved); AD APPROVE (not covering CI or later heads; L1, L2, N1
+  resolved, no new findings; they were never separate items).
+  MERGED (CM, standing owner permission): main = dfdbbbd6, 7/7
+  approvals at 55ee9dc9, no failed CI job. US-163 done records are
+  on main.
+  Follow-ups for the next US-163 docs touch (not blockers):
+  - AE: the AC14 verdict should read "16/16 read 0.000000 via pw-cli
+    (|x| < 5e-7; exact zero pending the US-159 raw-bits reader)".
+  - TW: when D-070 merges, add a short gloss of H to the US-163
+    status; lower-case "any" after the colon.
   QE non-blocking (new): the guard count is not echoed in the CI log
   (it is in $out only); add a dev-howto line on unstaged test files
   (Nix flakes ignore them). Already tracked: F-370, F-371, F-373;
