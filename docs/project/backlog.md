@@ -2201,6 +2201,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   keeps the OLD phase, so the output is no longer minimum-phase.
   Live under F-383's mechanism (its fail-closed check would trip on
   it). Fix before or with F-383.
+  STAFFING RULED (team-lead, 2026-10-25; supersedes the owner lines
+  above and the Architect's options): F-383 and F-384 are ONE
+  mission for one new worker, starting after US-174b merges
+  (correction.py stays in worker-4's lane until then). Architect:
+  keep them as separate items (not merged). F-384 AC (Architect):
+  after the overshoot re-clip, the correction output passes the
+  same min-phase gate (residual <= -40 dB, tail <= -60 dB), with a
+  test that forces the overshoot branch; the web-ui tests pass
+  unchanged (frozen function; only this branch's behaviour
+  changes).
 
 ## P2
 
@@ -2519,7 +2529,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   main since 9643be2a/TK-189 (yml cp before chmod); worker-7 fixes
   it on chore/rc-check-configs (Architect's flake prerequisite,
   copies configs/ into the check; Architect OK pending; commit 1
-  d86451eb pushed, CM 2026-10-25). test-midi
+  d86451eb pushed, CM 2026-10-25; open as PR #54, head 320c3ae6,
+  red on the F-363 test until F-363 merges; needs aarch64-linux
+  evidence before merge (QE); CM asked the Architect to choose a CI
+  step, a Pi 5 build or a later local build). test-midi
   (worker-7, QE): NOT a silent skip; flake.nix copies the configs
   flat (midi/, configs/), but src/midi/tests/test_midi_daemon.py:56
   resolves tests/../../../configs, so 6 tests (lines 93, 123, 132,
@@ -2611,6 +2624,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   using 'master'". Harmless for AC19 (configurationRevision came out
   correct). If future evidence relies on the export's git metadata
   beyond self.rev, the export needs a real ref.
+- US-163 AC5 direct read (QE-owned, P3, not a blocker; 2026-10-25):
+  on the next OBSERVE session on .89, run `systemctl show -p
+  RuntimeWatchdogUSec -p RebootWatchdogUSec -p WatchdogDevice` on
+  the booted generation, closing the AC5 inference (QE PASS rests on
+  two reads not taken on the final generation plus the config
+  default, QE git grep at 798f2dc7 and 07a65f9e) with a direct read.
 
 ## Open PRs (2026-10-24, per CM)
 
@@ -2699,6 +2718,14 @@ merge needs update-branch and 7 reconfirmations at the new head.
   B7d). Team-lead ruling: the TW approves the whole PR and states
   they wrote the section; the QE checks it line by line; the PO acks
   the status wording (not Rule 13).
+  B7c (90bed0e0) and B7d (bdf5d904) never committed; B7e (PM,
+  MANIFEST bc4dd46d, whole-file superset of B7d) committed on top of
+  the TW lab note v3 (943ec13e): head 55ee9dc9 (CM checked the cited
+  AC5 evidence lines). B7e: the AE's amps-on status sentence
+  (adopted as FINAL by the PO); AC5 ticked (QE PASS, watchdog off by
+  default and by config); 30 ticked, AC21 not (amended). All 7
+  reviewers and the PO asked at 55ee9dc9 (bundle
+  /tmp/pr53-review-55ee9dc9/).
   QE non-blocking (new): the guard count is not echoed in the CI log
   (it is in $out only); add a dev-howto line on unstaged test files
   (Nix flakes ignore them). Already tracked: F-370, F-371, F-373;
