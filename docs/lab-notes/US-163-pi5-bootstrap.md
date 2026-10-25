@@ -349,13 +349,82 @@ method rewrites `gens/x83…/` from the store if a rollback to it is needed.
 
 ## Task AC17 Session B: USBStreamer re-enumeration (CM-CHG-.89-5)
 
-**Date:** 2026-10-25 13:45Z onward
+**Date:** 2026-10-25 13:45-15:12 UTC
 **Operator:** Claude (worker-1, under change-manager session CM-CHG-.89-5)
 **Host:** mugge (Pi 5), booted `2wf21ydgfyqsz35iqy5hfjlyp37jrsqn` (boot_id `eeddb8b6…`)
 
-Step (a), software re-enumeration (USBStreamer `authorized` 0 then 1), is
-done. Step (b), the owner's physical replug, is pending. Results go in this
-section once the AE has ruled on step (a).
+Purpose: after the USBStreamer drops off the bus and comes back, nothing
+may get louder. The checks cover hardware mixer volumes and switches,
+PipeWire volume and mute on the sink and convolver output, the 16 convolver
+gains, the gate and the links. No mixer writes were made at any point
+(no `amixer set`, no `alsactl`). Nothing was connected to any Pi output.
+
+Steps:
+
+- (a) software re-enumeration: `echo 0`, 5 s, `echo 1` to the USBStreamer's
+  sysfs `authorized` file;
+- (b) the owner's physical unplug and replug;
+- (c) a PipeWire restart, then a restart of the metering bridges (the
+  interim rule from the F-358 notes).
+
+Each step compares a full read set taken after it with the read set taken
+before step (a).
+
+### Procedure
+
+```bash
+# Step (a): device 1-1, devnum 2 (the only USBStreamer on the bus)
+$ echo 0 | sudo tee /sys/bus/usb/devices/1-1/authorized    # 13:46:33Z
+$ echo 1 | sudo tee /sys/bus/usb/devices/1-1/authorized    # 13:46:38Z
+# 30 s wait, then the AFTER-a read set
+
+# Step (c)
+$ systemctl --user restart pipewire                          # 15:10:59Z
+$ systemctl --user restart level-bridge-hw-in level-bridge-hw-out \
+    level-bridge-sw pcm-bridge-capture-usb pcm-bridge-monitor  # 15:11:10Z
+# 30 s wait, then the AFTER-c read set
+```
+
+### Validation
+
+| Check | Expected | Actual | Pass/Fail |
+|-------|----------|--------|-----------|
+| (a) nothing louder | volumes not higher, switches unchanged, mutes not released | all hw and PW values identical to BEFORE | PASS (AE) |
+| (a) gains (AC14) | 16 values exactly 0 | 16, all 0 (pw-dump) | PASS |
+| (a) gate | closed | `gate_open: false`, no pending gains | PASS |
+| (a) links | unchanged | 24 before, 24 after, same set by name | PASS |
+| (a) sink recovery | recorded | no recovery: PipeWire never reopened the device (F-373, below) | FINDING |
+| (b) physical replug | replug seen within 1800 s | not seen: poll 13:54:48-14:25:31Z ended in a timeout | NOT RUN |
+| (c) nothing louder | as in (a) | all hw and PW values identical to BEFORE | PASS |
+| (c) gains, gate, links | 16 x 0, closed, 24 | 16 x 0, closed, 24 (same set by name) | PASS |
+| (c) nodes | the same 12 node names as BEFORE, all 5 bridge nodes | 12/12, all 5 bridges | PASS |
+| (c) sink | exactly one, running, no error, no `spa.alsa` lines from 5 s after the restart | one (`running`), `spa.alsa` count 0 | PASS |
+| (c) PCM open | Playback Channel Map as BEFORE | `3,4,7,8,5,6,12,13` again | PASS |
+| (c) services | all active, no restarts | PipeWire, WirePlumber, the 5 bridges, GraphManager, signal-gen active; NRestarts 0; no failed units | PASS |
+| Thermal | < 75 °C, no throttling | max 65.55 °C (a), 65.0 °C (b), 63.35 °C (c); 2.4 GHz throughout; no cooling devices; undervoltage alarm 0 | PASS |
+
+**F-373, zombie sink after re-enumeration** (AE: High, availability and
+safety-relevant, amps-on item 13; not a US-163 blocker). The AE's timeline:
+
+- 13:46:33Z: `authorized` set to 0. PipeWire starts logging
+  `spa.alsa: hw:USBStreamer,0p: snd_pcm_status error: No such device` and
+  `snd_pcm_drop: No such device` at once.
+- 13:46:38Z: `authorized` set to 1. The kernel logs `usb 1-1: authorized
+  to connect` and the card returns as ALSA card 0, but PipeWire never
+  reopens it.
+- The sink node keeps its id (33) and serial (34) and still reports
+  `running`. The hardware Playback Channel Map reads all 0 (it was
+  `3,4,7,8,5,6,12,13`), i.e. no PCM is open. It still read all 0 in
+  the BEFORE-b reads at 13:54Z.
+- The sink is a static adapter from `pipewire.conf.d`, so it has no hotplug
+  path (AE). The output stays silent until PipeWire restarts.
+- Step (c) recovered it: after the restart the channel map is back to
+  `3,4,7,8,5,6,12,13` and the new PipeWire process logs no `spa.alsa`
+  errors. The `No such device` lines at 15:10:59Z come from the old
+  PipeWire process while it shut down.
+
+Step (a) passes the AC17 safety criterion (AE): the device came back no
+louder, and the gate stayed closed.
 
 ### Deviations from Plan
 
@@ -368,3 +437,10 @@ section once the AE has ruled on step (a).
   roots. The paths are read-only tools, the Pi has no GC timer and nobody
   runs GC by hand; if they are ever collected, a new `nix copy` restores
   them. The planned `unroot` step is dropped.
+- **Step (b) not run.** The replug poll ran its full 1800 s (13:54:48Z to
+  14:25:31Z, rc 4) and saw no unplug. The owner request was never relayed,
+  so this is not a Pi finding. The CM, AE and QE decide whether (b) stays
+  in US-163 or goes to the backlog; step (c) was granted without it. If (b)
+  runs later, it starts from a healthy sink.
+- **Step (b) baseline only.** The BEFORE-b read set (taken at 13:54Z) is
+  complete; AC14 16 gains all 0 at that point.
