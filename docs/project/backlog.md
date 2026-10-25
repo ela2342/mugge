@@ -10,11 +10,12 @@ land here. Maintained by the PM; the CM commits changes.
 
 Taken (not yet filed as records): F-361, F-362, F-363, F-364 (below);
 F-365; F-366, F-367, F-369 (US-163 section); F-370 (P2);
+F-371 (P3); F-372 (P1);
 D-068 (T57 gate dropped); T65 =
 US-159 G16 reconciler test; US-172 (P1, Pi 5
 local display). F-368 WITHDRAWN, never to be reused (was a
 duplicate of the existing F-358 for AC13).
-Next free: F-371, US-173, D-069, T66.
+Next free: F-373, US-173, D-069, T66.
 
 ## US-163 text updates (critical path; one tracking batch before the PR)
 
@@ -525,6 +526,73 @@ Next free: F-371, US-173, D-069, T66.
     - AC8, AC9a, AC11: Mac-only, worker-1, pending. The CM holds the
       PR until worker-1's two proof files cited by the body are on
       disk.
+    PR #50 (2026-10-25, via CM): head afbc04ae -> main 289390bf;
+    body sha 8e9cba4a built from PM status list v2 (then v3,
+    6ad1e4f8, adds F-362 and F-371). Head-move proofs and the AC1a
+    nix-diff posted as a PR comment; the CM proof-file hold is
+    lifted. CM rulings: AC8/AC9a/AC11 PASS (Mac-only, worker-1), QE
+    review pending; AC11 side finding F-371. AC2 design half done.
+    - Verdicts at afbc04ae (all posted verbatim): UX APPROVE
+      6398304093 (re-check on any head move); Architect APPROVE
+      6398313761 (afbc04ae plus docs-only commits; re-rules only if
+      AC17 shows realtime/PAGESIZE/FIFO 88/RTKit/frequency faults);
+      SecSpec APPROVE 6398314068 (any non-docs commit voids; CI at
+      the final head: no failed job beyond F-363); AE APPROVE
+      6398314322 (does not clear amps-on; re-check any push before
+      merge; AC17-B FAIL goes to G16 High under US-159); AD APPROVE
+      (does not cover CI or AC17; docs-only re-review needs diffstat
+      plus nix-diff vs f0fbefd1); TW CHANGES REQUESTED 6398315124;
+      QE pending. All lapse at the next head move (strict main
+      protection).
+    - TW blocking: B1 the AC21 .89 docs batch (config.md still .185;
+      safety.md lacks the Pi 5 amps-on boundary and the F2 rule); B2
+      NEW docs/guide/howto/nixos-upgrade.md is wrong for the Pi 5
+      (kexec install, `switch` = live PW restart interrupting the
+      USBStreamer, rollback via --rollback/U-Boot; no Pi 5 install,
+      rollback or card-reader recovery procedure); B3 the tracking
+      batch. S1 = UX note 1: lab note deploy 2 Step 2 recovery line
+      names nkifli3r (just deployed); the fallback was x83m7bir.
+      N1/N2: lab-note heading levels, a timezone label.
+    - AD: M1 F-362 needs a definition and disposition in the PR body
+      before the final head; M2 = rule (d).
+    - CI run 40198045816: nixos-eval PASS (pi5-prune-gens 13/13 in
+      the log, QE's CI item met); test-and-build FAIL = F-335 (`cd
+      ...-source/src/web-ui: No such file`), NOT F-363; T1-T3 ran 0
+      tests. Under Q2 this blocks #50: #50 DEPENDS ON #49.
+    - PO RULINGS: (1) sequence: #49 lands -> ONE head move on #50
+      (B1, B2, B3, S1 + the main update) -> ONE re-review round by
+      all 7 on the final head. #49 is IN FOCUS, limited to F-335, no
+      scope additions. QE and AD may hold until the final head. (2)
+      B2: the TW writes it if the role permits and the file isn't
+      delegated (L-046), else worker-1 from TW's text; Architect + QE
+      verify the commands (darwin nixos-rebuild-ng --no-reexec,
+      `boot` plus announced reboot, .89, rollback via pointer and
+      generations). (3) Close review not by the TW: Architect the
+      factual parts (config.md .185 -> .89, host key + MAC, Pi 5
+      references), AE the safety.md parts (veto); same split for B2.
+      S1 goes INTO #50 in the same head move, as a traceable
+      correction: the line reads x83m7bir..., plus a note "corrected
+      in #50: originally said nkifli3r..., which was the generation
+      just deployed". worker-1 edits (their file).
+    - Branch route for TW (team-lead constraint): share worker-1's
+      branch only with strictly disjoint file sets agreed with the CM
+      before TW starts; worker-1 keeps the lab note; the CM picks the
+      worktree/branch and commits by explicit SHA; docs-only.
+    - AC17 Session A (CM-OBS-.89-4, done, released; raw
+      ac17-A-observe-20261025T133240Z.txt): AC2/AC3/AC4
+      PASS-candidates (QE rules); QE's findmnt form fails as written
+      (AC text fix with QE). vcio: CONFIG_BCM_VCIO=y, /dev/vcio
+      present, so the libraspberrypi CHANGE branch applies. The
+      USBStreamer HAS hardware Volume controls: under AE (a) the
+      owner's announced physical replug is needed; the read method is
+      with the AE. GENS-dirs script bug (wrong .complete path):
+      worker-1; not a FAT finding (config.txt/MAP shas unchanged).
+      Session B (CHANGE: libraspberrypi + replug) after CM review.
+    - AC3 wording (Architect): /sys/kernel/realtime is absent BY
+      DESIGN (it came from the out-of-tree RT patch; since 6.12
+      PREEMPT_RT is mainline Kconfig). AC3 PASS = uname -v
+      "PREEMPT_RT" + CONFIG_PREEMPT_RT=y, plus PAGESIZE 4096, as the
+      PRIMARY check. Amend the AC3 text and the PR body AC table.
     1. PASS (QE + SecSpec; CM-OBS-.89-T53, T53b, T53c): T53-on-deploy,
        ONE read-only OBSERVE on the running deploy. NO external port
        scan (owner directive, see the test-process rule below); the
@@ -951,18 +1019,29 @@ Next free: F-371, US-173, D-069, T66.
      re-rules (P1 US-172 GATE; layer deviation accepted only while
      nothing is connected).
   4. US-170 A1 item (QE): the Pi 4 AC13 A1 precondition before
-     amps-on (Pi 4 runtime unverified).
+     amps-on (Pi 4 runtime unverified); F-358 runtime verification
+     before any Pi 4 audio use (AE), including "no SIGKILL at startup
+     with production coefficients" (AD L1).
   5. F2: pcm-bridge/level-bridge PW nodes back after a PW restart
      (P1 below), or the INTERIM RULE (restart both bridges, confirm
      live meters).
   6. F-037/AC20: the open 8080 web UI is accepted only while nothing
      is connected.
   7. F-361 link-audit fix (P1 below: "before any amps-on use").
-  8. usbstreamer-volume-replug: if it FAILs, G16 is High and an
-     amps-on blocker (US-159); node or links not returning after the
-     replug is a recovery finding on this list.
+  8. usbstreamer-volume-replug (AC17-B) PASS (AE). A FAIL makes G16
+     High and an amps-on blocker (US-159); node or links not
+     returning after the replug is a recovery finding on this list.
   9. The AC20 open blockers for amps-on / gig use: F-317, F-318,
      F-352, F-354, F-355 (F-358 resolved on the Pi 5; Pi 4 US-170).
+  10. The 60-min flight-case thermal soak (GIG-READINESS entry, P1)
+     PASS (AE: amps-on too, not only gig).
+  11. F-372 (P1 below): the S-001 path check fix.
+  12. RTTIME soft = hard (AD L1): an overrun SIGKILLs PipeWire with
+     no SIGXCPU stage, which interrupts the USBStreamer and needs the
+     F2 procedure. Documented in safety.md before amps-on.
+  Related UX item (not a precondition): a persistent web UI banner
+  "DEV IMAGE -- not gig-capable. Amps, HP and IEM off." while any
+  item here is open, driven by a build or config flag (UX).
   Revisit before amps-on (not blocks): host key on console (P3,
   MANDATORY before gig/amps-on); ela PAM rtprio/memlock (P3); nix
   advisory version (P3); fail-closed allowlist + US-170 parity
@@ -1013,6 +1092,13 @@ Next free: F-371, US-173, D-069, T66.
      meters stale, right k of n; drop /ws -> all STALE; recovery
      after the node returns; E2E checks DOM text, not only a CSS
      class.
+- US-172 AC (AD L2): WirePlumber rule 54 has no on-device effect
+  evidence yet; add a positive HDMI-audio-disabled check.
+- Pi 4 has no WP card-block rule (54-disable-other-alsa-cards is Pi 5
+  only). Pre-existing; Pi 4 follow-up with US-170. (AE)
+- APC mini is ALSA card 0 and WP rule 54 disables its WP device:
+  fine for audio; at the first Mixxx session confirm the MIDI
+  controllers still reach Mixxx (rawmidi/seq). (AE)
 - **US-172** Pi 5 local display (D-022): vc4/DRM on the Pi 5,
   greetd/labwc up, Mixxx usable on HDMI. Prerequisite for DJ mode on
   the Pi 5; sits next to the F-358/F-291 work. Starting point: the
@@ -1095,6 +1181,26 @@ Next free: F-371, US-173, D-069, T66.
   modules ran (speaker_lifecycle_integration 17, activate_integration
   22, speaker_routes 177, protection_integration 30): observation
   only, their guards still mask failures. Not a US-163 blocker.
+  SecSpec: security-relevant; fix AC = S-001 and D-009 tests run and
+  pass in CI; guard must fail, not skip. The skip silences
+  TestDeployPathTraversal (S-001 regression) and the D-009 interlock
+  tests on deploy/rollback, which guard an unauthenticated LAN
+  endpoint (F-037). Root cause (SecSpec reading): the import asks for
+  `_PROFILES_DIR`, which filter_routes.py no longer defines (now
+  `_profiles_dir()` at :54), so the ImportError is permanent. Rating
+  stays High. Must be defined in the PR #50 body (AD M1).
+- **F-372** (SecSpec, MEDIUM; amps-on/gig blocker class next to
+  F-037): the S-001 fix is weak. filter_routes.py:545 tests
+  abspath(output_dir).startswith(abspath(DEFAULT_OUTPUT_DIR)), a
+  string prefix, so a sibling (<RC>/output-x, <RC>/output2) passes;
+  req.profile goes unsanitised into os.path.join for output_dir
+  (:244) and session_dir (:226) (partly limited: the profile must
+  load first). Impact: integrity; an unauthenticated LAN client could
+  deploy combined_*.wav from outside the output tree to
+  /etc/pi4audio/coeffs; D-009 verification still caps gain. Fix:
+  realpath + os.path.commonpath (or Path.is_relative_to), an
+  allowlist pattern for the profile name, and tests that actually run
+  (depends on F-362). No owner escalation (home lab rule).
 - Skip reasons invisible (QE): the integration-browser run shows 10
   skips with no reasons in the log (no -rs). Make skip reasons
   visible (cf. F-362). Low.
@@ -1116,11 +1222,12 @@ Next free: F-371, US-173, D-069, T66.
 
 ## P2
 
-- **F-370** (QE, Low; Architect to rule; not US-163 scope): the Pi 5
-  hook rewrites config.txt and MAP.txt on a no-op deploy with
-  identical content (seen in CM-DEP-.89-3 (c)). Skipping the rename
-  when the content is identical avoids reopening the accepted vfat
-  power-loss window on every no-op deploy.
+- **F-370** (QE, Low; RULED by the Architect: Low, P2, not a merge
+  blocker; not US-163 scope): the Pi 5 hook rewrites config.txt and
+  MAP.txt on a no-op deploy with identical content (seen in
+  CM-DEP-.89-3 (c)). Fix: skip the rewrite when the content is
+  identical (cmp -s before mv). Reason: every rewrite reopens the
+  accepted vfat power-loss window (bootloader.nix step 2), not wear.
 - "PipeWire main thread back to SCHED_OTHER: drop the F-020
   CPUSchedulingPolicy=fifo/88 from the pipewire user unit, now that
   module-rt promotes the data loops directly (F-358). At equal FIFO
@@ -1142,6 +1249,12 @@ Next free: F-371, US-173, D-069, T66.
 - Web UI listens on IPv4 only (web-ui.nix `--host 0.0.0.0`), so 8080
   is not reachable over IPv6 (CM, T53). Decide whether IPv6 listening
   is wanted. T53 passes either way ([::] optional). Not US-163. Low.
+- .89 docs batch additions (PR #50 review): B2 nixos-upgrade.md Pi 5
+  section (TW); "Image status (AC20)" names the thermal soak and the
+  P2 "PW main thread back to SCHED_OTHER" among the gig blockers, or
+  points to their backlog entries (Architect nit); safety.md gets the
+  RTTIME SIGKILL note (AD L1); pi5/default.nix comment .88 -> .89
+  (AE; already the worker-1 item above).
 - .89 docs batch (CM): the flake.nix comment on mugge-pi5-deploy still
   says "built natively on the Pi ... nixos-rebuild switch"; the real
   route is the Mac `nixos-rebuild boot --no-reexec`. Low.
@@ -1193,6 +1306,17 @@ Next free: F-371, US-173, D-069, T66.
 
 ## P3
 
+- **F-371** (worker-1, AC11 side finding; Low): the mugge-pi5-deploy
+  closure (2wf21ydg) contains the full nixpkgs source (8ggk1060, rev
+  812b3986; presumably via nix.registry/NIX_PATH), which ships 25
+  public upstream snakeoil/test private keys (e.g.
+  nixos/modules/profiles/keys/ssh_host_ed25519_key). Harmless; adds
+  closure size and false positives to every key grep. Option: the
+  registry flake by reference, drop the source from the closure.
+  Evidence: ~/mugge-pi5-prewipe-20261024/
+  ac11-closure-privkey-grep-2wf21ydg.txt.
+- Mark the board-guard file-only assertions as file-only (they check
+  config files, not on-device effect). (AD L3)
 - Legacy scripts/deploy/deploy.sh doesn't ship
   configs/pipewire/05-rt-direct.conf (F-358). Only relevant if that
   path is still used. LOW. (AE N3)
@@ -1342,7 +1466,11 @@ merge needs update-branch and 7 reconfirmations at the new head.
   artefact), so #42 needs a run with no failed job (after #49 or a
   re-run), then update-branch and 7 reconfirmations.
 - #49 F-335 fix: new head b959e5c9 pending push voids verdicts; needs a
-  fresh round and green T1-T3. Off the US-163 path.
+  fresh round and green T1-T3. NOW ON THE US-163 CRITICAL PATH (PO,
+  2026-10-25): #50's test-and-build fails on F-335, so #49 lands
+  first, limited to F-335 (no scope additions). CM holds the push
+  until worker-2 reports.
+- #50 US-163: open; see the US-163 section (PR #50 block).
 - #43, #45, #44: need #49 on main and real green CI; #45 before #44.
 - #36, #40: no Rule 13 review; owner direction needed (#40 IDs clash).
 - chore/backlog (this file): no PR yet; docs-only.
