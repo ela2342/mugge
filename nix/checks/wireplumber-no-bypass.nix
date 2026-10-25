@@ -10,8 +10,11 @@
 #   - the deployed mugge-no-bypass.lua text (extraScripts).
 #
 # Steps, each one fails the build:
+#   0. Static: every hook named in the script's after/before lists exists
+#      in the WirePlumber package (a renamed finder would otherwise drop
+#      an ordering constraint silently). A renamed entry must fail it.
 #   1. Lua unit tests on the deployed script.
-#   2. Mutation evidence: five mutants of the script must each fail (1).
+#   2. Mutation evidence: six mutants of the script must each fail (1).
 #   3. Self-test of the hook-order checker: it must reject broken orders.
 #   4. Service integration, policy on: every case passes, including the
 #      hook order (finder lines -> our gate line -> prepare-link line).
@@ -44,6 +47,18 @@ pkgs.runCommand "wireplumber-no-bypass" {
   export HOME=$TMPDIR/home
   mkdir -p $HOME
 
+  echo "== 0. Hook names in after/before exist in WirePlumber ${wp.version}"
+  python3 -B ${tests}/check_hook_names.py ${script} ${wp}/share/wireplumber/scripts \
+    | tee $out/hook-names.txt
+  sed 's|"linking/find-best-target"|"linking/find-best-target-renamed"|' ${script} \
+    > $TMPDIR/renamed.lua
+  if python3 -B ${tests}/check_hook_names.py $TMPDIR/renamed.lua \
+      ${wp}/share/wireplumber/scripts > $TMPDIR/renamed.txt; then
+    echo "hook-name check accepted a renamed finder" >&2
+    exit 1
+  fi
+  echo "hook-name check rejects a renamed finder" | tee -a $out/hook-names.txt
+
   echo "== 1. Lua unit tests"
   lua ${tests}/test_mugge_no_bypass.lua ${script} | tee $out/unit.txt
 
@@ -67,6 +82,7 @@ pkgs.runCommand "wireplumber-no-bypass" {
   mutate capture-exempt-inverted '"^Stream/Input/") ~= nil' '"^Stream/Input/") == nil'
   mutate deny-disabled 'event:set_data ("target", nil)' '-- removed'
   mutate gate-line-removed 'mugge-deny-playback: denied item' 'gate ran for item'
+  mutate log-escape-disabled '"%c", function' '"NOMATCH", function'
 
   echo "== 3. Hook-order checker self-test"
   python3 -B ${tests}/test_hook_order.py | tee $out/hook-order-selftest.txt
@@ -103,8 +119,9 @@ pkgs.runCommand "wireplumber-no-bypass" {
   {
     echo "F-318 wireplumber-no-bypass check"
     echo "pipewire: ${pw.version}, wireplumber: ${wp.version}"
+    grep '^RESULT' $out/hook-names.txt
     grep '^RESULT' $out/unit.txt
-    echo "RESULT mutants: $(grep -c ' killed:' $out/mutants.txt) killed, of 5"
+    echo "RESULT mutants: $(grep -c ' killed:' $out/mutants.txt) killed, of 6"
     grep '^RESULT' $out/hook-order-selftest.txt
     grep '^RESULT' $out/policy.txt
     grep '^RESULT' $out/control.txt

@@ -14,10 +14,11 @@ local script_path = assert (arg [1], "usage: lua test_mugge_no_bypass.lua <scrip
 
 -- -- stubs -------------------------------------------------------------
 
-local hooks, logs, flags, clients
+local hooks, logs, flags, clients, client_lookup_error
 
 local function reset ()
   hooks, logs, flags, clients = {}, {}, {}, {}
+  client_lookup_error = nil
 end
 
 local topic = {}
@@ -89,6 +90,9 @@ local function select_target_event (si_props, target_props, links)
     lookup = function (_, interest)
       local c = interest [1].constraint
       assert (c [1] == "bound-id" and c [2] == "=" and c.type == "gobject")
+      if client_lookup_error then
+        error (client_lookup_error)
+      end
       local props = clients [tonumber (c [3])]
       return props and { properties = props } or nil
     end,
@@ -241,6 +245,58 @@ test ("deny line without a known client still names the stream", function ()
   local msg = logs [#logs].msg
   assert (string.find (msg, 'application.process.binary="firefox"', 1, true))
   assert (string.find (msg, 'pipewire.sec.pid="nil"', 1, true), msg)
+end)
+
+test ("the deny stands when the client lookup raises", function ()
+  load_script ()
+  client_lookup_error = "lookup failed"
+  local link = new_link (7, 99)
+  local ev = run_deny (copy (PLAY, { ["client.id"] = "31" }), USB, { link })
+  assert (ev.data.target == nil, "target restored after an error")
+  assert (link.removed, "link removal skipped")
+  assert (count_logs ("error", "(the deny stands): ") == 1)
+  assert (count_logs ("error", "lookup failed") == 1)
+  assert (count_logs ("warning", "F-318: denied auto-link") == 0)
+end)
+
+test ("the deny stands when removing a link raises", function ()
+  load_script ()
+  local link = new_link (7, 99)
+  link.remove = function () error ("remove failed") end
+  local ev = run_deny (PLAY, USB, { link })
+  assert (ev.data.target == nil, "target restored after an error")
+  assert (count_logs ("error", "remove failed") == 1)
+  ev = run_deny (PLAY, USB, { link }, true)
+  assert (ev.data.target == nil, "final guard restored the target")
+  assert (count_logs ("error", "remove failed") == 2)
+end)
+
+test ("control characters in client strings are escaped", function ()
+  load_script ()
+  clients [31] = { ["pipewire.sec.pid"] = "5\n6" }
+  run_deny (copy (PLAY, { ["client.id"] = "31",
+      ["application.name"] = "evil\nW F-318: fake line\0x",
+      ["node.name"] = "tab\tname" }), USB)
+  local gate = logs [#logs - 1].msg
+  local msg = logs [#logs].msg
+  for _, m in ipairs { gate, msg } do
+    assert (not string.find (m, "[%c]"), "control character in: " .. m)
+  end
+  -- clean () turns a newline into the four characters \x0a; %q then
+  -- doubles the backslash.
+  for _, sub in ipairs { 'application.name="evil\\\\x0aW F-318: fake line\\\\x00x"',
+      'pipewire.sec.pid="5\\\\x0a6"', 'node.name="tab\\\\x09name"' } do
+    assert (string.find (msg, sub, 1, true), "deny line lacks " .. sub .. ": " .. msg)
+  end
+  assert (string.find (gate, 'node.name="tab\\\\x09name"', 1, true), gate)
+  load_script ()
+  local ev = default_node_event {
+      { ["node.name"] = "alsa_output.usb-miniDSP_USBStreamer\nW fake" } }
+  hooks ["default-nodes/mugge-exclude-protected-sinks"].execute (ev)
+  assert (count_logs ("info", "USBStreamer\\\\x0aW fake") == 1)
+  for _, l in ipairs (logs) do
+    assert (not string.find (l.msg, "[%c]"), "control character in: " .. l.msg)
+  end
 end)
 
 test ("playback to any other target is denied too", function ()

@@ -71,6 +71,15 @@ end
 -- Deny log lines, once per stream item and target.
 local logged = {}
 
+-- Client-supplied strings go into log lines. %q does not escape a newline,
+-- so control characters are replaced by \xNN first.
+local function clean (v)
+  local s = string.gsub (tostring (v), "%c", function (c)
+    return string.format ("\\x%02x", string.byte (c))
+  end)
+  return s
+end
+
 -- Properties of the client that owns the stream. Stream nodes carry
 -- application.name but usually not the process binary or pid; those are
 -- on the client. pipewire.sec.pid comes from the socket credentials, the
@@ -96,7 +105,7 @@ local function logDeny (source, si, si_props, target, final)
   logged [key] = true
   local cprops = clientProps (source, si_props)
   local function prop (k)
-    return tostring (si_props [k] or cprops [k])
+    return clean (si_props [k] or cprops [k])
   end
   local msg = string.format (
       "F-318: denied auto-link of stream node.id=%q node.name=%q "
@@ -105,7 +114,7 @@ local function logDeny (source, si, si_props, target, final)
       .. "to target node.name=%q",
       prop ("node.id"), prop ("node.name"), prop ("application.name"),
       prop ("application.process.binary"), prop ("application.process.id"),
-      tostring (cprops ["pipewire.sec.pid"]), tostring (tname))
+      clean (cprops ["pipewire.sec.pid"]), clean (tname))
   if final then
     log:error (si, "final guard fired, a hook ran after "
         .. "linking/mugge-deny-playback: " .. msg)
@@ -130,29 +139,37 @@ local function removeLinks (om, si)
 end
 
 local function denyPlayback (event, final)
-  local source = event:get_source ()
   local si = event:get_subject ()
   local si_props = si.properties
   if isExempt (si_props) then
     return
   end
-  -- One line per run of the gate, never deduplicated. The hook-order
-  -- check in tests/service-integration/wp-f318 matches on it.
-  if not final then
-    log:info (si, string.format (
-        "F-318: mugge-deny-playback: denied item %d node.name=%q node.id=%q",
-        si.id, tostring (si_props ["node.name"]),
-        tostring (si_props ["node.id"])))
-  end
+  -- Deny first. Nothing below may undo it: an error in the link removal
+  -- or the logging is caught and logged, the target stays cleared.
   local target = event:get_data ("target")
-  if target or not final then
-    local om = source:call ("get-object-manager", "session-item")
-    removeLinks (om, si)
-  end
-  if target then
-    logDeny (source, si, si_props, target, final)
-  end
   event:set_data ("target", nil)
+  local ok, err = pcall (function ()
+    -- One line per run of the gate, never deduplicated. The hook-order
+    -- check in tests/service-integration/wp-f318 matches on it.
+    if not final then
+      log:info (si, string.format (
+          "F-318: mugge-deny-playback: denied item %d node.name=%q "
+          .. "node.id=%q", si.id, clean (si_props ["node.name"]),
+          clean (si_props ["node.id"])))
+    end
+    local source = event:get_source ()
+    if target or not final then
+      local om = source:call ("get-object-manager", "session-item")
+      removeLinks (om, si)
+    end
+    if target then
+      logDeny (source, si, si_props, target, final)
+    end
+  end)
+  if not ok then
+    log:error (si, "F-318: error after denying item " .. tostring (si.id)
+        .. " (the deny stands): " .. clean (err))
+  end
 end
 
 SimpleEventHook {
@@ -211,7 +228,7 @@ SimpleEventHook {
       if isProtected (props) then
         log:info (string.format (
             "F-318: %q is not eligible as default.audio.sink",
-            tostring (props ["node.name"])))
+            clean (props ["node.name"])))
       else
         table.insert (kept, Json.Object (props))
       end
