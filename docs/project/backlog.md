@@ -286,7 +286,10 @@ Next free: F-369, US-173, D-069, T66.
     F-328 reconciled (QE request; Architect recommendation, PM
     adopted): re-state F-328 as "PW capture node deferred per F-295;
     ALSA 8-in verified by hw_params (AC12)"; it stays open as the
-    capture tracker. PO ADVICE (2026-10-25; owner sets the final
+    capture tracker. New F-328 AC (QE; found by worker-1): whatever
+    opens USBStreamer capture must get Interface 2 Altset 1 (8 ch),
+    not Altset 2 (4 ch), and verify the channel count once open
+    (relevant to F-295). PO ADVICE (2026-10-25; owner sets the final
     priority; team-lead told the owner it stands as Medium unless
     they object): re-rate High -> **Medium**. No US-163 AC depends on it
     (AC12 amended); DJ mode needs no USBStreamer capture (measurement
@@ -336,26 +339,120 @@ Next free: F-369, US-173, D-069, T66.
   - hifiberry-blocked PASS via /proc/asound/cards (aplay/arecord are
     not on the image). Sink S32LE/8ch/48k.
   - P2 main-thread item NOT triggered (no startup kill).
-  - Still open: T48 owner power cycle; the fan question.
+  - Still open: T48 (now the first AC17 cycle, see pre-merge runs);
+    the fan question.
   - Wording: aplay/arecord are not on the image; /proc/asound/cards
     as live evidence for hifiberry-blocked is ACCEPTED (AE, QE).
     AC12/hifiberry text updated in the pre-PR batch.
-  - OPEN (QE): the AC12 ALSA capture evidence (8 ch at 48 kHz) and
-    the suite results; CM asked worker-1.
+  - **AC12 PASS** (QE) at 132997f9, boot 1531f01f, CM-OBS-.89-AC12
+    (read-only, 09:38Z; file observe-AC12-capture-8bea1a7f.txt):
+    stream0 Capture Interface 2 Altset 1 = S32_LE, 8 ch, 44.1/48k
+    (Altset 2 = 4 ch); Playback 8 ch/48k on both altsets; pcmC1D0c is
+    a char device; pcm0c info binds via the card-id path and the
+    stream0 header. Missing PW capture node deferred per F-295
+    (F-328/F-319). Minor scope deviation logged: worker-1 also read
+    boot_id (static; QE no objection).
+  - Suites at 9b2879eb: darwin leg ACCEPTED (QE; nix 2.34.8 < 2.35,
+    all counts > 0), all green except F-363 (pre-existing, not US-163
+    scope). Lab note 9b2879eb, SecSpec OK, no cuts; story/US-163 now
+    8bea1a7f (lab note updated per rulings).
   - Recovery (Architect): the firmware partition keeps 2 gens, now
     nkifli3r + x83m7bir; p9mz... was pruned. The PR text and recovery
     notes use gens/x83m7bircd4b7j8wchx9k1mnilzi8kl4/ as the fallback
-    generation; drop any p9mz line. Pre-PR batch.
+    generation; drop any p9mz line. Pre-PR batch. After AC18b x83 is
+    pruned and the fallback becomes nkifli3r (Architect).
   - F2 (pcm-bridge/level-bridge nodes after PW restart): P1, see P1.
     The US-163 PR lists F2 as an OPEN AMPS-ON PRECONDITION, not only
     as observed (team-lead, CM).
   - US-163 status after deploy 2: the F-358 fix and the F-367 guard
     f87c162b are approved, deployed together (132997f9) and PASS.
-    PASS on deploy 2 (QE): AC13 (closed), T49, T51. Still open: T48
-    (OPEN, owner power cycle; the PW thread list is recorded once as
-    a confirmation, not a gate); the AC12 capture evidence and suite
-    results (QE); the fan question; the pre-PR tracking batch; then
-    the PR and Rule 13.
+    PASS on deploy 2 (QE): AC13 (closed), T49, T51, AC12. Still
+    open: the pre-merge runs below (T48 is now the first AC17 cycle);
+    the fan question; the pre-PR tracking batch; then the PR and
+    Rule 13.
+  - **US-163 pre-merge runs** (rulings 2026-10-25: PO scope, QE
+    adequacy, Architect technical, SecSpec scan). QE needs items 1-5
+    BEFORE its Rule 13 approval; only T56/AC19 come after merge.
+    ORDER (QE, Architect): T54 -> AC18a -> AC18b -> AC17. The FAT
+    keeps 2 gens, so AC18b would evict x83m7bir; T54 runs first.
+    Item 1 can run at any point.
+    1. OPEN: T53-on-deploy + external scan, ONE read-only OBSERVE on
+       the running deploy (SecSpec precondition; PO, QE). A worker runs
+       it from the Mac; SecSpec reviews the raw output under Rule 13.
+       Host key a5kILUyr + MAC first. v4: `nmap -Pn -p-` shows exactly
+       22 and 8080 open. v6: every address (link-local with scope,
+       e.g. %en0, plus SLAAC/global/ULA): 22 open, nothing open
+       outside {22, 8080} (8080 closed on v6 is fine if the web UI
+       binds 0.0.0.0 only). 5900 not open (filtered or closed; DROP
+       policy). 5353/udp by the existing ss + nft evidence, no UDP
+       scan. `sudo sshd -T`: permitrootlogin, passwordauthentication,
+       kbdinteractiveauthentication all no; no root authorized_keys.
+       `ss -ltnp`: 4001/4002/9100 on 127.0.0.1 only. AC15 services
+       up, GM gate CLOSED. 8080 HTTPS reachable from the Mac. The 8080
+       allowlist pos/neg test is moot (QE): AC10/AC15 amendment from
+       the owner ruling, F-037 known risk; PO words it. PO accepts
+       SecSpec's wording: "5900 filtered or closed (v4, and v6 if the
+       Pi has a global or ULA address; link-local only is recorded as
+       such); nmap -Pn -p- shows exactly 22 and 8080 open" (superseded
+       in scope by the v6 union above, SecSpec + QE agreed).
+    2. OPEN: T54 rollback, mandatory, no re-scope (PO). Method
+       (Architect, safe now): (0) gens/MAP.txt shows "2 x83m7bir...
+       present" and "3 nkifli3r... present", config.txt -> nkifli3r;
+       (1) `nix-env -p /nix/var/nix/profiles/system
+       --switch-generation 2` + `/nix/var/nix/profiles/system/bin/
+       switch-to-configuration boot`; prune removes nothing; (2)
+       announced reboot; (3) the same with generation 3; (4) announced
+       reboot. Explicit --switch-generation, NOT `nixos-rebuild
+       --rollback` twice (the 2nd goes to gen 1 p9mz, pruned). Pass
+       (QE): (a) booted toplevel = x83m7bir; (b) it survives a 2nd
+       reboot; (c) back on nkifli3r: T51 identity, AC13/T49 quick set,
+       AC14/#10. AC2a evidence: pointer file + both gen dirs before
+       and after, in the lab note; a rollback via the one-line
+       recovery edit also proves the recovery line. Expected on x83,
+       recorded, not a fail: greetd loop, PW RR 20, no linger
+       (F-367/F-358). If x83 fails: card reader, config.txt ->
+       gens/nkifli3r.../. Reboots announce-only.
+    3. OPEN: AC18, RE-WORDED to the boot verb (PO, verbatim): "(a)
+       no-op: `boot` at the same SHA creates no new generation; (b)
+       `boot` at a trivially different SHA -> announced reboot -> the
+       new generation is active, short re-check (no failed units,
+       AC14, T52 #10)." Architect: Pi 5 toplevels embed
+       configurationRevision (flake.nix:821), so any new SHA is a real
+       new gen. (a) pass: no new profile gen, config.txt byte-identical,
+       gens/ unchanged, no reboot. (b) = deploy of the final PR head
+       SHA (docs commits are enough): new gen, pointer moved, prune
+       keeps new/prev/booted, T51 identity, T49, #10. Deployed code =
+       PR head code; later commits docs-only, diff recorded (QE). If
+       the PR head moves after AC18b, AC18b reruns on the merge SHA;
+       QE decides required vs recorded. After AC18b x83 is pruned: the
+       recovery line becomes nkifli3r; update the recovery notes.
+    4. OPEN: AC17, two cold power cycles stay (PO). ONE owner request
+       for two back-to-back cycles on the FINAL deployed SHA (after
+       AC18b; QE). The first counts as T48 (incl. AE's ps -L). Per
+       boot, no intervention: SSH within 3 min; new boot_id; readlink
+       + configurationRevision; both failed lists empty; kernel log
+       scan with per-line disposition; get_throttled 0x0; AC14/#10.
+    5. **DONE at j2ykkiil: AC1a**, AMENDED (PO, verbatim): "The Pi 4
+       drvPath differs from main only by intended all-board changes
+       listed in the PR (at least the F-358 fragment
+       05-rt-direct.conf; the architect lists any others). The diff
+       is shown (nix-diff or equivalent) and attached to the PR. Any
+       unlisted difference is a FAIL." Evidence (Architect): nix-diff
+       Pi 4 `mugge` toplevel main 8nv9psc1 vs branch j2ykkiil; only
+       etc -> pipewire-configs -> pi4audio-pipewire-configs differs
+       (+05-rt-direct.conf, one cp); kernel drv hsf3x9wz unchanged.
+       Intended all-board list = exactly 05-rt-direct.conf.
+       Conditions: the raw diff is attached to the PR (QE/worker-1);
+       re-run at the final PR SHA if all-board paths change (CM
+       checks). Base = origin/main 289390bf, NOT 95306f66 (local-only,
+       unpushed; owner: leave it alone; never a base). Merge base
+       c34f7da7; c34f7da7..289390bf is docs/tracking only. worker-1
+       records both drvPaths; the CM updates the branch to 289390bf
+       before the PR (test merge clean).
+    6. RE-SCOPED to US-170: T55 full Pi 4 builds (`mugge`,
+       `images.sd-card`) (PO, Architect concurs). The PR states this
+       explicitly (QE) and keeps "Pi 4 runtime change is unverified
+       on hardware".
   - US-163 PR known deviations (PO, 2026-10-25, verbatim):
     - "Pi 5 firmware merges none of the config.txt dtoverlay lines
       (vc4-kms-v3d-pi5, disable-bt-pi5). The bootloader writes
@@ -555,7 +652,17 @@ Next free: F-369, US-173, D-069, T66.
   local-demo. Medium latent (AE; found by worker-1). Not blocking
   US-163: T57 namespace isolation covers it.
 - **F-362** Silent ImportError module skips: test_filter_routes.py (85
-  tests) plus four more modules. High; QE ACs 1-5. (worker-2)
+  tests) plus four more modules. High; QE ACs 1-5. (worker-2) Still
+  OPEN at 9b2879eb (QE): test_filter_routes.py:34-35 skips at module
+  level (`pytest.skip(..., allow_module_level=True)`); the log shows
+  only "collected 903 items / 1 skipped" = the whole module, 0 of 85
+  tests; the 1 web-ui unit skip IS this. The other four guarded
+  modules ran (speaker_lifecycle_integration 17, activate_integration
+  22, speaker_routes 177, protection_integration 30): observation
+  only, their guards still mask failures. Not a US-163 blocker.
+- Skip reasons invisible (QE): the integration-browser run shows 10
+  skips with no reasons in the log (no -rs). Make skip reasons
+  visible (cf. F-362). Low.
 
 ## P2
 
@@ -571,8 +678,22 @@ Next free: F-369, US-173, D-069, T66.
   (DNS mugge.lab.andreas.org; see US-163 first-boot entry). Remaining:
   record the final address in the AC and lab note after the Architect
   + SecSpec IP-vs-name ruling. (worker-1)
+- .89 docs batch (CM): the flake.nix comment on mugge-pi5-deploy still
+  says "built natively on the Pi ... nixos-rebuild switch"; the real
+  route is the Mac `nixos-rebuild boot --no-reexec`. Low.
 - **F-363** Purifi Qts test is order-dependent (`iterdir()[:20]`).
-  Medium; QE ACs 1-4. (worker-2)
+  Medium; QE ACs 1-4. (worker-2) Re-found by worker-1 (2026-10-25):
+  test_driver_validation.py::TestRealDriverRecords::
+  test_sample_real_drivers_pass FAILS on darwin on main 95306f66 and
+  US-163. configs/drivers/purifi-ptt6-5w04-nfa-01/driver.yml: Qts
+  0.23, but Qes 0.27 + Qms 6.3 give 0.2589 (11.2% vs 10% limit); data
+  from 36386c75. The unsorted sample makes it filesystem-order
+  dependent, so Linux CI may pass: latent data bug + order-dependent
+  test. Fix both: (a) verify/correct Qts against the datasheet; (b)
+  sort the sample or check all records. Not US-163 scope, no fix in
+  that PR (QE). Condition (QE): if Linux CI T1 on the US-163 PR hits
+  the failing order, it still BLOCKS (Rule 13 CI green); the minimal
+  fix is decided then, not waived.
 - US-159 G16 with AE amendments a-e and architect additions 1-3; test
   T65 (not T62). Medium; re-rate on (i) volume after replug, (ii) relink
   with gate_open true. Match by node and direction.
