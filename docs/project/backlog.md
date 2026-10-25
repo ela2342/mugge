@@ -2338,6 +2338,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     r5 (CM, 2026-10-25): r5 build running (gain_matrix.py 7050eac2).
     The AE and Architect validity conditions went to worker-3. One r6
     build is pre-cleared (CM, disk hold) if r5 does not capture them.
+    r5 RESULT (CM, 2026-10-25; results SUMS 222b787c): the matrix
+    shows the gain set applies AND both readers see it, in T1 and T2,
+    idle and with a stream: H2 is FALSE for the Pi topology, so no H2
+    F-ID. applied() misfired on sandbox zero-dropouts (the level reads
+    -26.02 with them removed). -0.0 is normalised to 0 in T2, so the
+    Mult 0.001 fallback is triggered; it needs the owner's S-012 OK,
+    with the AE's plain-language explanation first (to team-lead once
+    the joint ruling is out; non-blocking). The selftest set-param
+    still fails with the filter-chain suspended. Joint AE + Architect
+    ruling on options (i)-(iii) PENDING; worker-3 holds. The RULE
+    above (no amps-on step counts the readback as live proof) stays
+    until that ruling.
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -2948,6 +2960,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     limits should never get as far as playing a stimulus. UX: same
     message at every entry point. F-388.md (#58) gets it in the TW's
     #58 v2 if the TW takes it there, else in the next defects docs PR.
+    ON MAIN (#58 merged dfb81cd7, 2026-10-25; supersedes "gets it in
+    the TW's #58 v2 ... else in the next defects docs PR" and the
+    entry's "No defects/F-388.md record on main yet" line):
+    docs/project/defects/F-388.md is on main with AC-f as AC 6.
+    Dependency (AD N1 on #58; team-lead): AC-f(ii), the refusal at
+    session start, depends on F-390: the session reads the repo
+    configs/speakers while the editor saves to /etc/pi4audio/speakers,
+    so on the Pi the session-start check could be skipped. F-390 is
+    scheduled first. Architect: AC-f uses one shared validator
+    (F-391); no second implementation per entry point.
 - **F-389** Pi 5 tryboot with KMS+BT overlays via overlay_prefix:
   no network, needed an owner power cycle (Architect, no QE
   objection; via CM, 2026-10-25). US-172 run 2: run 1 +
@@ -3041,6 +3063,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     hashes (see F-391); (e) valid only for the named US-173 and
     US-174c/d sessions; F-390 stays P1 open, and the fallback never
     covers a gig.
+  Linked (AD N1 on #58, 2026-10-25): F-388 AC-f(ii), the driver-record
+  refusal at session start, depends on F-390; F-390 goes first.
 - **F-391** Measurement sweep ignores mandatory_hpf_hz (P1; AE,
   2026-10-25). Gates the same sessions as F-390. /measurement/start
   accepts ChannelConfig.mandatory_hpf_hz (session.py:193), but
@@ -3521,6 +3545,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   update) = 2/7. One intermittent "1 warning" in a web-ui unit run, 2
   reruns clean; worker-5 tries to capture its text; possibly the F-387
   family; the QE is informed.
+  UPDATE (CM, team-lead, 2026-10-25; supersedes "2/7" above): 7/7
+  APPROVE posted at d0a317c3 (comments 6404488379 to 6404489902), all
+  conditional on CI 40241633913 green. QE N2, verbatim: "unexplained
+  intermittent warning, 1 of 3 runs, d0a317c3 (web-ui unit)"; worker-5
+  is trying to capture the text. After #58 merged, #55 moved to
+  9fd7bf2b (update-branch with main dfb81cd7; diff cmp-identical); the
+  d0a317c3 approvals lapse (strict protection); diff-only re-check out
+  to all 7; CI 40242141720. Re-APPROVED at 9fd7bf2b: UX (own cmp), AD
+  (not covering CI) = 2/7. The post-#54 update needs one more
+  diff-only re-check (cmp the three-dot diff; room-correction 1244/0/1
+  unchanged; CI green at that head). Body nits for that push (same
+  fix): TW "(1232 -> 1244 total)" -> "(1233 -> 1245 collected)"; QE N1
+  "1233 -> 1245 collected (1244 passed / 0 failed / 1 skipped)".
   AD L3 suggested text (via CM; TW/AE tidy): "designed so the two legs
   sum flat; the shipped LR4 profile is verified within ±1 dB, LR8
   after room correction is not yet verified (F-383)" (markaudio LR4
@@ -3923,6 +3960,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Diff-only re-check out to all 7. The QE's F-262 XPASS line stays OUT
   of #58 (TW, scope as reviewed); queued for the TW's next defects
   docs PR.
+  #58 MERGED (CM, 2026-10-25): merge commit dfb81cd7 at 22:51:16Z
+  (head ff586707); it closes F-363 (R1: 11 marked records) and adds
+  F-388 with AC 6 = AC-f. Re-APPROVED at ff586707 (team-lead record):
+  UX, SecSpec, Architect, AE, AD; the TW and QE verdicts are covered
+  by the CM's 7/7 merge check (comment ids with the CM). The #56 item
+  "Open on merge: the TW closes F-363.md" is done. Still queued for
+  the TW's next defects docs PR: the QE's F-262 XPASS line.
   #56 backlog (AD, TW, 2026-10-25): AD L1 = TW (3), P3: the CLI
   scripts/drivers/validate_drivers.py and pytest need one shared
   exemption/bounds source (the CLI flags the 8 exempted records
@@ -4373,6 +4417,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   evidence. Scratch branch deleted. Body v3 posted (TW v2 with the H1
   row filled in); the QE does the diff-only body check. Open: the QE
   verdict and CI 40240718064 at 46343238 (running).
+  UPDATE (CM, 2026-10-25): the AD verified H1 run 40241169781 itself;
+  M1 confirmed met. CI 40240718064 at 46343238 FAILED one E2E test:
+  test_audio_flow.py::TestLevelBridge::test_level_bridge_sw_has_signal,
+  all 8 channels silent (log /tmp/ci54-40240718064-failed.log). The
+  QE, AE and Architect are ruling; a flake ruling needs an F-ID (next
+  free F-394). AD: the flake.nix diff does not explain it; it needs a
+  root cause or a recorded defect, not just a green rerun. After #58
+  merged, #54 moved to c32f416f (update-branch with main dfb81cd7;
+  diff cmp-identical); diff-only re-check out to all 7; CI
+  40242139498. Re-APPROVED at c32f416f: UX (own cmp), AD (not covering
+  CI) = 2/7.
   Pi build queue (Architect, 2026-10-25): F-365, then the F-374
   PR-head suite, then the wireplumber-no-bypass check; each from a
   tarball at the declared SHA with sandbox=true. WP check
