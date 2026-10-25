@@ -37,8 +37,10 @@ pw-dump; PM checked free across main, origin and all worktrees,
 2026-10-25); F-387 (Low, web-ui teardown flake; QE N2 on #55; PM
 checked free across main, origin and all worktrees, 2026-10-25);
 F-388 (P2, Xmax definition in the excursion mask; AE; PM checked
-free across main, origin and all worktrees, 2026-10-25).
-Next free: F-389, US-176, D-071, T66.
+free across main, origin and all worktrees, 2026-10-25); F-389
+(US-172 tryboot hang, Architect; PM checked free across main,
+origin and all worktrees, 2026-10-25).
+Next free: F-390, US-176, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -1805,8 +1807,54 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   state record (boot_id, tryboot flag, gen, journalctl -b -1); skip
   tb-post (marker 0 on a normal boot STOPs by design); tb-restore
   FAT-only; a RESTORED check, with no tb-normal reboot if the boot
-  is already normal. Whether the hang gets its own F (F-389) is
-  with them too. H1 may pre-empt
+  is already normal. The hang is F-389 (Architect, 2026-10-25; was
+  "whether ... gets its own F"). QE RULING (via CM, 2026-10-25;
+  the Architect's is pending; the CM gives worker-2 the go only
+  after both): plan
+  accepted. tb-post skipped, recorded as "skipped: normal boot,
+  would STOP by design". No tb-normal reboot: (c) is met on the
+  power-cycled boot once, after tb-restore, the manifest == PRE
+  byte for byte. R3 holds: no tryboot of any kind until the
+  Architect rules on a next step. Order on the Pi, before any FAT
+  write: (1) the current boot (boot_id, tryboot flag 0, marker 0,
+  booted rcyg67wd, overlay_prefix gens/<id>/overlays/); (2)
+  journalctl --list-boots: if a kernel boot happened between PRE
+  and now, save its journal (-b <id>, -k), timeline from the Mac
+  poll times; (3) /sys/fs/pstore, thermal, the rpi_volt alarm,
+  vcgencmd get_throttled; (4) a post-hang FAT manifest diffed
+  against the armed manifest, which must be 0 lines; (5)
+  tb-restore; (6) the RESTORED reads on this boot (audio, drm, the
+  (c) checks). Steps 1-4 are read-only OBSERVE; a script change for
+  step 6 is a new SHA and a quick QE + Architect re-review. H1
+  outcome: "H1 NO-RETURN (inconclusive)", neither CONFIRMED nor
+  FALSIFIED. The run report has the timeline, steps 1-4 verbatim
+  and the single-variable statement (run 2 = run 1 +
+  overlay_prefix=o/ + disable_splash=1 turned a 36 s return into
+  no return); no claim on whether the overlays applied; it carries
+  the disarm note. Without a console, any rerun needs a design that
+  splits the variables (the Architect's call).
+  ARCHITECT RULING (via CM, 2026-10-25; adds to the QE's): Safety:
+  the power cycle clears the tryboot flag, so a normal boot into
+  the base generation; no audio concern (cold USBStreamer at 0 dB
+  hw; D-063 Mult 0 and the closed gate apply; nothing connected).
+  SD: read-only checks for a FAT dirty bit and ext4 errors before
+  tb-restore; any manifest difference besides o/ + tryboot.txt =
+  STOP. Reads before tb-restore add `ls /var/log/journal` (is the
+  journal persistent?), the hung-boot journal with -o
+  short-monotonic and a grep list, and pstore. H1 INCONCLUSIVE, not
+  CONFIRMED: "positive control unread; H1 unresolved". NO tryboot
+  of any kind until the Architect and QE approve run 3. Run-3
+  design: self-recovery via panic=10 and softlockup_panic=1 on a
+  tryboot-only cmdline plus RuntimeWatchdogSec on bcm2835; a
+  persistent journal; split 3a (o/ with only disable-bt-pi5), then
+  3b adds vc4-kms after 3a. Owner-physical, list-only, nothing
+  blocks on it: the power cycle and the LED glance (already asked);
+  optional an HDMI monitor connected before run 3b; the QE's UART
+  item (below). CM DECISION (supersedes the QE's "no tb-normal
+  reboot" above): tb-normal runs after tb-restore as a plain reboot
+  gated by the CM's logged go, because the tb-normal guard cannot
+  trigger with tb-post skipped; a known limitation in the run
+  report. H1 may pre-empt
   the Pi
   build queue between derivations once reviewed; US-173 Gate-2
   follows H1.
@@ -1823,7 +1871,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   boot-id/oops/SError check afterwards; (5) dump 0600, sha logged,
   only reviewed excerpts quoted; (6) a one-off diagnostic, not a
   mechanism. Debug-UART capture needs the owner's hands: last
-  resort.
+  resort. Owner-physical, CONDITIONAL (QE, 2026-10-25): attach a
+  USB-serial adapter to the Pi 5 UART debug header so the team can
+  capture the boot console (enable_uart=1 is already set). Only if
+  the Architect plans another tryboot run; the Architect decides.
+  It goes to team-lead's batched owner list only then.
   Same deferred class (worker-2, via CM, 2026-10-25): a non-/dev/mem
   route to the VC log, mmap of /dev/vc-mem at 0x3ff22000. It maps
   physical memory uncached and bypasses STRICT_DEVMEM, so it needs a
@@ -2410,6 +2462,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the sheet's printed "mathematical" value. Precondition for F-385
   option (i'); related to the fail-closed T/S follow-up under
   F-363.
+- **F-389** Pi 5 tryboot with KMS+BT overlays via overlay_prefix:
+  no network, needed an owner power cycle (Architect, no QE
+  objection; via CM, 2026-10-25). US-172 run 2: run 1 +
+  overlay_prefix=o/ + disable_splash=1 turned a 36 s return into no
+  return. Details, recovery and the run-3 design under US-172.
 - Docs (TW; via CM, 2026-10-25): flake test apps run on a /nix/store
   copy of the git tree, so untracked new test files are invisible
   to `nix run .#test-*` until git-added. On darwin, test-web-ui is
@@ -3360,6 +3417,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the booted generation, closing the AC5 inference (QE PASS rests on
   two reads not taken on the final generation plus the config
   default, QE git grep at 798f2dc7 and 07a65f9e) with a direct read.
+  Architect (2026-10-25, from F-389): check whether the base
+  generation sets RuntimeWatchdogSec at all (the bootstrap read
+  showed RuntimeWatchdogUSec=0). The Pi 4 watchdog failed in Tests
+  3/5, so this matters for gigs; run 3 also needs it on bcm2835.
 
 ## Open PRs (2026-10-24, per CM)
 
