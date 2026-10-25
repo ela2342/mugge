@@ -21,7 +21,7 @@ metadata:
   datasheet_file: data/298-1219--tw030wa21-spec-sheet.pdf
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: qts 11.46 -> 1.46 per https://www.parts-express.com/pedocs/specs/298-1219--tw030wa21-spec-sheet.pdf (Wavecor TW030WA21/22 sheet, (c) 2014-2023, TW030WA21 column), retrieved 2026-10-25.'
   notes: 'Scraped from parts-express.com. Part number: 298-1219.'
   quantity_owned: null
   serial_numbers: []
@@ -31,7 +31,7 @@ thiele_small:
   fs_hz: 750.0
   re_ohm: null
   z_nom_ohm: 4
-  qts: 11.46
+  qts: 1.46
   qes: 1.78
   qms: 8.2
   vas_liters: null

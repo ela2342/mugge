@@ -21,7 +21,8 @@ metadata:
   datasheet_file: null
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: datasheet-inconsistent. https://www.parts-express.com/pedocs/more-info/290-305-goldwood-gw-2068-more-info.pdf (no revision printed) prints Qts 0.752, Qes 0.752, Qms 3.386 (Qts = Qes is impossible), retrieved 2026-10-25. Values stored exactly as printed (were 2-decimal roundings).'
+  ts_consistency: datasheet-inconsistent
   notes: 'Scraped from parts-express.com. Part number: 290-305. Unmapped materials (raw): cone=Treated Paper.'
   quantity_owned: null
   serial_numbers: []
@@ -31,9 +32,9 @@ thiele_small:
   fs_hz: 64.6
   re_ohm: 7.1
   z_nom_ohm: 8
-  qts: 0.75
-  qes: 0.75
-  qms: 3.39
+  qts: 0.752
+  qes: 0.752
+  qms: 3.386
   vas_liters: 11.04
   cms_m_per_n: 0.00043
   xmax_mm: 2.5

@@ -21,7 +21,8 @@ metadata:
   datasheet_file: null
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: datasheet-inconsistent. https://imagedynamicsusa.net/media/uploads_file/2024/07/01/a6682eec06d8c04.66893277.pdf (IDMAX V4 manual), IDMAX10D2 column: Qts 0.609, Qes 1.346, Qms 4.548, retrieved 2026-10-25. Values stored exactly as printed (were 2-decimal roundings). Our hypothesis, not data: the dual-voice-coil Q values may mix per-coil and both-coils (series) measurements.'
+  ts_consistency: datasheet-inconsistent
   notes: Scraped from loudspeakerdatabase.com on 2026-03-12
   quantity_owned: null
   serial_numbers: []
@@ -31,9 +32,9 @@ thiele_small:
   fs_hz: 27.0
   re_ohm: 3.44
   z_nom_ohm: 2.0
-  qts: 0.61
-  qes: 1.35
-  qms: 4.55
+  qts: 0.609
+  qes: 1.346
+  qms: 4.548
   vas_liters: 37.2
   cms_m_per_n: 0.00018199999999999998
   xmax_mm: 19.0

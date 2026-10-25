@@ -21,7 +21,7 @@ metadata:
   datasheet_file: SB15MFC30-4-data-sheet.pdf
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: qes 30.0 -> 0.3, vas_liters 194.0 -> 19.4 per https://sbacoustics.com/wp-content/uploads/2020/02/5in-SB15MFC30-4.pdf (no revision printed), retrieved 2026-10-25.'
   notes: Scraped from soundimports.eu.
   quantity_owned: null
   serial_numbers: []
@@ -32,9 +32,9 @@ thiele_small:
   re_ohm: 3.1
   z_nom_ohm: 4
   qts: 0.28
-  qes: 30.0
+  qes: 0.3
   qms: 5.26
-  vas_liters: 194.0
+  vas_liters: 19.4
   cms_m_per_n: 0.00203
   xmax_mm: 5.0
   xmech_mm: null

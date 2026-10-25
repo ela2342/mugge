@@ -38,6 +38,18 @@ metadata:
   ts_parameter_source: null     # manufacturer | measured-added-mass | measured-impedance-jig
   ts_measurement_date: null     # ISO 8601
   ts_measurement_notes: ""
+  # ts_consistency: datasheet-inconsistent | unverifiable
+  #   Optional. Set ONLY when the stored Qts/Qes/Qms triple fails the 10%
+  #   consistency check and cannot be corrected:
+  #     datasheet-inconsistent  the manufacturer datasheet itself prints
+  #                             the triple. Store it exactly as printed and
+  #                             quote it with source and revision in
+  #                             ts_measurement_notes.
+  #     unverifiable            the source is unavailable. Keep the stored
+  #                             values and say so in ts_measurement_notes.
+  #   Add a matching entry to TS_CONSISTENCY_EXEMPTIONS in
+  #   src/room-correction/tests/test_driver_validation.py (F-363).
+  #   Marked records must not be used by any speaker or venue config.
   notes: ""
   quantity_owned: null
   serial_numbers: []
