@@ -9,11 +9,12 @@ land here. Maintained by the PM; the CM commits changes.
 ## Reserved IDs
 
 Taken (not yet filed as records): F-361, F-362, F-363, F-364 (below);
-F-365; F-366, F-367, F-369 (US-163 section); D-068 (T57 gate dropped); T65 =
+F-365; F-366, F-367, F-369 (US-163 section); F-370 (P2);
+D-068 (T57 gate dropped); T65 =
 US-159 G16 reconciler test; US-172 (P1, Pi 5
 local display). F-368 WITHDRAWN, never to be reused (was a
 duplicate of the existing F-358 for AC13).
-Next free: F-370, US-173, D-069, T66.
+Next free: F-371, US-173, D-069, T66.
 
 ## US-163 text updates (critical path; one tracking batch before the PR)
 
@@ -389,7 +390,10 @@ Next free: F-370, US-173, D-069, T66.
     Architect + QE): x83 was pruned at AC18a, not AC18b (a no-op
     deploy prunes the FAT to {new, prev, booted}, which collapse to
     one); the recovery line is now gens/nkifli3r.../ and x83 is in the
-    store only. See F-369.
+    store only. See F-369. Update (CM, after CM-DEP-.89-3): the FAT
+    holds {2wf21ydg (M = system-4), nkifli3r (N = system-3)}; the
+    fallback line stays gens/nkifli3r.../. All x83 recovery text above
+    is superseded.
   - F2 (pcm-bridge/level-bridge nodes after PW restart): P1, see P1.
     The US-163 PR lists F2 as an OPEN AMPS-ON PRECONDITION, not only
     as observed (team-lead, CM).
@@ -428,6 +432,32 @@ Next free: F-370, US-173, D-069, T66.
     (a)-(e) (item 7), exact {M, N} criterion, thermal sampler
     condition; three reboots announced to team-lead. Next: AC1a
     re-run on M (separate grant) -> PR opens -> AC17.
+    RESULT (CM, 2026-10-25): CM-DEP-.89-3 COMPLETE, every step PASS
+    (worker-1; CM spot-checked), lock released. M = f0fbefd1 -> Pi 5
+    toplevel 2wf21ydg = system-4; N = nkifli3r = system-3.
+    Precondition {N}: PASS. (a) deploy rc=0, 14 paths, Mac profile
+    unchanged (system-150), gens {M, N}, os_prefix at M. (b) reboot
+    (boot c3a7a23f): booted M, T51 identity OK, check #10 16 gains
+    0.0, gate closed. (c) AC18c no-op redeploy: 0 paths, no new link,
+    {M, N}; PASS by the CM content ruling ("unchanged" = content; the
+    hook rewrites config.txt + MAP.txt with identical content, see
+    F-370). (d) T54b rollback: os_prefix at N, boot 80fc4047 booted
+    N, {M, N}; N's old hook also kept both. (e) back to M: boot
+    eeddb8b6, booted M, T51 OK, check #10 OK. MAP sha 90b081b2
+    constant; config.txt 012d89d4 -> 315a13d3 -> 012d89d4 (os_prefix
+    only). Thermal valid: 41 samples, 63.9-66.1 C, 2.4 GHz = max,
+    rpi_volt 0, no cooling devices (criterion 1 N/A). Deviation: (c)
+    attempt 0 failed on a local helper exec bit; nothing ran on the
+    Pi (QE: not a finding).
+    QE VERDICT: **AC18b PASS, AC18c PASS, T54b PASS**, unconditional.
+    QE spot-checked: M (f0fbefd1) contains b9e8974e (merge-base);
+    boots 45ebdf64 -> c3a7a23f -> 80fc4047 -> eeddb8b6; final state
+    system-4 = M, os_prefix M, {M, N}, gate closed, 16 gains 0.
+    NEXT: AC1a re-run (Mac nix-diff 289390bf vs f0fbefd1; Architect
+    verdict) -> PR opens -> AC17. QE expectation for AC1a: only F-358
+    (05-rt-direct.conf) plus configurationRevision; anything else
+    needs a per-item disposition (CM passed to the Architect: the PO
+    criterion lists only 05-rt-direct.conf).
     1. PASS (QE + SecSpec; CM-OBS-.89-T53, T53b, T53c): T53-on-deploy,
        ONE read-only OBSERVE on the running deploy. NO external port
        scan (owner directive, see the test-process rule below); the
@@ -982,6 +1012,11 @@ Next free: F-370, US-173, D-069, T66.
 
 ## P2
 
+- **F-370** (QE, Low; Architect to rule; not US-163 scope): the Pi 5
+  hook rewrites config.txt and MAP.txt on a no-op deploy with
+  identical content (seen in CM-DEP-.89-3 (c)). Skipping the rename
+  when the content is identical avoids reopening the accepted vfat
+  power-loss window on every no-op deploy.
 - "PipeWire main thread back to SCHED_OTHER: drop the F-020
   CPUSchedulingPolicy=fifo/88 from the pipewire user unit, now that
   module-rt promotes the data loops directly (F-358). At equal FIFO
