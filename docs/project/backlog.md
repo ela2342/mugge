@@ -2168,6 +2168,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     Pi order: US-172 recovery -> deploy 142a3523 -> preflight
     (OBSERVE) -> full run (CHANGE). c7dde808, a9addc52 and 142a3523
     are already pushed.
+  - Gate-2 reviews complete (via CM, 2026-10-25): AE CHANGES (B1
+    read the gains via pw-cli enum-params; R1 read the D-063 gate;
+    R2 a failed sink restore is a STOP). SecSpec APPROVED both
+    scripts, with a CM lock-release condition (configured default
+    and target.object restored) and lows 1-3. Architect CHANGES (C1
+    check the WP default-nodes state file; N1-N3). QE CHANGES for
+    the full run (G1-G4); --preflight-only APPROVED as-is on
+    OBSERVE. worker-3 has the batched list and is editing; builds
+    stay held (Mac disk).
+  - a9addc52 evidence (worker-3, via CM, 2026-10-25):
+    /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
+    pre-commit worktree; its provenance file explains why it is
+    valid. A clean-rev rebuild only if the QE asks for one.
   - Pushed (CM, 2026-10-25): story/US-173-first-dj-session =
     142a3523 (the F-380 revert of c7dde808, SecSpec fixes and
     Architect N1 in a9addc52, merge of main dfdbbbd6).
@@ -2405,6 +2418,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   MANIFEST b69ab2f5, same B6e base at bcc353ed, whole-file replace
   of US-174.md), which carries the QE's T1-T6 in place of A1-A5.
   The CM applies B6i on top of worker-4's AC2 commit.
+  B6i is HELD (CM, 2026-10-25) until 174d states the real gate. QE
+  condition for citing US-174d in place of (B): "corrected
+  MEASURED response, max positive deviation <=
+  closed_loop.MAX_POSITIVE_DEVIATION_DB (3.0 dB), same 1/6-oct
+  smoothing and bands as AC3, failure blocks deploy". The PM asked
+  the AE (tolerance owner) to agree the wording; then B6j. The #57
+  body cites that 174d line.
   PO FINAL (via CM, 2026-10-25): the constant move is within
   the "test-only" intent; (A) stands, no split (supersedes "the PO
   may still ask for the split"). QE A1-A5 on (A) (via CM,
@@ -2788,6 +2808,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   verbatim in the editor (UX checks under G1). Aligning the codes
   is out of scope; UX may backlog it. worker-5 is cleared and
   working.
+  #55 head 2e29f82e (pushed, CM, 2026-10-25): the U1 single-source
+  check, fixtures slope-only 96 -> 48, the negative save tests;
+  body v2 set; re-review requested from all 7 reviewers. The branch
+  is 7 commits behind main.
   #55 backlog (AD, 2026-10-25): L1 a loose-bounds regression test
   on the real, unmodified markaudio profile (sum, max|H|, phase),
   tightened with F-385/F-383. L2 default_profile.yml has no
@@ -3397,6 +3421,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   record (CM, 2026-10-25): during the hold worker-3 deleted their
   own temporary nix store paths (~430 MiB); the CM asked for
   details and set "no store delete/GC without CM clearance".
+  Details (worker-3, via CM, 2026-10-25; corrects ~430): 6
+  selftest builds on the linux-builder (20:56Z-21:31:58Z); 3 `nix
+  store delete` runs on their own w3-gate2-selftest outputs only
+  (339.1 + 92.7 + 92.2 MiB, ~524 MiB total); no GC. Deviation
+  recorded and closed (CM). Later (CM): disk 2.6 GiB and falling;
+  the hold stays.
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
