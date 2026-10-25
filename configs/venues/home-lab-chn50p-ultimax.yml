@@ -1,0 +1,57 @@
+# Venue config: home lab, first supervised DJ session (US-173).
+#
+# Same rig and coefficients as markaudio-ultimax-200hz (CHN-50P pair on
+# ch 1/2, one UMII18-22 on ch 3, 200 Hz crossover-only FIR), but with
+# audible gains. ONLY valid together with the hardware level cap H set on
+# the McGrey PA4504 (docs/operations/safety.md, D-070 home-lab exception):
+# at 0 dBFS sine, ch 1/2 <= 5.3 V rms (7 W / 4 ohm), ch 3 <= 20 V rms
+# (~100 W / 4 ohm). Without H, do not load this venue.
+#
+# Gain values (AE, relative to H; owner S-012 confirmation required at
+# the session before the gate is opened):
+#   Mains (-12 dB): <= 0.4 W per CHN-50P at full-scale sine. The 7 W limit
+#     is held by H; this adds about 12 dB of margin.
+#   Sub (-20 dB): the sub gets L+R summed (up to +6 dB for correlated
+#     content), so the sub output stays <= about -14.6 dBFS (<= 3.5 W).
+#     Roughly balanced with the mains before room gain; adjust by ear only
+#     downwards, or upwards with a fresh S-012 confirmation.
+#   Spare ch 4 (-120 dB): nothing connected, muted.
+#   HP/IEM (-120 dB): no headphones or IEM in this session, muted. This
+#     venue must not be used with HP/IEM connected.
+
+name: "home-lab-chn50p-ultimax"
+description: "Home lab first DJ session -- CHN-50P + UMII18-22, 200Hz crossover only, requires amp level cap H"
+
+channels:
+  1_sat_l:
+    gain_db: -12
+    delay_ms: 0
+    coefficients: "combined_left_hp.wav"
+  2_sat_r:
+    gain_db: -12
+    delay_ms: 0
+    coefficients: "combined_right_hp.wav"
+  3_sub1_lp:
+    gain_db: -20
+    delay_ms: 0
+    coefficients: "combined_sub1_lp.wav"
+  4_sub2_lp:
+    gain_db: -120
+    delay_ms: 0
+    coefficients: "dirac.wav"
+  5_eng_l:
+    gain_db: -120
+    delay_ms: 0
+    coefficients: "dirac.wav"
+  6_eng_r:
+    gain_db: -120
+    delay_ms: 0
+    coefficients: "dirac.wav"
+  7_iem_l:
+    gain_db: -120
+    delay_ms: 0
+    coefficients: "dirac.wav"
+  8_iem_r:
+    gain_db: -120
+    delay_ms: 0
+    coefficients: "dirac.wav"
