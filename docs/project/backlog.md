@@ -573,7 +573,24 @@ Next free: F-370, US-173, D-069, T66.
        dir plus profile links: (1) the no-op collapse case keeps the
        newest other complete generation; (2) a missing or incomplete
        alt is not recreated; (3) a normal deploy still prunes beyond
-       the keep set. The Architect's review confirms the diff touches
+       the keep set. SUPERSEDED (CM, 2026-10-25): current fix-review
+       conditions. Check file nix/checks/pi5-prune-gens.nix (worker-1,
+       in progress). QE accepted worker-1's cases 1-6 and added: (7)
+       new=D/prev=C/booted=B -> keeps {B,C,D}; (8) a booted dir with no
+       profile link is kept; (9) idempotent re-run; (10) a profiles dir
+       with a plain `system` symlink plus a non-matching entry.
+       Architect: case A = unbooted pointer (same as QE's 7); explicit
+       GNU PATH via lib.makeBinPath in the script (Pi + darwin check);
+       an empty prev/booted never matches a stray dir. Evidence: the
+       hook and the check use the same prune-gens store path; "N/N
+       cases passed"; the check runs in T1/CI; Pi 4 drvPaths unchanged
+       and board-guard green. Architect design approval: the MAP.txt
+       write moves into the prune-gens script with step 3, accepted
+       only if the MAP format and location are unchanged and the test
+       asserts MAP content; step 1 (generation build), step 2
+       (config.txt pointer write), os_prefix/tryboot handling and the
+       gens/<id>/ layout byte-for-byte unchanged in the diff. The
+       Architect's review confirms the diff touches
        only prune/retention, not the pointer write, boot selection or
        FAT layout (normal review item; PO). New **AC18c** (PO): "A no-op
        redeploy (boot at the same SHA) leaves >= 2 complete
