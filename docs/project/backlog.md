@@ -27,7 +27,9 @@ never to be reused: F-377 (Mac disk, worker-2) duplicates the
 existing P3 "Mac disk nearly full" item; F-378 (purifi Qts test,
 worker-4) duplicates F-363. Both updates are merged into those
 items.
-Next free: F-379, US-176, D-071, T66.
+F-379 (P2, web-UI correction level defect); F-380 (P2, CI builds no
+checks.*).
+Next free: F-381, US-176, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -1668,6 +1670,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   B4c (2b92af26) also superseded. Story batch B4d (PM, base
   951d5162, MANIFEST 4474a3fc; US-172.md only, whole-file replace of
   B4b/B4c, index row unchanged).
+  B4c was already relayed and committed by worker-2 (07eadd1a) before
+  B4d; B4d (verified 4474a3fc) goes on top; both pushed together (CM).
+  The tar/cmp wording matches the pinned us172.sh (the tar is deleted
+  after cmp plus an identical FAT manifest). Step 1 session
+  CM-CHG-.89-US172a granted to worker-2 (CM, after the AC19 PASS).
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -1947,6 +1954,24 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   lines, US-174b-sim, the F-374 lane and fence) and B6d (MANIFEST
   946cd203, on top of B6c: AC3 bands, cut-cap rule, AC4 positions,
   AC6 tolerance), each a whole-file replace of US-174.md.
+  B6b pushed: story/US-174-room-correction = 0b412fde (CM); B6c
+  (ea7c48d5) and B6d (946cd203) verified and relayed. AE alignment
+  (2026-10-25; worker-4 builds to it): AC6 = within 1 sample of the
+  geometric truth (stricter than +/-0.2 ms; worker-4 tests both;
+  supersedes the "+/-0.2 ms" above); AC2 adds "below-target regions
+  unchanged within 0.5 dB" as a gate; NEW AC6a: simulated pink noise
+  with a fixed seed, at -60 dB re the recording peak it gates (no
+  extra cuts below 30 Hz vs the noise-free run, +/-1 dB), at -40 dB
+  report-only. Story batch B6e (PM, MANIFEST 1accdb6e, on top of
+  B6d, whole-file replace).
+  Fence script carve-outs (CM): crossover.py, test_crossover.py,
+  generate_profile_filters.py, test_generate_profile_filters.py
+  (worker-5, F-374); test_driver_validation.py (F-363, worker-6);
+  test_committed_venue_coeffs.py (worker-3).
+  Prerequisite (Architect): chore/rc-check-configs (worker-7, off
+  b0666c02; F-365 room-correction part) copies configs/ into
+  checks.test-room-correction; it lands before the 174b PR and
+  before US-173 adds its checks line.
   Existing assets on main: src/room-correction/ (room_correction/,
   runner.py, analyze_measurement.py, gain_calibration.py,
   thermal_ceiling.py, tests/, mock/ with 3 scenarios),
@@ -2116,7 +2141,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   that keeps F-318 open (SecSpec accepts layer (a) alone only for
   the supervised home-lab session). File boundary: Rust
   src/graph-manager only, disjoint from worker-4's US-174b fence
-  and US-173's F-318 WP files. Owner unassigned.
+  and US-173's F-318 WP files. Owner unassigned. Team-lead pauses new
+  workers because of the Mac disk (5.0 GiB free, CM, 2026-10-25).
 
 ## P2
 
@@ -2216,7 +2242,29 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   while US-174 runs; disjoint files (test_driver_validation.py +
   driver.yml records), parallel branch OK; the CM checks the shared
   working directory sequencing. CM: urgent for #52 and the F-374 PR
-  (a CI failure blocks under Q2). Owner: the CM finds one.
+  (a CI failure blocks under Q2). Owner: the CM finds one. OWNER
+  (CM, 2026-10-25): worker-6, branch fix/F-363-driver-validation off
+  b0666c02 (test_driver_validation.py + configs/drivers/**), briefed
+  with the QE ACs above.
+- **F-379** (worker-4, Architect ruling; 2026-10-25) Web-UI
+  correction level defect: src/web-ui/app/filter_routes.py:231 calls
+  correction.generate_correction_filter directly, with no IR level
+  normalization, so the cut depth follows the absolute IR level (a
+  +12 dB mode is cut 29 dB at x1, 9 dB at x0.1, 49 dB at x10).
+  US-174b adds correction.normalize_ir_level(...) and a max_cut_db
+  kwarg, but the web-UI path stays unfixed. Lane: worker-2 + AE (it
+  changes web-UI outputs). Rating: AE (pending).
+- **F-380** (worker-7, Architect ruling: its own item; 2026-10-25)
+  "CI builds no checks.*. Step 1: audit which checks.* currently
+  build red (read-only, eval + build on the Mac/linux-builder).
+  Step 2: a ci.yml step building the green ones, with red ones
+  tracked as defects." Owner QE, sequencing CM. Known red:
+  checks.test-room-correction (red on main since 9643be2a/TK-189,
+  yml cp before chmod; fix on chore/rc-check-configs) and
+  checks.test-midi (both F-365). Until it lands, the room-correction
+  merge gate stays the app variants CI already runs. Note: worker-3's
+  ci.yml T1 step (US-173) and step 2 both touch ci.yml; the CM
+  sequences them.
 - US-159 G16 with AE amendments a-e and architect additions 1-3; test
   T65 (not T62). Medium; re-rate on (i) volume after replug, (ii) relink
   with gate_open true. Match by node and direction.
@@ -2379,7 +2427,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Also: a failed build grew the Mac store by 16 GiB vs 6.6 GiB
   expected; find out why (CM). Update (worker-2, 2026-10-25): 5.5
   GiB free (the CM brief said ~7.3); builds and caches getting tight.
-  Filed as F-377, withdrawn as a duplicate of this item.
+  Filed as F-377, withdrawn as a duplicate of this item. CM df
+  (2026-10-25): 5.1 GiB free, 99% used; later 5.0 GiB. Team-lead
+  pauses new workers because of it.
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
@@ -2393,7 +2443,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Permission denied on test_camilladsp.yml), test-web-ui (speaker
   YAMLs missing, graph_manager_client not importable). Owner QE;
   filed by worker-1, pending the drvPath-vs-main proof that it is
-  pre-existing.
+  pre-existing. Update 2026-10-25: test-room-correction is red on
+  main since 9643be2a/TK-189 (yml cp before chmod); worker-7 fixes
+  it on chore/rc-check-configs (Architect's flake prerequisite,
+  copies configs/ into the check; Architect OK pending). test-midi
+  (worker-7, QE): NOT a silent skip; flake.nix copies the configs
+  flat (midi/, configs/), but src/midi/tests/test_midi_daemon.py:56
+  resolves tests/../../../configs, so 6 tests (lines 93, 123, 132,
+  142, 536, 594) open <builddir>/../configs/midi/apcmini-mk2.yml,
+  hit FileNotFoundError and fail the derivation. Unnoticed because
+  CI doesn't run nix flake check (F-380); the app variants see the
+  real repo layout. Low (QE). Cheapest fix: mirror the repo layout
+  in the derivation (src/midi + configs). Out of
+  chore/rc-check-configs.
 - Architect N1-N3 on #48 (CM PR comment).
 - US-163 follow-ups (worker-1): installer has no configurationRevision.
   (wayvnc on the Pi 5: DONE in 433e16f7, VNC left out.)
@@ -2453,7 +2515,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
 - Merge scripts/generate-room-sim-ir.py (used by local-demo) into
   the single room simulator (mock/room_simulator.py) as a thin
   wrapper (Architect, 2026-10-25). Not in 174b: the script is
-  read-only for that lane.
+  read-only for that lane. Also reported by worker-4 (US-174b design
+  review): the script re-implements the image-source simulator.
 
 ## Open PRs (2026-10-24, per CM)
 
@@ -2509,6 +2572,8 @@ merge needs update-branch and 7 reconfirmations at the new head.
   green (artifact sd-card-image, digest 91b546c4...). US-163 stays
   OPEN until AC19 passes: DEPLOY session CM-DEP-.89-AC19 granted to
   worker-1. A US-163 done-records batch (PM) follows the AC19 PASS.
+  AC19 PASSED (CM, 2026-10-25); session closed; evidence with QE for
+  the verdict. The done-records batch follows the QE verdict.
   QE non-blocking (new): the guard count is not echoed in the CI log
   (it is in $out only); add a dev-howto line on unstaged test files
   (Nix flakes ignore them). Already tracked: F-370, F-371, F-373;
