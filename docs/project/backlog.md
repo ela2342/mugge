@@ -393,10 +393,17 @@ Next free: F-369, US-173, D-069, T66.
        stopped. Checks: host key a5kILUyr + MAC (PASS); `sudo sshd -T`:
        permitrootlogin, passwordauthentication,
        kbdinteractiveauthentication all no (PASS); no root
-       authorized_keys; `sudo ss -ltnup` with bind addresses (v4 and
-       v6): only 22 and 8080 reachable off-host, 5900 not listening,
-       4001/4002/9100 on 127.0.0.1 only, 5353/udp as expected; AC15
-       services up, GM gate CLOSED; 8080 HTTPS reachable from the Mac.
+       authorized_keys; listener clause (QE + SecSpec joint, replaces
+       all earlier wording): "Evidence: on-device `sudo ss -ltnup`
+       (bind addresses shown) plus `sudo nft list ruleset`.
+       Non-loopback TCP listeners are exactly 22 and 8080, each
+       REQUIRED on the v4 wildcard 0.0.0.0. The v6 wildcard [::] is
+       allowed for either but not required. 4001, 4002 and 9100
+       listen on 127.0.0.1 only. Nothing on 5900. Non-loopback UDP is
+       limited to 5353 (avahi) and DHCP client sockets. Any other
+       listener, or an expected one on an unexpected address, gets a
+       per-line disposition, or T53 FAILS." AC15 services up, GM gate
+       CLOSED; 8080 HTTPS reachable from the Mac.
        The 8080 allowlist pos/neg test is moot (QE): AC10/AC15
        amendment from the owner ruling, F-037 known risk; PO words it.
        SecSpec's public-IPv6 point (two global SLAAC addresses on
@@ -441,6 +448,21 @@ Next free: F-369, US-173, D-069, T66.
        boot, no intervention: SSH within 3 min; new boot_id; readlink
        + configurationRevision; both failed lists empty; kernel log
        scan with per-line disposition; get_throttled 0x0; AC14/#10.
+       get_throttled: OPEN, QE to rule. No vcgencmd on the image. QE
+       proposal: (a) rpi_volt hwmon in0_lcrit_alarm 0; (b) every
+       cpufreq cooling_device cur_state 0, SoC temp recorded; (c) no
+       undervoltage/throttling kernel-log lines, per-line disposition;
+       if (a) is absent, (c) covers undervoltage and the sticky
+       history is recorded as not observable (not a FAIL). Architect
+       proposal: (1) OBSERVE: /proc/config.gz SENSORS_RASPBERRYPI_HWMON
+       and BCM_VCIO, /dev/vcio, hwmon names; (2) if /dev/vcio exists:
+       `nix shell nixpkgs#libraspberrypi -c vcgencmd get_throttled`
+       per boot (CHANGE, adds to the Pi store), AC17 keeps 0x0; (3)
+       else: rpi_volt alarm 0 + no Undervoltage/throttl kernel lines
+       + cpuinfo_cur_freq never below max in the sampled run; record
+       that short events between samples are not seen. Governor is
+       already performance (rt-tuning.nix:33, F-291), so idle
+       scaling does not false-FAIL a freq check (Architect).
     5. AC1a: PASS (Architect) at bbff469e vs origin/main 289390bf:
        the only change is toplevel -> etc -> pipewire-configs ->
        pi4audio-pipewire-configs (+05-rt-direct.conf, store path
@@ -503,16 +525,25 @@ Next free: F-369, US-173, D-069, T66.
     fan config fix is needed (the disabled cooling_fan node is
     correct; Architect: nothing to fix). Reference: deploy 2 max
     66.65 C.
-  - THERMAL RULE (AE + Architect; replaces the "STOP at >= 80 C"
-    interim line) for every Pi 5 load run: sample thermal_zone0 AND
-    cpu0 scaling_cur_freq every 10 s; record max temperature and min
-    frequency. WARN at >= 75 C: report to the owner via team-lead,
-    keep running. STOP at >= 80 C (Pi 5 firmware throttle onset; full
-    throttle at 85 C). Any frequency drop below max during a run makes
-    that run's CPU/xrun evidence INVALID, even below 80 C; the run is
-    repeated (AE). A frequency drop is a finding, not a STOP
-    (Architect). No builds on the Pi; all builds stay on the Mac VM
-    (Architect). Gig cooling: see the P1 Pi 5 thermal soak item.
+  - THERMAL RULE (AE + Architect; re-worded 2026-10-25, replaces
+    v62's "cpu0 scaling_cur_freq" wording) for every Pi 5 load run.
+    Precondition (read-only): scaling_governor = performance on all
+    cores (production default, rt-tuning.nix:33, F-291); a mismatch
+    is a finding. Sample every 10 s: thermal_zone0, cpu0
+    cpuinfo_cur_freq (root; actual clock from firmware, not
+    scaling_cur_freq), every cpufreq cooling_device cur_state, the
+    rpi_volt undervoltage alarm. worker-1 confirms on the Pi that
+    cpuinfo_cur_freq and scaling_cur_freq agree at idle. WARN at
+    >= 75 C: report to the owner via team-lead, keep running. STOP at
+    >= 80 C (Pi 5 firmware throttle onset; full throttle at 85 C).
+    The run's CPU/xrun evidence is INVALID, and the run is repeated,
+    if at any sample: any cooling_device cur_state != 0; the
+    undervoltage alarm is set; or cpuinfo_cur_freq <
+    cpuinfo_max_freq (AE: the firmware can cap the clock at the soft
+    limit without a Linux cooling_device showing it). Invalidation is
+    a finding, not a STOP (Architect). No builds on the Pi; all
+    builds stay on the Mac VM (Architect). Gig cooling: see the P1
+    Pi 5 thermal soak item.
   - QE request: commit a SecSpec-vetted subset of the deploy evidence
     into the US-163 PR.
 - 2026-10-24 20:28:03: Pi 5 restart CONFIRMED as the owner's power
@@ -710,12 +741,13 @@ Next free: F-369, US-173, D-069, T66.
   fan or heatsink for gig use. Throttling means xruns (clicks): a
   gig-readiness precondition, not a speaker-safety veto. Test:
   passive soak first, 60 min in the closed flight case, DJ quantum
-  1024, Mixxx + convolver, amps off, sampling every 10 s
-  (thermal_zone0 + cpu0 freq). PASS = max < 75 C, cpu0 freq never
-  below max, 0 xruns, ambient recorded (margin noted for warm
-  venues). FAIL: add active cooling (or a case vent design) and
-  re-run. Any cpufreq drop invalidates the run (thermal rule, US-163
-  section). Links to the flight-case ventilation TODO.
+  1024, Mixxx + convolver, amps off, production performance
+  governor, sampling every 10 s (signals per the thermal rule, US-163
+  section). PASS = max < 75 C, none of the three invalidation
+  signals (cooling_device cur_state != 0, undervoltage alarm,
+  cpuinfo_cur_freq < max), 0 xruns, ambient recorded (margin noted
+  for warm venues). FAIL: add active cooling (or a case vent design)
+  and re-run. Links to the flight-case ventilation TODO.
 
 ## P2
 
@@ -846,7 +878,9 @@ Next free: F-369, US-173, D-069, T66.
   the fallback path during the 20:13 eth0 drop (P2 item), so NixOS
   currently has no wireless fallback. P3 (worker-1).
 - No vcgencmd on the Pi 5 image, so no get_throttled evidence for T50
-  and gig thermal checks. P3 (worker-1).
+  and gig thermal checks. P3 (worker-1). Fix (Architect): add
+  `libraspberrypi` (in pinned nixpkgs, evaluates for aarch64-linux;
+  needs /dev/vcio) to the Pi 5 system packages. Not US-163.
 - Nix on the installer is nixpkgs 2.31.2, below the 2026-10-13
   advisory fixes (2.34.9/2.35.3). If the final systems ship it too:
   bump nix.package or nixpkgs. LOW for now (local nix-daemon only, ela
