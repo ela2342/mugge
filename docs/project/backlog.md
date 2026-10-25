@@ -29,8 +29,9 @@ worker-4) duplicates F-363. Both updates are merged into those
 items.
 F-379 (P2, web-UI correction level defect); F-380 (P2, CI builds no
 checks.*); F-381 (P3, driver datasheet_file paths); F-382 (P3,
-deploy-src git export ref).
-Next free: F-383, US-176, D-071, T66.
+deploy-src git export ref); F-383 (P1, combine destroys LR8
+phase); F-384 (P1, correction.py step 9 re-clip).
+Next free: F-385, US-176, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -2141,6 +2142,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   alignment (Architect): runner.py:200 (worker-4, switch in 174b
   after F-374) and generate_bose_filters.py:103/113 (switch, or
   retire if obsolete).
+  Fence (AE, 2026-10-25): F-374 does NOT change combine.py. The AE's
+  earlier D-009-scalar instructions to worker-5 belong to F-383 (CM
+  relays). F-374 keeps the crossover-level gate (all 4 cases, exact
+  digital LR) plus LR4 post-combine through the UNCHANGED combine;
+  LR4 already passes there (4.1/7.4 deg, max|H| -0.499 dB).
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
@@ -2150,6 +2156,51 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   src/graph-manager only, disjoint from worker-4's US-174b fence
   and US-173's F-318 WP files. Owner unassigned. Team-lead pauses new
   workers because of the Mac disk (5.0 GiB free, CM, 2026-10-25).
+- **F-383** (Architect, AE; 2026-10-25) combine_filters: the D-009
+  magnitude clip plus the minimum-phase re-synthesis destroys the
+  LR8 crossover phase (76/64 deg HP/LP over fc/2..2fc, sum down to
+  -0.94 dB); LR4 is within limits. Blocks deploying any LR8 profile
+  (8 in-repo profiles); does NOT block the first DJ session (LR4,
+  markaudio-ultimax). Sequenced after F-374. Owner: a new worker
+  (team-lead); this entry is their authoritative brief. Causes
+  (worker-5): the -200 dB log floors in combine and
+  dsp_utils.linear_to_db (about 40 deg); the D-009 per-bin clip
+  (another 20-35 deg).
+  FINAL mechanism (Architect + AE; supersedes the earlier scope
+  note): convolve correction x crossover (x subsonic) directly, then
+  truncate and fade as today, then apply ONE scalar D-009 gain (peak
+  -0.5 dB at 4x oversampling). No cepstral re-synthesis. Fail closed:
+  run the minimum-phase check on the output and raise if it fails;
+  a test feeds a non-minimum-phase correction input.
+  Min-phase check (Architect + AE): energy of (h - minphase(|H|)) <=
+  -40 dB re energy(h), AND the last 5% of taps <= -60 dB re peak
+  (the 174b gate thresholds); either failing raises. The reference
+  minphase(|H|) is computed cepstrally with a 1e-20 floor and at
+  least 4x zero-padding (else it carries the DC-zero/floor error
+  that broke LR8 and rejects correct filters). Calibration first: a
+  dirac correction x each of the 4 bilinear LR cases (LR4/LR8 x
+  80/200 Hz) must PASS the output check with margin; the measured
+  values are recorded in the test. Fallback if any calibration case
+  is above -46 dB: run the fail-closed min-phase check on the
+  CORRECTION input before the product, and make the output
+  min-phase check report-only for the LR legs (bilinear LR is
+  min-phase by construction). The tail check stays fail-closed on
+  the output in every case.
+  ACs (AE + Architect): LR8 post-combine HP/LP phase difference <=
+  5 deg at fc and <= 10 deg over fc/2..2fc, at 80 and 200 Hz, on
+  read-back float32 WAVs; sum +/-1 dB and fc level -6 +/-0.5 dB,
+  both relative to the -0.5 dB passband plateau; max|H| <= -0.5 dB;
+  the applied scalar logged per channel, with a warning if any
+  channel's scalar deviates from -0.5 dB by more than 0.1 dB (AE
+  condition, moved here from F-374); tail check as above; full
+  room-correction and web-ui runs.
+- **F-384** (Architect; AE confirms the priority; P1; 2026-10-25)
+  correction.py step 9 (main b0666c02,
+  src/room-correction/room_correction/correction.py:130-143): the
+  post-output D-009 re-clip clips the rfft magnitude per bin and
+  keeps the OLD phase, so the output is no longer minimum-phase.
+  Live under F-383's mechanism (its fail-closed check would trip on
+  it). Fix before or with F-383.
 
 ## P2
 
@@ -2467,7 +2518,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   pre-existing. Update 2026-10-25: test-room-correction is red on
   main since 9643be2a/TK-189 (yml cp before chmod); worker-7 fixes
   it on chore/rc-check-configs (Architect's flake prerequisite,
-  copies configs/ into the check; Architect OK pending). test-midi
+  copies configs/ into the check; Architect OK pending; commit 1
+  d86451eb pushed, CM 2026-10-25). test-midi
   (worker-7, QE): NOT a silent skip; flake.nix copies the configs
   flat (midi/, configs/), but src/midi/tests/test_midi_daemon.py:56
   resolves tests/../../../configs, so 6 tests (lines 93, 123, 132,
@@ -2633,6 +2685,20 @@ merge needs update-branch and 7 reconfirmations at the new head.
   not ticked (amended), the rest ticked. Docs-only (CI-exempt); 7
   approvals still required. The US-172 board-guard note is already
   US-172 AC4 (PO: no new batch).
+  PR #53 (CM): B7 (db8d2199) was committed before B7b arrived; head
+  ec4508cb, PR opened, 7 reviewers asked. B7b committed on top as a
+  whole-file replace: head c1ff5545 (29 ticked; AC5, AC21 not).
+  B7 stays in the history as an intermediate commit (no force-push).
+  At ec4508cb: UX APPROVED, AD APPROVE (both lapse on the head
+  move). AD L1 (status cites D-070 before it is on main): PO adopts
+  the AE's corrected sentence as FINAL (B7c 90bed0e0 void, never
+  committed; B7d follows). AD L2 (AC6/AC7) fixed by B7b. AD N1
+  (down window = Mac-side poll times): TW lab note v3. AC5 evidence
+  (CM): two watchdog reads, neither on the final generation; QE
+  decides. The CM re-asks all 7 reviewers at the final head (v3 +
+  B7d). Team-lead ruling: the TW approves the whole PR and states
+  they wrote the section; the QE checks it line by line; the PO acks
+  the status wording (not Rule 13).
   QE non-blocking (new): the guard count is not echoed in the CI log
   (it is in $out only); add a dev-howto line on unstaged test files
   (Nix flakes ignore them). Already tracked: F-370, F-371, F-373;
