@@ -35,8 +35,10 @@ subsonic vs crossover phase; PM checked free across main, origin
 and all worktrees, 2026-10-25); F-386 (P2, gain values read from
 pw-dump; PM checked free across main, origin and all worktrees,
 2026-10-25); F-387 (Low, web-ui teardown flake; QE N2 on #55; PM
-checked free across main, origin and all worktrees, 2026-10-25).
-Next free: F-388, US-176, D-071, T66.
+checked free across main, origin and all worktrees, 2026-10-25);
+F-388 (P2, Xmax definition in the excursion mask; AE; PM checked
+free across main, origin and all worktrees, 2026-10-25).
+Next free: F-389, US-176, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -2380,6 +2382,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   test_gm_mode_transitions_during_happy_path. The mock GM returns
   None at session.py:480, then a starlette CancelledError at
   shutdown. 1 in 15 runs at base b0666c02. Low.
+- **F-388** Xmax definition in the excursion-mask derivation (P2;
+  AE-owned; 2026-10-25; ID at the AE's request): the
+  D-031/excursion-mask derivation must record which Xmax definition
+  each driver record carries ("mathematical"/overhang vs measured
+  linear, e.g. a 10% THD or 70% BL point) and derate a
+  "mathematical" Xmax instead of using it as a linear limit.
+  Trigger: F-363 corrects PRV 10MR2000-NDY xmax 5.0 -> 7.15 mm to
+  the sheet's printed "mathematical" value. Precondition for F-385
+  option (i'); related to the fail-closed T/S follow-up under
+  F-363.
 - Docs (TW; via CM, 2026-10-25): flake test apps run on a /nix/store
   copy of the git tree, so untracked new test files are invisible
   to `nix run .#test-*` until git-added. On darwin, test-web-ui is
@@ -2668,6 +2680,7 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     records), asserted fail-closed on every exported sat WAV. A
     subsonic is added only where the crossover HP violates the
     mask, at the lowest order and corner that satisfy it. Preferred.
+    Precondition: F-388 (Xmax definition, AE).
   - (ii) A lag allpass on the SAT leg (an allpass can only add lag;
     never the sub). Not min-phase, so it conflicts with F-383 and
     needs the Architect's scoped exception. Low preference.
@@ -2835,6 +2848,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   R-b the mutation reds come from the full-set and exemption tests,
   naming the red test per mutation; R-c Linux CI evidence that the
   full-set test is red before the fix.
+  PR #56 (CM, 2026-10-25): github.com/ela2342/mugge/pull/56, head
+  f4d92a6e, tests only. R-a done: the sample test is deleted in
+  favour of the full-set test. R-c: CI run 40234711016 is in
+  progress at that head and must come back red (local: 5 failed /
+  52 passed). The data fix 4afb8235 is pushed only after the run
+  finishes (a push cancels the running job). QE scope: the qms
+  comma records sb-acoustics-mt19cp-8 and visaton-paw-46-8 go IN,
+  plus a plausibility-bound test (bounds from the AE), as a third
+  commit. Then worker-6 merges main dfdbbbd6 on top (base b0666c02
+  is 7 commits behind, no file overlap); that is the final review
+  head.
   Follow-ups outside worker-6's fence (QE and AE via worker-6,
   2026-10-25; not in the F-363 PR):
   - Re-scrape risk (QE): the driver scrapers would undo the F-363
@@ -2854,7 +2878,7 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     2026-10-25; supersedes "datasheet-inconsistent" above): fail
     closed on ANY record with a ts_consistency mark (today
     datasheet-inconsistent and unverifiable), so future mark values
-    are covered automatically.
+    are covered automatically. Related: F-388 (Xmax definition).
   - Dual-voice-coil Re (AE, P3): Earthquake/Image Dynamics records
     store series Re as if per-coil; the IDMAX10D2 Re 3.44 is in no
     manufacturer document. AE-owned. Detail (worker-6, 2026-10-25):
@@ -2876,7 +2900,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     retailer page prints "0,34" / "5,27". Other records from the
     same source may be affected (worker-6 scanning). AC: a parser
     test with comma decimals plus a Qts/Qms range sanity check in
-    the data tests. QE-owned.
+    the data tests. QE-owned. Update (CM, 2026-10-25): the qms
+    comma records sb-acoustics-mt19cp-8 and visaton-paw-46-8 and
+    a plausibility-bound test go INTO PR #56 (QE scope, AE
+    bounds); see the #56 paragraph above.
   - Coast record (AE + QE final, via CM, 2026-10-25): KEEP, marked
     ts_consistency: unverifiable (a separate value from
     datasheet-inconsistent); stored values unchanged. The QE owns
@@ -3111,7 +3138,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Mac builds can run on the Pi. CM measured 3 GiB free
   (2026-10-25), BELOW the 4 GiB line: still no new worktrees or
   builds; backlog commits continue. Later (CM, 2026-10-25): 3.3
-  GiB; later 3.2, 3.4, then 3.2 GiB (CM). Only worker-4's cleared
+  GiB; later 3.2, 3.4, 3.2, then 3.1 GiB (CM, near the 3.0 GiB
+  abort line). Only worker-4's cleared
   US-174b nix runs (abort below 3.0 GiB).
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
