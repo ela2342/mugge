@@ -4,7 +4,7 @@ The acceptance criteria are measured on exported float32 WAVs read back
 from disk: legs -6 +-0.5 dB at fc, HP+LP complex sum +-1 dB over
 20 Hz-20 kHz, |phase(HP) - phase(LP)| <= 10 deg over fc/2..2fc, at
 24 and 48 dB/oct and 80 and 200 Hz.  Tighter regression guards: LR4 sum
-+-0.05 dB, LR8 sum +-0.1 dB, LR8 phase at fc <= 5 deg.
++-0.05 dB, LR8 sum +-0.1 dB, LR4 and LR8 phase at fc <= 5 deg.
 
 The legacy path (alignment=None) must stay byte-identical; it is checked
 against a frozen copy of the pre-F-374 implementation below.
@@ -31,7 +31,7 @@ LEG_DB, LEG_TOL_DB = -6.0, 0.5
 SUM_AC_DB = 1.0
 PHASE_AC_DEG = 10.0
 SUM_GUARD_DB = {24: 0.05, 48: 0.1}
-LR8_PHASE_AT_FC_DEG = 5.0
+PHASE_AT_FC_DEG = 5.0
 
 
 def _export_roundtrip(fir, directory, name):
@@ -186,7 +186,7 @@ class TestAlignmentValidation(unittest.TestCase):
     def test_unsupported_lr_slope_raises(self):
         for slope in (12.0, 36.0, 96.0):
             with self.subTest(slope=slope):
-                with self.assertRaises(ValueError):
+                with self.assertRaisesRegex(ValueError, "24 or 48 dB/oct"):
                     crossover.generate_crossover_filter(
                         'lowpass', 80.0, slope, n_taps=1024, alignment=LR)
 
@@ -264,10 +264,9 @@ class TestLinkwitzRileyPair(unittest.TestCase):
         for _, _, m in self._each():
             self.assertLessEqual(m[4], PHASE_AC_DEG)
 
-    def test_lr8_phase_at_fc(self):
-        for (slope, _), _, m in self._each():
-            if slope == 48:
-                self.assertLessEqual(m[5], LR8_PHASE_AT_FC_DEG)
+    def test_phase_at_fc(self):
+        for _, _, m in self._each():
+            self.assertLessEqual(m[5], PHASE_AT_FC_DEG)
 
     def test_finite_and_minimum_phase(self):
         for _, pair, _ in self._each():

@@ -52,8 +52,8 @@ def _validate_alignment(alignment, *slopes_db_per_oct):
     for slope in slopes_db_per_oct:
         if float(slope) not in LR_SLOPES_DB_PER_OCT:
             raise ValueError(
-                f"Linkwitz-Riley crossover supports slopes "
-                f"{LR_SLOPES_DB_PER_OCT} dB/oct, got {slope}"
+                f"Linkwitz-Riley crossover supports 24 or 48 dB/oct, "
+                f"got {slope}"
             )
 
 
