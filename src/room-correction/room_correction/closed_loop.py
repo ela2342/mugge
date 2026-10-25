@@ -117,8 +117,17 @@ def system_response(acoustic_ir, fir):
 
 
 def max_positive_deviation_db(response_db, target_db):
-    """Largest amount (dB) by which the response exceeds the target."""
-    return float(np.max(np.asarray(response_db) - np.asarray(target_db)))
+    """
+    Largest amount (dB) by which the response exceeds the target.
+
+    Raises ValueError on non-finite input (Architect + AE, defence in
+    depth). Gate decisions go through passes_residual_gate, which checks
+    finiteness first and never raises.
+    """
+    diff = np.asarray(response_db, dtype=float) - np.asarray(target_db, dtype=float)
+    if not np.all(np.isfinite(diff)):
+        raise ValueError("max_positive_deviation_db: non-finite response or target")
+    return float(np.max(diff))
 
 
 def deviation_within_limit(dev_db, *, limit=MAX_POSITIVE_DEVIATION_DB):
@@ -137,15 +146,14 @@ def passes_residual_gate(response_db, target_db, *, limit=MAX_POSITIVE_DEVIATION
     Residual gate (Architect + AE, 2026-10-25): True when the response
     exceeds the target by at most ``limit`` dB everywhere.
 
-    Fails closed: empty input, or any non-finite value in either array, is
-    False. The check runs on the inputs as given, before any reduction,
-    because max() ignores -inf in the response and so would hide it.
-    A shape mismatch raises ValueError.
+    Fails closed and never raises (Architect + AE): a shape mismatch, empty
+    input, or any non-finite value in either array is False. Finiteness is
+    checked on the inputs before the metric runs.
     """
     response = np.asarray(response_db, dtype=float)
     target = np.asarray(target_db, dtype=float)
     if response.shape != target.shape:
-        raise ValueError(f"passes_residual_gate: shape {response.shape} != {target.shape}")
+        return False
     if response.size == 0:
         return False
     if not (np.all(np.isfinite(response)) and np.all(np.isfinite(target))):

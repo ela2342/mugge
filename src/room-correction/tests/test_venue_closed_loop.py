@@ -395,6 +395,7 @@ class TestResidualPerChannel:
         for spk in result.corrections:
             _, cor, _ = _corrected_and_uncorrected(bundle, sim, result, spk)
             dev = closed_loop.max_positive_deviation_db(cor, np.zeros_like(cor))
+            assert np.isfinite(dev), f"{name} {spk}: {dev!r}"
             assert closed_loop.passes_residual_gate(cor, np.zeros_like(cor)), \
                 f"{name} {spk}: {dev:+.2f} dB"
 
@@ -438,8 +439,9 @@ class TestResidualPerChannel:
         for spk in result.corrections:
             _, cor, unc = _corrected_and_uncorrected(bundle, sim, result, spk)
             zero = np.zeros_like(unc)
-            if (closed_loop.max_positive_deviation_db(unc, zero) > NON_VACUOUS_UNCORRECTED_DB
-                    and closed_loop.passes_residual_gate(cor, zero)):
+            unc_dev = closed_loop.max_positive_deviation_db(unc, zero)
+            assert np.isfinite(unc_dev), f"{name} {spk}: {unc_dev!r}"
+            if unc_dev > NON_VACUOUS_UNCORRECTED_DB and closed_loop.passes_residual_gate(cor, zero):
                 biting.append(spk)
         assert biting, f"{name}: no channel where the residual bar bites"
 
@@ -462,19 +464,30 @@ class TestResidualPerChannel:
         assert closed_loop.deviation_within_limit(MAX_POSITIVE_DEVIATION_DB) is True
         assert closed_loop.deviation_within_limit(MAX_POSITIVE_DEVIATION_DB + 0.01) is False
 
-    @pytest.mark.parametrize("where, bad", [("response", math.nan), ("response", -math.inf),
-                                            ("target", math.inf)],
-                             ids=["response-nan", "response--inf", "target-+inf"])
+    @pytest.mark.parametrize("bad", [math.nan, math.inf, -math.inf], ids=["nan", "+inf", "-inf"])
+    @pytest.mark.parametrize("where", ["response", "target"])
     def test_residual_gate_fails_closed_on_non_finite(self, where, bad):
-        # AE (b): checked on the arrays before max(), which drops a -inf
-        # response bin (or +inf target bin) and would otherwise pass.
+        # Architect + AE: False, never an exception (a raise here fails the test).
         target = np.zeros(5)
         response = np.zeros(5)
         (response if where == "response" else target)[3] = bad
         assert closed_loop.passes_residual_gate(response, target) is False
 
+    @pytest.mark.parametrize("bad", [math.nan, math.inf, -math.inf], ids=["nan", "+inf", "-inf"])
+    @pytest.mark.parametrize("where", ["response", "target"])
+    def test_metric_raises_on_non_finite(self, where, bad):
+        # Architect + AE: the metric itself raises (defence in depth).
+        target = np.zeros(5)
+        response = np.zeros(5)
+        (response if where == "response" else target)[3] = bad
+        with pytest.raises(ValueError, match="non-finite"):
+            closed_loop.max_positive_deviation_db(response, target)
+
     def test_residual_gate_fails_closed_on_empty(self):
         assert closed_loop.passes_residual_gate(np.array([]), np.array([])) is False
+
+    def test_residual_gate_fails_closed_on_shape_mismatch(self):
+        assert closed_loop.passes_residual_gate(np.zeros(5), np.zeros(4)) is False
 
     def test_residual_gate_boundary(self):
         target = np.array([-2.0, -0.5, 0.0, 1.0, 2.5])
@@ -521,6 +534,7 @@ class TestResidualPerChannel:
         _, real_cor, _ = _corrected_and_uncorrected(bundle, sim, real, "sub1")
         weak_dev = closed_loop.max_positive_deviation_db(weak_cor, np.zeros_like(weak_cor))
         real_dev = closed_loop.max_positive_deviation_db(real_cor, np.zeros_like(real_cor))
+        assert np.isfinite(weak_dev) and np.isfinite(real_dev), (weak_dev, real_dev)
         with capsys.disabled():
             print(f"\n  teeth home_lab sub1 (30-200 Hz): weak {weak_dev:+.2f} dB at "
                   f"{freqs[np.argmax(weak_cor)]:.1f} Hz, real {real_dev:+.2f} dB", end="")
@@ -541,9 +555,10 @@ class TestResidualPerChannel:
         for spk in result.corrections:
             _, cor, unc = _corrected_and_uncorrected(bundle, sim, result, spk)
             dev = closed_loop.max_positive_deviation_db(unc, np.zeros_like(unc))
+            harm = closed_loop.max_positive_deviation_db(cor, np.zeros_like(cor))
+            assert np.isfinite(dev) and np.isfinite(harm), f"{name} {spk}: {dev!r}, {harm!r}"
             assert closed_loop.passes_residual_gate(unc, np.zeros_like(unc)), \
                 f"{name} {spk}: {dev:+.2f} dB"
-            harm = closed_loop.max_positive_deviation_db(cor, np.zeros_like(cor))
             assert closed_loop.passes_residual_gate(cor, np.zeros_like(cor)), \
                 f"{name} {spk}: {harm:+.2f} dB corrected"
 
@@ -660,6 +675,7 @@ class TestAC7Identity:
         target = np.full_like(own_resp, level)
         own = closed_loop.max_positive_deviation_db(own_resp, target)
         other = closed_loop.max_positive_deviation_db(other_resp, target)
+        assert np.isfinite(own) and np.isfinite(other), (own, other)
         assert closed_loop.passes_residual_gate(own_resp, target), f"{own:+.2f} dB"
         assert own < other - 1.0, (own, other)
 
