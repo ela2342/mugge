@@ -39,8 +39,10 @@ checked free across main, origin and all worktrees, 2026-10-25);
 F-388 (P2, Xmax definition in the excursion mask; AE; PM checked
 free across main, origin and all worktrees, 2026-10-25); F-389
 (US-172 tryboot hang, Architect; PM checked free across main,
-origin and all worktrees, 2026-10-25).
-Next free: F-390, US-176, D-071, T66.
+origin and all worktrees, 2026-10-25); F-390 (P1, speaker-config
+path split, GATE before US-173/US-174c/d sessions; PO; PM checked
+free across main, origin and all worktrees, 2026-10-25).
+Next free: F-391, US-176, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -2177,6 +2179,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     the full run (G1-G4); --preflight-only APPROVED as-is on
     OBSERVE. worker-3 has the batched list and is editing; builds
     stay held (Mac disk).
+  - F-390 GATE (PO, 2026-10-25): no US-173 session that loads
+    speaker or crossover configs (measurement, CP-5) starts before
+    F-390 is met, or the AE-accepted fallback is in place. Gate
+    wording with the AE. See F-390.
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -2425,6 +2431,25 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   smoothing and bands as AC3, failure blocks deploy". The PM asked
   the AE (tolerance owner) to agree the wording; then B6j. The #57
   body cites that 174d line.
+  AE 174d wording (agree with edits, 2026-10-25): the corrected
+  MEASURED response at the listening position has a max positive
+  deviation <= closed_loop.MEASURED_MAX_POSITIVE_DEVIATION_DB
+  (initially 3.0 dB, the same value as the simulated
+  MAX_POSITIVE_DEVIATION_DB), same 1/6-oct smoothing and bands as
+  AC3. A re-measurement with SNR below 60 dB re peak is INVALID
+  (repeat it), never a pass. A failure blocks the deploy: the new
+  filters are not loaded, the previous ones stay, the run reports
+  per channel. Any change to the measured constant needs AE
+  review and never ships in the same PR as a correction-algorithm
+  change. A separate constant, so real data can't silently loosen
+  the simulated gate or the reverse; 174d revisits only the
+  measured one. B6j (PM, MANIFEST 6b35c163, same B6e base at
+  bcc353ed, whole-file replace of US-174.md; supersedes B6i, B6h
+  and B6g, none applied) carries it. HELD (CM) for the QE's OK on
+  the separate constant and worker-4's AC2 SHA. PM reading: the
+  MEASURED constant is 174d scope, not #57.
+  F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
+  that loads speaker or crossover configs. See F-390.
   PO FINAL (via CM, 2026-10-25): the constant move is within
   the "test-only" intent; (A) stands, no split (supersedes "the PO
   may still ask for the split"). QE A1-A5 on (A) (via CM,
@@ -2611,7 +2636,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Trigger: F-363 corrects PRV 10MR2000-NDY xmax 5.0 -> 7.15 mm to
   the sheet's printed "mathematical" value. Precondition for F-385
   option (i'); related to the fail-closed T/S follow-up under
-  F-363.
+  F-363. Proposed ACs (AD, #56 verdict, 2026-10-25; AE to accept):
+  M1 no code enforces ts_consistency marks today and
+  speaker_sim.load_driver loads marked records; any safety
+  calculation that reads driver records refuses marked records at
+  load. M2 xmax_mm gets a definition attribute; a
+  "mathematical"/overhang-plus Xmax is derated or rejected (PRV
+  5.0 -> 7.15 is +3.3 dB less conservative; other scraped records
+  likely carry the same unknown definition). No defects/F-388.md
+  record on main yet (TW); add one with the next defects docs PR.
 - **F-389** Pi 5 tryboot with KMS+BT overlays via overlay_prefix:
   no network, needed an owner power cycle (Architect, no QE
   objection; via CM, 2026-10-25). US-172 run 2: run 1 +
@@ -2621,6 +2654,63 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   reliability TODO (CLAUDE.md open questions; BCM2835 watchdog
   failed Tests 3/5 on the Pi 4) and the RuntimeWatchdogSec check
   under US-163 AC5 below.
+- **F-390** Speaker-config path split (P1; PO, 2026-10-25; from #55
+  backlog (a), AD N4). The editor writes /etc/pi4audio/speakers;
+  the measurement session and CP-5 read the repo configs/speakers
+  (the Nix store on the Pi), so an editor fix never reaches the
+  session that measures with it. Driver-safety risk (D-031), not a
+  convenience issue (PO). GATE before every US-173 session and
+  every US-174c/d session that loads speaker or crossover configs
+  (measurement, CP-5); gate wording with the AE.
+  AC1: one source of truth on the Pi; the editor, the measurement
+  session and CP-5 read and write the same path. AC2: each session
+  logs the path and hash of the speaker config it loaded; the lab
+  note records it. AC3: a test that an editor change reaches the
+  session that measures with it. Fallback, only if the fix is late
+  and would block a session: AC2 alone plus a manual hash
+  comparison against the editor file before the start; the AE
+  decides whether that is enough.
+  Route (Architect ruling, 2026-10-25, cc AE and CM): canonical
+  /etc/pi4audio/speakers (env PI4AUDIO_SPEAKERS_DIR). Code facts:
+  speaker_routes.py:40-59 `_speakers_dir()` (env, /etc, repo,
+  ~/pi4-audio-workstation); filter_routes.py:40-51 a duplicate;
+  measurement/session.py:~1014 hardcodes
+  <project_root>/configs/speakers (the split); #55's
+  `_profile_dirs()` inherits it; config_generator.py:31
+  IDENTITIES_DIR default (callers must pass dirs); no tmpfiles rule
+  for /etc/pi4audio/speakers (only coeffs, pipewire.nix:95-101).
+  - R1: the repo/store configs/speakers is read-only seed data,
+    never a runtime read path on the Pi.
+  - R2: one shared resolver speakers_dir() -> (profiles_dir,
+    identities_dir, source) for speaker_routes, filter_routes,
+    session start, CP-5, the F-374 pre-check and every
+    config_generator/generate_profile_filters call (explicit dirs);
+    duplicates deleted. Precedence: env, else /etc if present, else
+    the repo dir (dev/test only: local-demo, CI).
+  - R3: no silent fallback on the Pi. The Nix module sets the env
+    for the web-ui; env set and dir missing or unreadable -> raise;
+    the editor shows a clear error, the session refuses to start
+    and names the path.
+  - R4: tmpfiles `d` for speakers/{profiles,identities}, owned and
+    writable by the web-ui user; per-file `C` seeds from the repo.
+    Operator edits are never overwritten; changed repo versions of
+    existing files do not propagate (deliberate; document it).
+    Propagation is a separate AE/QE decision (Architect: no).
+  - R5 (AC2): at start and CP-5, log source/dir and the sha256 of
+    the profile and each identity file, also in the session record;
+    a hash change start -> CP-5 is a WARNING; the session keeps its
+    start-time copy.
+  - R6 (AC3): (a) editor-save and session-load resolve to the same
+    dir (tmp env); (b) integration: save via the editor API, start a
+    session (D-057 mock boundary), hash match; (c) env set, dir
+    absent -> refuses to start; (d) grep guard: no web-ui module
+    builds configs/speakers paths outside the resolver.
+  - R7: #55 is NOT widened; F-390 branches after #55 merges (or
+    rebases) and replaces `_profile_dirs()`.
+  CM assigns the lane; the Architect reviews design and diff before
+  the PR; the AE confirms the gate and AC2 wording.
+- Speaker-config reset-to-default action (Architect R4 under F-390;
+  not F-390 scope).
 - Docs (TW; via CM, 2026-10-25): flake test apps run on a /nix/store
   copy of the git tree, so untracked new test files are invisible
   to `nix run .#test-*` until git-added. On darwin, test-web-ui is
@@ -2795,7 +2885,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   /etc/pi4audio; (b) workshop-xrk10f-fullrange has no crossover
   and cannot be saved (unknown filter_type "fullrange";
   pre-existing); (c) /validate, check-mode and activate do not run
-  the crossover check yet.
+  the crossover check yet. (a) is PROMOTED to F-390 (PO,
+  2026-10-25; AD N4); see F-390.
   FENCE ANSWERS (via CM, 2026-10-25): AE: 96 -> 48 is correct (LR8,
   as in meh-3way). Architect: the fence extension is OK for slope
   only; frequencies, delay_ms, enclosure_type and all assertions
@@ -2811,7 +2902,40 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   #55 head 2e29f82e (pushed, CM, 2026-10-25): the U1 single-source
   check, fixtures slope-only 96 -> 48, the negative save tests;
   body v2 set; re-review requested from all 7 reviewers. The branch
-  is 7 commits behind main.
+  is 7 commits behind main. CI run 40236549456.
+  #55 Rule 13 at 2e29f82e (verdicts posted verbatim, CM,
+  2026-10-25): APPROVED QE (test content; conditional on CI),
+  Architect, UX (U1 incl. G1/G2, N1/N2 done), SecSpec (conditional
+  on CI T1-T3 at the final head), AD (L1 resolved by the
+  real-profile ceiling; does not cover CI/F-363). TW CHANGES
+  REQUESTED, one blocker: docs/user-journeys.md:289-294 still says
+  48-96 dB/oct; worker-5 is applying the TW text, the AE confirms
+  the claims, body v3 adds QE N-a/N-b. AE verdict pending. All
+  approvals lapse on a head move; UX does a diff-only re-check at
+  the merge-main head.
+  #55 backlog from the 2e29f82e verdicts (pre-existing, none
+  blocking):
+  - SecSpec LOW: the measurement session's profile_name has no slug
+    check and can load any readable *.yml. Fix before F-037 is
+    closed for gigs.
+  - Architect N2: the room-correction import path is set up 3
+    ways; consolidate it into one helper.
+  - Architect N3 = AD N5: the editor and validate_profile_crossover
+    accept crossover as a LIST; generate_profile_filters calls .get
+    on it -> AttributeError -> 500.
+  - AD L2 (extends L2 above): the default_profile.yml line 19
+    comment "48-96 recommended" is wrong now that 96 is rejected.
+  - AD N3: the editor browser test fakes the 422 on the PUT, no
+    real backend round trip; a tmp profiles dir would fix it. QE
+    decides.
+  - UX: a missing profile only logs a warning at the pre-check; the
+    "not supported" note moves from c-danger to a warning style
+    once one exists.
+  - TW non-blocking: the profile crossover schema doc
+    (speaker-management-requirements.md section 4); the "LR
+    magnitude as min-phase FIR" clarification in CLAUDE.md, D-001
+    and the theory docs (CLAUDE.md is the owner's); tracking
+    records on main for F-374, F-383, F-385 and F-387.
   #55 backlog (AD, 2026-10-25): L1 a loose-bounds regression test
   on the real, unmodified markaudio profile (sum, max|H|, phase),
   tightened with F-385/F-383. L2 default_profile.yml has no
@@ -3118,6 +3242,25 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   RED as required (5 failed / 1203 passed / 1 skipped, only the
   full-set and exemption tests). Data fix 4afb8235 pushed; the
   body links the run. worker-6 is on commit 3 plus the main merge.
+  #56 final head 684da11a (CM, 2026-10-25): commit 3 e9a96c60 plus
+  the merge of main dfdbbbd6; pushed, body v3, Rule 13 requested
+  from all 7; CI run 40236821737. Rule 13 at 684da11a: APPROVED
+  UX (no concerns: no web UI code reads driver records, no shipped
+  speaker or venue config references the 36 changed records), AD
+  (does not cover CI; lapses on a head move), TW. Others pending.
+  On merge (TW): close docs/project/defects/F-363.md (main says
+  "open"; its AC2 says "sorted sample") and record the
+  resolution: all records checked, exemption table, plausibility
+  bounds.
+  #56 backlog (AD, TW, 2026-10-25): AD L1 = TW (3), P3: the CLI
+  scripts/drivers/validate_drivers.py and pytest need one shared
+  exemption/bounds source (the CLI flags the 8 exempted records
+  and skips the bounds); or a CLI help/driver-docs note. AD L2:
+  check datasheet_url against the model on the Parts
+  Express-sourced records (tang-band's pointed to another driver).
+  TW (4), P3 docs debt: the docs/project/test-strategy.md:51
+  inventory lacks test_driver_validation.py; the table is stale.
+  AD M1/M2: see F-388.
   Follow-ups outside worker-6's fence (QE and AE via worker-6,
   2026-10-25; not in the F-363 PR):
   - Re-scrape risk (QE): the driver scrapers would undo the F-363
@@ -3426,7 +3569,7 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   store delete` runs on their own w3-gate2-selftest outputs only
   (339.1 + 92.7 + 92.2 MiB, ~524 MiB total); no GC. Deviation
   recorded and closed (CM). Later (CM): disk 2.6 GiB and falling;
-  the hold stays.
+  the hold stays. Later (CM): 2.5 GiB, still falling.
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
