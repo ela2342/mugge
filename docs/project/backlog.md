@@ -28,8 +28,9 @@ existing P3 "Mac disk nearly full" item; F-378 (purifi Qts test,
 worker-4) duplicates F-363. Both updates are merged into those
 items.
 F-379 (P2, web-UI correction level defect); F-380 (P2, CI builds no
-checks.*); F-381 (P3, driver datasheet_file paths).
-Next free: F-382, US-176, D-071, T66.
+checks.*); F-381 (P3, driver datasheet_file paths); F-382 (P3,
+deploy-src git export ref).
+Next free: F-383, US-176, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -2448,7 +2449,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Filed as F-377, withdrawn as a duplicate of this item. CM df
   (2026-10-25): 5.1 GiB free, 99% used; later 5.0 GiB. Team-lead
   pauses new workers because of it. CM df later on 2026-10-25: 4.9
-  GiB. F-380 step 1 waits for at least 8 GiB free.
+  GiB. F-380 step 1 waits for at least 8 GiB free. Later (CM): 4.7
+  GiB.
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
@@ -2546,6 +2548,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   under any configs/drivers/*/data/ (bose-ps28-iii), so most PDFs
   are not committed at all. No audio impact (AE). Same records as
   F-363 (worker-6): the CM decides whether it rides there or later.
+  CM ruling (2026-10-25): LATER, its own item with its own worker
+  after F-363 merges. F-363 is first in the merge order and must stay
+  small; the fix touches validate_driver.py:189, outside worker-6's
+  fence; 822 changed records would bury F-363's ~29 data corrections.
+  worker-6 does not touch datasheet_file paths; a correction's
+  citation may name the real file while the path field stays as is.
+- **F-382** (QE, LOW; 2026-10-25; US-163 lab note, AC19 Notes) The
+  deploy-src export's eval stderr shows "could not read HEAD ref ...
+  using 'master'". Harmless for AC19 (configurationRevision came out
+  correct). If future evidence relies on the export's git metadata
+  beyond self.rev, the export needs a real ref.
 
 ## Open PRs (2026-10-24, per CM)
 
@@ -2610,6 +2623,16 @@ merge needs update-branch and 7 reconfirmations at the new head.
   AC20 (bootstrap/dev image, not gig-capable) kept; "done" is not
   amps-on clearance. Done-records batch B7 (PM): pending the QE's
   per-AC list and the PO's check of the deviation list.
+  PO ruling: all 7 "Known deviations" of #50 (final head 22370317)
+  verbatim, each with its successor, plus the PR's Backlog IDs list
+  unchanged; the earlier "four" is withdrawn. Branch
+  docs/US-163-done-records (CM, off b0666c02): TW's AC19 lab-note
+  section committed as 8b0c3947; story batch B7b (PM, MANIFEST
+  980dd1d2; supersedes B7 db8d2199, never committed) uses the QE's
+  authoritative per-AC list: AC5 not ticked (not QE-verified), AC21
+  not ticked (amended), the rest ticked. Docs-only (CI-exempt); 7
+  approvals still required. The US-172 board-guard note is already
+  US-172 AC4 (PO: no new batch).
   QE non-blocking (new): the guard count is not echoed in the CI log
   (it is in $out only); add a dev-howto line on unstaged test files
   (Nix flakes ignore them). Already tracked: F-370, F-371, F-373;
