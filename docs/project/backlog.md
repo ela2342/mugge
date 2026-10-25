@@ -618,7 +618,26 @@ Next free: F-374, US-173, D-070, T66.
       MANIFEST-v3-superseded.txt. The CM notes v4 as the frozen batch
       for the #50 head move.
     - AC17-B step (c), PW and bridge restart: PASS (worker-1; CM
-      verified); AE ruling pending. CM-CHG-.89-5 released.
+      verified; AE ruled PASS after checking the raw files 5aad9083
+      and 64fdbcdf). Graph-manager's watchdog re-armed, the 16 gains
+      came up at 0, the gate is closed, and the PCM reopened with its
+      channel map restored. AE: AC17 is satisfied by (a) and (c), (b)
+      deferred to F-373; QE's per-cycle check on the cold cycles
+      stays. CM-CHG-.89-5 released after (c), then re-opened
+      read-only for cold cycles 1 and 2. Script additions: the
+      USB-POWER bmAttributes/bMaxPower read, and an ssh
+      ServerAlive option in pi.sh so a poll doesn't hang when the
+      power is cut.
+    - AE (non-blocking): after each cold boot, a read-only ps -L
+      check (PW main and data-loop.0 at FF 88, RTTIME
+      200000/200000) confirms F-358 survives a real cold boot.
+      worker-1 runs it after each cycle.
+    - B3 v5 (PM, 2026-10-25; supersedes v4): F-373.md gets the
+      step-(c) recovery data point and AC5 (recovery shape); US-163
+      AC16b records step (c) PASS and "AC17 satisfied by (a) and
+      (c)"; AC17 adds the AE ps -L check after each cold boot. Index
+      rows unchanged. MANIFEST.txt sha e40664ca...; v4 kept as
+      MANIFEST-v4-superseded.txt. Other 24 files unchanged from v4.
     - AE: the USBStreamer is bus-powered on root port 1-1. Each cold
       cycle records bmAttributes (expected 0x80) and bMaxPower.
     - AD APPROVE is comment 6398339160 (CM). AD M2 precise: the
@@ -1318,7 +1337,10 @@ Next free: F-374, US-173, D-070, T66.
   replug with the AE's step-(b) read set, before and after: the node
   list (new nodes), the USB devnum, the kernel log, spa.alsa errors,
   the gains, the gate state and the hw mixer. Re-open trigger as in
-  the AC17 Session B entry. AMPS-ON items 8 and 13.
+  the AC17 Session B entry. AMPS-ON items 8 and 13. Data point (AE,
+  AC17-B step (c)): a PW restart plus a bridge restart recovers the
+  zombie sink with the 16 gains at exactly 0 and the gate closed
+  (D-063 fail-safe). The fix must keep that recovery shape.
 - **F-372** (SecSpec, MEDIUM; amps-on/gig blocker class next to
   F-037): the S-001 fix is weak. filter_routes.py:545 tests
   abspath(output_dir).startswith(abspath(DEFAULT_OUTPUT_DIR)), a
