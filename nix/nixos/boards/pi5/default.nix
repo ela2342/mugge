@@ -35,6 +35,19 @@
   # block the web UI.
   mugge.vnc.enable = false;
 
+  # F-367: no DRM device on the Pi 5 yet (vc4/v3d DT nodes are disabled),
+  # so labwc exits and greetd restart-loops. Start greetd only when a DRM
+  # card exists (any card*: card0 may be v3d once vc4 loads). A failed
+  # condition skips the unit, it is neither failed nor restarting. Not a
+  # StartLimit: hitting it leaves the unit failed. The display follow-up
+  # story must order greetd after the DRM device, since this condition is
+  # checked only once at boot.
+  systemd.services.greetd.unitConfig.ConditionPathExistsGlob = "/dev/dri/card*";
+
+  # ela's user manager (PipeWire and the audio stack) was started by the
+  # greetd autologin. With greetd skipped, linger starts it at boot.
+  users.users.ela.linger = true;
+
   # /boot/firmware is written on every switch (bootloader.nix), so it must
   # be mounted at boot (F-289). No noauto.
   fileSystems."/boot/firmware".options = lib.mkForce [ "nofail" ];
