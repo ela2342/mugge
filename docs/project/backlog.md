@@ -191,6 +191,8 @@ Next free: F-369, US-173, D-069, T66.
     A3: the restart interrupts the USBStreamer, so announce it to the
     owner first; under the standing "nothing is connected" statement
     an announcement is enough, no ack wait.
+    A1b: exactly ONE libpipewire-module-rt is loaded, and `pw-cli ls
+    Module` shows the 05-rt-direct.conf fragment's args.
     A4: the fix is its own commit on the US-163 branch; AE reviews the
     diff before deploy. Pi 4 recorded as unverified (unreachable),
     under F-358.
@@ -205,9 +207,13 @@ Next free: F-369, US-173, D-069, T66.
     EPERM and RTKit then grants RR/20. Fix: one commit, all boards: a
     new PW conf.d fragment 05-rt-direct.conf sets module.rt=false and
     loads module-rt with nice.level=20 ("don't change"), rt.prio=88,
-    rtkit and portal disabled. No unit, PAM or limit change (narrower
-    than the SecSpec condition). AE + Architect review the diff before
-    deploy; AC13 must PASS with A1-A4; Pi 4 recorded as unverified.
+    rtkit and portal disabled, flags ifexists nofail. The user@ RTPRIO
+    path is moot. No unit, PAM or limit change (narrower than the
+    SecSpec condition). AE + Architect review the diff before deploy;
+    AC13 must PASS with A1, A1b, A2-A4; Pi 4 recorded as unverified.
+    Pi 4 precondition (AE, via Architect): "Pi 4: AC13 A1 must pass
+    before next amps-on use". The fragment is shared; on the Pi 4 it
+    is unverified on hardware and T55 is build-only.
     Update the F-358 record (High) and status.md.
   - **F-367** T49 FAIL: greetd crash-loops every ~10 s (~45 restarts
     in 8 min, not marked failed): no DRM device (vc4/v3d =m but not
@@ -238,8 +244,13 @@ Next free: F-369, US-173, D-069, T66.
     F-328 reconciled (QE request; Architect recommendation, PM
     adopted): re-state F-328 as "PW capture node deferred per F-295;
     ALSA 8-in verified by hw_params (AC12)"; it stays open as the
-    capture tracker, priority set by the PO (pending; record says
-    High). Record update in the pre-PR tracking batch.
+    capture tracker. PO ADVICE (2026-10-25; owner sets the final
+    priority): re-rate High -> **Medium**. No US-163 AC depends on it
+    (AC12 amended); DJ mode needs no USBStreamer capture (measurement
+    uses the separate UMIK-1); only Live mode on the Pi 5 needs it.
+    Re-rate trigger: High as soon as Live mode on the Pi 5 is
+    prioritised or a Pi 5 Live gig image is planned. Record update in
+    the pre-PR tracking batch.
   - AE check #10 PASS (enum-params; 1+1 convolver nodes, 8 gains
     0/0). AC12a full PASS. AC14 PASS, complete (quantum base 256,
     force 1024). AC13 (F-358) is the only open AE item.
@@ -329,6 +340,14 @@ Next free: F-369, US-173, D-069, T66.
   the Pi 5; sits next to the F-358/F-291 work. Starting point: the
   F-367 crash loop from the US-163 deploy (vc4 not loaded, no DRM
   device). (PO, 2026-10-25)
+  Architect note: on the Pi 5 every GPU/HDMI DT node is
+  status=disabled, so vc4/v3d never autoload; the deployed kernel
+  ships vc4-kms-v3d-pi5.dtbo. First checks: config.txt has the
+  dtoverlay line; gens/<id>/overlays has the README and the dtbo;
+  /proc/device-tree/chosen/os_prefix; whether disable-bt-pi5 applied
+  (overlay-specific vs no overlays loaded at all); the firmware
+  "variant start_cd" line. greetd must also be ordered after the DRM
+  device, because the f87c162b condition is checked once at boot.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect)
@@ -390,6 +409,13 @@ Next free: F-369, US-173, D-069, T66.
 
 ## P3
 
+- ela's PAM loginLimits (nix/nixos/audio/pipewire.nix:83-86; Pi 4 and
+  Pi 5) set rtprio 95 and memlock unlimited: every ela process (SSH
+  sessions, Mixxx) may go to FIFO 95, above PipeWire's 88, and lock
+  all RAM (availability). Existing config, not added by the F-358
+  fix. Proposal: rtprio 88 and a bounded memlock, or limits on the PW
+  units only. Revisit before gig or amps-on use, with F-291 (#40).
+  LOW, not blocking US-163. (SecSpec)
 - **F-364** local-demo seeds are copied 0444, so saving a profile fails
   with EACCES (local-demo.sh:676-680; speaker_routes.py:136;
   hardware_routes.py:120). Low. (worker-2)
