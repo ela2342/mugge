@@ -21,7 +21,8 @@ metadata:
   datasheet_file: null
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: unverifiable. Qes 22.17 is above the plausibility bound (10). The only source, the Parts Express product page in datasheet_url, serves no data to a plain HTTP fetch (retrieved 2026-10-25), so the values cannot be checked. Values kept: our derivation from the stored fs 365 Hz, Cms 0.115 mm/N, Re 14.9 ohm and Bl 1.59 Tm gives Mms ~1.65 g and Qes = 2*pi*fs*Mms*Re/Bl^2 ~22.3, so the set is self-consistent (weak motor, high Re).'
+  ts_consistency: unverifiable
   notes: 'Scraped from parts-express.com. Part number: 289-2244.'
   quantity_owned: null
   serial_numbers: []

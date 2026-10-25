@@ -21,20 +21,20 @@ metadata:
   datasheet_file: SB13PFCR25-4-COAX-data-sheet.pdf
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: fs_hz 44.0 -> 43.0, qts 0.49 -> 0.27, qes 0.33 -> 0.3, qms 2.6 -> 2.26, vas_liters 13.4 -> 14.4 per https://sbacoustics.com/wp-content/uploads/2020/03/5in-SB13PFCR25-4-COAX.pdf (REV. 0, 17.12.2018), retrieved 2026-10-25.'
   notes: Scraped from soundimports.eu.
   quantity_owned: null
   serial_numbers: []
   purchase_date: null
   condition: null
 thiele_small:
-  fs_hz: 44.0
+  fs_hz: 43.0
   re_ohm: 3.2
   z_nom_ohm: 4
-  qts: 0.49
-  qes: 0.33
-  qms: 2.6
-  vas_liters: 13.4
+  qts: 0.27
+  qes: 0.3
+  qms: 2.26
+  vas_liters: 14.4
   cms_m_per_n: 0.00151
   xmax_mm: 4.7
   xmech_mm: null
