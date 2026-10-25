@@ -1551,6 +1551,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      worker-3 applies it on the US-173 branch, Rule 13 review on that
      PR. Lead-in and Gate rule change only as planned ("1-3, 5-15" and
      the count). PO informed (FYI) of the D-070 rows.
+     AE FINAL OK on TW v14 (57cef8e0), 22:18:02 to the TW (via
+     team-lead and CM, 2026-10-25). Conditions: (1) amps-on rows 14/15
+     match the v14 wording exactly (PM checked: the v150 row texts
+     match D-070 rows 14/15 in v14 word for word; D-070 row 15 adds
+     the prefix "Not closed for the supervised session. Instead:");
+     (2) the AE reviews anything the rebase onto the merged US-173
+     head changes beyond those rows and their ranges. The F-318 batch
+     now waits only for the merged US-173 head.
      Earlier note, superseded by the final text: the AE has since ruled that
      "unchanged" is a FAIL, so "gains unchanged or 0" above is
      superseded; the TW asked the AE for corrected text. Do not act
@@ -2315,6 +2323,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     superseded. Addendum (Architect + AE): point 4 wording follows the
     AE: "(live readback under investigation, Gate-2 r3)". Point 3
     fallback: see the Pi -0.0 readback check item.
+    r4 progress (CM, 2026-10-25): worker-3's selftest edits are in
+    gate2_selftest.py 67008fd7 (diff vs 9d941567: fa00acda); gate2.py
+    b226c0ba and selftest.nix 90258d73 unchanged. Done: (a) GM link
+    re-created per run, (c) setparam probe fails early, S1 the
+    NoneDefault run, S2a and S2b. Being added: (b) and the T1/T2
+    matrix; then one build and run. Disk-rule breach (CM logged):
+    worker-3 ran an uncleared `nix run
+    nixpkgs#python3Packages.pyflakes` (1.1 MiB fetched; no harm, 5.2
+    GiB free); the disk hold covers nix run, so every nix build/run
+    needs CM clearance first.
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -2630,6 +2648,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   mutation (c) reds 3 tests) is held for AE (a)/(c) (CM, 2026-10-25).
   B6n received and verified by the CM (2026-10-25); the CM applies it
   on top of worker-4's next #57 commit.
+  #57 state (CM, 2026-10-25): the remote head is still e548a3d6, the
+  earlier head pushed before 27d8ff11 (CI 40237500890 on it), NOT
+  worker-4's awaited commit. worker-4's 46c53424 sits on top of
+  27d8ff11: (a) the AE's closed_loop comment verbatim; (c)
+  inspect.signature 8.0 (no literals). (b) was built as a metric
+  RAISE, not the two-layer gate: push HELD, worker-4 is redoing it;
+  the Architect and AE rule on whether the metric may also raise.
+  Teeth numbers corrected: weak +6.66 dB at 68.1 Hz, real +0.94 dB,
+  margin 3.66 dB. Then the CM verifies, pushes (27d8ff11 and 46c53424
+  come along), applies B6n (bddbe5c8) as a separate commit, pushes,
+  updates the body; QE/AE review.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -2851,6 +2880,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     scraped xmax_mm counts as unknown-definition until its source
     is classified.
   - AC-e (QE N1): a test once a consumer of xmax exists.
+  - QE backlog item (#56 merge, via CM, 2026-10-25), covered by
+    M1/AC-a, no new ID: "any future consumer of driver-record T/S
+    values must exclude ts_consistency: unverifiable records"; the #56
+    body points it at F-388.
   AE ACCEPT with edits (via CM, 2026-10-25; replaces the AC-a and AC-d
   wording; AC-b, AC-c and AC-e stay; "derate a mathematical Xmax"
   above is superseded by "re-derive, no percentage derate"):
@@ -3438,6 +3471,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   QE: confirm the 270 collected vs 271 run discrepancy (likely a
   module-level skip) via --collect-only; one body line at the
   main-merge push.
+  #55 after #56 merged (CM, 2026-10-25): worker-5 is merging main
+  1c36889f in; then a diff-only re-check by all 7; one more main
+  update after #54 merges (strict protection), then the BS1 docs PR
+  (c37b8f3c; CM rechecks base blobs).
   AD L3 suggested text (via CM; TW/AE tidy): "designed so the two legs
   sum flat; the shipped LR4 profile is verified within ±1 dB, LR8
   after room correction is not yet verified (F-383)" (markaudio LR4
@@ -3788,6 +3825,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   "open"; its AC2 says "sorted sample") and record the
   resolution: all records checked, exemption table, plausibility
   bounds.
+  #56 MERGED (CM, 2026-10-25; standing consent): merge commit
+  1c36889f446d79a74a4a69750e48281be84515c5, main = 1c36889f; 7/7 at
+  684da11a, CI 40236821737 green (1210 passed / 0 failed / 1 skipped),
+  QE body edit in. Open on merge: the TW closes
+  docs/project/defects/F-363.md (above). QE backlog one-liner (P2/P3),
+  recorded under F-388 (the #56 body points it there): "any future
+  consumer of driver-record T/S values must exclude ts_consistency:
+  unverifiable records". QE non-blocking: N1 F-388 adds an xmax test
+  once a consumer appears (= F-388 AC-e); N2 optional assert that
+  quote-None notes start with "F-363: unverifiable" (as above). CM
+  observation sent to the QE: the E2E local-demo step shows 1 xpassed
+  (QE to classify; F-272 removed xfails).
   #56 backlog (AD, TW, 2026-10-25): AD L1 = TW (3), P3: the CLI
   scripts/drivers/validate_drivers.py and pytest need one shared
   exemption/bounds source (the CLI flags the 8 exempted records
@@ -4210,6 +4259,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   check's own line is l.1951 "test-room-correction> rootdir:
   /build/src/room-correction". The bullet now reads "(CI log
   l.1951; also l.1787, 1912 for camilladsp)".
+  #54 updated to main 1c36889f (CM, 2026-10-25; after #56 merged):
+  head 46343238; all 7 asked for a FULL re-review (bundle
+  /tmp/pr54-review-46343238/); CI 40240718064 running. Merge order
+  unchanged: #54, then #55.
   Pi build queue (Architect, 2026-10-25): F-365, then the F-374
   PR-head suite, then the wireplumber-no-bypass check; each from a
   tarball at the declared SHA with sandbox=true. WP check
