@@ -1786,6 +1786,31 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   boundary (expected src/room-correction/ only, disjoint from nix/,
   the GraphManager code and the F-318 WP files); the PM relays it
   to team-lead for worker-4.
+  DONE (Architect, 2026-10-25; PO accepted the cut): first slice
+  US-174b "Offline filter generation, closed loop against the room
+  simulator" (venue markaudio-ultimax-200hz.yml; 3 scenarios + a
+  generic home-lab one; ACs 1-8 in US-174.md); AE numbers (X, Y,
+  boost cap, pre-ringing threshold, target curve, band) follow as
+  AC refinements (174a, day 1). File boundary: WRITE
+  src/room-correction/** and new files in configs/room-correction/;
+  API freeze on the names src/web-ui imports; deploy.py,
+  pw_config_generator.py, recording.py, ws_server.py not edited;
+  OUT nix/, flake.*, all Rust, src/web-ui/**, configs/pipewire/,
+  configs/wireplumber/, scripts/local-demo.sh; a new Python dep
+  means STOP and a separate nix PR; the CM checks the diff names
+  on every push. Brief sent to the CM for worker-4 (spawned,
+  branch from b0666c02). Sub-story IDs (PO): suffixes US-174a..e;
+  US-067 keeps its ID as US-174b2 (optional; after 174b and after
+  worker-2's lane). 174c is gated by the FULL amps-on list, H,
+  F-341 AC3, D-070 and the S-010 measurement rules; it needs the
+  UMIK-1 calibration file (serial 7161942) re-fetched from miniDSP
+  (the Pi 4 copy is unreachable). 174e comes after worker-2's
+  web-UI lane. Owner list (sent to team-lead, no hurry): the UMIK-1
+  calibration file (owner or team fetches); the home-lab room
+  dimensions and positions. Story batch B6 (PM, MANIFEST
+  a0f9b60c, base b0666c02): US-174.md, 11 old story status lines,
+  their index cells, the US-174 index row. Its index row sits next
+  to B5's US-173 row: trivial merge conflict expected (CM).
   Existing assets on main: src/room-correction/ (room_correction/,
   runner.py, analyze_measurement.py, gain_calibration.py,
   thermal_ceiling.py, tests/, mock/ with 3 scenarios),
@@ -1793,7 +1818,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   configs/local-demo/room-sim-convolver.conf,
   docs/architecture/room-compensation.md.
   OLD ROOM-CORRECTION STORIES (PO): US-174 is the umbrella and
-  links them; none is closed in this batch. Linked: US-008,
+  links them; none is closed in this batch (superseded by the PO
+  decisions below, recorded in B6). Linked: US-008,
   US-010, US-012, US-013, US-047, US-048, US-049, US-050, US-061,
   US-067, US-090, US-097, US-098, US-101 (list to be confirmed by
   the Architect's mapping). Status of each until the mapping:
@@ -1805,6 +1831,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   batch after. US-090 and US-097 (owner-rejected, session 5) STAY
   rejected; their rejection reasons become explicit US-174
   constraints/ACs (Architect extracts, PO checks the wording).
+  PO DECISIONS (2026-10-25) on the Architect's mapping: folded into
+  174b: US-010, US-008 (sim part; recording into 174c), US-013 (sim
+  half; real-room half into 174d), US-098 P1/P2; into 174c: US-047,
+  US-061's abort-restores-state AC (restated against D-063);
+  SUPERSEDED: US-050 by 174c (remaining Pi items folded in), US-012
+  by 174e; US-067 = US-174b2 (own ID; index "= US-174b2"); US-090
+  and US-097 stay "rejected" with "successor: US-174e"; the owner's
+  rejection reason quoted verbatim in 174e as a constraint (record:
+  local-demo broken by auth middleware redirect, F-223; "exactly
+  none of those stories have been end to end tested."); their ACs
+  are input only, each checked by the PO before it becomes a 174e
+  AC. US-101 separate, off the critical path.
   TW one-liner (PO, no hurry): CLAUDE.md says the room correction
   pipeline is "NOT YET WRITTEN", but src/room-correction/ (incl.
   mock/room_simulator.py) exists on main; the text is stale.
