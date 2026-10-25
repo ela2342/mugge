@@ -14,6 +14,11 @@ The approach:
 The steep slopes (48-96 dB/oct) are much steeper than practical IIR designs
 and provide excellent separation between mains and subs, reducing distortion
 in the crossover region.
+
+With ``alignment='linkwitz-riley'`` the magnitude is an LR4 or LR8 target
+instead (F-374): each leg is -6 dB at fc and the minimum-phase HP and LP
+legs sum flat and in phase.  The default (None) keeps the legacy knee
+byte-identical.
 """
 
 import numpy as np
@@ -24,14 +29,68 @@ from . import dsp_utils
 
 SAMPLE_RATE = dsp_utils.SAMPLE_RATE
 
+LINKWITZ_RILEY = 'linkwitz-riley'
 
-def _design_crossover_magnitude(freqs, crossover_freq, filter_type, slope_db_per_oct):
+# LR orders that sum in phase without a polarity flip (LR4, LR8).
+LR_SLOPES_DB_PER_OCT = (24.0, 48.0)
+
+# The LR8 HP leg reaches 1e-10 at ~0.056*fc; clipping the log magnitude
+# there corrupts the Hilbert-derived phase, so the LR path floors at 1e-20.
+_LR_LOG_FLOOR = 1e-20
+_LEGACY_LOG_FLOOR = 1e-10
+
+
+def _validate_alignment(alignment, *slopes_db_per_oct):
+    """Raise ValueError for an unknown alignment or an unsupported LR slope."""
+    if alignment is None:
+        return
+    if alignment != LINKWITZ_RILEY:
+        raise ValueError(
+            f"Unknown crossover alignment '{alignment}'; expected "
+            f"None or '{LINKWITZ_RILEY}'"
+        )
+    for slope in slopes_db_per_oct:
+        if float(slope) not in LR_SLOPES_DB_PER_OCT:
+            raise ValueError(
+                f"Linkwitz-Riley crossover supports slopes "
+                f"{LR_SLOPES_DB_PER_OCT} dB/oct, got {slope}"
+            )
+
+
+def _log_floor(alignment):
+    return _LEGACY_LOG_FLOOR if alignment is None else _LR_LOG_FLOOR
+
+
+def _lr_magnitude(freqs, crossover_freq, filter_type, slope_db_per_oct, sr):
+    """Linkwitz-Riley magnitude: LP = 1/(1+x), HP = x/(1+x).
+
+    x = (w/wc)^(S/6) on the bilinear-warped frequency w = tan(pi*f/sr):
+    this is the exact digital LR magnitude, whose min-phase legs stay in
+    phase (ln(f) has a Nyquist kink that skews the Hilbert phase).
+    """
+    nyquist = sr / 2.0
+    warped = np.tan(np.pi * np.clip(freqs, 0.0, nyquist) / sr)
+    ratio = warped / np.tan(np.pi * crossover_freq / sr)
+    order = slope_db_per_oct / 6.0
+    with np.errstate(divide='ignore', over='ignore'):
+        if filter_type == 'highpass':
+            return 1.0 / (1.0 + ratio ** -order)
+        return 1.0 / (1.0 + ratio ** order)
+
+
+def _design_crossover_magnitude(freqs, crossover_freq, filter_type, slope_db_per_oct,
+                                alignment=None, sr=SAMPLE_RATE):
     """
     Design the target magnitude response for a crossover filter.
 
-    Creates a smooth rolloff shape rather than a true brick-wall to avoid
-    Gibbs phenomenon ringing. The rolloff follows a power law that matches
-    the specified slope in dB/octave.
+    With ``alignment=None`` (legacy) this creates a smooth rolloff shape
+    rather than a true brick-wall to avoid Gibbs phenomenon ringing. The
+    rolloff follows a power law that matches the specified slope in
+    dB/octave, with a 0 dB knee at the crossover frequency.
+
+    With ``alignment='linkwitz-riley'`` the shape is a Linkwitz-Riley
+    magnitude (-6 dB at the crossover frequency), so complementary
+    highpass and lowpass legs sum flat.
 
     Parameters
     ----------
@@ -43,12 +102,25 @@ def _design_crossover_magnitude(freqs, crossover_freq, filter_type, slope_db_per
         'highpass' or 'lowpass'.
     slope_db_per_oct : float
         Rolloff slope in dB per octave.
+    alignment : str or None
+        None (legacy knee) or 'linkwitz-riley'.
+    sr : int
+        Sample rate (used by the Linkwitz-Riley frequency warping).
 
     Returns
     -------
     np.ndarray
         Target magnitude response (linear scale).
+
+    Raises
+    ------
+    ValueError
+        If alignment is unknown or the slope is not a supported LR order.
     """
+    _validate_alignment(alignment, slope_db_per_oct)
+    if alignment == LINKWITZ_RILEY:
+        return _lr_magnitude(freqs, crossover_freq, filter_type, slope_db_per_oct, sr)
+
     magnitude = np.ones_like(freqs, dtype=np.float64)
 
     for i, f in enumerate(freqs):
@@ -141,7 +213,26 @@ def generate_subsonic_filter(
     return subsonic_filter
 
 
-def _magnitude_to_min_phase_fir(magnitude, n_fft, n_taps):
+def _normalise_to_target(fir, target_fn, lo, hi, sr):
+    """Scale *fir* so its magnitude matches *target_fn* over [lo, hi] Hz.
+
+    Linkwitz-Riley path only.  The gain is the mean dB difference between
+    measured and target magnitude, so the legs stay at -6 dB at fc instead
+    of being pulled to unity by a passband that has not fully settled.
+    """
+    n_fft = dsp_utils.next_power_of_2(len(fir))
+    freqs = np.fft.rfftfreq(n_fft, d=1.0 / sr)
+    mask = (freqs >= lo) & (freqs <= hi)
+    if not np.any(mask):
+        return fir
+    measured = np.abs(np.fft.rfft(fir, n=n_fft))[mask]
+    target = target_fn(freqs[mask])
+    log_offset = np.mean(np.log(np.maximum(measured, _LR_LOG_FLOOR))
+                         - np.log(np.maximum(target, _LR_LOG_FLOOR)))
+    return fir / np.exp(log_offset)
+
+
+def _magnitude_to_min_phase_fir(magnitude, n_fft, n_taps, floor=_LEGACY_LOG_FLOOR):
     """Synthesise a minimum-phase FIR from a half-spectrum magnitude.
 
     Shared helper for all crossover filter types.
@@ -154,13 +245,17 @@ def _magnitude_to_min_phase_fir(magnitude, n_fft, n_taps):
         FFT size used for synthesis.
     n_taps : int
         Desired output FIR length.
+    floor : float
+        Magnitude floor before the log.  The LR8 HP leg reaches 1e-10 at
+        about 0.056*fc, and clipping there corrupts the Hilbert phase, so
+        the LR path passes 1e-20.
 
     Returns
     -------
     np.ndarray
         Minimum-phase FIR of length *n_taps*, with fade-out window applied.
     """
-    log_mag_half = np.log(np.maximum(magnitude, 1e-10))
+    log_mag_half = np.log(np.maximum(magnitude, floor))
     log_mag_full = np.zeros(n_fft, dtype=np.float64)
     log_mag_full[:len(log_mag_half)] = log_mag_half
     log_mag_full[len(log_mag_half):] = log_mag_half[-2:0:-1]
@@ -193,6 +288,7 @@ def generate_bandpass_filter(
     high_slope_db_per_oct=96.0,
     n_taps=16384,
     sr=SAMPLE_RATE,
+    alignment=None,
 ):
     """Generate a minimum-phase FIR bandpass crossover filter.
 
@@ -216,31 +312,40 @@ def generate_bandpass_filter(
         Output filter length.
     sr : int
         Sample rate.
+    alignment : str, optional
+        None for the legacy knee, or ``'linkwitz-riley'`` for LR edges
+        (both edges must then be 24 or 48 dB/oct).
 
     Returns
     -------
     np.ndarray
-        Minimum-phase FIR bandpass crossover filter, normalised to unity
-        gain in the passband centre.
+        Minimum-phase FIR bandpass crossover filter.  Legacy: unity gain in
+        the passband centre.  LR: matched to the LR target there.
 
     Raises
     ------
     ValueError
-        If *low_freq* >= *high_freq*.
+        If *low_freq* >= *high_freq*, or the alignment or an LR slope is
+        unsupported.
     """
     if low_freq >= high_freq:
         raise ValueError(
             f"low_freq ({low_freq}) must be less than high_freq ({high_freq})"
         )
+    _validate_alignment(alignment, low_slope_db_per_oct, high_slope_db_per_oct)
 
     n_fft = dsp_utils.next_power_of_2(n_taps * 4)
     freqs = np.fft.rfftfreq(n_fft, d=1.0 / sr)
 
-    hp_mag = _design_crossover_magnitude(freqs, low_freq, 'highpass', low_slope_db_per_oct)
-    lp_mag = _design_crossover_magnitude(freqs, high_freq, 'lowpass', high_slope_db_per_oct)
-    magnitude = hp_mag * lp_mag
+    def band_magnitude(f):
+        hp = _design_crossover_magnitude(
+            f, low_freq, 'highpass', low_slope_db_per_oct, alignment, sr)
+        lp = _design_crossover_magnitude(
+            f, high_freq, 'lowpass', high_slope_db_per_oct, alignment, sr)
+        return hp * lp
 
-    fir = _magnitude_to_min_phase_fir(magnitude, n_fft, n_taps)
+    fir = _magnitude_to_min_phase_fir(
+        band_magnitude(freqs), n_fft, n_taps, floor=_log_floor(alignment))
 
     # Normalise: unity gain at passband centre (geometric mean of edges)
     center_freq = np.sqrt(low_freq * high_freq)
@@ -249,6 +354,8 @@ def generate_bandpass_filter(
     hi = min(high_freq * 0.67, center_freq * 1.4)
     if lo >= hi:
         lo, hi = low_freq * 1.2, high_freq * 0.8
+    if alignment is not None:
+        return _normalise_to_target(fir, band_magnitude, lo, hi, sr)
     mask = (passband_freqs >= lo) & (passband_freqs <= hi)
     if np.any(mask):
         passband_level = np.mean(passband_mag[mask])
@@ -266,6 +373,7 @@ def generate_crossover_filter(
     sr=SAMPLE_RATE,
     crossover_freq_high=None,
     high_slope_db_per_oct=None,
+    alignment=None,
 ):
     """
     Generate a minimum-phase FIR crossover filter.
@@ -289,6 +397,10 @@ def generate_crossover_filter(
     high_slope_db_per_oct : float, optional
         Rolloff steepness at the upper edge (bandpass only).  Defaults to
         *slope_db_per_oct* if not provided.
+    alignment : str, optional
+        None (default) for the legacy knee.  ``'linkwitz-riley'`` gives an
+        LR4 (24 dB/oct) or LR8 (48 dB/oct) leg: -6 dB at fc, summing flat
+        and in phase with the complementary leg.
 
     Returns
     -------
@@ -298,7 +410,8 @@ def generate_crossover_filter(
     Raises
     ------
     ValueError
-        If filter_type is unknown or bandpass parameters are invalid.
+        If filter_type is unknown, bandpass parameters are invalid, or the
+        alignment or an LR slope is unsupported.
     """
     if filter_type == 'bandpass':
         if crossover_freq_high is None:
@@ -315,6 +428,7 @@ def generate_crossover_filter(
             ),
             n_taps=n_taps,
             sr=sr,
+            alignment=alignment,
         )
 
     if filter_type not in ('highpass', 'lowpass'):
@@ -322,21 +436,34 @@ def generate_crossover_filter(
             f"Unknown filter_type '{filter_type}'; expected "
             f"'highpass', 'lowpass', or 'bandpass'"
         )
+    _validate_alignment(alignment, slope_db_per_oct)
 
     n_fft = dsp_utils.next_power_of_2(n_taps * 4)
     freqs = np.fft.rfftfreq(n_fft, d=1.0 / sr)
 
     # Design target magnitude
-    magnitude = _design_crossover_magnitude(freqs, crossover_freq, filter_type, slope_db_per_oct)
+    magnitude = _design_crossover_magnitude(
+        freqs, crossover_freq, filter_type, slope_db_per_oct, alignment, sr)
 
-    fir = _magnitude_to_min_phase_fir(magnitude, n_fft, n_taps)
+    fir = _magnitude_to_min_phase_fir(
+        magnitude, n_fft, n_taps, floor=_log_floor(alignment))
+
+    if filter_type == 'highpass':
+        lo, hi = crossover_freq * 2, sr / 2 * 0.9
+    else:
+        lo, hi = 20, crossover_freq * 0.5
+
+    if alignment is not None:
+        return _normalise_to_target(
+            fir,
+            lambda f: _design_crossover_magnitude(
+                f, crossover_freq, filter_type, slope_db_per_oct, alignment, sr),
+            lo, hi, sr,
+        )
 
     # Normalize: passband should be at 0dB (unity gain)
     passband_freqs, passband_mag = dsp_utils.rfft_magnitude(fir)
-    if filter_type == 'highpass':
-        mask = (passband_freqs >= crossover_freq * 2) & (passband_freqs <= sr / 2 * 0.9)
-    else:
-        mask = (passband_freqs >= 20) & (passband_freqs <= crossover_freq * 0.5)
+    mask = (passband_freqs >= lo) & (passband_freqs <= hi)
 
     if np.any(mask):
         passband_level = np.mean(passband_mag[mask])

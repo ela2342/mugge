@@ -25,6 +25,7 @@ import numpy as np
 from . import dsp_utils
 from .combine import combine_filters
 from .crossover import (
+    LINKWITZ_RILEY,
     generate_bandpass_filter,
     generate_crossover_filter,
     generate_subsonic_filter,
@@ -109,8 +110,13 @@ def _generate_channel_crossover(
     slope: float,
     n_taps: int,
     sr: int,
+    alignment: Optional[str] = None,
 ) -> np.ndarray:
-    """Generate the appropriate crossover FIR for a single speaker channel."""
+    """Generate the appropriate crossover FIR for a single speaker channel.
+
+    *alignment* is passed to the crossover generator: None for the legacy
+    knee, ``'linkwitz-riley'`` for LR4/LR8 (F-374).
+    """
     filter_type = spk_cfg.get("filter_type", "highpass")
 
     if filter_type == "bandpass":
@@ -123,6 +129,7 @@ def _generate_channel_crossover(
             high_slope_db_per_oct=high_slope,
             n_taps=n_taps,
             sr=sr,
+            alignment=alignment,
         )
 
     if filter_type == "highpass":
@@ -138,6 +145,7 @@ def _generate_channel_crossover(
         slope_db_per_oct=slope,
         n_taps=n_taps,
         sr=sr,
+        alignment=alignment,
     )
 
 
@@ -176,9 +184,30 @@ def generate_profile_filters(
     -------
     dict
         Mapping of speaker key to combined FIR (np.ndarray).
+
+    Raises
+    ------
+    ValueError
+        If ``crossover.type`` is present but not ``'linkwitz-riley'``.
+
+    Notes
+    -----
+    ``crossover.type`` selects the alignment (F-374).  A crossover section
+    without ``type`` is Linkwitz-Riley; a profile without a crossover
+    section keeps the legacy knee.
     """
     crossover_freqs = _normalize_crossover_freqs(profile)
-    slope = profile.get("crossover", {}).get("slope_db_per_oct", 48.0)
+    crossover_cfg = profile.get("crossover")
+    slope = (crossover_cfg or {}).get("slope_db_per_oct", 48.0)
+    if crossover_cfg is None:
+        alignment = None
+    else:
+        alignment = crossover_cfg.get("type", LINKWITZ_RILEY)
+        if alignment != LINKWITZ_RILEY:
+            raise ValueError(
+                f"Unknown crossover type '{alignment}'; expected "
+                f"'{LINKWITZ_RILEY}'"
+            )
     speakers = profile.get("speakers", {})
 
     if correction_filters is None:
@@ -195,7 +224,7 @@ def generate_profile_filters(
     for spk_key, spk_cfg in speakers.items():
         # 1. Crossover
         xo = _generate_channel_crossover(
-            spk_cfg, crossover_freqs, slope, n_taps, sr,
+            spk_cfg, crossover_freqs, slope, n_taps, sr, alignment,
         )
 
         # 2. Correction (or dirac placeholder)

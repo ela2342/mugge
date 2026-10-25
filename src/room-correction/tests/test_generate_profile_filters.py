@@ -14,6 +14,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from room_correction import dsp_utils
+from room_correction.combine import combine_filters
 from room_correction.generate_profile_filters import (
     COMBINE_MARGIN_DB,
     _generate_channel_crossover,
@@ -605,6 +606,77 @@ class TestGenerateProfileFiltersEdgeCases(unittest.TestCase):
         }
         result = generate_profile_filters(profile, {}, n_taps=N_TAPS)
         self.assertEqual(result, {})
+
+
+
+# ---------------------------------------------------------------------------
+# crossover.type pass-through (F-374)
+# ---------------------------------------------------------------------------
+
+def _profile_2way_lr4(crossover):
+    profile = {
+        "speakers": {
+            "sat_left": {"identity": "sat", "filter_type": "highpass"},
+            "sub1": {"identity": "sub", "filter_type": "lowpass"},
+        },
+    }
+    if crossover is not None:
+        profile["crossover"] = crossover
+    return profile
+
+
+class TestCrossoverTypePassThrough(unittest.TestCase):
+    """crossover.type selects the alignment; missing type means LR."""
+
+    XO = {"frequency_hz": 200, "slope_db_per_oct": 24}
+
+    def _run(self, crossover):
+        return generate_profile_filters(
+            _profile_2way_lr4(crossover), {}, n_taps=N_TAPS)
+
+    def test_missing_type_defaults_to_linkwitz_riley(self):
+        implicit = self._run(dict(self.XO))
+        explicit = self._run(dict(self.XO, type="linkwitz-riley"))
+        for key in implicit:
+            self.assertTrue(np.array_equal(implicit[key], explicit[key]), key)
+
+    def test_linkwitz_riley_differs_from_legacy(self):
+        lr = _generate_channel_crossover(
+            {"filter_type": "highpass"}, [200.0], 24, N_TAPS, 48000,
+            "linkwitz-riley")
+        legacy = _generate_channel_crossover(
+            {"filter_type": "highpass"}, [200.0], 24, N_TAPS, 48000)
+        self.assertFalse(np.allclose(lr, legacy))
+
+    def test_unknown_type_raises(self):
+        with self.assertRaises(ValueError):
+            self._run(dict(self.XO, type="butterworth"))
+
+    def test_unknown_type_raises_without_speakers(self):
+        with self.assertRaises(ValueError):
+            generate_profile_filters(
+                {"crossover": dict(self.XO, type="bessel"), "speakers": {}}, {},
+                n_taps=N_TAPS)
+
+    def test_no_crossover_section_keeps_legacy(self):
+        result = self._run(None)
+        dirac = np.zeros(N_TAPS)
+        dirac[0] = 1.0
+        for key, filter_type in (("sat_left", "highpass"), ("sub1", "lowpass")):
+            xo = _generate_channel_crossover(
+                {"filter_type": filter_type}, [], 48.0, N_TAPS, 48000)
+            expected = combine_filters(
+                dirac, xo, N_TAPS, margin_db=COMBINE_MARGIN_DB)
+            self.assertTrue(np.array_equal(result[key], expected), key)
+
+    def test_bandpass_edges_are_linkwitz_riley(self):
+        bp = _generate_channel_crossover(
+            {"filter_type": "bandpass"}, [300.0, 2000.0], 48, 16384, 48000,
+            "linkwitz-riley")
+        freqs, mag = dsp_utils.rfft_magnitude(bp, n_fft=1 << 17)
+        for edge in (300.0, 2000.0):
+            level = 20 * np.log10(mag[np.argmin(np.abs(freqs - edge))])
+            self.assertAlmostEqual(level, -6.0, delta=0.5)
 
 
 if __name__ == "__main__":
