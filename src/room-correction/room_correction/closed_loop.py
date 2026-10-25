@@ -1,0 +1,191 @@
+"""
+Closed-loop evaluation of correction filters (US-174b).
+
+Given an acoustic path IR (speaker * room at the mic) and the FIR that
+will run on that channel, compute the corrected system response and
+compare it with the target. Used by the simulator closed-loop tests now,
+and by the re-measurement check after deploy later (US-174d), so the
+metrics live here rather than in a test file.
+
+Metrics (values: AE, 2026-10-25):
+- Smoothed response: 1/6-octave, log-domain average (same averaging as
+  dsp_utils.fractional_octave_smooth), evaluated on a log frequency grid.
+- Max positive deviation from target, one-sided (the cut-only pipeline
+  must remove peaks; it is not allowed to fill dips).
+- Below-target regions stay unchanged: where the uncorrected response is
+  below target, the corrected one stays within a tolerance of it.
+- Minimum phase: energy of (h - minphase(|H|)) relative to energy of h.
+- Causality / wrap-around: energy in the last 5% of taps.
+
+Known limit (Architect, 2026-10-25): the room simulator has a single mic
+position and position-independent room modes, so off-position robustness
+(AC4) cannot be evaluated yet; that is slice 174b-sim.
+"""
+
+import numpy as np
+
+from . import dsp_utils
+from . import target_curves as tc
+
+
+SAMPLE_RATE = dsp_utils.SAMPLE_RATE
+EVAL_N_FFT = 1 << 17          # 0.37 Hz bins at 48 kHz, fine enough for Q~10 modes
+POINTS_PER_OCTAVE = 48
+
+
+def log_grid(f_low, f_high, points_per_octave=POINTS_PER_OCTAVE):
+    """Log-spaced frequency grid from f_low to f_high inclusive."""
+    n_oct = np.log2(f_high / f_low)
+    n = int(np.ceil(n_oct * points_per_octave)) + 1
+    return f_low * 2.0 ** (np.linspace(0.0, n_oct, n))
+
+
+def smoothed_response_db(h, f_low, f_high, sr=SAMPLE_RATE, fraction=6,
+                         n_fft=EVAL_N_FFT, points_per_octave=POINTS_PER_OCTAVE):
+    """
+    Fractional-octave smoothed magnitude of an FIR / IR on a log grid.
+
+    Each grid point is the mean of the log magnitude over bins within
+    +/- half of 1/fraction octave, which matches
+    dsp_utils.fractional_octave_smooth() at that frequency.
+
+    Returns
+    -------
+    tuple of (np.ndarray, np.ndarray)
+        (grid frequencies in Hz, smoothed magnitude in dB).
+    """
+    h = np.asarray(h, dtype=np.float64)
+    n_fft = max(n_fft, dsp_utils.next_power_of_2(len(h)))
+    mag = np.abs(np.fft.rfft(h, n=n_fft))
+    log_mag = np.log10(np.maximum(mag, 1e-10))
+    bin_hz = sr / n_fft
+
+    grid = log_grid(f_low, f_high, points_per_octave)
+    ratio = 2.0 ** (0.5 / fraction)
+    lo = np.ceil(grid / ratio / bin_hz).astype(int)
+    hi = np.floor(grid * ratio / bin_hz).astype(int)
+    lo = np.clip(lo, 1, len(mag) - 1)
+    hi = np.clip(np.maximum(hi, lo), 1, len(mag) - 1)
+
+    csum = np.concatenate([[0.0], np.cumsum(log_mag)])
+    mean_log = (csum[hi + 1] - csum[lo]) / (hi - lo + 1)
+    return grid, 20.0 * mean_log
+
+
+def crossover_target_db(freqs, filter_type, crossover_freq, slope_db_per_oct):
+    """
+    Ideal Linkwitz-Riley magnitude in dB (the crossover part of the target).
+
+    LR of order 2N is a squared Butterworth of order N, N = slope / 12:
+    lowpass 1 / (1 + x^2N), highpass x^2N / (1 + x^2N), x = f / fc.
+    This is the textbook shape (-6 dB at fc), not whatever crossover.py
+    produces today (F-374), so it cannot lock in that defect.
+    """
+    freqs = np.asarray(freqs, dtype=np.float64)
+    order = 2.0 * slope_db_per_oct / 12.0
+    x = np.maximum(freqs, 1e-6) / float(crossover_freq)
+    if filter_type == 'lowpass':
+        mag = 1.0 / (1.0 + x ** order)
+    elif filter_type == 'highpass':
+        mag = x ** order / (1.0 + x ** order)
+    elif filter_type == 'fullrange':
+        mag = np.ones_like(x)
+    else:
+        raise ValueError(f"unsupported filter_type {filter_type!r}")
+    return dsp_utils.linear_to_db(mag)
+
+
+def channel_target_db(freqs, filter_type, crossover_freq, slope_db_per_oct,
+                      target_curve_name='flat'):
+    """Crossover target times the profile's target curve, in dB."""
+    curve = tc.get_target_curve(target_curve_name, np.asarray(freqs, dtype=np.float64))
+    return crossover_target_db(freqs, filter_type, crossover_freq,
+                               slope_db_per_oct) + curve
+
+
+def system_response(acoustic_ir, fir):
+    """Corrected system: the FIR feeding the acoustic path (time domain)."""
+    return dsp_utils.convolve_fir(acoustic_ir, fir)
+
+
+def max_positive_deviation_db(response_db, target_db):
+    """Largest amount (dB) by which the response exceeds the target."""
+    return float(np.max(np.asarray(response_db) - np.asarray(target_db)))
+
+
+def below_target_change_db(corrected_db, uncorrected_db, target_db):
+    """
+    Largest |corrected - uncorrected| where uncorrected is below target.
+
+    Cut-only correction must leave dips alone. Returns 0.0 if the
+    uncorrected response is nowhere below target.
+    """
+    corrected_db = np.asarray(corrected_db)
+    uncorrected_db = np.asarray(uncorrected_db)
+    below = uncorrected_db < np.asarray(target_db)
+    if not np.any(below):
+        return 0.0
+    return float(np.max(np.abs(corrected_db[below] - uncorrected_db[below])))
+
+
+def minimum_phase_reference(h, oversample=8):
+    """Minimum-phase FIR with the same magnitude as h (cepstral method)."""
+    h = np.asarray(h, dtype=np.float64)
+    n = len(h)
+    n_fft = dsp_utils.next_power_of_2(n * oversample)
+    mag = np.abs(np.fft.rfft(h, n=n_fft))
+    floor = max(np.max(mag), 1e-30) * 1e-12
+    log_mag = np.log(np.maximum(mag, floor))
+    full = np.concatenate([log_mag, log_mag[-2:0:-1]])
+    cepstrum = np.fft.ifft(full).real
+    window = np.zeros(n_fft)
+    window[0] = 1.0
+    window[1:n_fft // 2] = 2.0
+    window[n_fft // 2] = 1.0
+    return np.fft.ifft(np.exp(np.fft.fft(cepstrum * window))).real[:n]
+
+
+def minimum_phase_residual_db(h):
+    """Energy of (h - minphase(|H|)) in dB relative to the energy of h."""
+    h = np.asarray(h, dtype=np.float64)
+    energy = np.sum(h ** 2)
+    if energy == 0:
+        raise ValueError("filter has no energy")
+    residual = np.sum((h - minimum_phase_reference(h)) ** 2)
+    return float(10.0 * np.log10(max(residual / energy, 1e-30)))
+
+
+def tail_energy_db(h, tail_fraction=0.05):
+    """Energy in the last tail_fraction of taps, dB relative to total."""
+    h = np.asarray(h, dtype=np.float64)
+    energy = np.sum(h ** 2)
+    if energy == 0:
+        raise ValueError("filter has no energy")
+    n_tail = max(1, int(round(len(h) * tail_fraction)))
+    return float(10.0 * np.log10(max(np.sum(h[-n_tail:] ** 2) / energy, 1e-30)))
+
+
+def summed_response(acoustic_irs, firs, delays_samples=None):
+    """
+    Sum of several corrected channels at the listening position.
+
+    Parameters
+    ----------
+    acoustic_irs, firs : dict
+        Keyed by channel/speaker; same keys.
+    delays_samples : dict, optional
+        Integer delay compensation per key (applied to the FIR output).
+    """
+    delays_samples = delays_samples or {}
+    parts = []
+    for key, ir in acoustic_irs.items():
+        y = system_response(ir, firs[key])
+        d = int(delays_samples.get(key, 0))
+        if d < 0:
+            raise ValueError(f"negative delay for {key}: {d}")
+        parts.append(np.concatenate([np.zeros(d), y]))
+    n = max(len(p) for p in parts)
+    total = np.zeros(n)
+    for p in parts:
+        total[:len(p)] += p
+    return total
