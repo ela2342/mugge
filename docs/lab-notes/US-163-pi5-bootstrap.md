@@ -168,7 +168,7 @@ $ ps -L -o pid,tid,cls,rtprio,pri,ni,comm -p 1165
 | systemd --user limits | rtprio 95 | 95/95 | PASS |
 | T49 at 11 min uptime | NRestarts <= 3, no failed units | max 0, both lists empty | PASS |
 | USBStreamer sink | S32LE, 8 ch, 48 kHz | S32LE, 8, 48000 (pw-dump and ALSA hw_params) | PASS |
-| USBStreamer capture PCM (AC12) | ALSA capture PCM, 8 ch, 48 kHz | `pcmC1D0c` present; capture stream closed, so no hw_params recorded | OPEN |
+| USBStreamer capture PCM (AC12) | ALSA capture PCM, 8 ch, 48 kHz | `pcmC1D0c` (card 1); stream0: 8 ch S32_LE 48 kHz (altset 1; altset 2 = 4 ch), not open; PW capture node deferred per F-295 | PASS (QE) |
 | Gains (AC14), both rounds | all linear Mult/Add 0 | 24 enumerated, 16 gain-relevant (8 nodes x Mult/Add), all exactly 0 | PASS |
 | HiFiBerry blocked | no card, modules, nodes | none in /proc/asound/cards; 4 modules not loaded; 0 objects | PASS |
 | Thermal | < 80 °C | max 66.65 °C (21 samples) | PASS |
@@ -185,8 +185,33 @@ $ ps -L -o pid,tid,cls,rtprio,pri,ni,comm -p 1165
   Mult, Add). Control only feeds the notify port, not the audio path, so
   16 are gain-relevant (AE).
 - AC12 capture: PipeWire has no USBStreamer capture node by design (F-295;
-  GraphManager adds it for Live mode). The ALSA-level capture evidence is
-  still to be recorded.
+  GraphManager adds it for Live mode). The ALSA-level evidence is the static
+  USB descriptor, read without opening the PCM (CM-OBS-.89-AC12, same boot
+  `1531f01f`):
+
+  ```bash
+  $ cat /proc/asound/USBStreamer/stream0      # Capture section
+  Capture:
+    Status: Stop
+    Interface 2
+      Altset 1
+      Format: S32_LE
+      Channels: 8
+      Rates: 44100, 48000
+    Interface 2
+      Altset 2
+      Format: S32_LE
+      Channels: 4
+      Rates: 44100, 48000
+  $ cat /proc/asound/USBStreamer/pcm0c/info
+  card: 1
+  stream: CAPTURE
+  subdevices_avail: 1
+  ```
+
+  The card-id path and the stream0 header bind it to the USBStreamer;
+  "USB Audio" is the generic snd-usb-audio name. Whatever opens capture
+  later (Live mode) must use altset 1: altset 2 has only 4 channels.
 
 ### Notes
 
