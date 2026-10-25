@@ -2594,6 +2594,49 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       cleared. The Pi steps are DEFERRED: the Pi 5 .89 is down (no
       ping), waiting for the owner's power cycle in the US-172c
       recovery.
+    - r7 RESULT (CM, 2026-10-26; supersedes the Status line above):
+      worker-3 build at US-173 rev 142a3523 (gate2.py e8a39667,
+      gate2_selftest.py 2899cfe6, gain_matrix.py 238b3841); results
+      /tmp/w3-gate2/selftest-r7-result/ (SUMS e9d5b394), log d8dc52aa.
+      Selftest 4 FAIL / 9 PASS: G1-G5 and the cap case PASS;
+      gain_matrix verdicts are the same as r6b. NEW finding: after the
+      step-6 WirePlumber restart, fc and fc-out both re-suspend, so
+      the cleanup gains readback is NOT VERIFIABLE (STOP, exit 3), and
+      S2a, S2b, C1b-negative and fail-replay were not exercised
+      (Abort, exit 2 at step 0). Exit codes deviate from the ruled
+      "exit 1".
+    - JOINT r7 RULING (AE + Architect, 2026-10-26;
+      /tmp/w3-gate2-rulings/r7-exitcode-joint.md sha256 65555e73,
+      frozen copy /tmp/pm-backlog/r7-exitcode-joint-65555e73.md): (1)
+      exit codes ACCEPTED as built: NOT VERIFIABLE gives Abort exit 2
+      at step 0 (including --preflight-only) and STOP exit 3 at
+      cleanup; never PASS, never exit 0, no new exit code. Condition:
+      the reason stays visible: the FAIL line carries "gains not
+      verifiable: <node> state <before>/<after>", the summary tells it
+      apart from a value FAIL (G4) at the same exit code, and the QE
+      confirms this in the r7 output; the selftest assertions on the
+      reason stay. Record line (AE, verbatim): "Addendum 1 B amended:
+      NOT VERIFIABLE = exit 2 at step 0, exit 3 at cleanup
+      (r7-exitcode-joint)." The TW and PM record that exit 2/3
+      includes NOT VERIFIABLE wherever gate2's exit codes are
+      documented. Non-blocking for the next touch: append "(not
+      verifiable)" to the Abort/STOP top line. (2) The step-6
+      re-suspend is a real finding (F-396), not a harness bug; STOP is
+      correct; gate2.py stays read-only with no wake; the cleanup
+      states.json goes into the results. (3) Diff review: no blocking
+      issues; two stricter-than-ruled points accepted (any state
+      change between the snapshots is NOT VERIFIABLE; a missing node
+      is bad); "cap reached = not met" fails closed and is accepted.
+      Non-blocking: the r7 summary quotes G2's "values alone" field as
+      the blindness evidence.
+    - Selftest re-wake (AE + Architect agree, 2026-10-26; joint text
+      to the CM): only gate2_selftest.py re-wakes, never gate2.py; it
+      re-wakes before S2a, S2b, C1b-negative and fail-replay, and each
+      must start idle/idle. In the main run, a WP restart that leaves
+      the chain suspended gives exit 3 with the cleanup NOT VERIFIABLE
+      as the only failed check: a KNOWN FINDING F-396. If the nodes
+      are idle or running, exit 0 is expected, logged as "F-396 not
+      reproduced". Anything else is FAIL. One build follows (r8).
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -2940,6 +2983,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   test_venue_closed_loop.py:438/:473/:492. Then the CM verifies,
   pushes, applies B6n (bddbe5c8) as a separate commit, pushes, updates
   the body; QE/AE review.
+  UPDATE (CM, 2026-10-26): pushed worker-4's declared head 47b88da9
+  (chain 27d8ff11 -> 46c53424 -> 47b88da9). It still has the metric
+  NaN-in/NaN-out, not the joint line (metric raises, gates never
+  raise, isfinite asserts); worker-4's tree has uncommitted edits in
+  that direction, so a successor head is expected. B6n and the body
+  update are held until then; B6n still applies to base 32260961 (CM
+  checked). 47b88da9 lacks #56, so its F-363 failure comes from its
+  base.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -3853,6 +3904,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   UPDATE (CM, 2026-10-26): #55 is HELD. QE ruling pending between (a)
   the update-branch run onto main ba5cc200 counting as its single
   attempt, or (b) the F-394 strict-xfail quarantine PR first.
+  UPDATE (QE ruling via CM and team-lead, 2026-10-26; supersedes "QE
+  ruling pending" above): the QE ruled (b). #55 is held until the
+  F-394 quarantine PR merges. PR #59 OPEN (branch
+  test/F-394-quarantine from ba5cc200, worker-5, head 011bfa5d): one
+  line, marks only test_level_bridge_sw_has_signal xfail(strict=True)
+  citing F-394. Rule 13 requested from all 7; CI 40245796169 queued.
+  #55 stays at 9fd7bf2b until #59 merges; then update-branch onto
+  main, the QE's diff-only re-check and a new CI run.
   AD L3 suggested text (via CM; TW/AE tidy): "designed so the two legs
   sum flat; the shipped LR4 profile is verified within ±1 dB, LR8
   after room correction is not yet verified (F-383)" (markaudio LR4
@@ -4070,6 +4129,54 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   context's re-run can't produce a PASS; it waits for US-176 or F-396
   (Addendum 1 B) and is not a FAIL meanwhile. The cold cycle waits
   until the owner says they're available and blocks nothing.
+  UPDATE (AE ruling via CM, 2026-10-26, agreed with the Architect;
+  supersedes "The cold cycle waits until the owner says they're
+  available" above): the read-only check after the US-172c recovery
+  power cycle counts as the cold-cycle gains evidence (F-395 AC (c)),
+  so no second owner trip is needed. It also counts as the step-1
+  OBSERVE "right after boot". Order (joint): US-172c steps 1-6
+  (read-only, no graph), then this read, then steps 7-8; the time
+  between the boot and the read is logged. Records (AE, six conditions
+  plus the CM's four points; record list
+  /tmp/pm-backlog/cold-cycle-read-plan-91bb526b.txt):
+  - 1) Cold: the owner's statement, verbatim, that power was
+    physically removed (unplugged or switched off at the PSU), ideally
+    with roughly how long. A reset button or a software reboot doesn't
+    count.
+  - 2) This boot: boot id, uptime and the deployed revision/toplevel,
+    because the conf defaults are what's being proven. Plus the Mac
+    ping down window.
+  - 3) First touch: the read is the FIRST session on the graph after
+    boot. Before it: no CHANGE, no stream, no pw-cli set, no GM mode
+    change, no web-UI action. If anything ran first, log it, and the
+    result counts only as an after-boot read, not a cold-cycle read.
+    ("No GM" means no GM RPC or web-UI action; the services start at
+    boot as normal.)
+  - 4) The read, per the r6b rule: pw-dump state of the convolver,
+    convolver-out and the USBStreamer node, before and after the
+    enum-params read; all 16 Mult and Add values exactly 0.000000;
+    pw-dump structure (one of each node, 8 gains); D-063 gate closed.
+    Both gain nodes must be idle or running and unchanged, otherwise
+    the result is NOT VERIFIABLE.
+  - 5) Hardware: the USBStreamer hw mixer (amixer dump, read-only)
+    shows Playback Volume unchanged at 0 dB, the same as after AC17.
+  - 6) Read-only: no wake of any kind.
+  If the result is NOT VERIFIABLE (the chain suspended or never run at
+  boot), that is the step-1 OBSERVE result and a valid finding, not a
+  FAIL; per Addendum 1 B the cold-cycle gains proof then waits for the
+  canary (US-176) or the no-suspend fix (F-396), and the cold cycle is
+  batched with the next physical owner task; no second trip now (AE).
+  Annotation vehicle (TW + PM, 2026-10-26; supersedes "Vehicle: a
+  small docs-only PR or part of the F-318 batch (PM and TW choose)"
+  above): a separate small docs-only TW defects PR from main ba5cc200,
+  not the F-318 batch (which waits for US-173). Scope: the 9
+  annotations, append-only, located by content (F-373.md's line is
+  l.34 on main; the AE OKs placement in the 7 table rows); the F-373
+  AC2 addition; the F-262 XPASS line (QE verbatim); new records F-395,
+  F-396, F-397 plus index rows (AE checks F-395/F-396, the Architect
+  F-397); the F-394 record and its AC (v) correction only if the QE
+  confirms. US-176 story text stays out (own PR). Branch requested
+  from the CM; PR number pending.
 - **F-396** Production must never suspend the filter-chain or the
   USBStreamer node (P1 unless the Architect rules otherwise; AE,
   2026-10-26, from the r6b ruling draft section 4): a suspend of the
@@ -4096,6 +4203,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Pi (the step 1 OBSERVE records the filter-chain and USBStreamer node
   states); extend the config test guard to 20-usbstreamer.conf and
   21-usbstreamer-playback.conf.
+  UPDATE (AE, 2026-10-26, Gate-2 r7): F-396 is now also a safety item,
+  still P1. The r7 sandbox showed every node suspending across a
+  WirePlumber restart, the USBStreamer stand-in included, despite
+  suspend-timeout 0. Added scope: (a) one Pi observation of the
+  USBStreamer, convolver and convolver-out states across a WP restart
+  (CHANGE, announced, nothing connected); (b) pw-mon over step 6 in
+  every Gate-2 --wp-restart Pi run. safety.md needs no new rule,
+  because TW batch v17 already treats a WP restart as a USBStreamer
+  interruption. Non-blocking: cite F-396 there the next time the batch
+  is touched (TW).
 - **US-176** Canary node for the gains readback (AE + Architect;
   durable F-395 fix; joint r6b ruling section 3 + Addendum 1 A +
   Addendum 2 item 1, 2026-10-26): the production filter-chain gets one
