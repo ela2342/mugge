@@ -1827,6 +1827,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     #55 merges, regenerate the session WAVs from the merged SHA, the
     AE re-checks them (AC2 was checked on pre-F-374 files), and the
     AC3a SHA256SUMS are committed from that same regeneration.
+    AE (via CM, 2026-10-25): the AC2 re-check runs ONLY on WAVs
+    regenerated from the #55 merge SHA, with the AC3a SHA256SUMS
+    from the same run.
   - F-321 check (AE, NOT waivable): sha256 of the WAVs the convolver
     actually loaded matches the generated files, before amps on.
   - F-341 AC3 (AE, NOT waivable): nc checks #3/#6 verified on the
@@ -2483,6 +2486,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   F-385 exist only in this backlog: no defect records or
   defects-index rows on main; closing F-374 on merge needs the usual
   tracking batch.
+  #55 RULINGS (via CM, 2026-10-25): AE: 96 dB/oct does NOT stay; the
+  editor offers 24/48 only, and type is fixed to linkwitz-riley; a
+  non-LR alignment would be a new story. Architect: the U1 fix goes
+  INTO #55 (worker-5): save-time validation calls the generator's
+  own check (single source), plus a JS/Python parity test, a sweep
+  of every shipped profile, and no crash or rewrite for stored bad
+  values. Architect N1 (LR4 phase-at-fc) and UX N1 go in the same
+  head; F-387 cited in the body. Joint AE + Architect (replaces
+  "no guard on the real profile"; supersedes AD L1's "loose-bounds"
+  test below): a real-profile REGRESSION CEILING of phase <= 35 deg
+  at fc and <= 75 deg over fc/2..2fc, sum +/-1.0 dB re plateau, and
+  max|H| <= -0.5 dB (hard). Only F-383/F-385 may tighten it;
+  relaxing it needs joint AE + Architect approval.
   #55 backlog (AD, 2026-10-25): L1 a loose-bounds regression test
   on the real, unmodified markaudio profile (sum, max|H|, phase),
   tightened with F-385/F-383. L2 default_profile.yml has no
@@ -2775,7 +2791,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     measured T/S override is present. The F-363 PR only adds a test
     that no profile under configs/ references a marked record
     today. AE-owned; P2 (AE confirmed, 2026-10-25). The F-363
-    configs/ assertion is the interim guard.
+    configs/ assertion is the interim guard. Scope widened (AE,
+    2026-10-25; supersedes "datasheet-inconsistent" above): fail
+    closed on ANY record with a ts_consistency mark (today
+    datasheet-inconsistent and unverifiable), so future mark values
+    are covered automatically.
   - Dual-voice-coil Re (AE, P3): Earthquake/Image Dynamics records
     store series Re as if per-coil; the IDMAX10D2 Re 3.44 is in no
     manufacturer document. AE-owned.
@@ -2790,7 +2810,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     ts_consistency: unverifiable (a separate value from
     datasheet-inconsistent); stored values unchanged. The QE owns
     the exemption mechanics. Open (AE, PM question): whether the
-    fail-closed rule above also covers "unverifiable".
+    fail-closed rule above also covers "unverifiable". ANSWERED
+    (AE): yes, see the widened scope above. Addendum (AE + QE, via
+    CM): the exemption test still asserts the exact error string,
+    and mutation (e) flips unverifiable to datasheet-inconsistent
+    and must go red.
 - **F-379** (worker-4, Architect ruling; 2026-10-25) Web-UI
   correction level defect: src/web-ui/app/filter_routes.py:231 calls
   correction.generate_correction_filter directly, with no IR level
