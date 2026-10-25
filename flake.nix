@@ -415,10 +415,14 @@
             nativeBuildInputs = [ testPython camilladsp-test ];
             PI_AUDIO_MOCK = "1";
           } ''
-            cp -r ${./src/room-correction} room-correction
-            chmod -R u+w room-correction
-            cp ${./src/camilladsp-test/test_config.yml} room-correction/test_camilladsp.yml
-            cd room-correction
+            # Mirror the repo layout: room-correction resolves configs/ as ../../configs
+            mkdir src
+            cp -r ${./src/room-correction} src/room-correction
+            cp -r ${./configs} configs
+            chmod -R u+w src configs
+            cp ${./src/camilladsp-test/test_config.yml} src/room-correction/test_camilladsp.yml
+            test -d configs/venues && test -d configs/speakers || { echo "configs/ missing in sandbox"; exit 1; }
+            cd src/room-correction
             python -m pytest tests/ -v --tb=short
             touch $out
           '';
