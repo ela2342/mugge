@@ -21,7 +21,13 @@ US-173 (P1, supervised home-lab first DJ session); D-070
 2026-10-25, PO; see US-173). US-174 (P1 epic, automated room
 correction pipeline; PM checked free across main, origin and all
 local/worktree branches, 2026-10-25).
-Next free: F-374, US-175, D-071, T66.
+F-374 (P1, LR4 crossover defect); US-175 (P1, F-318 layer 2, GM
+link enforcement); F-375, F-376 (P3). F-377 and F-378 WITHDRAWN,
+never to be reused: F-377 (Mac disk, worker-2) duplicates the
+existing P3 "Mac disk nearly full" item; F-378 (purifi Qts test,
+worker-4) duplicates F-363. Both updates are merged into those
+items.
+Next free: F-379, US-176, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -1640,6 +1646,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     force_eeprom_read.
   - GATE (AE + PO): before any amps/HP/IEM or HiFiBerry use, either
     US-172 restores HiFiBerry layer (a) or the AE re-rules.
+  State (CM, 2026-10-25): head 951d5162 pushed, draft PR #52. The
+  Architect REPLACED the Step 1 procedure above (the config.txt
+  hand-edit on the FAT is superseded): deploy the branch as a new
+  generation (nixos-rebuild boot), announced reboot, pre/post reads,
+  rollback per nixos-upgrade.md 8.5; a /dev/mem read counts as
+  CHANGE. Test boot after US-163 AC19 closes. Story batch B4b (PM,
+  base 951d5162, MANIFEST d646d2c3; US-172.md only, index row
+  unchanged): the new Step 1, the branch head and PR #52, and the
+  out-of-scope note for F-376.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -1760,6 +1775,44 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   F-314 never switch venue with the gate open; F-338/F-339 amp
   switch as e-stop, gains verified from pw-dump (see N1 above);
   F-349 H + fresh PW start + no NaN sources; F-322 covered by H.
+  AE Mac-side items (2026-10-25; generated from a read-only export of
+  07a65f9e in /private/tmp/ae-us173/, nothing in the repo yet):
+  - Crossover WAVs: NEW DEFECT F-374 (P1 below). A +5.4 dB bump at
+    200 Hz; the AE recommends the fix before the first session (else
+    an audible boom at 140-280 Hz; not a speaker-safety issue).
+    All other WAV checks pass (48 kHz mono float32, 16384 taps,
+    causal min-phase, tail decayed, max gain -0.6 dB, L = R, sub DC
+    -0.6 dB under the D-031 exception; sat HPF 80 Hz -31.8 dB, US-155
+    AC2 OK). Correction (AE): "US-155 is usable" holds for safety
+    only; US-155 AC1 (summation) is not signed until F-374 lands.
+  - Home-lab venue draft home-lab-chn50p-ultimax.yml: mains -12 dB,
+    sub -20 dB, ch 4 -120 dB, HP/IEM -120 dB (muted on purpose, none
+    used). With H set: at most ~0.4 W per CHN-50P and ~3.5 W sub at
+    full scale incl. the +6 dB L+R sum. Header: valid only with H.
+    The owner confirms at the session (S-012) before the gate opens.
+  - F-321 loaded-WAV check (before amps on, every session after any
+    deploy or reboot; any failure = amps stay off): (a) expected
+    hashes from a SHA256SUMS committed next to the WAVs; deploy
+    copies exactly those, never regenerates on the Pi (libsndfile
+    writes a timestamp into the PEAK chunk, sample data identical);
+    (b) OBSERVE sha256 of combined_left_hp, combined_right_hp,
+    combined_sub1_lp match, dirac and combined_sub2_lp recorded;
+    (c) PW start time later than all three mtimes, else an announced
+    PW restart (USBStreamer interruption) and re-check; (d) no
+    filter-chain/convolver load error in the journal since PW start;
+    (e) GM active venue = home-lab-chn50p-ultimax; (f) recommended
+    once per deploy, speakers disconnected (can share the H
+    session): same-level 100 Hz and 1 kHz tones, read on the scope,
+    ch 1 at 100 Hz >= 20 dB below 1 kHz, ch 3 at 1 kHz >= 40 dB below
+    100 Hz, dirac 0 dB; only (f) proves what PW convolves. H also
+    caps CHN-50P excursion (~7.5 V peak vs ~8.6 V peak Xmax), so a
+    wrong filter under H costs sound quality, not the driver.
+  - These go into US-173.md as story batch B5b (PM, pending) for
+    worker-3. The AE signs off the H row and D-070 exception drafts
+    when the TW has them.
+  SecSpec (2026-10-25): F-318 (a), the WP rule, is accepted ALONE as
+  the interim for the supervised session; F-318 stays OPEN until
+  layer (b), now US-175 (P1 below). The amps call is the AE's.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -1811,6 +1864,30 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   a0f9b60c, base b0666c02): US-174.md, 11 old story status lines,
   their index cells, the US-174 index row. Its index row sits next
   to B5's US-173 row: trivial merge conflict expected (CM).
+  B6 verified 13/13 (CM), handed to worker-4 to commit; boundary
+  check script armed on every push (PM batch paths excepted).
+  174a DONE (AE, 2026-10-25), numbers for 174b: boost cap |H| <=
+  -0.5 dB absolute; dip-fill sub <= +6 dB 30-200 Hz, 0 dB below
+  30 Hz, sats <= +3 dB; nulls narrower than 1/3 octave or deeper
+  than 10 dB left alone; min-phase gate = energy of
+  (h - minphase(|H|)) <= -40 dB re h (NOT "energy before the peak":
+  a correct min-phase lowpass fails it), last 5% of taps <= -60 dB;
+  X = +/-3 dB 30-500 Hz on the summed response, 1/6 octave, flat
+  target (500 Hz-16 kHz +/-4 dB at 1/3 octave only if simulated);
+  Y = corrected RMS <= uncorrected + 1 dB off-position, no 1/3-octave
+  band > 3 dB worse; GD <= 3.5 ms 50-300 Hz and <= 1 ms above 500 Hz
+  (excl. +/-1/6 octave around corrected modes; "1-2 ms at 200 Hz" is
+  not achievable with LR4), sat-sub phase <= 30 deg at 200 Hz,
+  modal decay not longer than uncorrected. Precondition: F-374 lands
+  before AC3-AC5 are judged. 174c (AE): H also applies to sweeps;
+  UMIK-1 file magnitude-only, -1.378 dB; the owner may have a copy,
+  else a team member downloads it by serial (no owner needed);
+  verify the serial in the header. Story batch B6b (PM, MANIFEST
+  a8a7b6c9, on top of B6): US-174.md AC2-AC5 values, the F-374
+  precondition, the UMIK-1 wording; sent to the CM for worker-4.
+  worker-4 found the purifi Qts test failure on b0666c02: that is
+  F-363 (P2), not a new item; it can block a green T1 on the US-174
+  PR too, and worker-4 does not fix it there.
   Existing assets on main: src/room-correction/ (room_correction/,
   runner.py, analyze_measurement.py, gain_calibration.py,
   thermal_ceiling.py, tests/, mock/ with 3 scenarios),
@@ -1948,6 +2025,29 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   cpuinfo_cur_freq < max), 0 xruns, ambient recorded (margin noted
   for warm venues). FAIL: add active cooling (or a case vent design)
   and re-run. Links to the flight-case ventilation TODO.
+- **F-374** (AE, Medium, sound quality; 2026-10-25) crossover.py
+  ignores the profile's `type: linkwitz-riley`:
+  `_design_crossover_magnitude` builds "flat to fc, then 24 dB/oct",
+  a 0 dB knee, so sat HP and sub LP are both at -0.6 dB at 200 Hz
+  (LR4: -6 dB each). Measured on the US-155 files: sat -12.1 dB at
+  141 Hz, -0.6 at 200, -0.6 at 283; sub -0.6, -0.6, -12.0; complex
+  sum +1.1 dB at 141 Hz, +5.4 dB at 200 Hz, +1.4 dB at 283 Hz. The
+  AE's true-LR4 prototype through the same min-phase code (80 Hz
+  subsonic kept): each filter -6.0 dB at 200 Hz, sum -0.68..-0.01
+  dB over 20 Hz-20 kHz. Not speaker safety (H caps power; D-031
+  met). Blocks the AE's sign-off of US-155 AC1 (summation); a
+  precondition for US-174b AC3-AC5; recommended before the US-173
+  session (else an audible boom at 140-280 Hz). The file sits inside
+  worker-4's US-174b fence (src/room-correction/**). Lane (US-173,
+  US-174 or its own small PR): pending the Architect, CM relays.
+- **US-175** F-318 layer 2: GraphManager removes any link to the
+  USBStreamer that it did not make itself (SecSpec's second
+  required layer; team-lead, 2026-10-25). Its own item and its own
+  owner: NOT worker-2, whose one mission is US-172. The gig blocker
+  that keeps F-318 open (SecSpec accepts layer (a) alone only for
+  the supervised home-lab session). File boundary: Rust
+  src/graph-manager only, disjoint from worker-4's US-174b fence
+  and US-173's F-318 WP files. Owner unassigned.
 
 ## P2
 
@@ -2011,7 +2111,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   sort the sample or check all records. Not US-163 scope, no fix in
   that PR (QE). Condition (QE): if Linux CI T1 on the US-163 PR hits
   the failing order, it still BLOCKS (Rule 13 CI green); the minimal
-  fix is decided then, not waived.
+  fix is decided then, not waived. Re-found by worker-4 (2026-10-25)
+  on main b0666c02 in the US-174 worktree before any edits (1
+  failed, 1197 passed, 1 skipped); filed as F-378, withdrawn as a
+  duplicate. Can block T1 on the US-174 PR as well; not fixed there.
+  Routed to QE (classification, owner).
 - US-159 G16 with AE amendments a-e and architect additions 1-3; test
   T65 (not T62). Medium; re-rate on (i) volume after replug, (ii) relink
   with gate_open true. Match by node and direction.
@@ -2172,7 +2276,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
 - Mac disk nearly full (6.0 GiB free on 2026-10-24, falling slowly,
   CM). Clean up Nix store / old worktrees before heavy local builds.
   Also: a failed build grew the Mac store by 16 GiB vs 6.6 GiB
-  expected; find out why (CM).
+  expected; find out why (CM). Update (worker-2, 2026-10-25): 5.5
+  GiB free (the CM brief said ~7.3); builds and caches getting tight.
+  Filed as F-377, withdrawn as a duplicate of this item.
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
@@ -2234,6 +2340,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   error. Not blocking; not US-163 scope. Owner: Architect.
 - US-170: Pi 4 allowlist and configurationRevision (AC1); Pi 4 WP ALSA
   rule; drvPath pin removal.
+- **F-375** (SecSpec, LOW; F-318 follow-up, 2026-10-25) Consider
+  PipeWire client permissions that hide or limit the USBStreamer
+  playback node for non-GM clients, which is stronger than the WP
+  rule. Deferred: it breaks pw-link -l audits and the monitor taps.
+  Revisit after US-173 and F-318 layer (b) (US-175).
+- **F-376** (worker-2, LOW; 2026-10-25) installer.nix still writes
+  tryboot.txt with os_prefix= after the dt lines, the order US-172
+  fixes in bootloader.nix. Architect: out of US-172 (the installer
+  is used up); backlog only.
 
 ## Open PRs (2026-10-24, per CM)
 
