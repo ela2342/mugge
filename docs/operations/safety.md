@@ -19,18 +19,20 @@ The Pi 5 (`ela@192.168.178.89`) runs a **bootstrap/dev image. It is NOT
 gig-capable.** Evidence: `docs/lab-notes/US-163-pi5-bootstrap.md`.
 
 **No amps, headphones or IEM, and no signal-gen measurement use,** until
-every item of the AMPS-ON PRECONDITION LIST (Pi 5) below holds. The PM
-keeps the list in the backlog, using the same item numbers; if the
-backlog adds an item, this table must be updated too. At US-163 (PR #50)
-the list has 13 items, and ALL of them must hold. For a defect row,
-"holds" means the defect is closed and its fix verified on the Pi 5.
+every Pi 5 row of the AMPS-ON PRECONDITION LIST (Pi 5) below holds. The
+PM keeps the list in the backlog, using the same item numbers; if the
+backlog adds an item, this table must be updated too. The list has 14
+rows. On the Pi 5, rows 1-3 and 5-14 must ALL hold; row 4 applies to the
+Pi 4 only. For a defect row, "holds" means the defect is closed and its
+fix verified on the Pi 5, unless the row itself names an alternative
+(row 14).
 
 | # | Item | What must hold, and why |
 |---|------|-------------------------|
 | 1 | Owner | The owner re-confirms amps-on, and the Section 5 pre-flight (with S-012, Section 7) passes |
 | 2 | F-341 AC3 | The pre-flight `nc` commands (Section 5, checks #3 and #6) are verified on the Pi 5 NixOS image. Until then, no signal-gen measurement session on the Pi 5 |
 | 3 | US-172 | The HiFiBerry block is back to three working layers: layer (a) (`force_eeprom_read=0`) is verified to take effect, or the AE re-rules. The two-layer state is accepted only while nothing is connected to the HAT output (see "Outputs" below) |
-| 4 | US-170 | Pi 4 only: the F-358 runtime check on the Pi 4 before any Pi 4 audio use. Not a Pi 5 item |
+| 4 | US-170 | Pi 4 only (N/A on the Pi 5): the F-358 runtime check on the Pi 4 before any Pi 4 audio use |
 | 5 | F2 | Metering bridge nodes come back after a PipeWire restart. Until then, the F2 rule below |
 | 6 | F-037 | Web UI on 8080 has no authentication. It is open on the LAN by owner ruling, accepted only while nothing is connected to any Pi output |
 | 7 | F-361 | The link audit protects only ports named `playback_AUX0..7` |
@@ -40,6 +42,7 @@ the list has 13 items, and ALL of them must hold. For a defect row,
 | 11 | F-372 | The S-001 path check is a string-prefix test, and the profile name is not sanitised |
 | 12 | RTTIME | A PipeWire RT overrun is SIGKILLed with no warning first (see "Unannounced PipeWire kill" below) |
 | 13 | US-159 G16 (F-373) | Any re-adoption of the USBStreamer sink after a re-enumeration (by GraphManager or WirePlumber) comes up gated: gains 0, gate closed, and audio returns only when the operator re-opens it through the D-063 ramp. Tested (AE) |
+| 14 | Gate-authority defects (AD M4) | F-338, F-339, F-320, F-314, F-325 and F-349 are closed, or each has an interim operating rule in the merged safety.md (planned in PR #45) that is followed. For F-314, F-349, F-338 and F-339 the interim rule must be AE-accepted. For F-338 and F-339 it must not rely on the web-UI Close Gate or on a CloseGate success reply: the emergency stop is the amp power switches (including the headphone/IEM amps), and after any gate close, mute or GraphManager restart, 'muted' is proven only by all 16 gain values reading 0 in pw-dump. That interim covers supervised sessions only (a person at those switches for the whole time the amps are on, and able to run the pw-dump read); before any gig or unattended use, F-338 and F-339 are closed. For any own-speaker venue (e.g. CHN-50P), F-321 and F-322 are also closed |
 
 Until the list is closed, these rules apply on the Pi 5:
 
@@ -67,7 +70,7 @@ Until the list is closed, these rules apply on the Pi 5:
   0 (16 values). Check from `pw-dump` JSON, not from `pw-cli`'s six-decimal
   output. Any other value after a boot is a FAIL: stop and report.
 - **Gate:** the GraphManager gate boots closed. Do not open it while any
-  item of the list above is open.
+  Pi 5 row (1-3, 5-14) of the list above is open.
 - **Outputs:** the WirePlumber allowlist disables every ALSA card except the
   USBStreamer (and the UMIK-1 capture). The HiFiBerry DAC+ HAT is blocked on
   2 layers (allowlist and module blacklist). The third layer

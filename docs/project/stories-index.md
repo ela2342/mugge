@@ -170,7 +170,7 @@ Generated from the per-item files in `stories/` (the source of truth). Do NOT ru
 | [US-160](stories/US-160.md) | draft. PO proposal (2026-10-24), recommended high priorit... | Interim — hide or relabel web UI UNMUTE to match interim rule 6 |
 | [US-161](stories/US-161.md) | draft (orphan from US-159 G9, filed by PM at PO request 2... | Amplifier chain calibration (validate "Mult 1.0 = 450 W") |
 | [US-162](stories/US-162.md) | draft (orphan from US-159 G9, filed by PM at PO request 2... | Dynamic per-speaker limiter |
-| [US-163](stories/US-163.md) | in review: PR #50 (2026-10-25). Installed and deployed; t... | Bootstrap NixOS on the Raspberry Pi 5 via nixos-anywhere |
+| [US-163](stories/US-163.md) | DONE (2026-10-25). Merged as #50; AC19 accepted by QE (wa... | Bootstrap NixOS on the Raspberry Pi 5 via nixos-anywhere |
 | [US-164](stories/US-164.md) | draft (PO, 2026-10-24; architect's 163c, accepted by the ... | Pi 5 RT and audio re-baseline |
 | [US-165](stories/US-165.md) | draft (PO, 2026-10-24; accepted by the architect) | Minimal kernel config for bcm2712 |
 | [US-169](stories/US-169.md) | draft (PO, 2026-10-24, from AE's verdict on #40's D-066 t... | D-066 on main: per-identity sealed-sub HPF exemption, quantified and enforced |
