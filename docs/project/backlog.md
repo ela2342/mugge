@@ -593,11 +593,15 @@ Next free: F-374, US-173, D-070, T66.
       re-enumeration PASSED on safety (nothing raised); recovery
       finding F-373. Step (b), the owner's physical replug, is
       cleared.
-      AE RULING (2026-10-25, to the CM; PO confirmed): step (b) is
-      DEFERRED to F-373 and is not a US-163 AC; AC17 (AC16b) is
-      satisfied by step (a). The hw volume and the PW volumes were
-      already at maximum, so a replug can't raise them, and WP
-      re-disabled the card. Re-open trigger (AE; PO addition): if the
+      AE + QE RULING (2026-10-25, to the CM; PO confirmed): step (b)
+      is DEFERRED to F-373 and is not a US-163 AC; AC17 (AC16b) is
+      satisfied by step (a) plus QE's per-cycle check on the two
+      cold cycles. The replug is not on the owner's physical list for
+      US-163. The step-(b) timeout at 14:25:31Z happened because the
+      owner was never asked; it is not a Pi finding. The hw volume
+      and the PW volumes were already at maximum, so a replug can't
+      raise them, and WP re-disabled the card. Re-open trigger (AE;
+      PO addition): if the
       USBStreamer hw volume is ever set below 0 dB (e.g. by US-159),
       OR the WP rule / link management for the USBStreamer changes
       (disable rule, autoconnect, GraphManager re-adoption), the
@@ -607,6 +611,16 @@ Next free: F-374, US-173, D-070, T66.
       step-(b) read set), AC3 (AMPS-ON item 8), AC4 (re-open
       trigger). 26 files; MANIFEST.txt sha 7002b0a7...; v2 kept as
       MANIFEST-v2-superseded.txt. Other 24 files unchanged from v2.
+    - B3 v4 (PM, 2026-10-25; supersedes v3): F-373 AC2 uses the AE's
+      step-(b) read set; AE and QE named as ruling; US-163 AC16b adds
+      QE's per-cycle check and "not on the owner's physical list".
+      MANIFEST.txt sha 9a5da8ef...; v3 kept as
+      MANIFEST-v3-superseded.txt. The CM notes v4 as the frozen batch
+      for the #50 head move.
+    - AC17-B step (c), PW and bridge restart: PASS (worker-1; CM
+      verified); AE ruling pending. CM-CHG-.89-5 released.
+    - AE: the USBStreamer is bus-powered on root port 1-1. Each cold
+      cycle records bmAttributes (expected 0x80) and bMaxPower.
     - AD APPROVE is comment 6398339160 (CM). AD M2 precise: the
       f0fbefd1 -> final diffstat is docs-only AND the
       mugge-pi5-deploy nix-diff shows only configurationRevision,
@@ -1300,9 +1314,10 @@ Next free: F-374, US-173, D-070, T66.
   and an operator-initiated restart only. Not a US-163 blocker (AC17
   step (a) PASSED). Step (b) shows whether a power-cycled device
   behaves the same way. Record: B3 v2. Step (b) is DEFERRED here
-  (AE ruling, PO): the F-373 fix acceptance includes a physical
-  replug with the step-(b) read set (USB mixer controls, PW Props,
-  the 16 gains, the links, before and after). Re-open trigger as in
+  (AE + QE ruling, PO): the F-373 fix acceptance includes a physical
+  replug with the AE's step-(b) read set, before and after: the node
+  list (new nodes), the USB devnum, the kernel log, spa.alsa errors,
+  the gains, the gate state and the hw mixer. Re-open trigger as in
   the AC17 Session B entry. AMPS-ON items 8 and 13.
 - **F-372** (SecSpec, MEDIUM; amps-on/gig blocker class next to
   F-037): the S-001 fix is weak. filter_routes.py:545 tests
@@ -1429,6 +1444,8 @@ Next free: F-374, US-173, D-070, T66.
   includes the guard; it runs in CI only); the apps run from a store
   snapshot of the tracked tree, so new files must be git-added first;
   the CI section 7.2 pin and guard text; the PytestCacheWarning note.
+- Low (QE, #49): `cat` the guard's out path in the CI step so the
+  "Checked N app scripts" count shows in the log.
 - AD L1 (#49): the lint only catches `toString ./.` and `toString
   self`, and the closure check covers apps only: widen the lint or
   document the limit.
@@ -1634,6 +1651,11 @@ merge needs update-branch and 7 reconfirmations at the new head.
   C3, via team-lead), owner acceptance. Next body touch (worker-2):
   AD (a) F-364 "most likely pre-existing"; TW N1 "No other job uses
   GITHUB_TOKEN" is imprecise (actions/checkout uses it by default).
+  CI run 40198678554 at 316cc3eb GREEN, counts identical to
+  df4a6a9b. QE C1 MET (6399369458): "Checked 18 app scripts" read
+  from the signed cachix output of the CI guard derivation (it is in
+  $out, not in the log). C3 pending on T3 run 40205694612
+  (release.yml, dispatched by the owner at 316cc3eb), in progress.
 - #50 US-163: open; see the US-163 section (PR #50 block).
 - #43, #45, #44: need #49 on main and real green CI; #45 before #44.
 - #36, #40: no Rule 13 review; owner direction needed (#40 IDs clash).
