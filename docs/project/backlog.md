@@ -1870,6 +1870,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   a console goes back to the Architect. get_throttled counts as a
   current-boot reading only. worker-2's recovery script
   us172-recovery.sh (bf33e6e1...) is under Architect + QE review.
+  Result (CM, 2026-10-25): CHANGES REQUESTED by both; fixed at
+  2832a5c6 and back with both for a re-check. The Pi is still down.
   HDMI and UART stay list-only until run 3 is approved (CM: not to
   team-lead now). H1 may pre-empt
   the Pi
@@ -2318,7 +2320,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   run both nix run apps (the dry-run builds only the wrapper drvs):
   df before and after, sequential, abort below 3.0 GiB free. HELD
   (CM, 2026-10-25): Mac disk 2.95 GiB, below the line; pytest in
-  the dev shell continues (see the Mac disk item).
+  the dev shell continues (see the Mac disk item). Pushed (CM,
+  2026-10-25): R1 bcc353ed (do-no-harm max+ <= 3 dB on
+  large_hall/outdoor_tent; mutation x2 red). The nix runs on
+  bcc353ed had finished before the hold: test-room-correction 1
+  failed / 1266 passed / 1 skipped (the 1 F is
+  test_sample_real_drivers_pass, the F-363 darwin case);
+  test-room-sim-e2e 75 passed / 1 skipped, exit 0. Both with the
+  QE.
   Measurement SNR check (AE, P2, AE-owned; 2026-10-25): US-174b
   shows the correction raises up to +0.67 dB in below-target
   regions at -40 dB noise re peak, clean at -60. The sweep capture
@@ -2956,7 +2965,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   plus a plausibility-bound test (bounds from the AE), as a third
   commit. Then worker-6 merges main dfdbbbd6 on top (base b0666c02
   is 7 commits behind, no file overlap); that is the final review
-  head.
+  head. R-c RESULT (CM, 2026-10-25): run 40234711016 at f4d92a6e is
+  RED as required (5 failed / 1203 passed / 1 skipped, only the
+  full-set and exemption tests). Data fix 4afb8235 pushed; the
+  body links the run. worker-6 is on commit 3 plus the main merge.
   Follow-ups outside worker-6's fence (QE and AE via worker-6,
   2026-10-25; not in the F-363 PR):
   - Re-scrape risk (QE): the driver scrapers would undo the F-363
@@ -3201,6 +3213,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   reboots. Does O-24 cover it? Architect/AE to rule. P3 (worker-1).
 - sshd AllowAgentForwarding yes (default) on the Pi 5. LOW, SecSpec to
   decide (worker-1).
+- PytestCacheWarning "Permission denied" in both nix test apps
+  (Low; worker-4 via CM, 2026-10-25): pytest tries to write
+  .pytest_cache into the read-only /nix/store source; also in CI
+  run 40234711016. Proposed fix: `-p no:cacheprovider` in the
+  flake.nix app wrappers.
 - Pi 5 WiFi/BT firmware missing (brcmfmac, BCM4345C0). Note: wlan0 was
   the fallback path during the 20:13 eth0 drop (P2 item), so NixOS
   currently has no wireless fallback. P3 (worker-1).
@@ -3242,7 +3259,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   2.95 GiB, BELOW the 3.0 GiB abort line: worker-4's US-174b nix
   run is HELD; pytest in the dev shell continues. Nix GC is banned
   below 4 GiB; freeing space is the owner's call (CM reported it to
-  team-lead).
+  team-lead). Later (CM): 2.9 GiB, still falling with no team job
+  running; the hold stays.
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
