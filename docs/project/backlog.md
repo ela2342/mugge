@@ -50,8 +50,10 @@ check-sandbox guard misses configs/drivers; AD L1 + QE on #54; PM
 checked free across main, origin and all worktrees, 2026-10-25);
 F-394 (High, DJ-mode E2E group skips or fails, mute unproven; QE,
 AE confirms; PM checked free across main, origin and all worktrees,
-2026-10-25).
-Next free: F-395, US-176, D-071, T66.
+2026-10-25); F-395 (P1, gain readback blind on a suspended node,
+Gate-2 r6b (ii-c); AE co-owns per A5; PM provisional; PM checked
+free across main, origin and all worktrees, 2026-10-26).
+Next free: F-396, US-176, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -2395,6 +2397,24 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     one cleared build, pending. Read every "r6" in the ruling above
     (the (ii) decision table, condition (f), the AE/Architect diff
     review) as r7.
+    r6b RESULT (CM, 2026-10-26; supersedes "r7 ... pending": the one
+    cleared build is named r6b, not r7): gain_matrix 396a1a69 (final
+    ruling built in), results SUMS 38cbc645 (438 files), build log
+    9dbfbaa0, rev 142a3523, nix exit 0. Validity: all conditions met;
+    no INVALID cells, no NO DATA. Main matrix T1 and T2, idle and
+    running: the set applies and both readers show it; H2 false.
+    (ii-a): a set made while suspended is not lost; it applies after
+    the resume; only the suspended readback is stale (this also
+    explains the selftest set-param FAIL). (ii-b): boot 0, then
+    resume: silent. (ii-c) BLIND: on a suspended node the readers
+    return 0, not the stored conf value. Per the decision table this
+    is a P1 against B1 / safety.md check 10, AE co-owned (A5): F-395.
+    The AE sends the PM and the TW interim text for D-070 rows 14-15;
+    amps-on rows 14/15 here change only on that text. Next: the AE and
+    Architect rule on the gate2.py design (refuse suspended nodes vs
+    wake them with a silent stream) and on whether the Pi P-a check is
+    now due; worker-3 holds. The cleared build is used up; disk at 4.3
+    GiB. r5 and r6 stay non-counting records.
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -3735,6 +3755,27 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   indefinite hold; a separate test-only PR puts a strict xfail on
   test_level_bridge_sw_has_signal, reason F-394, through Rule 13; then
   update-branch on #54/#55 and diff-only re-checks.
+  Diagnosis lead (QE, via CM, 2026-10-26; a lead, not a conclusion;
+  rule in or out under AC (ii)/(iii)): the test-e2e app does not set
+  WP_STORE, so local-demo.sh l.114-115 resolves `nix eval --raw
+  nixpkgs#wireplumber.outPath` from the unpinned flake-registry
+  nixpkgs, not from flake.lock, and puts that WirePlumber into
+  XDG_DATA_DIRS, WIREPLUMBER_MODULE_DIR and PATH (l.138-141). The E2E
+  environment is not hermetic: the WP version and config search path
+  can drift between CI runs, a plausible contributor to the
+  nondeterministic DJ switch. Fix candidate: export a WP_STORE pinned
+  from the flake, like PW_STORE. Same at both #54 heads, so not a #54
+  concern.
+- **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
+  per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
+  2026-10-26): on a suspended node, the gain readers in the r6b matrix
+  return 0, not the stored conf value. A "0" reading therefore does
+  not prove "muted" for a suspended node. Against B1 / safety.md check
+  10. A set made while suspended applies after the resume ((ii-a));
+  boot 0 then resume is silent ((ii-b)). Open: the AE and Architect
+  ruling on the gate2.py design (refuse suspended nodes, or wake them
+  with a silent stream) and whether the Pi P-a check is now due; the
+  AE's interim text for D-070 rows 14-15 (PM, TW).
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
