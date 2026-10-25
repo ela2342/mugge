@@ -14,13 +14,13 @@ Generated from the per-item files in `stories/` (the source of truth). Do NOT ru
 | [US-005](stories/US-005.md) | done (owner confirms basic DJ functionality works 2026-03... | Hercules DJControl Mix Ultra USB-MIDI Functional Verification |
 | [US-006](stories/US-006.md) | done (implicitly validated 2026-03-12 — owner actively DJ... | Mixxx on Pi 4B Feasibility |
 | [US-007](stories/US-007.md) | draft (scope revised 2026-03-10 — was: Mixxx mapping) | APCmini mk2 System Controller and Reaper Mixer Surface |
-| [US-008](stories/US-008.md) | draft | Measurement Engine — Sweep Generation, Recording, and Deconvolution |
+| [US-008](stories/US-008.md) | folded into US-174b (simulation) and US-174c (recording) ... | Measurement Engine — Sweep Generation, Recording, and Deconvolution |
 | [US-009](stories/US-009.md) | draft | Time Alignment Computation |
-| [US-010](stories/US-010.md) | draft | Correction Filter Generation |
+| [US-010](stories/US-010.md) | folded into US-174b (PO, 2026-10-25); was: draft | Correction Filter Generation |
 | [US-011](stories/US-011.md) | draft | Crossover Integration and Combined Filter Export |
 | [US-011b](stories/US-011b.md) | draft (D-040 rewrite 2026-03-22. Was: CamillaDSP YAML gen... | Speaker Profile Schema and PW Filter-Chain Config Generator |
-| [US-012](stories/US-012.md) | draft (D-040 rewrite 2026-03-22. Was: deploys to CamillaD... | End-to-End Room Correction Automation Script |
-| [US-013](stories/US-013.md) | draft | Correction Effectiveness Verification (Test T5) |
+| [US-012](stories/US-012.md) | superseded by US-174e (PO, 2026-10-25); was: draft (D-040... | End-to-End Room Correction Automation Script |
+| [US-013](stories/US-013.md) | folded into US-174b (simulation half) and US-174d (real-r... | Correction Effectiveness Verification (Test T5) |
 | [US-014](stories/US-014.md) | draft | Documentation Suite Structure and Introduction |
 | [US-015](stories/US-015.md) | draft | Theory and Design Document |
 | [US-016](stories/US-016.md) | draft | How-To Guides |
@@ -55,10 +55,10 @@ Generated from the per-item files in `stories/` (the source of truth). Do NOT ru
 | [US-044](stories/US-044.md) | IMPLEMENT/TEST (owner-selected 2026-03-21, priority 2. AC... | Protect Against Accidental Filter-Chain Bypass (Safety) |
 | [US-045](stories/US-045.md) | in-review (TK-155, `2a2a2f9` — code + tests done, DoD sig... | Hardware Signal Chain Configuration Schema |
 | [US-046](stories/US-046.md) | in-review (TK-155, `2a2a2f9` — code + tests done, DoD sig... | T/S-Parameter-Based Thermal Ceiling Computation |
-| [US-047](stories/US-047.md) | selected | Path A Room Measurement Script |
+| [US-047](stories/US-047.md) | folded into US-174c (PO, 2026-10-25); was: selected | Path A Room Measurement Script |
 | [US-048](stories/US-048.md) | selected | Post-Measurement Visualization (MVP) |
 | [US-049](stories/US-049.md) | selected | Real-Time Measurement Observation via Websocket Feed |
-| [US-050](stories/US-050.md) | in-progress (DEPLOY phase — TEST PASS 2026-03-24, 1,304 t... | Measurement Pipeline Mock Backend / Test Harness |
+| [US-050](stories/US-050.md) | superseded by US-174c (PO, 2026-10-25; remaining Pi items... | Measurement Pipeline Mock Backend / Test Harness |
 | [US-051](stories/US-051.md) | in-progress (DEPLOY phase — TEST PASS 2026-03-24, 194 E2E... | Persistent System Status Bar with Channel Meters |
 | [US-052](stories/US-052.md) | active (resumed per owner directive 2026-03-20. Was defer... | Real-Time Signal Generator in Rust |
 | [US-053](stories/US-053.md) | active (resumed per owner directive 2026-03-20. Was defer... | Manual Test Tool Page |
@@ -69,13 +69,13 @@ Generated from the per-item files in `stories/` (the source of truth). Do NOT ru
 | [US-058](stories/US-058.md) | done (owner-accepted 2026-03-16. BM2-4 PASS: q1024 1.70% ... | PipeWire Filter-Chain FIR Convolution Benchmark (BM-2) |
 | [US-059](stories/US-059.md) | done (owner-accepted 2026-03-21. Clean reboot demo PASS —... | GraphManager Core + Production Filter-Chain (Phase A) |
 | [US-060](stories/US-060.md) | active (owner-authorized 2026-03-20. Architect scoped int... | PipeWire Monitoring Replacement (Phase B) |
-| [US-061](stories/US-061.md) | active (owner-authorized 2026-03-20. Independent of US-06... | Measurement Pipeline Adaptation (Phase C) |
+| [US-061](stories/US-061.md) | folded into US-174c/US-174d (abort-restores-state AC, res... | Measurement Pipeline Adaptation (Phase C) |
 | [US-062](stories/US-062.md) | done (owner-accepted 2026-03-20. 7/7 DoD. Clean reboot de... | Boot-to-DJ Mode (Minimum Viable Auto-Launch) |
 | [US-063](stories/US-063.md) | mostly satisfied by Phase 2a (task #108 assessment 2026-0... | PipeWire Metadata Collector (pw-top Replacement) |
 | [US-064](stories/US-064.md) | IMPLEMENT Phase 3 (2026-03-22). Phase 1: SPA config parse... | Real PipeWire Graph Visualization Tab (REWORK — F-059) |
 | [US-065](stories/US-065.md) | in-progress (worker-1, DoD 5/10. Code complete: `config.j... | Configuration Tab — Gain, Quantum, and Filter Info |
 | [US-066](stories/US-066.md) | selected (owner-selected 2026-03-21. Priority 1 for this ... | Spectrum and Meter Polish |
-| [US-067](stories/US-067.md) | draft (PO-drafted 2026-03-22 per owner request.) | PipeWire Speaker-Room-Microphone Simulator for End-to-End Testing |
+| [US-067](stories/US-067.md) | = US-174b2, linked child story of US-174 (PO, 2026-10-25)... | PipeWire Speaker-Room-Microphone Simulator for End-to-End Testing |
 | [US-068](stories/US-068.md) | draft (PO-drafted 2026-03-22 per architect recommendation... | Dedicated `pi4audio` Service Account for Audio Process Isolation |
 | [US-069](stories/US-069.md) | draft (PO-drafted 2026-03-22 per owner request. AE review... | Speaker Setup and Design Tool |
 | [US-070](stories/US-070.md) | in-progress (TEST phase 2026-03-24. Merged to main. CI gr... | GitHub Actions CI Pipeline |
@@ -105,7 +105,7 @@ Generated from the per-item files in `stories/` (the source of truth). Do NOT ru
 | [US-095](stories/US-095.md) | REVIEW — OWNER REJECTED (session 5). Advisory approvals: ... | Graph Visualization Improvements — Pan, Zoom, and Truthful Topology |
 | [US-096](stories/US-096.md) | REVIEW — OWNER REJECTED (session 5). Advisory approvals: ... | UMIK-1 Full Calibration Pipeline |
 | [US-097](stories/US-097.md) | REVIEW — OWNER REJECTED (session 5). Advisory approvals: ... | Room Compensation from Measurements — Web UI Workflow |
-| [US-098](stories/US-098.md) | TEST — P0 done, P1/P2 deferral REJECTED by owner (session... | Room Correction Pipeline Correctness Verification |
+| [US-098](stories/US-098.md) | P1/P2 folded into US-174b (PO, 2026-10-25); was: TEST — P... | Room Correction Pipeline Correctness Verification |
 | [US-099](stories/US-099.md) | draft (2026-03-27) | Speaker Discovery — Near-Field Characterization of Unknown Speakers |
 | [US-100](stories/US-100.md) | draft (2026-03-27) | Speaker Identity Creation from Discovery Data |
 | [US-101](stories/US-101.md) | draft (2026-03-27) | Room Correction Quick Start — Known Speaker Fast Path |
@@ -177,3 +177,4 @@ Generated from the per-item files in `stories/` (the source of truth). Do NOT ru
 | [US-170](stories/US-170.md) | draft (PO, 2026-10-24, from worker-1) | Pi 4 config hardening parity |
 | [US-171](stories/US-171.md) | draft (PO, 2026-10-24; design by the architect, amended b... | GraphManager measurement lease closes the gate when the web UI is lost |
 | [US-172](stories/US-172.md) | draft (PO, 2026-10-25, from F-367). Next active job direc... | Pi 5 local display (D-022): vc4/DRM, greetd/labwc, Mixxx on HDMI |
+| [US-174](stories/US-174.md) | in progress (PO, 2026-10-25; P1 epic; 174b active, runs i... | Automated room correction pipeline (Pi 5, home lab first) |
