@@ -52,8 +52,11 @@ F-394 (High, DJ-mode E2E group skips or fails, mute unproven; QE,
 AE confirms; PM checked free across main, origin and all worktrees,
 2026-10-25); F-395 (P1, gain readback blind on a suspended node,
 Gate-2 r6b (ii-c); AE co-owns per A5; PM provisional; PM checked
-free across main, origin and all worktrees, 2026-10-26).
-Next free: F-396, US-176, D-071, T66.
+free across main, origin and all worktrees, 2026-10-26; AE asked
+for this P1, 2026-10-26); F-396 (P1, production must never suspend
+the filter-chain or USBStreamer node; AE; Architect may re-rate; PM
+checked free across main, origin and all worktrees, 2026-10-26).
+Next free: F-397, US-176, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -1566,6 +1569,45 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      (2) the AE reviews anything the rebase onto the merged US-173
      head changes beyond those rows and their ranges. The F-318 batch
      now waits only for the merged US-173 head.
+     UPDATE v160 (AE, A5 of the Gate-2 ruling, 2026-10-26; final from
+     the AE side; source /tmp/w3-gate2-rulings/AE-draft-r6b-ruling.md
+     section 6, sha256 80ec329c, PM frozen copy
+     /tmp/pm-backlog/AE-draft-r6b-ruling-80ec329c.md, "F-<new>" filled
+     in as F-395 by the PM; supersedes the v150 Row 15 FINAL and Row
+     14 (#51) NEW texts above). This list takes these verbatim once
+     the F-318 batch merges (mirror rule); the AE reviews the TW's
+     diff for word-for-word identity. Row 14 (#51): "the emergency
+     stop is the amp power switches (including the HP/IEM amps); a
+     person at the switches the whole time the amps are on. After any
+     gate close, mute or GraphManager restart, reading the gains does
+     not prove "muted" yet. Switch the amps off, including the
+     headphone/IEM amps, and headphones/IEMs not worn, and keep them
+     off until PipeWire is restarted or the Pi is cold power-cycled,
+     with all 16 gains verified at their boot values (safety.md, Gains
+     at boot) and the gate closed. A gains reading counts only if the
+     filter-chain node and its output node were idle or running at
+     that moment (state logged with the reading); a reading on a
+     suspended node shows 0 whatever the real gain is and proves
+     nothing (F-395, Gate-2 r6b). Once the live readback is proven on
+     the Pi, this goes back to: "muted" is proven only by all 16 gains
+     reading exactly 0.000000 via `pw-cli enum-params` on a node that
+     is idle or running." Row 15 (the text is kept up to "until
+     PipeWire is restarted or the Pi is cold power-cycled,"; the end
+     is replaced): "After any WirePlumber restart: amps stay off,
+     including the headphone/IEM amps, and headphones/IEMs not worn,
+     until PipeWire is restarted or the Pi is cold power-cycled, with
+     the gains verified at their boot values on a node that is idle or
+     running (row 14) and the gate closed (safety.md, WirePlumber
+     restart). Interim, until US-175 is verified and the live gains
+     readback is proven on the Pi (sandbox: proven for non-suspended
+     nodes, Gate-2 r6b; Pi check pending)." safety.md check 10 (Gains
+     at boot), added: "The reading counts only if the filter-chain
+     node and its output node are idle or running at that moment, as
+     logged with the reading. A suspended node reads 0 whatever the
+     real gain is, so that result is NOT VERIFIABLE, never a pass."
+     The F-318 batch (TW v14) therefore needs a new version with these
+     texts before it lands; the AE's v14 OK covered the old row texts.
+     PM passed the texts to the TW.
      Earlier note, superseded by the final text: the AE has since ruled that
      "unchanged" is a FAIL, so "gains unchanged or 0" above is
      superseded; the TW asked the AE for corrected text. Do not act
@@ -3776,6 +3818,41 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   ruling on the gate2.py design (refuse suspended nodes, or wake them
   with a silent stream) and whether the Pi P-a check is now due; the
   AE's interim text for D-070 rows 14-15 (PM, TW).
+  UPDATE (AE, 2026-10-26; supersedes "PM provisional ID, AE to
+  confirm" and the title above): the AE asked for this P1 with the AE
+  and the Architect as co-owners. Title: "Gains readback is blind on a
+  suspended filter-chain node, so the gains check gives a false PASS."
+  Evidence: Gate-2 r6b (ii-c): a conf default of 0.25 reads 0.000000
+  while the node is suspended, in all 4 stacks, yet the audio proves
+  0.25 was applied; 0.000000 is the gains check's PASS value (D-063),
+  so the false PASS is in the dangerous direction. ACs (AE):
+  - (a) gate2.py counts a reading only when the fc and fc-out nodes
+    are idle or running, as shown in the same snapshot; otherwise NOT
+    VERIFIABLE.
+  - (b) a selftest mutation: a suspended node with a non-zero default
+    must not PASS.
+  - (c) every past gains PASS recorded without the node state is
+    marked unproven (PM/QE list them). PM candidates from this
+    backlog, for the QE to complete: US-163 AE check #10 PASS
+    (enum-params, 8 gains 0/0); US-163 AC14 PASS (16/16 gain values 0,
+    CM-DEP-.89-2). Nothing amps-on depended on them (AE: amps off,
+    nothing connected).
+  - (d) Pi OBSERVE of the node states, then P-a.
+  Still open: the joint AE + Architect r6b text (gate2.py base rule
+  and optional silent-zero wake mode, P-a amendment to condition (f),
+  the new gains status line), which the Architect sends to the CM for
+  worker-3. The AE's draft is the frozen copy above.
+- **F-396** Production must never suspend the filter-chain or the
+  USBStreamer node (P1 unless the Architect rules otherwise; AE,
+  2026-10-26, from the r6b ruling draft section 4): a suspend of the
+  USBStreamer sink means a stream stop/start, which is the transient
+  risk in safety.md. AE recommendation:
+  session.suspend-timeout-seconds = 0 or equivalent for those nodes,
+  and verified. It would also make the gains readers authoritative at
+  all times (gate2.py still checks the state). Open question to the
+  Architect: does the production filter-chain or the USBStreamer sink
+  ever suspend on the Pi? F-395 AC (d) step 1 (Pi OBSERVE of the node
+  states at idle and right after boot) answers it.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
