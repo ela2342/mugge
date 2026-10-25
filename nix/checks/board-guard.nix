@@ -21,6 +21,11 @@ let
     if ok then "PASS ${conf}: ${name}"
     else throw "board-guard: ${conf}: ${name} FAILED";
 
+  # The hook text calls the exact store path the pi5-prune-gens check runs.
+  # Context is dropped only for the string comparison.
+  hookRunsPrune = c: lib.hasInfix
+    (builtins.unsafeDiscardStringContext "${c.system.build.pi5PruneGens} ")
+    (builtins.unsafeDiscardStringContext c.boot.loader.external.installHook.text);
   hasNoauto = c: builtins.elem "noauto" c.fileSystems."/boot/firmware".options;
   hasUs156Route = c: c.networking.interfaces ? end0
     && c.networking.interfaces.end0.ipv4.routes != [ ];
@@ -104,6 +109,7 @@ let
     { name = "board is pi5"; ok = c.mugge.board.name == "pi5"; }
     { name = "NVMe kept"; ok = c.mugge.board.kernel.keepNvme; }
     { name = "external bootloader hook"; ok = c.boot.loader.external.enable; }
+    { name = "hook runs pi5PruneGens (AC2a check target)"; ok = hookRunsPrune c; }
     { name = "no extlinux"; ok = !c.boot.loader.generic-extlinux-compatible.enable; }
     { name = "no grub"; ok = !c.boot.loader.grub.enable; }
     { name = "no NixOS DT overlays"; ok = c.hardware.deviceTree.overlays == [ ]; }

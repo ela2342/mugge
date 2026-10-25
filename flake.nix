@@ -337,7 +337,10 @@
           };
 
           # US-163 AC2a: offline test of the Pi 5 FAT generation prune.
-          pi5-prune-gens = import ./nix/checks/pi5-prune-gens.nix { inherit pkgs; };
+          pi5-prune-gens = import ./nix/checks/pi5-prune-gens.nix {
+            inherit pkgs;
+            target = self.nixosConfigurations.mugge-pi5-deploy.config.system.build.pi5PruneGens;
+          };
 
           test-web-ui = pkgs.runCommand "test-web-ui" {
             nativeBuildInputs = [ testPython ];

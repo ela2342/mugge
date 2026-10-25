@@ -15,12 +15,17 @@
 # <gens>/MAP.txt (profile generation -> id -> present/pruned).
 #
 # A separate script so that nix/checks/pi5-prune-gens.nix runs exactly
-# this code against fake directories.
+# this code against fake directories. PATH is set explicitly so the same
+# GNU tools run on the Pi and in the check; binPath is exported so the
+# check can swap in host tools and nothing else.
 { lib, pkgs }:
 
+let
+  binPath = lib.makeBinPath [ pkgs.coreutils pkgs.gnused ];
+in
 pkgs.writeShellScript "prune-pi5-gens" ''
   set -euo pipefail
-  export PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.gnused ]}
+  export PATH=${binPath}
 
   gens="$1"
   profiles="$2"
@@ -59,6 +64,7 @@ pkgs.writeShellScript "prune-pi5-gens" ''
   for link in "$profiles"/system-*-link; do
     [ -e "$link" ] || continue
     n=$(basename "$link" | sed 's/^system-\(.*\)-link$/\1/')
+    case "$n" in ""|*[!0-9]*) continue ;; esac
     h=$(basename "$(readlink -f "$link")" | cut -c1-32)
     state=pruned
     [ -e "$gens/$h/.complete" ] && state=present
@@ -68,4 +74,4 @@ pkgs.writeShellScript "prune-pi5-gens" ''
   sync "$gens/MAP.txt.new"
   mv -f "$gens/MAP.txt.new" "$gens/MAP.txt"
   sync "$gens"
-''
+'' // { inherit binPath; }

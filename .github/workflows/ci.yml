@@ -120,6 +120,13 @@ jobs:
           out=$(nix build --no-link --print-out-paths .#checks.x86_64-linux.board-guard)
           cat "$out"
 
+      # US-163 AC2a: offline test of the Pi 5 FAT generation prune.
+      - name: Pi 5 generation prune (offline)
+        run: |
+          set -euo pipefail
+          out=$(nix build --no-link --print-out-paths -L .#checks.x86_64-linux.pi5-prune-gens)
+          cat "$out"
+
   # -----------------------------------------------------------
   # T1 + T2 — Tests (single ARM runner)
   # One Nix/Cachix setup, shared Nix store across all steps.

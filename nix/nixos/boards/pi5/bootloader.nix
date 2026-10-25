@@ -167,4 +167,7 @@ in
   boot.loader.generic-extlinux-compatible.enable = lib.mkForce false;
   # Exposed for board-guard; the hook replaces @ID@.
   system.build.pi5ConfigTxt = configTxt "@ID@";
+  # Exposed for board-guard and the pi5-prune-gens check (same script as
+  # the hook runs).
+  system.build.pi5PruneGens = pruneGens;
 }
