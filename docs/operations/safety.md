@@ -37,6 +37,11 @@ Until the list is closed, these rules apply on the Pi 5:
 
 - **F2 rule:** after any PipeWire restart, restart pcm-bridge and
   level-bridge and confirm live meters before any amp goes on.
+- **Unannounced PipeWire kill:** `RLIMIT_RTTIME` is 200 ms soft and hard
+  (F-358), so a runaway RT loop gets PipeWire SIGKILLed with no SIGXCPU
+  warning first. An unannounced PipeWire SIGKILL or restart is a
+  USBStreamer interruption (Section 1). Follow the F2 procedure (restart
+  pcm-bridge and level-bridge, confirm live meters) before amps on.
 - **F-341 rule:** do not rely on pre-flight checks #3 and #6 as written on
   the Pi 5; treat their result as unverified.
 - **Gains at boot:** all 8 linear gain nodes boot with Mult and Add exactly
