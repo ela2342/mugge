@@ -9,8 +9,9 @@ land here. Maintained by the PM; the CM commits changes.
 ## Reserved IDs
 
 Taken (not yet filed as records): F-361, F-362, F-363, F-364 (below);
-F-365; F-366, F-367, F-368 (US-163 section); D-068 (T57 gate
-dropped); T65 = US-159 G16 reconciler test.
+F-365; F-366, F-367 (US-163 section); D-068 (T57 gate dropped); T65 =
+US-159 G16 reconciler test. F-368 WITHDRAWN, never to be reused (was a
+duplicate of the existing F-358 for AC13).
 Next free: F-369, US-172, D-069, T66.
 
 ## US-163 text updates (critical path; one tracking batch before the PR)
@@ -33,9 +34,12 @@ Next free: F-369, US-172, D-069, T66.
   - P3: after the announced deploy switch: T54/T55, AC13, T53 on
     deploy, T51 deriver.
   - Deploy verb (Architect + QE, final; owner 2026-10-24: "boot is
-    fine."): from the Mac, `nixos-rebuild boot --flake
-    .#mugge-pi5-deploy --target-host ela@192.168.178.89 --sudo`,
-    then an announced reboot (not `switch`).
+    fine."): from the Mac, the darwin `nixos-rebuild-ng` from the
+    flake's nixpkgs: `nixos-rebuild-ng boot --no-reexec --flake
+    .#mugge-pi5-deploy --target-host ela@192.168.178.89 --sudo`, then
+    an announced reboot (not `switch`). The legacy script re-execs
+    the target's aarch64 tool and fails with an exec format error.
+    Put this in the deploy docs (CM, CM-DEP-.89-1).
 
 - Rename `mugge-pi5` to `mugge-pi5-deploy` in story and AC text
   (worker-1, 4de6cee0).
@@ -51,7 +55,8 @@ Next free: F-369, US-172, D-069, T66.
     nftables default DROP and the v4/v6 scan stay.
   - AC15: "HTTPS reachable from the LAN"; allowlist part dropped.
   - AC20: F-037 accepted as known risk; the Pi 5 is not gig-ready; no
-    amps or HP/IEM connected while F-037 is open.
+    amps or HP/IEM connected while F-037 is open. Also list "F-358
+    (AC13 FAIL)" alongside F-037 (PO, 2026-10-25).
   - AC21: drop the allowlist runbook part.
   - T53: negative case is "5900 refused (v4 and v6)".
   - The allowlist fail-closed + IPv6 AC moves to the backlog with F-037.
@@ -152,17 +157,44 @@ Next free: F-369, US-172, D-069, T66.
   CM-MAC-BUILD-2 and deployed to .89 (see post-deploy entry).
 
 - US-163 post-deploy on .89 at 798f2dc7 (QE, 2026-10-24/25):
-  - T51 PASS: current = booted = x83m7bir, deriver kz0j0c6f, RT
-    kernel. Amend T51 text: `nix store verify -r --no-trust` (QE's
-    `--sigs-needed 0` spec was wrong).
-  - **F-368** AC13 FAIL: PipeWire data-loop at RR/20, not FIFO 88. RT
-    is a safety requirement (D-013), so this BLOCKS US-163 acceptance.
-    Diagnosis: Architect + AE.
-  - **F-367** T49 FAIL: greetd crash-loops (~45 restarts in 8 min, not
-    marked failed). New defect, US-163 scope. Amend the T49 criterion:
-    no failed units AND NRestarts <= 3 for every service.
-  - T50 PASS (61.2C, no throttle). T48 covered for warm reboot only;
-    the cold-boot part needs the owner.
+  Deploy session CM-DEP-.89-1 (x83m7bir), 2026-10-25.
+  - T51 PASS (QE RULED, final): `nix store verify -r --no-trust`
+    rc=0 plus identity (current = booted = x83m7bir, deriver
+    kz0j0c6f, PREEMPT_RT 6.12.62). Test text changes to `--no-trust`;
+    `--sigs-needed 0` is wrong (it does not skip the trust check on
+    this Nix).
+  - **F-358** re-rated HIGH (AE; worker-1 agrees): AC13 FAIL,
+    PipeWire data-loop.0 at RR/20, not FIFO 88 (no daemon-reload
+    involved). Blocks amps-on and gig use (D-013); does NOT block the
+    US-163 bring-up PR. Fix: the separate port of #40's F-291 RT fix.
+    PO RULING (2026-10-25; Architect may object in one line): US-163
+    goes to the PR without waiting for the port; AC13 stays an honest
+    FAIL (never reworded to PASS); the lab note carries the raw
+    `ps -L`/chrt output; the PR description lists it as a known
+    deviation linked to F-358; the owner decides acceptance at the
+    PR. Interim: no amps-on use of the Pi 5 until F-358 is fixed
+    (already so via F-037/AC20). PO advice: the F-358/F-291 port is
+    the next active priority after US-163 (shortest path to an
+    audio-capable Pi 5; re-verifies AC13) -- owner sets priority.
+    Update the F-358 record and status.md (still say Medium).
+  - **F-367** T49 FAIL: greetd crash-loops every ~10 s (~45 restarts
+    in 8 min, not marked failed): no DRM device (vc4/v3d =m but not
+    loaded, /sys/class/drm empty), so the labwc greeter cannot start.
+    Architect ruling on cause and whether it blocks US-163. Amend the
+    T49 criterion: no failed units AND NRestarts <= 3 per service.
+  - AC12 FAIL as written (8in/8out, QE): PipeWire has no USBStreamer
+    capture node although ALSA pcmC1D0c exists; level-bridge-hw-in is
+    unlinked. Not a new ID: this is the existing **F-328** (ada8200-in
+    capture node no longer deployed since 991ff456; High) plus
+    **F-319** (level-bridge hw-in targets the removed node). Blocks
+    US-163 unless the PO amends AC12; Architect + AE diagnose.
+  - AE check #10 PASS (enum-params; 1+1 convolver nodes, 8 gains
+    0/0). AC12a full PASS. AC14 PASS via pw-cli; quantum reading
+    still to record. AC13 (F-358) is the only open AE item.
+  - T50 PASS (61.2C, no throttle).
+  - Pending: T48 cold boot (needs an owner power cycle).
+  - QE request: commit a SecSpec-vetted subset of the deploy evidence
+    into the US-163 PR.
 - 2026-10-24 20:28:03: Pi 5 restart CONFIRMED as the owner's power
   cycle ("It needed a power cycle", ~20:29, via team-lead). C8
   regressed on that boot (apt timers re-armed); re-stop granted as
@@ -199,10 +231,10 @@ Next free: F-369, US-172, D-069, T66.
   is an alias only (not resolvable via the Mac's default/VPN
   resolvers); any use of the name must match the same known_hosts
   entry (HostKeyAlias), never a fresh accept-new; identity is host key
-  + MAC. Reference updates (.88/.185 -> .89) are GO but PARKED until
-  after the deploy step (bookkeeping, not blocking): then one docs
-  batch on the story branch (TW docs + CLAUDE.md, worker-1 the
-  pi5/default.nix comment, CM routes .claude/team).
+  + MAC. Reference updates (.88/.185 -> .89) are GO and UNPARKED
+  (deploy done, 2026-10-25): one docs batch on the story branch (TW
+  docs + CLAUDE.md, worker-1 the pi5/default.nix comment, CM routes
+  .claude/team); include the nixos-rebuild-ng deploy verb.
 - Host key a5kILUyr ACCEPTED as is (joint Architect + SecSpec): TOFU
   on a MAC-verified LAN host, current-system p9mzphhy and revision
   fb7d557e matching. CLOSED, do not re-open. No extra check for
@@ -367,6 +399,11 @@ Next free: F-369, US-172, D-069, T66.
   VM's SSH would likely need LAN exposure. Rule 13 code change, not in
   US-163 unless the owner asks. P3 (Architect).
 - AE-F6 (routing.rs:423): check whether tracked; file if not.
+- Convolver sink's own audioconvert Props (volume, channelVolumes,
+  softVolumes; all 1.0 now) are a second gain stage before the D-063
+  Mults: anything raising them above 1.0 bypasses the G9 ceilings
+  while the gate is Open. GM should pin them at 1.0 and check them.
+  Latent, same class as AE-F6. P3 (AE).
 - Compare the Pi 5 host key fingerprint (a5kILUyr) on the HDMI/serial
   console (`ssh-keygen -lf` on the host key). Optional, only if the
   owner is at the Pi anyway (never asked); MANDATORY before any gig or
