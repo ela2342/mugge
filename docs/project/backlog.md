@@ -28,8 +28,8 @@ existing P3 "Mac disk nearly full" item; F-378 (purifi Qts test,
 worker-4) duplicates F-363. Both updates are merged into those
 items.
 F-379 (P2, web-UI correction level defect); F-380 (P2, CI builds no
-checks.*).
-Next free: F-381, US-176, D-071, T66.
+checks.*); F-381 (P3, driver datasheet_file paths).
+Next free: F-382, US-176, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -1675,6 +1675,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   The tar/cmp wording matches the pinned us172.sh (the tar is deleted
   after cmp plus an identical FAT manifest). Step 1 session
   CM-CHG-.89-US172a granted to worker-2 (CM, after the AC19 PASS).
+  B4d relayed to worker-2 as current (CM). The standby owner step
+  for a test-boot hang (power cycle) is in team-lead's batch (CM).
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -1972,6 +1974,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   b0666c02; F-365 room-correction part) copies configs/ into
   checks.test-room-correction; it lands before the 174b PR and
   before US-173 adds its checks line.
+  B6e verified (1accdb6e) and relayed to worker-4, replacing B6d
+  (CM). Merge order (Architect, as given): F-363, then
+  chore/rc-check-configs, then the 174b PR; US-173 merges main after
+  chore/rc-check-configs. F-374 merges first per the earlier ruling.
   Existing assets on main: src/room-correction/ (room_correction/,
   runner.py, analyze_measurement.py, gain_calibration.py,
   thermal_ceiling.py, tests/, mock/ with 3 scenarios),
@@ -2245,7 +2251,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (a CI failure blocks under Q2). Owner: the CM finds one. OWNER
   (CM, 2026-10-25): worker-6, branch fix/F-363-driver-validation off
   b0666c02 (test_driver_validation.py + configs/drivers/**), briefed
-  with the QE ACs above.
+  with the QE ACs above. QE (2026-10-25): worker-6 has the QE's
+  approach OK; the full-set scan finds 29 failing records of 2345.
+  The US-174 head 0b412fde changes nothing under configs/drivers or
+  src/room-correction vs main b0666c02, so the US-174 T1 ruling
+  above stands.
 - **F-379** (worker-4, Architect ruling; 2026-10-25) Web-UI
   correction level defect: src/web-ui/app/filter_routes.py:231 calls
   correction.generate_correction_filter directly, with no IR level
@@ -2253,7 +2263,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   +12 dB mode is cut 29 dB at x1, 9 dB at x0.1, 49 dB at x10).
   US-174b adds correction.normalize_ir_level(...) and a max_cut_db
   kwarg, but the web-UI path stays unfixed. Lane: worker-2 + AE (it
-  changes web-UI outputs). Rating: AE (pending).
+  changes web-UI outputs). Rating: AE (pending). Update (CM,
+  2026-10-25): stays in the backlog for a later worker, not
+  worker-2.
 - **F-380** (worker-7, Architect ruling: its own item; 2026-10-25)
   "CI builds no checks.*. Step 1: audit which checks.* currently
   build red (read-only, eval + build on the Mac/linux-builder).
@@ -2264,7 +2276,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   checks.test-midi (both F-365). Until it lands, the room-correction
   merge gate stays the app variants CI already runs. Note: worker-3's
   ci.yml T1 step (US-173) and step 2 both touch ci.yml; the CM
-  sequences them.
+  sequences them. The Architect approved the QE's audit plan (QE,
+  2026-10-25). QE finding: no Rule 13 approval on #49, #50 or #51
+  cited an unbuilt checks.* result as CI evidence; the Architect
+  waived checking #27-#38. Step 1 HELD (CM decision) until worker-7's
+  chore/rc-check-configs PR merges and the Mac has at least 8 GiB
+  free; then team-lead spawns worker-8, building from the pinned
+  main ref with no worktree.
 - US-159 G16 with AE amendments a-e and architect additions 1-3; test
   T65 (not T62). Medium; re-rate on (i) volume after replug, (ii) relink
   with gate_open true. Match by node and direction.
@@ -2429,7 +2447,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   GiB free (the CM brief said ~7.3); builds and caches getting tight.
   Filed as F-377, withdrawn as a duplicate of this item. CM df
   (2026-10-25): 5.1 GiB free, 99% used; later 5.0 GiB. Team-lead
-  pauses new workers because of it.
+  pauses new workers because of it. CM df later on 2026-10-25: 4.9
+  GiB. F-380 step 1 waits for at least 8 GiB free.
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
@@ -2517,6 +2536,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   wrapper (Architect, 2026-10-25). Not in 174b: the script is
   read-only for that lane. Also reported by worker-4 (US-174b design
   review): the script re-implements the image-source simulator.
+- **F-381** (AE, LOW; 2026-10-25) Driver records give
+  metadata.datasheet_file with a "data/" prefix, but validate_driver
+  (validate_driver.py:189-190) already resolves it under
+  <driver_dir>/data, so the path doubles ("data/data/") and the
+  check warns "referenced file not found". Found on
+  configs/drivers/dayton-audio-umii18-22 (US-155). PM check on main
+  b0666c02: 822 records use the prefix, and only one file exists
+  under any configs/drivers/*/data/ (bose-ps28-iii), so most PDFs
+  are not committed at all. No audio impact (AE). Same records as
+  F-363 (worker-6): the CM decides whether it rides there or later.
 
 ## Open PRs (2026-10-24, per CM)
 
@@ -2574,6 +2603,13 @@ merge needs update-branch and 7 reconfirmations at the new head.
   worker-1. A US-163 done-records batch (PM) follows the AC19 PASS.
   AC19 PASSED (CM, 2026-10-25); session closed; evidence with QE for
   the verdict. The done-records batch follows the QE verdict.
+  QE ACCEPTED AC19 (warm-reboot redeploy on main 07a65f9e; the full
+  verdict is with the CM). main = b0666c02 (#51, docs only); the Pi
+  runs #50's 07a65f9e, the same system config. PO status call
+  (2026-10-25): DONE (2026-10-25), with the known deviations and
+  AC20 (bootstrap/dev image, not gig-capable) kept; "done" is not
+  amps-on clearance. Done-records batch B7 (PM): pending the QE's
+  per-AC list and the PO's check of the deviation list.
   QE non-blocking (new): the guard count is not echoed in the CI log
   (it is in $out only); add a dev-howto line on unstaged test files
   (Nix flakes ignore them). Already tracked: F-370, F-371, F-373;
