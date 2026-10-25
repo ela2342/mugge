@@ -741,5 +741,81 @@ class TestMarkaudioProtectionPresent(unittest.TestCase):
         self.assertGreaterEqual(cut_db, PROTECTION_MIN_CUT_DB)
 
 
+
+class TestMarkaudioLr4PostCombine(unittest.TestCase):
+    """LR4 200 Hz post-combine gate on the markaudio profile, sat HPF removed.
+
+    The sat's D-031 subsonic is removed in-test only: its minimum-phase
+    lead at 200 Hz is tracked as F-385.  Levels are relative to each WAV's
+    own passband plateau.  The +-0.7 dB tolerances are interim: combine.py's
+    per-bin D-009 clip lifts the crossover region ~0.6 dB above the plateau.
+    F-383 (scalar D-009) tightens them to legs -6 +-0.5 dB and sum +-0.1 dB.
+    """
+
+    FC = 200.0
+    LEG_DB, LEG_TOL_DB = -6.0, 0.7
+    SUM_TOL_DB = 0.7
+    PHASE_AT_FC_DEG = 5.0
+    PHASE_NEAR_FC_DEG = 10.0
+    D009_MAX_DB = -0.5
+
+    @classmethod
+    def setUpClass(cls):
+        profile, identities = _load_profile_with_identities(MARKAUDIO_PROFILE)
+        sat_identity = profile["speakers"]["sat_left"]["identity"]
+        identities = copy.deepcopy(identities)
+        identities[sat_identity]["mandatory_hpf_hz"] = None
+        with tempfile.TemporaryDirectory() as d:
+            generate_profile_filters(profile, identities, output_dir=d)
+            cls.wavs = {
+                key: load_filter(os.path.join(d, f"combined_{key}.wav"))[0]
+                for key in profile["speakers"]
+            }
+        n_fft = 1 << 17
+        cls.freqs = np.fft.rfftfreq(n_fft, d=1.0 / 48000)
+        cls.hp = np.fft.rfft(cls.wavs["sat_left"], n=n_fft)
+        cls.lp = np.fft.rfft(cls.wavs["sub1"], n=n_fft)
+        f = cls.freqs
+        cls.i_fc = np.argmin(np.abs(f - cls.FC))
+        cls.near = (f >= cls.FC / 2) & (f <= 2 * cls.FC)
+        cls.hp_plateau = np.mean(
+            20 * np.log10(np.abs(cls.hp[(f >= 2 * cls.FC) & (f <= 20000)])))
+        cls.lp_plateau = np.mean(
+            20 * np.log10(np.abs(cls.lp[(f >= 20) & (f <= cls.FC / 2)])))
+
+    def test_legs_minus_6db_relative_at_fc(self):
+        hp_db = 20 * np.log10(np.abs(self.hp[self.i_fc])) - self.hp_plateau
+        lp_db = 20 * np.log10(np.abs(self.lp[self.i_fc])) - self.lp_plateau
+        print(f"markaudio LR4 post-combine legs at fc: HP {hp_db:.2f}, "
+              f"LP {lp_db:.2f} dB re plateau")
+        self.assertAlmostEqual(hp_db, self.LEG_DB, delta=self.LEG_TOL_DB)
+        self.assertAlmostEqual(lp_db, self.LEG_DB, delta=self.LEG_TOL_DB)
+
+    def test_sum_relative_near_fc(self):
+        plateau = (self.hp_plateau + self.lp_plateau) / 2
+        sum_db = 20 * np.log10(np.abs(self.hp + self.lp)[self.near]) - plateau
+        print(f"markaudio LR4 post-combine sum fc/2..2fc: "
+              f"{sum_db.min():.3f}..{sum_db.max():.3f} dB re plateau")
+        self.assertGreaterEqual(sum_db.min(), -self.SUM_TOL_DB)
+        self.assertLessEqual(sum_db.max(), self.SUM_TOL_DB)
+
+    def test_phase_tracking(self):
+        at_fc = np.degrees(np.abs(np.angle(self.hp[self.i_fc] / self.lp[self.i_fc])))
+        near = np.degrees(np.abs(np.angle(self.hp[self.near] / self.lp[self.near])))
+        print(f"markaudio LR4 post-combine phase: {at_fc:.2f} deg at fc, "
+              f"{near.max():.2f} deg max fc/2..2fc")
+        self.assertLessEqual(at_fc, self.PHASE_AT_FC_DEG)
+        self.assertLessEqual(near.max(), self.PHASE_NEAR_FC_DEG)
+
+    def test_d009_absolute(self):
+        n_fft = 4 * len(self.wavs["sat_left"])
+        for key, fir in self.wavs.items():
+            freqs, mag = dsp_utils.rfft_magnitude(fir, n_fft=n_fft)
+            band = (freqs >= 20) & (freqs <= 20000)
+            max_db = 20 * np.log10(mag[band].max())
+            with self.subTest(key=key):
+                self.assertLessEqual(max_db, self.D009_MAX_DB)
+
+
 if __name__ == "__main__":
     unittest.main()
