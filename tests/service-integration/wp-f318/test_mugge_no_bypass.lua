@@ -304,6 +304,19 @@ test ("deny line is logged once per stream and target", function ()
   assert (count_logs ("warning", "denied") == 2, "new target not logged")
 end)
 
+test ("gate line is logged on every run, with or without a target", function ()
+  load_script ()
+  run_deny (PLAY, USB)
+  run_deny (PLAY, USB)
+  run_deny (PLAY, nil)
+  assert (count_logs ("info", 'F-318: mugge-deny-playback: denied item 7 '
+      .. 'node.name="browser-tab" node.id="42"') == 3)
+  run_deny (copy (PLAY, { ["media.class"] = "Stream/Input/Audio" }), USB)
+  run_deny (PLAY, USB, {}, true)
+  assert (count_logs ("info", "mugge-deny-playback: denied") == 3,
+      "gate line logged for a capture stream or by the final guard")
+end)
+
 test ("removing the stream item resets the dedupe", function ()
   load_script ()
   run_deny (PLAY, USB)

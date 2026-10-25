@@ -90,6 +90,76 @@ class CaseFailure(Exception):
     pass
 
 
+# Hook-order evidence (case_hook_order). Lines are tied to a stream by the
+# session item in the WirePlumber log prefix ("<WpSiAudioAdapter:0x...>").
+# GATE_RX is the line our own hook logs. PREP_RX is the one anchor taken
+# from WirePlumber (0.5.12, prepare-link.lua:31). FIND_RX only matches the
+# source file of a finder hook, not its wording.
+ITEM_RX = re.compile(r"<WpSiAudioAdapter:(0x[0-9a-f]+)>")
+GATE_RX = re.compile(r"F-318: mugge-deny-playback: denied item (\d+) "
+                     r'node\.name="([^"]*)" node\.id="([^"]*)"')
+PREP_RX = re.compile(r"\sprepare-link\.lua:\d+:\S*: <[^>]*> "
+                     r"handling item (\d+): (\S+) \((\d+)\)")
+FIND_RX = re.compile(r"\s(?:find-[a-z-]+|get-filter-from-target)\.lua:\d+:")
+# Playback streams the policy run starts; each must pass the gate.
+GATED_STREAMS = (
+    "f318-play-default", "f318-play-usb", "f318-play-conv", "f318-play-move",
+    "f318-loop-out", "f318-paplay", "f318-play-reenum", "f318-play-gm",
+    "f318-play-wprestart", "f318-play-pwrestart",
+)
+
+
+def check_hook_order(text, expected=GATED_STREAMS):
+    """Checks finder lines -> gate line -> prepare-link line per stream.
+
+    Fails if a finder logs between the gate and prepare-link (the gate ran
+    before that finder), if the gate ran with no finder line before it,
+    if prepare-link handles a gated stream without a gate line since its
+    last prepare-link (the gate ran after it, or not at all), or if an
+    expected stream never completed the sequence. Returns the number of
+    complete sequences.
+    """
+    state, names, done = {}, {}, {}
+    gated_names = set(expected)
+    for n, line in enumerate(text.splitlines(), 1):
+        m = ITEM_RX.search(line)
+        if not m:
+            continue
+        item = m.group(1)
+        g = GATE_RX.search(line)
+        p = PREP_RX.search(line)
+        if g:
+            names[item] = g.group(2)
+            gated_names.add(g.group(2))
+            # Only a gate after a finder line completes a sequence.
+            state[item] = ("gated" if state.get(item) == "finding"
+                           else "gated-early")
+        elif p:
+            name = p.group(2)
+            if state.get(item) == "gated":
+                done[name] = done.get(name, 0) + 1
+            elif state.get(item) == "gated-early":
+                raise CaseFailure(
+                    "line %d: the gate ran for %s before any finder logged"
+                    % (n, name))
+            elif name in gated_names:
+                raise CaseFailure(
+                    "line %d: prepare-link handled %s without the gate "
+                    "line before it" % (n, name))
+            state[item] = None
+        elif FIND_RX.search(line):
+            if state.get(item) in ("gated", "gated-early"):
+                raise CaseFailure(
+                    "line %d: a finder logged for %s after the gate line, "
+                    "before prepare-link: %s" % (n, names[item], line))
+            state[item] = "finding"
+    missing = [s for s in expected if not done.get(s)]
+    if missing:
+        raise CaseFailure("no finder -> gate -> prepare-link sequence for: %s"
+                          % ", ".join(missing))
+    return sum(done.values())
+
+
 class Stack:
     def __init__(self, args, workdir):
         self.args = args
@@ -110,10 +180,9 @@ class Stack:
         self.env.pop("DBUS_SESSION_BUS_ADDRESS", None)
         self.wp_env = dict(self.env)
         self.wp_env["XDG_DATA_DIRS"] = args.wp_data_dirs
-        # Base level N is the WirePlumber default; s-linking info and the
-        # dispatcher trace give the hook order for case_hook_order.
-        self.wp_env["WIREPLUMBER_DEBUG"] = (
-            "N,s-linking:I,s-mugge-no-bypass:I,wp-event-dispatcher:T")
+        # Base level N is the WirePlumber default; s-linking and
+        # s-mugge-no-bypass info give the lines for check_hook_order.
+        self.wp_env["WIREPLUMBER_DEBUG"] = "N,s-linking:I,s-mugge-no-bypass:I"
         self.pw = None
         self.wp = None
         self.pulse = None
@@ -253,7 +322,9 @@ class Stack:
     def create_standin(self, name):
         props = dict(STANDINS[name])
         props.update({"factory.name": "support.null-audio-sink",
-                      "node.name": name, "object.linger": "true"})
+                      "node.name": name, "object.linger": "true",
+                      # wpctl status lists nodes by description.
+                      "node.description": name})
         spec = "{ " + " ".join('%s = "%s"' % (k, v) if not v.startswith("[")
                                else "%s = %s" % (k, v)
                                for k, v in props.items()) + " }"
@@ -601,52 +672,9 @@ class Cases:
 
     # 16
     def case_hook_order(self):
-        rx = re.compile(r"dispatching event \((.*?)\) running hook "
-                        r"<[^>]*>\((.*?)\)\s*$")
-        groups, current = [], {}
-        for line in self.s.wp_log().splitlines():
-            m = rx.search(line)
-            if not m or "select-target" not in m.group(1):
-                continue
-            ev, hook = m.groups()
-            seq = current.get(ev)
-            if seq is None or hook in seq:
-                seq = []
-                current[ev] = seq
-                groups.append(seq)
-            seq.append(hook)
-        finders = ("linking/find-defined-target",
-                   "linking/find-audio-group-target",
-                   "linking/find-filter-target",
-                   "linking/find-media-role-target",
-                   "linking/find-default-target",
-                   "linking/find-best-target",
-                   "linking/get-filter-from-target")
-        checked = 0
-        for seq in groups:
-            if "linking/mugge-deny-playback" not in seq:
-                continue
-            i = seq.index("linking/mugge-deny-playback")
-            for f in finders:
-                if f in seq and seq.index(f) > i:
-                    raise CaseFailure("%s ran after the deny hook: %s"
-                                      % (f, seq))
-            for later in ("linking/prepare-link",
-                          "linking/mugge-deny-playback-final",
-                          "linking/link-target"):
-                if later not in seq:
-                    raise CaseFailure("%s missing from chain: %s"
-                                      % (later, seq))
-            order = [seq.index(h) for h in (
-                "linking/mugge-deny-playback", "linking/prepare-link",
-                "linking/mugge-deny-playback-final", "linking/link-target")]
-            if order != sorted(order):
-                raise CaseFailure("wrong hook order: %s" % seq)
-            checked += 1
-        if checked == 0:
-            raise CaseFailure("no select-target chain with the deny hook "
-                              "found in the dispatcher trace")
-        print("    checked %d select-target chains" % checked)
+        checked = check_hook_order(self.s.wp_log())
+        print("    checked %d finder -> gate -> prepare-link sequences"
+              % checked)
 
     # 17
     def case_final_guard_silent(self):
@@ -667,6 +695,33 @@ ORDER = [
 ]
 
 
+def startup_diagnostics(stack):
+    """Prints versions, the PW/WP startup lines and wpctl status.
+
+    Returns False if wpctl fails or does not show the stand-ins, so a
+    runner where the stack comes up differently fails instead of skipping.
+    """
+    a = stack.args
+    for tool in (a.pipewire, a.wireplumber):
+        r = stack.tool(tool, "--version")
+        print("---- %s --version\n%s" % (os.path.basename(tool),
+                                         r.stdout.strip()))
+    for log in ("pipewire.log", "wireplumber.log"):
+        with open(os.path.join(stack.work, log), errors="replace") as f:
+            head = f.readlines()[:20]
+        print("---- first lines of %s\n%s" % (log, "".join(head).rstrip()))
+    r = stack.tool(a.wpctl, "status")
+    print("---- wpctl status (rc %d)\n%s%s"
+          % (r.returncode, r.stdout.rstrip(), r.stderr.rstrip()))
+    missing = [n for n in STANDINS if n not in r.stdout]
+    if r.returncode != 0 or missing:
+        print("wpctl status: rc %d, stand-ins not listed: %s"
+              % (r.returncode, ", ".join(missing) or "-"))
+        return False
+    print("---- end of startup diagnostics")
+    return True
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=("policy", "control"), required=True)
@@ -675,7 +730,7 @@ def main():
     ap.add_argument("--log-copy", help="copy the WirePlumber log here")
     for tool in ("pipewire", "wireplumber", "pipewire-pulse", "pw-dump",
                  "pw-cli", "pw-play", "pw-record", "pw-link", "pw-metadata",
-                 "pw-loopback", "paplay"):
+                 "pw-loopback", "paplay", "wpctl"):
         ap.add_argument("--" + tool, default=shutil.which(tool))
     args = ap.parse_args()
     missing = [t for t, v in vars(args).items() if v is None
@@ -711,6 +766,9 @@ def main():
             print("---- pw-cli ls Metadata:")
             print(stack.tool(args.pw_cli, "ls", "Metadata").stdout)
             print("FAIL: PipeWire/WirePlumber stack did not start")
+            return 2
+        if not startup_diagnostics(stack):
+            print("FAIL: startup diagnostics (the sandbox behaves differently?)")
             return 2
         cases = Cases(stack, silence)
         for name in ORDER:

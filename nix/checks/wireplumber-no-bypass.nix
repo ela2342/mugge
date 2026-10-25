@@ -11,13 +11,18 @@
 #
 # Steps, each one fails the build:
 #   1. Lua unit tests on the deployed script.
-#   2. Mutation evidence: four mutants of the script must each fail (1).
-#   3. Service integration, policy on: every case passes.
-#   4. Negative control, policy disabled: the run must fail, the
+#   2. Mutation evidence: five mutants of the script must each fail (1).
+#   3. Self-test of the hook-order checker: it must reject broken orders.
+#   4. Service integration, policy on: every case passes, including the
+#      hook order (finder lines -> our gate line -> prepare-link line).
+#   5. Negative control, policy disabled: the run must fail, the
 #      default-sink pw-play case must fail because WirePlumber linked it,
 #      and the default sink must be the USBStreamer stand-in.
 #
-# $out holds the output of every step and the WirePlumber logs.
+# $out holds the output of every step, the WirePlumber logs and
+# summary.txt (counts, negative-control result, PW and WP versions). The
+# hook-order anchor is WirePlumber 0.5.12's prepare-link line; summary.txt
+# records the version the check ran against.
 #
 # Usage: nix build -L .#checks.aarch64-linux.wireplumber-no-bypass
 { nixos }:
@@ -61,17 +66,21 @@ pkgs.runCommand "wireplumber-no-bypass" {
   mutate default-filter-inverted 'if isProtected (props) then' 'if not isProtected (props) then'
   mutate capture-exempt-inverted '"^Stream/Input/") ~= nil' '"^Stream/Input/") == nil'
   mutate deny-disabled 'event:set_data ("target", nil)' '-- removed'
+  mutate gate-line-removed 'mugge-deny-playback: denied item' 'gate ran for item'
+
+  echo "== 3. Hook-order checker self-test"
+  python3 -B ${tests}/test_hook_order.py | tee $out/hook-order-selftest.txt
 
   run() {
-    python3 ${tests}/run_policy_test.py --mode "$1" \
+    python3 -B ${tests}/run_policy_test.py --mode "$1" \
       --wp-data-dirs '${wpDataDirs}' \
       --workdir $TMPDIR/$1 --log-copy $out/wireplumber-$1.log
   }
 
-  echo "== 3. Service integration, policy on"
+  echo "== 4. Service integration, policy on"
   run policy | tee $out/policy.txt
 
-  echo "== 4. Negative control, policy disabled"
+  echo "== 5. Negative control, policy disabled"
   set +e
   run control > $out/control.txt 2>&1
   rc=$?
@@ -90,4 +99,16 @@ pkgs.runCommand "wireplumber-no-bypass" {
     exit 1
   fi
   echo "negative control failed as expected"
+
+  {
+    echo "F-318 wireplumber-no-bypass check"
+    echo "pipewire: ${pw.version}, wireplumber: ${wp.version}"
+    grep '^RESULT' $out/unit.txt
+    echo "RESULT mutants: $(grep -c ' killed:' $out/mutants.txt) killed, of 5"
+    grep '^RESULT' $out/hook-order-selftest.txt
+    grep '^RESULT' $out/policy.txt
+    grep '^RESULT' $out/control.txt
+    echo "negative control: failed as expected (play_default linked, default sink protected)"
+  } > $out/summary.txt
+  cat $out/summary.txt
 ''

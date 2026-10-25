@@ -136,6 +136,14 @@ local function denyPlayback (event, final)
   if isExempt (si_props) then
     return
   end
+  -- One line per run of the gate, never deduplicated. The hook-order
+  -- check in tests/service-integration/wp-f318 matches on it.
+  if not final then
+    log:info (si, string.format (
+        "F-318: mugge-deny-playback: denied item %d node.name=%q node.id=%q",
+        si.id, tostring (si_props ["node.name"]),
+        tostring (si_props ["node.id"])))
+  end
   local target = event:get_data ("target")
   if target or not final then
     local om = source:call ("get-object-manager", "session-item")

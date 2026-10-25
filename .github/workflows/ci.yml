@@ -188,6 +188,11 @@ jobs:
       - name: Run browser integration tests
         run: cachix watch-exec mugge -- nix run .#test-integration-browser
 
+      - name: WirePlumber no-bypass policy check (F-318)
+        run: |
+          cachix watch-exec mugge -- nix build -L .#checks.aarch64-linux.wireplumber-no-bypass
+          cat result/summary.txt
+
       # -- T2: E2E tests (PRs + manual dispatch) ------------------
 
       - name: Run E2E tests with local-demo stack

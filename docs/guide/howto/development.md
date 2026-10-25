@@ -24,6 +24,7 @@ working tree (picks up uncommitted changes):
 nix run .#test-unit             # Web UI unit tests (excludes e2e)
 nix run .#test-room-correction  # Room correction DSP tests
 nix run .#test-graph-manager    # GraphManager Rust tests (pure logic)
+nix build -L .#checks.aarch64-linux.wireplumber-no-bypass  # F-318 WirePlumber no-bypass policy (needs an aarch64-linux builder); counts in result/summary.txt
 nix run .#test-integration-browser  # Playwright browser integration tests
 nix run .#test-integration      # PipeWire integration test (Linux only, US-075)
 nix run .#test-e2e              # Real E2E: full stack + browser (Linux only)
