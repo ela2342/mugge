@@ -1519,6 +1519,38 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      wording it. The batch stays held for that wording, the AE's final
      OK and the merged US-173 head. The row 14 replacements above are
      unchanged.
+     UPDATE v150 (TW, AE, 2026-10-25; supersedes the row 15 PENDING
+     text and BOTH row 14 replacements above, the pw-cli 0.000000 one
+     and "able to run that pw-cli read", because of r3: a live gains
+     readback can't prove "muted" yet). This list takes both verbatim
+     once the F-318 batch merges (mirror rule). Row 15 FINAL: "After
+     any WirePlumber restart: amps stay off, including the
+     headphone/IEM amps, and headphones/IEMs not worn, until PipeWire
+     is restarted or the Pi is cold power-cycled, with the gains
+     verified at their boot values and the gate closed (safety.md,
+     WirePlumber restart). Interim, until US-175 is verified and the
+     live gains readback is proven (Gate-2 r3)." Row 14 (#51) NEW:
+     "the emergency stop is the amp power switches (including the
+     HP/IEM amps); a person at the switches the whole time the amps
+     are on. After any gate close, mute or GraphManager restart,
+     reading the gains does not prove "muted" yet (live readback under
+     investigation, Gate-2 r3). Switch the amps off, including the
+     headphone/IEM amps, and headphones/IEMs not worn, and keep them
+     off until PipeWire is restarted or the Pi is cold power-cycled,
+     with all 16 gains verified at their boot values (safety.md, Gains
+     at boot) and the gate closed. Once the live readback is proven,
+     this goes back to: "muted" is proven only by all 16 gains reading
+     exactly 0.000000 via `pw-cli enum-params`." TW batch state: v13
+     (/tmp/tw-f318-applied-v13.diff, sha256 ea6fb2c8) has "live
+     readback" in both caveats, the AE's option (b) WP-restart bullet
+     (the pw-link -l check stays; an open gate or a failed pw-link
+     check is a US-175 defect) and D-070 row 15; the WP-restart
+     wording is no longer pending. v14 (/tmp/tw-f318-applied-v14.diff,
+     sha256 57cef8e0) adds D-070 row 14 with the same row 14 text.
+     Held for the AE's final OK on v14 and the merged US-173 head;
+     worker-3 applies it on the US-173 branch, Rule 13 review on that
+     PR. Lead-in and Gate rule change only as planned ("1-3, 5-15" and
+     the count). PO informed (FYI) of the D-070 rows.
      Earlier note, superseded by the final text: the AE has since ruled that
      "unchanged" is a FAIL, so "gains unchanged or 0" above is
      superseded; the TW asked the AE for corrected text. Do not act
