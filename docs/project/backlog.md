@@ -1763,7 +1763,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   overlay_prefix in bootloader.nix or a shorter gen id, plus a
   path-length assertion in board-guard.nix) gets its own ruling.
   LIBPI option (i) approved: indirect root /home/ela/.us172-libpi
-  on frspf350, removed when US-172 closes. H1 may pre-empt the Pi
+  on frspf350, removed when US-172 closes (CM, 2026-10-25: kept at
+  RESTORED, removed only at US-172 close). Run-2 at stable SHAs
+  (us172.sh 8706a804, drm-reads d1c52592), under Architect/QE
+  review. H1 may pre-empt the Pi
   build queue between derivations once reviewed; US-173 Gate-2
   follows H1.
   /dev/mem firmware-log read: DEFERRED. Eligible only if H1 is
@@ -1811,7 +1814,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - Crossover-only minimum-phase WAVs from the US-155 config
     (scripts/generate-crossover-coeffs.py), magnitude response
     verified by the AE (sat HPF clearly down at 80 Hz, sub LP, sane
-    sum); no room correction.
+    sum); no room correction. AD (#55 review, 2026-10-25): after
+    #55 merges, regenerate the session WAVs from the merged SHA, the
+    AE re-checks them (AC2 was checked on pre-F-374 files), and the
+    AC3a SHA256SUMS are committed from that same regeneration.
   - F-321 check (AE, NOT waivable): sha256 of the WAVs the convolver
     actually loaded matches the generated files, before amps on.
   - F-341 AC3 (AE, NOT waivable): nc checks #3/#6 verified on the
@@ -2369,7 +2375,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   worker-3" is superseded. Legacy callers on the old crossover
   alignment (Architect): runner.py:200 (worker-4, switch in 174b
   after F-374) and generate_bose_filters.py:103/113 (switch, or
-  retire if obsolete).
+  retire if obsolete). AE (#55 review, 2026-10-25; P2): before any
+  LR profile goes live, verify that the Pi's filters come from
+  generate_profile_filters, not from runner.py or
+  generate_bose_filters.py.
   Fence (AE, 2026-10-25): F-374 does NOT change combine.py. The AE's
   earlier D-009-scalar instructions to worker-5 belong to F-383 (CM
   relays). F-374 keeps the crossover-level gate (all 4 cases, exact
@@ -2413,7 +2422,25 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - Tightening is a new F-383 AC (see F-383).
   PR #55 OPEN (CM, 2026-10-25) at 6e05fd64: 3 commits, tests
   1227/1/1; the only failure is F-363. F-363 merges first; #55's T1
-  stays red until then.
+  stays red until then. Merge order (team-lead): the F-363 PR (not
+  open yet), then #54 (F-365), then #55. Standing consent applies
+  at 7/7 on the final head plus green CI.
+  Rule 13 on #55 at 6e05fd64 (bundle /tmp/pr55-review-6e05fd64/;
+  requests out 21:5x CET; CM posts verdicts verbatim): AE APPROVE;
+  AD APPROVE (not covering CI or a later head). Pending: SecSpec,
+  TW, QE, Architect, UX. AD note: updating the branch after F-363
+  merges voids all approvals and needs a re-review round.
+  #55 backlog (AD, 2026-10-25): L1 a loose-bounds regression test
+  on the real, unmodified markaudio profile (sum, max|H|, phase),
+  tightened with F-385/F-383. L2 default_profile.yml has no
+  crossover `type`; with "missing = LR" it changes silently once
+  runner.py is migrated: add `type`, and document the default in
+  the schema docs.
+  #55 backlog (AE, 2026-10-25; verdict
+  /tmp/pr55-review-6e05fd64/AE-verdict.md): the D-009 max|H| test
+  in test_generate_profile_filters covers only 20 Hz..20 kHz;
+  extend it to 0..Nyquist and also assert it on the real markaudio
+  WAVs, not only the HPF-removed copy. P2, AE-owned.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
@@ -2511,6 +2538,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   considered and DECLINED. The ruling stands: F-383 and F-384 are
   one mission for a new worker after US-174b merges; worker-4 stays
   on US-174b.
+  New AC (AE, #55 review, 2026-10-25; P1 with F-383): an LR8
+  post-combine gate on at least one 80 Hz PA profile; today LR8 is
+  ungated at 76/64 deg phase. No LR8 profile goes on amps before
+  that gate exists.
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
@@ -2675,6 +2706,21 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   The US-174 head 0b412fde changes nothing under configs/drivers or
   src/room-correction vs main b0666c02, so the US-174 T1 ruling
   above stands.
+  Follow-ups outside worker-6's fence (QE and AE via worker-6,
+  2026-10-25; not in the F-363 PR):
+  - Re-scrape risk (QE): the driver scrapers would undo the F-363
+    datasheet corrections; scrape_loudspeakerdatabase updates
+    existing records, scrape_soundimports overwrites them.
+  - Two parallel validators (QE): src/room-correction/
+    validate_driver.py and scripts/drivers/validate_drivers.py; the
+    CLI one still flags records exempted in the F-363 test.
+  - Fail closed (AE condition): any code that derives safety
+    parameters from driver T/S (D-031 mandatory_hpf_hz, excursion
+    mask, alignment, speaker_sim) must fail closed on a record
+    marked metadata.ts_consistency: datasheet-inconsistent, unless a
+    measured T/S override is present. The F-363 PR only adds a test
+    that no profile under configs/ references a marked record
+    today. AE-owned; priority P2 pending the AE.
 - **F-379** (worker-4, Architect ruling; 2026-10-25) Web-UI
   correction level defect: src/web-ui/app/filter_routes.py:231 calls
   correction.generate_correction_filter directly, with no IR level
@@ -2960,6 +3006,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   interrupted build restarts at the dry-run gate; (5) WP canary:
   the 16 gains still 0 and the gate closed, besides the pids and
   links; any change = STOP to the QE and Architect.
+  Scratch ARM check (CM, 2026-10-25): scratch/f365-arm-check =
+  0e56bd4d (ci.yml only, dispatch-only, cachix skipPush), run
+  github.com/ela2342/mugge/actions/runs/40232728057, in progress;
+  expected red on F-363 alone. The CM deletes the branch after the
+  result. worker-7's F-365 v3 Pi scripts are shelved, unhashed
+  (fallback only).
   Pi build queue (Architect, 2026-10-25): F-365, then the F-374
   PR-head suite, then the wireplumber-no-bypass check; each from a
   tarball at the declared SHA with sandbox=true. WP check
