@@ -1772,7 +1772,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   fails after the put, so tb-pre now removes it. QE CHANGES
   REQUESTED: R1 FALSIFIED only on the exact base states; R2 an
   oracle self-test before arming; R3 tb-reboot runs once per run
-  id. worker-2 is revising. H1 may pre-empt the Pi
+  id. worker-2 is revising. Revised (CM, 2026-10-25): us172.sh
+  522e5571, drm-reads 0da219b4, with QE R1-R3 and Architect N1
+  implemented; re-review with the QE and Architect. worker-2's Mac
+  harness passed the oracle cases; the us172.sh changes were only
+  checked with bash -n and shellcheck. H1 may pre-empt the Pi
   build queue between derivations once reviewed; US-173 Gate-2
   follows H1.
   /dev/mem firmware-log read: DEFERRED. Eligible only if H1 is
@@ -2499,6 +2503,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   at fc and <= 75 deg over fc/2..2fc, sum +/-1.0 dB re plateau, and
   max|H| <= -0.5 dB (hard). Only F-383/F-385 may tighten it;
   relaxing it needs joint AE + Architect approval.
+  U1 UX gaps, same head (UX via CM, 2026-10-25): G1 a stored invalid
+  slope or type shows as a selected, disabled "(not supported)"
+  option with an inline note, never silently 24 or linkwitz-riley;
+  save stays 400. G2 the generator check runs at measurement-session
+  start, before gain calibration, and refuses to start with its
+  message. Nice-to-have: Filters Generate returns 400 instead of
+  500. worker-5's fence adds session.py and filter_routes.py
+  (disjoint from all open branches, CM checked).
   #55 backlog (AD, 2026-10-25): L1 a loose-bounds regression test
   on the real, unmodified markaudio profile (sum, max|H|, phase),
   tightened with F-385/F-383. L2 default_profile.yml has no
