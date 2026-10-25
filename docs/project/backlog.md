@@ -373,6 +373,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - AE check #10 PASS (enum-params; 1+1 convolver nodes, 8 gains
     0/0). AC12a full PASS. AC14 PASS, complete (quantum base 256,
     force 1024). AC13 (F-358) is the only open AE item.
+    UPDATE (AE, F-395 AC (c), 2026-10-26): check #10 is reclassified
+    from PASS to NOT VERIFIABLE (node state not logged; not a FAIL);
+    re-run at the next Pi gains check (see F-395).
   - T50 PASS (61.2C, no throttle).
   - Pending: T48 cold boot (needs an owner power cycle).
 - US-163 deploy 2 (CM-DEP-.89-2, worker-1, 2026-10-25; DONE, lock
@@ -404,6 +407,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     doesn't affect audio. AC14 count corrected to 16 (PO, AE). Future
     evidence wording: "N enumerated, 16 gain-relevant" (AE). QE
     accepts 16/16 with that wording.
+    UPDATE (AE, F-395 AC (c), 2026-10-26): AC14 is reclassified from
+    PASS to NOT VERIFIABLE (node state not logged; not a FAIL); re-run
+    at the next Pi gains check (see F-395).
   - AE: the no-amps/HP/IEM condition tied to AC13 is LIFTED from the
     RT side. Any amps-on/HP/IEM use of the Pi 5 still needs the
     owner's explicit re-confirmation plus the S-012/safety.md
@@ -1608,6 +1614,30 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      The F-318 batch (TW v14) therefore needs a new version with these
      texts before it lands; the AE's v14 OK covered the old row texts.
      PM passed the texts to the TW.
+     UPDATE v161 (AE, 2026-10-26; aligns with the joint ruling;
+     supersedes the v160 Row 14 and check 10 texts; Row 15 unchanged;
+     final from the AE side, AE sent the same to the TW): Row 14
+     (#51): "the emergency stop is the amp power switches (including
+     the HP/IEM amps); a person at the switches the whole time the
+     amps are on. After any gate close, mute or GraphManager restart,
+     reading the gains does not prove "muted" yet. Switch the amps
+     off, including the headphone/IEM amps, and headphones/IEMs not
+     worn, and keep them off until PipeWire is restarted or the Pi is
+     cold power-cycled, with all 16 gains verified at their boot
+     values (safety.md, Gains at boot) and the gate closed. A gains
+     reading counts only if the filter-chain node and its output node
+     were idle or running immediately before and after the reading
+     (states logged with it); a reading on a suspended node shows 0
+     whatever the real gain is and proves nothing (F-395, Gate-2 r6b).
+     Once the live readback is proven on the Pi, this goes back to:
+     "muted" is proven only by all 16 gains reading exactly 0.000000
+     via `pw-cli enum-params` on a node that is idle or running."
+     safety.md check 10 (Gains at boot), added (the rest of check 10
+     stays): "The reading counts only if the filter-chain node and its
+     output node are idle or running immediately before and after the
+     reading (states logged with it). A suspended node reads 0
+     whatever the real gain is, so that result is NOT VERIFIABLE,
+     never a pass." The AE reviews the TW's diff word for word.
      Earlier note, superseded by the final text: the AE has since ruled that
      "unchanged" is a FAIL, so "gains unchanged or 0" above is
      superseded; the TW asked the AE for corrected text. Do not act
@@ -3837,6 +3867,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     (enum-params, 8 gains 0/0); US-163 AC14 PASS (16/16 gain values 0,
     CM-DEP-.89-2). Nothing amps-on depended on them (AE: amps off,
     nothing connected).
+    AE RULING (2026-10-26): both are reclassified from PASS to NOT
+    VERIFIABLE and are no longer evidence. They are not FAILs: the
+    conf defaults were 0 at the time, so nothing points to an unsafe
+    gain; a reader on a suspended node simply can't tell that apart
+    from a non-zero gain. Both are re-run under the new rule (node
+    state read before and after) at the next Pi gains check; the CM
+    may fold that into the 5a OBSERVE. Any record the QE adds to the
+    list gets the same treatment, unless its node state was logged at
+    the time. F-395 ID CONFIRMED by the AE (AE owns, Architect
+    co-owns).
   - (d) Pi OBSERVE of the node states, then P-a.
   Still open: the joint AE + Architect r6b text (gate2.py base rule
   and optional silent-zero wake mode, P-a amendment to condition (f),
