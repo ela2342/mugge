@@ -5,7 +5,11 @@ NixOS from the `mugge-pi5-deploy` configuration. Raw evidence stays in the
 operator's private evidence directory (not in the repo); this note carries
 excerpts only. Identity data is limited to fingerprints and the MAC address.
 
-### Reproducibility
+Times marked `Z` or `UTC` are UTC. Journal timestamps (`Oct 25 hh:mm:ss`)
+are the Pi's local time, CET (UTC+1): daylight saving time ended on
+2026-10-25 at 01:00 UTC, before any of the work below.
+
+## Reproducibility
 
 | Role | Path |
 |------|------|
@@ -88,7 +92,7 @@ system -> system-150-link            # darwin-system, unchanged
 # Pi: new profile and switch-to-configuration boot ran there
 $ readlink -f /nix/var/nix/profiles/system
 /nix/store/nkifli3rxayxxmrndqw3a3ic0jj5fix8-nixos-system-mugge-25.11.20260320.812b398
-$ journalctl -b -u nixos-rebuild-switch-to-configuration | tail -2
+$ journalctl -b -u nixos-rebuild-switch-to-configuration | tail -2   # local CET
 Oct 25 09:50:05 mugge systemd[1]: nixos-rebuild-switch-to-configuration.service: Deactivated successfully.
 ```
 
@@ -103,7 +107,9 @@ $ cat /boot/firmware/gens/MAP.txt
 ```
 
 Recovery via card reader: set line 16 to
-`os_prefix=gens/nkifli3rxayxxmrndqw3a3ic0jj5fix8/`. For the current
+`os_prefix=gens/x83m7bircd4b7j8wchx9k1mnilzi8kl4/`, the generation booted
+before this deploy (corrected in #50: originally said `nkifli3r…`, which
+was the generation just deployed). For the current
 generations and recovery line, see "FAT generations" below.
 
 ```bash
