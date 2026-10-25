@@ -15,7 +15,8 @@ D-068 (T57 gate dropped); T65 =
 US-159 G16 reconciler test; US-172 (P1, Pi 5
 local display). F-368 WITHDRAWN, never to be reused (was a
 duplicate of the existing F-358 for AC13).
-Next free: F-373, US-173, D-069, T66.
+D-069 (Architect: Pi 5 platform baseline under NixOS, PROPOSED).
+Next free: F-373, US-173, D-070, T66.
 
 ## US-163 text updates (critical path; one tracking batch before the PR)
 
@@ -544,6 +545,47 @@ Next free: F-373, US-173, D-069, T66.
       plus nix-diff vs f0fbefd1); TW CHANGES REQUESTED 6398315124;
       QE pending. All lapse at the next head move (strict main
       protection).
+    - v79 committed at 91404ac9 (CM; sha 02b54ecd... verified).
+    - QE (2026-10-25): AC2, AC3, AC4, AC8, AC9a and AC11 PASS. QE's
+      #50 verdict waits for the final head (PO ruling 1).
+    - TW routes (CM): B1/B2 on the separate branch
+      docs/US-163-ac21-batch (worktree at afbc04ae); TW owns 6 files:
+      config.md, CLAUDE.md, rt-audio-stack.md, safety.md,
+      SETUP-MANUAL.md, nixos-upgrade.md. The CM merges it into
+      story/US-163. S1/N1/N2: worker-1, lab note only.
+    - B3 DELIVERED (PM, 2026-10-25): /tmp/pm-b3, base afbc04ae, 25
+      files (14 new, 11 modified), MANIFEST.txt with sha256s. The CM
+      ACKed 26; the difference: D-069 is the Architect's file (byte
+      copy of /tmp/arch-D-069.md), F-368 is withdrawn, and F-328 was
+      added (its update was due in this batch). F-037, F-328, F-341
+      and F-358 get "Update 2026-10-25" sections; headers and index
+      rows unchanged. US-159 G16 AE a-e from the AE's verbatim text;
+      T65 lists AE's five cases plus the Architect's two.
+    - AD APPROVE is comment 6398339160 (CM). AD M2 precise: the
+      f0fbefd1 -> final diffstat is docs-only AND the
+      mugge-pi5-deploy nix-diff shows only configurationRevision,
+      else AC17 is re-run. AD L2 precise: the US-172 check is HDMI
+      ALSA devices device.disabled = true in pw-dump, none a sink.
+      AD L1 precise: US-170 AC13 A1 += "NRestarts 0, no SIGKILL at
+      startup with production 16k-tap coefficients" (in B3 US-170
+      AC6); AMPS-ON + safety.md: "an unannounced PW SIGKILL is a
+      USBStreamer interruption; follow F2" (CM sent it to the TW).
+    - Push gates (CM): (1) #49 lands; (2) Architect docs-only scope:
+      CLAUDE.md, .claude/team/config.md and SETUP-MANUAL.md count as
+      docs-only; docs-only = no file under src/, nix/, configs/,
+      scripts/ (READMEs inside src/ included) and no flake.nix or
+      flake.lock change. Per-commit gate: mugge-pi5-deploy nix-diff
+      only configurationRevision and the Pi 4 drvPath unchanged,
+      else rule (d). #49 at df4a6a9b sets repoSrc=${self} only in
+      the app scripts, not in nixosConfigurations, so option (A)
+      survives taking main; the Architect re-confirms at b959e5c9;
+      the CM runs the empirical nix-diff once after the rebase.
+    - Session B ruling (CM/AE): amixer by card ID via a temporary
+      alsa-utils copy; software re-enumeration, then the owner's
+      physical replug; reads are read-only; PASS when nothing goes
+      up. worker-1 is revising the scripts and collects the real
+      install commands for the TW's B2 in
+      /tmp/us163-install-cmds-for-tw.md.
     - TW blocking: B1 the AC21 .89 docs batch (config.md still .185;
       safety.md lacks the Pi 5 amps-on boundary and the F2 rule); B2
       NEW docs/guide/howto/nixos-upgrade.md is wrong for the Pi 5
@@ -1466,7 +1508,9 @@ merge needs update-branch and 7 reconfirmations at the new head.
   artefact), so #42 needs a run with no failed job (after #49 or a
   re-run), then update-branch and 7 reconfirmations.
 - #49 F-335 fix: new head b959e5c9 pending push voids verdicts; needs a
-  fresh round and green T1-T3. NOW ON THE US-163 CRITICAL PATH (PO,
+  fresh round and green T1-T3. QE APPROVES #49 on 3 conditions: CI
+  green at 316cc3eb with the guard checking 18 scripts; a local
+  revert proof; T3 addressed. NOW ON THE US-163 CRITICAL PATH (PO,
   2026-10-25): #50's test-and-build fails on F-335, so #49 lands
   first, limited to F-335 (no scope additions). CM holds the push
   until worker-2 reports.
