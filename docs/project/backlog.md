@@ -16,7 +16,10 @@ US-159 G16 reconciler test; US-172 (P1, Pi 5
 local display). F-368 WITHDRAWN, never to be reused (was a
 duplicate of the existing F-358 for AC13).
 D-069 (Architect: Pi 5 platform baseline under NixOS, PROPOSED).
-Next free: F-374, US-173, D-070, T66.
+US-173 (P1, supervised home-lab first DJ session); D-070
+(supervised home-lab first-session exception, PROPOSED, pending
+owner).
+Next free: F-374, US-174, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -1415,6 +1418,28 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (3) UX (b): "(planned in PR #45)" goes stale; once #45 lands,
   name the section instead. AD nit, no change: §8.5 "the Mac" means
   any machine with Nix and the repo.
+  UPDATE (CM, #51): (1) and (2) now go INTO #51, superseding "next
+  touch" for them. Architect CHANGES REQUESTED at 667b7a8f
+  (6402343698): R1 (required) = (1). N1 (non-blocking; AE and AD
+  rule): F-338/F-339 must be closed, no interim option. AE APPROVE
+  6402349414 crossed the hold; tally at 667b7a8f 6 approve + Arch
+  changes requested, all lapse with the TW head move (R1 + L2 + AE
+  final wording incl. the N1 ruling); all 7 re-review. (3) stays
+  next touch (waits for #45). The lead-in and row 14 here follow
+  the new #51 text verbatim once it exists (mirror rule). If N1
+  makes F-338/F-339 closed-only, both fixes join the US-173 path
+  (~1 day, Architect) and the DJ estimate to the owner is
+  corrected (PM asked the AE to name the variant).
+  PENDING ROW H (AE, 2026-10-25; PO agrees; NOT yet numbered here):
+  hardware level cap. With the speakers disconnected and a
+  true-RMS multimeter on the amp outputs, the amp input knobs are
+  set and marked so 0 dBFS reaches at most 5.3 V rms on the sats
+  (CHN-50P, 7 W into 4 ohm) and at most 20 V rms (~100 W) on the
+  sub (UMII18-22, home lab). Not waivable: without H the AE accepts
+  no interim rule. Mirror rule: the TW adds it to safety.md first,
+  in the AE's wording, with its own review; this list then follows
+  with the safety.md number. AE: row 14 stays the default gate;
+  the supervised exception (D-070) needs its own safety.md change.
   MIRROR RULE (AE via TW, 2026-10-25): safety.md "Pi 5 Platform
   Status" carries this full table (13 items in #50; 14 rows on
   docs/US-163-postmerge 1472206a, the first post-merge docs PR) with
@@ -1575,6 +1600,81 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   it. Architect RULING: BACKLOG, merged here (not a new item); later
   fix = the same module.rt.args override in a wireplumber.conf.d
   fragment. AC13 covers PipeWire only.
+- **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
+  2026-10-25; P1/High; next after US-172). Origin: owner question
+  "So how many days until I can use this setup to spin some
+  songs?"; PM estimate to team-lead (PO, AE, Architect): 3-5 working
+  days, 6-8 if the display or the Hercules surprise, plus fan
+  delivery. ACs (PO):
+  - H set and marked (pending row H above; owner with multimeter,
+    speakers disconnected).
+  - Crossover-only minimum-phase WAVs from the US-155 config
+    (scripts/generate-crossover-coeffs.py), magnitude response
+    verified by the AE (sat HPF clearly down at 80 Hz, sub LP, sane
+    sum); no room correction.
+  - F-321 check (AE, NOT waivable): sha256 of the WAVs the convolver
+    actually loaded matches the generated files, before amps on.
+  - F-341 AC3 (AE, NOT waivable): nc checks #3/#6 verified on the
+    Pi 5 in one CM session.
+  - F-318 fixed (Architect: small WP rule, 0.5-1 day): non-JACK
+    streams never auto-link to the USBStreamer.
+  - Home-lab venue file with audible gain_db (AE values; a gain
+    increase, so the owner's S-012 confirmation at the session).
+  - "DJ routing via GraphManager on the Pi 5: Mixxx -> convolver ->
+    gate -> USBStreamer, quantum 1024; no manual pw-link around the
+    gate. Verified by link audit." (PO)
+  - "The Hercules DJControl Mix Ultra is recognised by Mixxx via
+    USB-MIDI (deck/play/crossfader work). If it fails: a separate
+    story, and the session may run with mouse/keyboard only if the
+    owner wants." (PO)
+  - Thermal: the first session is the thermal soak (10 s sampling
+    per the AE thermal rule; STOP at 80 C). What STOP means in
+    practice (end the session / amps off) is defined beforehand by
+    AE and UX as a procedure; owner question only if the team
+    cannot specify it (PO).
+  - Pre-flight plus owner re-confirmation; session rules (AE): amps
+    on last and off first, amp power switch within reach (the
+    emergency stop), no USB replugging, fixed USB cable with strain
+    relief and no hub, one deployed venue, no web-UI gain edits.
+  Parallel start (PO): the sub-items that don't need the display (H,
+  F-321 check, F-341 AC3, F-318, venue gains, the AE WAV check) may
+  start now, in parallel with US-172 and without blocking it. Only
+  the session itself waits for US-172.
+  Out of scope (PO): IEM/HP (ch 5-8 gated and muted), room
+  correction, second sub and time alignment, Live mode, APCmini.
+  Owner physical list (sent to team-lead): remove the HiFiBerry HAT
+  (or confirm nothing on it); fit a fan; plug in the Hercules over
+  USB; wiring ADA8200 out 1/2/3 -> amp in 1/2/3 (out 4 not
+  connected), amp ch1/ch2 -> CHN-50P L/R, ch3 -> UMII18-22 coils in
+  series (4 ohm), ch4 nothing, + to + everywhere; ~30 min multimeter
+  session for H. Owner questions sent (team-lead): target "home-lab
+  test, no room correction"; which speakers/subs; true-RMS
+  multimeter and fan on hand; F-037 (web UI without auth) accepted
+  for this session. Architect: the full code fixes (worker-1 GM
+  lane F-361 -> F-373/G16 -> GM DJ mode; worker-2 lane F-362 ->
+  F-372 -> F-352/F-354/F-355 -> F-338/F-339 -> F2 -> F-318 -> F-317)
+  are ~6-9 working days and gate unsupervised or gig use, not this
+  session.
+  D-070 (PROPOSED, pending owner; PO): supervised home-lab
+  first-session exception. Interim rules (AE) replace the full fix
+  for named amps-on rows. "The exception lists the replaced amps-on
+  rows individually with their interim rule; valid only with H set
+  and the owner present; expires per row as soon as the full fix is
+  merged." F-321 sha and F-341 AC3 are NOT replaced (AE). Pending
+  the owner answers (target, F-037 acceptance with amps on). Needs
+  its own safety.md change and review (AE). AE interim rules per
+  row (2026-10-25, summary): 1 procedure; 3 remove the HAT; 5
+  restart bridges, confirm meters; 6 F-037 bounded by H; 7 manual
+  `pw-link -l` check before the gate opens (only convolver-out ->
+  USBStreamer AUX); 8/13 F-373 rule, amps off before any recovery;
+  9 F-317/F-325 amp switch in reach; F-318 fixed (or link check +
+  no other apps); F-352/F-354/F-355 no Config gain API, no web-UI
+  gain edits, limiter unconfigured; 10 first session = soak; 11
+  F-372 one venue, no switching or uploads; 12 existing rule; 14
+  F-320 never watchdog_unlatch, latch -> amps off and restart;
+  F-314 never switch venue with the gate open; F-338/F-339 amp
+  switch as e-stop, gains verified from pw-dump (see N1 above);
+  F-349 H + fresh PW start + no NaN sources; F-322 covered by H.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
