@@ -1672,6 +1672,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      phrase), v17 (bc1efdd1, (a)-(c)). The batch still waits only for
      the merged US-173 head (rebase, amps-on ranges), then goes to the
      CM; this list mirrors it on merge.
+     UPDATE (PM, 2026-10-26): the TW batch is now v18
+     (/tmp/tw-f318-applied-v18.diff, sha1 3f1a578f); the only change
+     from v17 is "(F-396)" after "USBStreamer interruption (Section
+     1)" in the safety.md WirePlumber-restart paragraph (the F-396
+     cite, AE ruling). Still waits only for the merged US-173 head.
      Earlier note, superseded by the final text: the AE has since ruled that
      "unchanged" is a FAIL, so "gains unchanged or 0" above is
      superseded; the TW asked the AE for corrected text. Do not act
@@ -2678,6 +2683,31 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       test chain; if the null sink is created via WP or pw-cli, log
       the states after creation and at every read. No other P-a
       change.
+    - r8 IDLE-BRANCH JOINT (AE + Architect via the Architect to the
+      CM, 2026-10-26;
+      /tmp/w3-gate2-rulings/r8-idle-branch-joint-cm-copy.md sha256
+      e74a6e93, frozen copy
+      /tmp/pm-backlog/r8-idle-branch-joint-e74a6e93.md): plan AGREED;
+      let r8 finish; if r8 reproduces the suspend, it counts as built
+      for the suspended branch. (c) CONFIRMED: idle branch, policy
+      exit 0, control exit 1, cleanup gains check PASS; suspended
+      branch, exit 3 in both modes, NV the only failed gains check.
+      (a) accepted for r8 as built (fails closed). ONE small edit
+      folds into the next build that is needed anyway (no separate
+      build), limited to the main-run cleanup assertion in
+      gate2_selftest.py: (1) branch selection uses BOTH entries
+      (before and after) of gate2's gains-after-states.json: idle
+      branch both idle or running, suspended branch both suspended; a
+      missing file, a mixed set or an unknown state is FAIL;
+      node-states-wp-restart.json stays as F-396 evidence, not
+      asserted; (2) control mode, both branches (AE finding): the set
+      of non-gains FAIL names must EQUAL the by-design policy-FAIL set
+      from fail-r7-control.txt, stated explicitly in the code; (3)
+      idle branch logs "F-396 not reproduced (sandbox)", NOT evidence
+      that F-396 is fixed; the Pi --wp-restart verdict stays "STOP,
+      F-396" until F-396 AC 3/4 is done. Process note (CM): worker-3
+      declared an uncleared cached `nix run` (pyflakes); disk
+      unchanged; logged.
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -4100,6 +4130,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     ACs (vi) and (viii) in the docs/F-395-annotations PR if the QE
     agrees, together with the AC (v) F-262 D-249 correction ("now
     passes consistently", contradicted by #59).
+  - AD L1 on #60 (Low, the QE decides): put the F-394 sentence "sw tap
+    silent, mute test still passed" into the #59 xfail reason or PR
+    body.
+  - SecSpec (#60 review): supports pinning WP_STORE from flake.lock as
+    the F-394 fix (CI supply chain; see the diagnosis lead above).
+  - Status follow-up (QE, TW): if #59 merges before #60, the F-394
+    Status line and its index row change to "quarantined (PR #59,
+    strict xfail)".
 - **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
   per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
   2026-10-26): on a suspended node, the gain readers in the r6b matrix
@@ -4260,6 +4298,30 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   action; GM and PW start at boot as normal); the gains read logs the
   fc and fc-out states from the same pw-dump; the elapsed time from
   the boot to the read is recorded.
+  UPDATE (TW, CM, 2026-10-26; supersedes "PR number pending" above):
+  the docs PR is #60, head 39dd0deaef422bf146f95d6f21310fc060c52035,
+  one commit on main ba5cc200, scope as above (US-176 out). Docs-only,
+  CI-exempt. 6/7 APPROVE: AE 6405089963, SecSpec 6405090180, UX
+  6405090404, Architect 6405094259, QE 6405094450, TW 6405094669
+  (author, COI declared). AD REQUEST CHANGES 6405108734
+  (/tmp/pr60-ad-verdict-39dd0dea.md, sha256 a6316d4e...0b2a).
+  AD H1 (BLOCKING #60; supersedes "AC (c) LIST COMPLETE" and the count
+  of 9 above): docs/project/stories/US-163.md AC14, AC16b, AC17/17-B
+  and AC19 carry unannotated gains PASS verdicts, so the AC (c) list
+  and count are incomplete. The TW is fixing it (batch v2: annotate
+  them, fix the count); the QE confirms the full list with a search
+  over docs/. The corrected count goes here when the new #60 head
+  lands; then the re-checks follow.
+  AD H2 (AMPS-ON PRECONDITION; not blocking #60): safety.md rows 8 and
+  14, l.64 and l.69 (check 10), and D-070 row 14 on main still treat a
+  pw-dump 0 as mute proof. An AE-worded amendment must merge before
+  any amps-on session or D-070 use: a gains read counts only if fc and
+  fc-out are idle or running before and after it; NOT VERIFIABLE means
+  not muted. The safety.md wording goes through the TW (amps-on
+  mirroring rule). PM note: TW batch v18 already carries the
+  idle-or-running rule (safety.md, D-070 rows 14 and 15); the PM asked
+  the AD whether v18 covers H2 or what delta is missing (wording to
+  the AE, application to the TW).
 - **F-396** Production must never suspend the filter-chain or the
   USBStreamer node (P1 unless the Architect rules otherwise; AE,
   2026-10-26, from the r6b ruling draft section 4): a suspend of the
@@ -4341,6 +4403,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the operator when it resumes. AC: audit all gain readback consumers;
   they must label or refuse readback on nodes that are not idle or
   running. Related: F-395, US-176.
+  UX N1 (#60 review, 2026-10-26; non-blocking; for AC 2): a node that
+  is not idle or running shows NO gain number at all (no 0, no -inf
+  dB, no muted styling), only a distinct state such as "— (node
+  suspended: gain unknown)". While the gate is open, that state goes
+  in the U8 banner order next to GAIN NODES MISMATCH as "GAIN READBACK
+  UNAVAILABLE". The UX specialist reviews the wording in the fix PR.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
