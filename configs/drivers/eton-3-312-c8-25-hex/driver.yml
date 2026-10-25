@@ -21,7 +21,7 @@ metadata:
   datasheet_file: ETON_SYMPHONYII_3-312C825_HEX.pdf
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: qms 0.43 -> 6.22 per https://doc.soundimports.nl/pdf/brands/ETON/SYMPHONY%20II/ETON_SYMPHONYII_3-312C825_HEX.pdf (ETON Symphony II sheet, no revision printed), retrieved 2026-10-25.'
   notes: Scraped from soundimports.eu.
   quantity_owned: null
   serial_numbers: []
@@ -33,7 +33,7 @@ thiele_small:
   z_nom_ohm: 8
   qts: 0.29
   qes: 0.3
-  qms: 0.43
+  qms: 6.22
   vas_liters: 0.7
   cms_m_per_n: null
   xmax_mm: 2.0

@@ -21,7 +21,7 @@ metadata:
   datasheet_file: R2004-602200-datasheet.pdf
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: qts 96.0 -> 0.96, re_ohm 3.8 -> 2.8 per https://www.scan-speak.dk/datasheet/pdf/r2004-602200.pdf (Preliminary Datasheet, updated May 8, 2024), retrieved 2026-10-25.'
   notes: Scraped from soundimports.eu.
   quantity_owned: null
   serial_numbers: []
@@ -29,9 +29,9 @@ metadata:
   condition: null
 thiele_small:
   fs_hz: 625.0
-  re_ohm: 3.8
+  re_ohm: 2.8
   z_nom_ohm: 4
-  qts: 96.0
+  qts: 0.96
   qes: 1.43
   qms: 2.88
   vas_liters: null
