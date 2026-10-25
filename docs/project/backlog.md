@@ -305,6 +305,11 @@ Next free: F-369, US-173, D-069, T66.
   profile system-3, boot_id 1531f01f-e66f-4f6f-9b15-a5e9c362ee10.
   Deploy 08:49:41-08:50:05Z, warm reboot 08:51:50Z, PW restart
   08:56:26Z.
+  - QE wording (agreed, verbatim): "AC13: PASS (132997f9,
+    CM-DEP-.89-2). Warm reboot + PW restart accepted. RT setup is
+    applied fresh at every PW start (AE A1, PO accepted, QE agrees).
+    T48 power cycle: PW `ps -L` recorded once as a confirmation, not
+    a gate." There is no cold-boot leg.
   - **AC13 PASS** at 132997f9 (AE; PO record): main thread and
     data-loop.0 at FF/88 after the reboot AND after the announced PW
     restart; one module-rt (A1b); RTTIME 200000/200000; no RTKit;
@@ -321,7 +326,8 @@ Next free: F-369, US-173, D-069, T66.
   - **AC14 PASS**: 16/16 gain values (8 linear x Mult/Add), all 0.
     The earlier "24" = 8 linear x (Control, Mult, Add); Control
     doesn't affect audio. AC14 count corrected to 16 (PO, AE). Future
-    evidence wording: "N enumerated, 16 gain-relevant" (AE).
+    evidence wording: "N enumerated, 16 gain-relevant" (AE). QE
+    accepts 16/16 with that wording.
   - AE: the no-amps/HP/IEM condition tied to AC13 is LIFTED from the
     RT side. Any amps-on/HP/IEM use of the Pi 5 still needs the
     owner's explicit re-confirmation plus the S-012/safety.md
@@ -340,8 +346,9 @@ Next free: F-369, US-173, D-069, T66.
     nkifli3r + x83m7bir; p9mz... was pruned. The PR text and recovery
     notes use gens/x83m7bircd4b7j8wchx9k1mnilzi8kl4/ as the fallback
     generation; drop any p9mz line. Pre-PR batch.
-  - F2 (pcm-bridge/level-bridge nodes after PW restart): P1, see P1;
-    the US-163 PR mentions it as observed.
+  - F2 (pcm-bridge/level-bridge nodes after PW restart): P1, see P1.
+    The US-163 PR lists F2 as an OPEN AMPS-ON PRECONDITION, not only
+    as observed (team-lead, CM).
   - US-163 status after deploy 2: the F-358 fix and the F-367 guard
     f87c162b are approved, deployed together (132997f9) and PASS.
     PASS on deploy 2 (QE): AC13 (closed), T49, T51. Still open: T48
@@ -462,10 +469,11 @@ Next free: F-369, US-173, D-069, T66.
   (PartOf=/BindsTo=pipewire.service or reconnect logic), verified by
   an announced PW restart with 12/12 nodes and live levels; or (b)
   defence in depth: the web UI shows meters as STALE/disconnected,
-  not zero, when a bridge has no PW node. INTERIM RULE: after any PW
-  restart, restart both bridges and confirm live meters before amps
-  on. Pre-existing; does not block US-163; the US-163 PR mentions it
-  as observed. Related to F-090 (resolved; links lost on restart),
+  not zero, when a bridge has no PW node. INTERIM RULE: after ANY PW
+  restart (including one after an RTTIME kill), restart both bridges
+  and confirm live meters before amps on. Pre-existing; does not
+  block US-163; the US-163 PR lists it as an OPEN AMPS-ON
+  PRECONDITION. Related to F-090 (resolved; links lost on restart),
   but this is the nodes. (CM, deploy-2 finding F2)
   UX design for (b) (UX; attached, no active work):
   1. Source of truth is the backend: the bridge or GM reports per
