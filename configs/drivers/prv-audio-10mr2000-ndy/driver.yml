@@ -21,7 +21,7 @@ metadata:
   datasheet_file: 10MR2000-NDY-Datasheet.pdf
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: 'F-363: datasheet-inconsistent. https://doc.soundimports.nl/pdf/brands/PRV%20Audio/10MR2000-NDY/10MR2000-NDY-Datasheet.pdf (Rev 01/20) prints Qts 0.21, Qes 0.21, Qms 1.54 (Qts = Qes is impossible), retrieved 2026-10-25. Values kept as printed. mms_g 39.33 -> 59.33 (transcription error) per the same sheet.'
+  ts_measurement_notes: 'F-363: datasheet-inconsistent. https://doc.soundimports.nl/pdf/brands/PRV%20Audio/10MR2000-NDY/10MR2000-NDY-Datasheet.pdf (Rev 01/20) prints Qts 0.21, Qes 0.21, Qms 1.54 (Qts = Qes is impossible), retrieved 2026-10-25. Values kept as printed. mms_g 39.33 -> 59.33 (transcription error) per the same sheet. xmax_mm 5.0 -> 7.15: sheet prints ''Excursion (mathematical) Xmax 7.15 mm'' (overhang geometry, footnote: (winding depth - gap depth)/2 + gap depth/4, not a measured linear limit); the source of 5.0 is unknown; our hypothesis: (18.8 - 9.0)/2 = 4.9, the plain overhang figure, rounded.'
   ts_consistency: datasheet-inconsistent
   notes: Scraped from soundimports.eu.
   quantity_owned: null
@@ -37,7 +37,7 @@ thiele_small:
   qms: 1.54
   vas_liters: 27.98
   cms_m_per_n: null
-  xmax_mm: 5.0
+  xmax_mm: 7.15
   xmech_mm: null
   le_mh: 0.5
   bl_tm: 21.73

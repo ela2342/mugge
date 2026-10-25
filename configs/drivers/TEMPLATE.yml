@@ -40,7 +40,8 @@ metadata:
   ts_measurement_notes: ""
   # ts_consistency: datasheet-inconsistent | unverifiable
   #   Optional. Set ONLY when the stored Qts/Qes/Qms triple fails the 10%
-  #   consistency check and cannot be corrected:
+  #   consistency check, or a Q value is outside the plausibility bounds
+  #   (unverifiable only), and cannot be corrected:
   #     datasheet-inconsistent  the manufacturer datasheet itself prints
   #                             the triple. Store it exactly as printed and
   #                             quote it with source and revision in

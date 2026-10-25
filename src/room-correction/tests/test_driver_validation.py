@@ -680,6 +680,48 @@ TS_CONSISTENCY_EXEMPTIONS = {
 }
 
 
+# Plausibility bounds on the Q values, as (lower, upper), inclusive (F-363).
+# AE-set: widening or removing a bound needs an Audio Engineer review.
+# Scraped comma decimals ("6,54" read as 654) can produce a record that
+# passes the Qts consistency check, because Qts ~ Qes when Qms is huge;
+# a 100x error downward is just as wrong. A real record outside these
+# bounds needs an entry in TS_PLAUSIBILITY_ALLOWLIST, never a wider bound.
+# Independently of the bounds, every Q must be > 0 (no allowlist).
+TS_PLAUSIBILITY_BOUNDS = {
+    "qts": (0.1, 5.0),
+    "qes": (0.1, 10.0),
+    "qms": (0.5, 50.0),
+}
+
+# Records with a real Q value outside its bounds, as
+# {record_id: {"field": name, "value": stored value, "quote": source}}.
+# quote None means the value could not be sourced; such a record must
+# carry ts_consistency: unverifiable, which keeps it out of the safety math.
+TS_PLAUSIBILITY_ALLOWLIST = {
+    "factory-buyouts-42-41716g-001": {
+        "field": "qes",
+        "value": 22.17,
+        "quote": None,
+    },
+    "tang-band-w1-2361s": {
+        "field": "qms",
+        "value": 0.35,
+        "quote": None,
+    },
+    "visaton-g-50-ffl": {
+        "field": "qms",
+        "value": 0.48,
+        "quote": None,
+    },
+    "visaton-gs-20-sc": {
+        "field": "qms",
+        "value": 0.36,
+        "quote": "visaton.de G 20 SC 8 Ohm: Mechanical Q factor Qms 0.36, "
+        "Electrical Q factor Qes 1.34, Total Q factor Qts 0.28",
+    },
+}
+
+
 class TestRealDriverRecords:
     """Validate every real driver record in the project's configs/drivers/.
 
@@ -745,7 +787,13 @@ class TestRealDriverRecords:
             record_id: exemption["mark"]
             for record_id, exemption in TS_CONSISTENCY_EXEMPTIONS.items()
         }
-        assert marked == exempt
+        unsourced = {
+            record_id: "unverifiable"
+            for record_id, allowed in TS_PLAUSIBILITY_ALLOWLIST.items()
+            if allowed["quote"] is None
+        }
+        assert not exempt.keys() & unsourced.keys()
+        assert marked == {**exempt, **unsourced}
         for record_id, exemption in TS_CONSISTENCY_EXEMPTIONS.items():
             if exemption["mark"] == "datasheet-inconsistent":
                 assert exemption["quote"], f"{record_id}: quote required"
@@ -780,6 +828,44 @@ class TestRealDriverRecords:
                 if record_id in text
             ]
         assert not references, "\n".join(references)
+
+    def test_ts_values_plausible(self, results):
+        """Every Q is > 0 and within its bounds, except allowlisted ones."""
+        violations = []
+        for record_id, result in sorted(results.items()):
+            with open(result.driver_path) as f:
+                ts = yaml.safe_load(f).get("thiele_small") or {}
+            for field, (lower, upper) in TS_PLAUSIBILITY_BOUNDS.items():
+                value = ts.get(field)
+                if value is None:
+                    continue
+                if value <= 0:
+                    violations.append(f"{record_id}: {field}={value} <= 0")
+                    continue
+                if lower <= value <= upper:
+                    continue
+                allowed = TS_PLAUSIBILITY_ALLOWLIST.get(record_id)
+                if allowed and (allowed["field"], allowed["value"]) == (field, value):
+                    continue
+                violations.append(
+                    f"{record_id}: {field}={value} outside [{lower}, {upper}]"
+                )
+        assert not violations, "\n".join(violations)
+
+    def test_plausibility_allowlist_is_current(self, results):
+        """Each allowlist entry still matches an out-of-bound stored value."""
+        for record_id, allowed in sorted(TS_PLAUSIBILITY_ALLOWLIST.items()):
+            quote = allowed["quote"]
+            assert quote is None or quote.strip(), f"{record_id}: empty quote"
+            assert record_id in results, f"{record_id} has no driver record"
+            with open(results[record_id].driver_path) as f:
+                ts = yaml.safe_load(f)["thiele_small"]
+            assert ts[allowed["field"]] == allowed["value"], record_id
+            lower, upper = TS_PLAUSIBILITY_BOUNDS[allowed["field"]]
+            assert not lower <= allowed["value"] <= upper, (
+                f"{record_id}: {allowed['field']}={allowed['value']} is within "
+                "bounds, remove the allowlist entry"
+            )
 
     def test_template_is_not_validated(self):
         """TEMPLATE.yml is not inside a {id}/ directory, so it shouldn't be picked up."""
