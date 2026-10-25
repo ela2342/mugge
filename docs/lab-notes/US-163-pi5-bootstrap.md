@@ -344,3 +344,27 @@ method rewrites `gens/x83…/` from the store if a rollback to it is needed.
 - T54 reboots were warm (`systemd-run --on-active=2 systemctl reboot`),
   each announced to the change-manager first; nothing connected to any Pi
   output.
+
+---
+
+## Task AC17 Session B: USBStreamer re-enumeration (CM-CHG-.89-5)
+
+**Date:** 2026-10-25 13:45Z onward
+**Operator:** Claude (worker-1, under change-manager session CM-CHG-.89-5)
+**Host:** mugge (Pi 5), booted `2wf21ydgfyqsz35iqy5hfjlyp37jrsqn` (boot_id `eeddb8b6…`)
+
+Step (a), software re-enumeration (USBStreamer `authorized` 0 then 1), is
+done. Step (b), the owner's physical replug, is pending. Results go in this
+section once the AE has ruled on step (a).
+
+### Deviations from Plan
+
+- **No GC roots for the AC17 tools.** The `libpi` step copied
+  `libraspberrypi` (`vcgencmd`) and `alsa-utils` (`amixer`) from
+  cache.nixos.org to the Pi (rc 0). Both `nix-store --add-root` calls under
+  `/nix/var/nix/gcroots/per-user/ela/` failed (rc 1, "Permission denied"):
+  NixOS does not create per-user gcroots directories, and `ela` cannot
+  create one under `/nix/var/nix/gcroots/per-user/`. CM ruling: no new
+  roots. The paths are read-only tools, the Pi has no GC timer and nobody
+  runs GC by hand; if they are ever collected, a new `nix copy` restores
+  them. The planned `unroot` step is dropped.
