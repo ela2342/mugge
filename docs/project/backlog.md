@@ -61,6 +61,20 @@ Next free: F-369, US-173, D-069, T66.
     on the Pi 5 (AC13 PASS at 132997f9), so it is not listed next to
     F-037; the fallback did not apply (PO, 2026-10-25).
   - AC21: drop the allowlist runbook part.
+  - AC21 (amended, PO ruling (a), verbatim): "the D-022 part
+    (hardware V3D GL) is NOT confirmable on the Pi 5 in US-163,
+    because there's no DRM device (/dev/dri missing despite
+    dtoverlay=vc4-kms-v3d-pi5,noaudio, F-367). It's deferred to
+    US-172. Recorded in US-163: 'not confirmable, F-367', with the
+    evidence (ls /dev/dri, deploy nkifli3r / boot 45ebdf64). Any
+    other parts of AC21 stay as written and are verified as usual."
+    Architect concurs; the merge does not depend on D-022 (the audio
+    path has no GPU dependency). Record: D-013 re-confirmed on the
+    Pi 5 (PREEMPT_RT, AC13 PASS); D-022 NOT re-confirmed on the Pi 5,
+    deferred to US-172; the decision record must not say "confirmed"
+    for the Pi 5; D-022 on the Pi 4 unchanged (unverified, US-170).
+    US-163 PR: known deviation, next to the overlay item (same root
+    cause). Status RE-SCOPED (PO).
   - T53: negative case is "5900 refused (v4 and v6)".
   - The allowlist fail-closed + IPv6 AC moves to the backlog with F-037.
 - T57: builder Nix pinned to 2.34.9 (2.34.8 has five Nix advisories of
@@ -268,6 +282,10 @@ Next free: F-369, US-173, D-069, T66.
     restart-looping; the display stack is disabled or guarded on this
     image while no DRM device exists; checked before Gate 2. A working
     display is NOT a US-163 AC.
+    Re-confirmed on the deploy (QE, T54 step 4, nkifli3r / boot
+    45ebdf64): /dev/dri absent despite dtoverlay=vc4-kms-v3d-pi5,
+    noaudio; greetd condition-skipped, no labwc, no hardware GL for
+    Mixxx (D-022; AC21 re-scoped, see the US-163 text updates).
   - AC12 FAIL as originally written (8in/8out, QE): PipeWire has no
     USBStreamer capture node although ALSA pcmC1D0c exists;
     level-bridge-hw-in is unlinked (existing **F-328** + **F-319**).
@@ -385,33 +403,42 @@ Next free: F-369, US-173, D-069, T66.
     configurationRevision; (c) QE ACCEPTS the T54 evidence before
     AC18b (AC18b prunes x83); (d) if the head moves: docs-only + diff
     recorded keeps AC18b/AC17 valid; any non-docs change reruns both.
-    Status (CM): CM-DEP-.89-T54 granted to worker-1, starts after
-    CM-OBS-.89-T53 ends; three announced reboots.
-    1. OPEN (CM-OBS-.89-T53): T53-on-deploy, ONE read-only OBSERVE
-       on the running deploy. NO external port scan (owner directive,
-       see the test-process rule below); the running nmap scans were
-       stopped. Checks: host key a5kILUyr + MAC (PASS); `sudo sshd -T`:
-       permitrootlogin, passwordauthentication,
+    Status (CM, 2026-10-25): T53 PASS, T54 ACCEPTED; AC18a is next.
+    1. PASS (QE + SecSpec; CM-OBS-.89-T53, T53b, T53c): T53-on-deploy,
+       ONE read-only OBSERVE on the running deploy. NO external port
+       scan (owner directive, see the test-process rule below); the
+       running nmap scans were stopped. Checks: host key a5kILUyr + MAC
+       (PASS); `sudo sshd -T`: permitrootlogin, passwordauthentication,
        kbdinteractiveauthentication all no (PASS); no root
        authorized_keys; listener clause (QE + SecSpec joint, replaces
-       all earlier wording): "Evidence: on-device `sudo ss -ltnup`
-       (bind addresses shown) plus `sudo nft list ruleset`.
-       Non-loopback TCP listeners are exactly 22 and 8080, each
-       REQUIRED on the v4 wildcard 0.0.0.0. The v6 wildcard [::] is
-       allowed for either but not required. 4001, 4002 and 9100
-       listen on 127.0.0.1 only. Nothing on 5900. Non-loopback UDP is
-       limited to 5353 (avahi) and DHCP client sockets. Any other
-       listener, or an expected one on an unexpected address, gets a
-       per-line disposition, or T53 FAILS." AC15 services up, GM gate
-       CLOSED; 8080 HTTPS reachable from the Mac.
-       The 8080 allowlist pos/neg test is moot (QE): AC10/AC15
-       amendment from the owner ruling, F-037 known risk; PO words it.
-       SecSpec's public-IPv6 point (two global SLAAC addresses on
-       end0, one EUI-64) is answered by the on-device bind addresses;
-       the rest goes to backlog (P2 router inbound-v6 item). Not an
-       owner question (owner). SecSpec reviews the raw output under
-       Rule 13. T54 starts once T53 closes.
-    2. OPEN: T54 rollback, mandatory, no re-scope (PO). Method
+       all earlier wording): "Evidence: on-device `sudo ss -ltnup` (bind
+       addresses shown) plus `sudo nft list ruleset`. Non-loopback TCP
+       listeners are exactly 22 and 8080, each REQUIRED on the v4
+       wildcard 0.0.0.0. The v6 wildcard [::] is allowed for either but
+       not required. 4001, 4002 and 9100 listen on 127.0.0.1 only.
+       Nothing on 5900. Non-loopback UDP is limited to 5353 (avahi) and
+       DHCP client sockets. Any other listener, or an expected one on an
+       unexpected address, gets a per-line disposition, or T53 FAILS."
+       QE amendment for future checks: "Loopback-only listeners from
+       known units are benign; list them." AC15 services up, GM gate
+       CLOSED; 8080 HTTPS reachable from the Mac. Result: SecSpec
+       ACCEPTED all listener dispositions (LLMNR 5355 and avahi
+       ephemeral sockets dropped by nft; loopback extras benign).
+       SecSpec gap read CM-OBS-.89-T53b: no root entry in
+       /etc/ssh/authorized_keys.d, 8080 owner non-root with its unit
+       name recorded, host-key pin line logged. The 8080 allowlist
+       pos/neg test is moot (QE): AC10/AC15 amendment from the owner
+       ruling, F-037 known risk; PO words it. SecSpec's public-IPv6
+       point (two global SLAAC addresses on end0, one EUI-64) is
+       answered by the on-device bind addresses; the rest goes to
+       backlog (P2 router inbound-v6 item). Not an owner question
+       (owner). SecSpec reviews the raw output under Rule 13. T54 starts
+       once T53 closes.
+    2. ACCEPTED (QE): T54 rollback round trip done 12:34-12:41Z; back
+       on nkifli3r, boot 45ebdf64, MAP unchanged. AE undervoltage
+       condition met by T53c: 0 hits on all 3 boots; rpi_volt =
+       hwmon1, in0_lcrit_alarm 0. T54 was mandatory, no re-scope
+       (PO). Method
        (Architect, safe now): (0) gens/MAP.txt shows "2 x83m7bir...
        present" and "3 nkifli3r... present", config.txt -> nkifli3r;
        (1) `nix-env -p /nix/var/nix/profiles/system
@@ -453,10 +480,18 @@ Next free: F-369, US-173, D-069, T66.
        vcgencmd on the image. (1) OBSERVE once, before the power
        cycles: /proc/config.gz grep SENSORS_RASPBERRYPI_HWMON and
        BCM_VCIO; `ls -l /dev/vcio`; hwmon names. (2) If /dev/vcio
-       exists: ONE CHANGE before the first power cycle fetches
+       exists: ONE CHANGE before the first power cycle copies
        libraspberrypi into the Pi store once (store add only, no
-       config or service change, not the audio path; CM sets the
-       tier); each boot runs `sudo vcgencmd get_throttled` from that
+       config or service change, not the audio path). CM tier
+       ruling: CHANGE (it modifies state). Conditions: `nix copy --to
+       ssh://ela@192.168.178.89` from the Mac with the pinned
+       known_hosts; no build or nix shell eval on the Pi; nixpkgs
+       revision = the deployed flake.lock; record the store path and
+       add a GC root on the Pi (`nix-store --add-root` under the
+       user's gcroots) so it survives both cycles; removal after
+       AC17 is part of the same CHANGE. The CM schedules (1) and (2)
+       after AC18b, right before the owner request, and grants both.
+       Each boot runs `sudo vcgencmd get_throttled` from that
        same store path; PASS = 0x0; record the store path and that no
        GC ran between the boots. (3) Else: rpi_volt in0_lcrit_alarm =
        0, no Undervoltage/throttl kernel-log lines (per-line
@@ -528,27 +563,31 @@ Next free: F-369, US-173, D-069, T66.
     fan config fix is needed (the disabled cooling_fan node is
     correct; Architect: nothing to fix). Reference: deploy 2 max
     66.65 C.
-  - THERMAL RULE (AE + Architect; re-worded 2026-10-25, replaces
-    v62's "cpu0 scaling_cur_freq" wording) for every Pi 5 load run.
+  - THERMAL RULE (AE + Architect; re-worded 2026-10-25, replaces v62's
+    "cpu0 scaling_cur_freq" wording) for every Pi 5 load run.
     Precondition (read-only): scaling_governor = performance on all
-    cores (production default, rt-tuning.nix:33, F-291); a mismatch
-    is a finding, a deploy defect; nobody sets it by hand (AE). Live
+    cores (production default, rt-tuning.nix:33, F-291); a mismatch is a
+    finding, a deploy defect; nobody sets it by hand (AE). Live
     evidence: postboot-T48-50-link-798f2dc7, cpu0 performance
     2400000/2400000 at idle (AE). Sample every 10 s: thermal_zone0, cpu0
     cpuinfo_cur_freq (root; actual clock from firmware, not
     scaling_cur_freq), every cpufreq cooling_device cur_state, the
-    rpi_volt undervoltage alarm. worker-1 confirms on the Pi that
+    rpi_volt undervoltage alarm (path found in T53c:
+    /sys/class/hwmon/hwmon1/in0_lcrit_alarm; match on name rpi_volt, the
+    hwmon index can change). The sampler runs as root (sudo):
+    cpuinfo_cur_freq is root-readable only (worker-1). OPEN (T54): the
+    sampler did not match a cpufreq cooling_device; the AE decides
+    whether it is fixed before AC18b. worker-1 confirms on the Pi that
     cpuinfo_cur_freq and scaling_cur_freq agree at idle. WARN at
     >= 75 C: report to the owner via team-lead, keep running. STOP at
-    >= 80 C (Pi 5 firmware throttle onset; full throttle at 85 C).
-    The run's CPU/xrun evidence is INVALID, and the run is repeated,
-    if at any sample: any cooling_device cur_state != 0; the
-    undervoltage alarm is set; or cpuinfo_cur_freq <
-    cpuinfo_max_freq (AE: the firmware can cap the clock at the soft
-    limit without a Linux cooling_device showing it). Invalidation is
-    a finding, not a STOP (Architect). No builds on the Pi; all
-    builds stay on the Mac VM (Architect). Gig cooling: see the P1
-    Pi 5 thermal soak item.
+    >= 80 C (Pi 5 firmware throttle onset; full throttle at 85 C). The
+    run's CPU/xrun evidence is INVALID, and the run is repeated, if at
+    any sample: any cooling_device cur_state != 0; the undervoltage
+    alarm is set; or cpuinfo_cur_freq < cpuinfo_max_freq (AE: the
+    firmware can cap the clock at the soft limit without a Linux
+    cooling_device showing it). Invalidation is a finding, not a STOP
+    (Architect). No builds on the Pi; all builds stay on the Mac VM
+    (Architect). Gig cooling: see the P1 Pi 5 thermal soak item.
   - QE request: commit a SecSpec-vetted subset of the deploy evidence
     into the US-163 PR.
 - 2026-10-24 20:28:03: Pi 5 restart CONFIRMED as the owner's power
@@ -691,6 +730,17 @@ Next free: F-369, US-173, D-069, T66.
   08:34:52Z). The Architect cancelled the overlay diagnosis for
   US-163; it is the US-172 starting point.
   US-172 scope extensions:
+  - (PO, new AC) "D-022 re-confirmed on the Pi 5: /dev/dri/card*
+    present, labwc/greetd running, Mixxx with hardware GL (no
+    llvmpipe)."
+  - (Architect) /dev/dri root cause: likely F-367 (no overlay applied,
+    so the GPU nodes are not okay and the modules have nothing to
+    bind), not yet shown on nkifli3r. One OBSERVE via the CM: status
+    and compatible of the v3d and vc4 (hvs/hdmi/kms) nodes under
+    /proc/device-tree, plus lsmod | grep -E 'v3d|vc4'. Disabled or
+    absent: covered by F-367. Okay but modules not loaded: a separate
+    F-item (autoload/blacklist) under US-172. Filing only, not
+    merge-relevant.
   - (PO) "dtoverlays are applied on the Pi 5 (vc4-kms-v3d-pi5,
     disable-bt-pi5); verified via the live device tree."
   - (Architect + SecSpec) board-guard checks on config.txt content
@@ -771,7 +821,12 @@ Next free: F-369, US-173, D-069, T66.
 - Pi 5 public IPv6 (SecSpec; left open after the on-device check):
   end0 has two global SLAAC addresses, one EUI-64 (MAC-derived).
   Check the router's inbound-v6 policy and consider privacy
-  addresses. Not an owner question; not US-163. Low.
+  addresses. Not an owner question; not US-163. Low. CM (T53): no
+  stable-privacy addressing in use; options are stable-privacy
+  addresses or disabling IPv6.
+- Web UI listens on IPv4 only (web-ui.nix `--host 0.0.0.0`), so 8080
+  is not reachable over IPv6 (CM, T53). Decide whether IPv6 listening
+  is wanted. T53 passes either way ([::] optional). Not US-163. Low.
 - .89 docs batch (CM): the flake.nix comment on mugge-pi5-deploy still
   says "built natively on the Pi ... nixos-rebuild switch"; the real
   route is the Mac `nixos-rebuild boot --no-reexec`. Low.
@@ -874,7 +929,8 @@ Next free: F-369, US-173, D-069, T66.
   SecSpec; T48 after first boot shows whether present); optionally in
   the installer too (worker-1). Confirmed on first boot: LLMNR on 5355
   (firewalled); avahi also warns about a second mDNS stack (resolved +
-  avahi) -- pick one.
+  avahi) -- pick one. Seen again in T53 on the deploy: 5355 listens,
+  nft drops it (SecSpec accepted the disposition). No new item.
 - systemd RebootWatchdogUSec=10min (default) arms the watchdog during
   reboots. Does O-24 cover it? Architect/AE to rule. P3 (worker-1).
 - sshd AllowAgentForwarding yes (default) on the Pi 5. LOW, SecSpec to
