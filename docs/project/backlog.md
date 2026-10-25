@@ -638,6 +638,14 @@ Next free: F-374, US-173, D-070, T66.
       (c)"; AC17 adds the AE ps -L check after each cold boot. Index
       rows unchanged. MANIFEST.txt sha e40664ca...; v4 kept as
       MANIFEST-v4-superseded.txt. Other 24 files unchanged from v4.
+    - B3 v6 (PM, 2026-10-25; supersedes v5): F-373.md only. AC5 is
+      the AE's verbatim safety shape (any recovery route; gains 0
+      and gate closed when audio can flow; deliberate ramp; meters
+      recover; no abrupt resume), replacing v5's "recovery shape".
+      PW + bridge restart is recorded as the current interim
+      recovery procedure, not the fix. MANIFEST.txt sha
+      ff0687e9...; v5 kept as MANIFEST-v5-superseded.txt. Other 25
+      files unchanged from v5.
     - AE: the USBStreamer is bus-powered on root port 1-1. Each cold
       cycle records bmAttributes (expected 0x80) and bMaxPower.
     - AD APPROVE is comment 6398339160 (CM). AD M2 precise: the
@@ -1337,10 +1345,17 @@ Next free: F-374, US-173, D-070, T66.
   replug with the AE's step-(b) read set, before and after: the node
   list (new nodes), the USB devnum, the kernel log, spa.alsa errors,
   the gains, the gate state and the hw mixer. Re-open trigger as in
-  the AC17 Session B entry. AMPS-ON items 8 and 13. Data point (AE,
-  AC17-B step (c)): a PW restart plus a bridge restart recovers the
-  zombie sink with the 16 gains at exactly 0 and the gate closed
-  (D-063 fail-safe). The fix must keep that recovery shape.
+  the AC17 Session B entry. AMPS-ON items 8 and 13. Current interim
+  recovery procedure (AE; verified in AC17-B step (c), 5aad9083): a
+  PW restart plus a bridge restart recovers the zombie sink with the
+  16 gains at exactly 0 and the gate closed. That is today's manual
+  workaround, not the fix. AC (AE, verbatim; the safety shape, not
+  the mechanism): "After a USBStreamer re-enumeration (software and
+  physical replug), the sink recovers by whatever route the fix
+  chooses. At the moment audio can flow again, all 16 gains are
+  exactly 0 and the gate is closed (D-063); levels return only
+  through a deliberate gate open/ramp. Meters recover (F2). There is
+  never an abrupt resume at the previous gain."
 - **F-372** (SecSpec, MEDIUM; amps-on/gig blocker class next to
   F-037): the S-001 fix is weak. filter_routes.py:545 tests
   abspath(output_dir).startswith(abspath(DEFAULT_OUTPUT_DIR)), a
