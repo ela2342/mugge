@@ -16,7 +16,7 @@ Declared in project config.md as `State directory`. Typically `docs/project/`.
 | `user-stories.md` | Stories with AC, DoD, dependencies | Project Manager | — |
 | `defects.md` | Defect log with severity, status, linked story | Project Manager | Orchestrator (session-end) |
 
-Formats follow `~/mobile/gabriela-bogk/team-protocol/project-state/format.md`.
+Formats follow `.claude/team/protocol/state-format.md`.
 
 ## Story Selection
 
