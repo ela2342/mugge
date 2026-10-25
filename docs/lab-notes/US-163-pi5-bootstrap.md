@@ -270,7 +270,7 @@ Listener evidence is on-device `ss`, not an external scan (owner, 2026-10-25).
 | T54 after return | T51, AC14, check #10, AC13/T49 | current = booted = profile = nkifli3r; 16 gain-relevant values exactly 0 (pw-dump); PW FF 88, one module-rt, RTTIME 200000/200000, NRestarts 0, no failed units | PASS (QE) |
 | T54 thermal | < 80 °C, no throttling | max 66.1 °C; `cpuinfo_cur_freq` = max (2.4 GHz) on all 31 samples; governor performance; cooling_device not sampled | PASS |
 | AC1a: Pi 4 drvPath | only `05-rt-direct.conf` or configurationRevision differs from main | `nixosConfigurations.mugge`: origin/main `289390bf` and `c34f7da7` both `8nv9psc1mf8da746cxginj021jjs8a5a`; branch `bbff469e` `j2ykkiilld1pfkchxbgrqyqwigrkkd14`; nix-diff: only `pi4audio-pipewire-configs` gains `05-rt-direct.conf` | PASS (criterion met) |
-| AC18a: no-op boot | clean checkout at `132997f9`, `nixos-rebuild boot --no-reexec` | rc 0; toplevel unchanged (nkifli3r, 0 paths copied); no new profile generation (still system-3); os_prefix unchanged; FAT pruned to {new, prev, booted}; MAP.txt updated (`2 x83… pruned`) | PASS (Architect; QE pending) |
+| AC18a: no-op boot | clean checkout at `132997f9`, `nixos-rebuild boot --no-reexec` | rc 0; toplevel unchanged (nkifli3r, 0 paths copied); no new profile generation (still system-3); os_prefix unchanged; FAT pruned to {new, prev, booted} by the pre-AC2a hook; MAP.txt updated (`2 x83… pruned`) | PASS (Architect; QE pending) |
 
 **T53 dispositions:**
 
@@ -286,7 +286,17 @@ The pattern is case-insensitive and covers "Undervoltage detected" and
 
 ### FAT generations
 
-A no-op deploy (new = previous = booted) leaves exactly one FAT generation (by design; it is the booted one). The FAT never holds more than {new, previous, booted}.
+The FAT keeps new, previous, booted and the newest other complete generation, so ≥2 generations remain whenever ≥2 exist.
+
+This is the AC2a rule (PO ruling after AC18a). The hook that ran in AC18a
+kept only {new, previous, booted}, so a no-op deploy (new = previous =
+booted) left exactly one FAT generation. The fix is in
+`nix/nixos/boards/pi5/prune-gens.nix`. The "newest other" generation is
+the highest-numbered `system-N-link` whose id differs from the new one and
+whose `gens/<id>/.complete` exists. The prune only ever keeps directories,
+it never recreates them, so `gens/x83…/` stays pruned until a deploy
+writes it again. The offline check `checks.<system>.pi5-prune-gens` runs
+the same script against fake directories.
 
 After AC18a the firmware partition holds only `gens/nkifli3rxayxxmrndqw3a3ic0jj5fix8/`:
 

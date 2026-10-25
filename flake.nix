@@ -336,6 +336,9 @@
             cachedKernel = (import nixpkgs { system = "aarch64-linux"; }).linuxPackages_rpi4.kernel;
           };
 
+          # US-163 AC2a: offline test of the Pi 5 FAT generation prune.
+          pi5-prune-gens = import ./nix/checks/pi5-prune-gens.nix { inherit pkgs; };
+
           test-web-ui = pkgs.runCommand "test-web-ui" {
             nativeBuildInputs = [ testPython ];
             PI_AUDIO_MOCK = "1";
