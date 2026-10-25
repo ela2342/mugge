@@ -5,6 +5,7 @@ _generate_channel_crossover, and generate_profile_filters for
 2-way (regression), 3-way, and 4-way topologies.
 """
 
+import copy
 import os
 import sys
 import tempfile
@@ -15,6 +16,7 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from room_correction import dsp_utils
 from room_correction.combine import combine_filters
+from room_correction.verify import load_filter
 from room_correction.generate_profile_filters import (
     COMBINE_MARGIN_DB,
     _generate_channel_crossover,
@@ -677,6 +679,66 @@ class TestCrossoverTypePassThrough(unittest.TestCase):
         for edge in (300.0, 2000.0):
             level = 20 * np.log10(mag[np.argmin(np.abs(freqs - edge))])
             self.assertAlmostEqual(level, -6.0, delta=0.5)
+
+
+
+# ---------------------------------------------------------------------------
+# Real markaudio-ultimax profile: D-031 protection present (F-374 / F-385)
+# ---------------------------------------------------------------------------
+
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+MARKAUDIO_PROFILE = os.path.join(
+    REPO_ROOT, "configs", "speakers", "profiles", "2way-200hz-markaudio-ultimax.yml")
+PROTECTION_MIN_CUT_DB = 18.0
+
+
+def _load_profile_with_identities(path):
+    import yaml
+    from room_correction.speaker_sim import load_identity
+
+    with open(path) as f:
+        profile = yaml.safe_load(f)
+    identities = {
+        spk["identity"]: load_identity(spk["identity"])
+        for spk in profile["speakers"].values()
+    }
+    return profile, identities
+
+
+def _exported_sat(profile, identities, directory):
+    generate_profile_filters(profile, identities, output_dir=directory)
+    data, _ = load_filter(os.path.join(directory, "combined_sat_left.wav"))
+    return data
+
+
+class TestMarkaudioProtectionPresent(unittest.TestCase):
+    """The sat leg keeps its mandatory subsonic HPF (D-031).
+
+    The HPF costs crossover phase at 200 Hz (F-385).  This test guards
+    against "fixing" that by dropping the protection; it deliberately
+    asserts nothing about phase or sum.
+    """
+
+    def test_sat_subsonic_cuts_one_octave_below_corner(self):
+        profile, identities = _load_profile_with_identities(MARKAUDIO_PROFILE)
+        sat_identity = profile["speakers"]["sat_left"]["identity"]
+        hpf_hz = identities[sat_identity].get("mandatory_hpf_hz")
+        self.assertIsNotNone(hpf_hz)
+
+        unprotected = copy.deepcopy(identities)
+        unprotected[sat_identity]["mandatory_hpf_hz"] = None
+        with tempfile.TemporaryDirectory() as d:
+            protected_sat = _exported_sat(profile, identities, d)
+        with tempfile.TemporaryDirectory() as d:
+            unprotected_sat = _exported_sat(profile, unprotected, d)
+
+        n_fft = 1 << 17
+        freqs, protected_mag = dsp_utils.rfft_magnitude(protected_sat, n_fft=n_fft)
+        _, unprotected_mag = dsp_utils.rfft_magnitude(unprotected_sat, n_fft=n_fft)
+        i = np.argmin(np.abs(freqs - hpf_hz / 2))
+        cut_db = 20 * np.log10(unprotected_mag[i] / protected_mag[i])
+        print(f"markaudio sat protection at {freqs[i]:.1f} Hz: {cut_db:.2f} dB cut")
+        self.assertGreaterEqual(cut_db, PROTECTION_MIN_CUT_DB)
 
 
 if __name__ == "__main__":
