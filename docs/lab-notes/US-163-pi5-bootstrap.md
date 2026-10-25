@@ -486,3 +486,60 @@ louder, and the gate stayed closed.
   USBStreamer before PipeWire starts, so the cycles do not exercise the
   F-373 hot-replug path. That is scope, not a gap: hot replug stays with
   F-373.
+
+---
+
+## Task AC19: redeploy of merged main (CM-DEP-.89-AC19)
+
+**Date:** 2026-10-25, run from 19:47Z (reboot 19:54:29-19:54:47Z)
+**Operator:** Claude (worker-1, under change-manager session CM-DEP-.89-AC19)
+**Host:** mugge (Pi 5), from `2wf21ydg` (f0fbefd1) to `rcyg67wd` (main `07a65f9e`)
+
+Purpose: after #50 merged, deploy the merged main SHA and re-read the
+AC17 set against the AC17 (a) BEFORE values. A warm reboot is enough
+unless the nix-diff from `2wf21ydg` touches an AC19 cold-cycle trigger
+(boot chain, audio device path, audio startup, gain defaults, anything
+that sets the USBStreamer hw volume), or the EEPROM changed. Verdict: QE
+ACCEPTED, warm reboot sufficient. QE recomputed the sha256 of every
+evidence file and read each result in the files themselves.
+
+### Procedure
+
+- Deploy from the Mac with the D-069 deploy verb (`boot`, see
+  `docs/guide/howto/nixos-upgrade.md` §8.3): `switch-to-configuration boot`,
+  not `switch`, with the pinned known_hosts and `StrictHostKeyChecking=yes`.
+- One announced warm reboot.
+- The AC17/AC19 read set before (PRE) and after (POST) the reboot, and a
+  second service read at the 10-minute mark (same boot id).
+
+### Validation
+
+| Check | Expected | Actual | Pass/Fail |
+|-------|----------|--------|-----------|
+| Cold-cycle triggers | none touched | masked nix-diff `5fih61rg` (f0fbefd1) vs `113xl12f` (07a65f9e): one mismatching environment, `nixos-version` (`@configurationRevision@` and `@json@` only); the rest is the expected cascade (etc, dbus-1, system-path, system/user units, X-Restart-Triggers). Same shape vs 22370317 (`ydr9h4xi`); unmasked diffs show only the store-path cascade | PASS (warm) |
+| Other outputs | unchanged | Pi 4 drv `j2ykkiil`, `images.sd-card` `r4hqi43b`, both as in the #50 T3 | PASS |
+| Reboot and identity | new boot id; booted = main | `8c6239cb` → `ff87ced5`; booted = current = profile = `rcyg67wd`; configurationRevision `07a65f9e`; kernel 6.12.62 PREEMPT_RT; host key `a5kILUyr…`, MAC `88:a2:9e:8c:8d:4e` | PASS |
+| Boot generations | ≥2 complete incl. booted | `config.txt:16` `os_prefix=gens/rcyg67wd…/`; MAP 4 `2wf21ydg` and 5 `rcyg67wd` present, 1-3 pruned; both `.complete=yes`; no `*.tmp` dirs | PASS |
+| EEPROM | equal to DRM1 baseline | version `000d3ca2…`, timestamp 1756339608, config sha256 `916ce18a…`: all equal, so not a cold trigger | PASS |
+| Power | no throttling | `get_throttled=0x0`; no under-voltage lines in the kernel log | PASS |
+| HiFiBerry (AC12a) | no module, no card, no node | no hifiberry/pcm512 module loaded; 0 such PW objects; `/proc/asound/cards` lists only the APC mini mk2 and the USBStreamer | PASS |
+| Gains and gate (AC14) | 16 x 0, closed | all 16 Mult/Add 0; gate closed, no pending gains | PASS |
+| USBStreamer hw mixer | unchanged | `amixer` sha256 `29d42498…` in all three snapshots, as in AC17; hw volume still 0 dB, not a cold trigger | PASS |
+| PW graph vs AC17 (a) BEFORE | unchanged | nodes 12/12 and links 24/24, none gone or new; 32 USBStreamer link lines; sink running; PW volume and mute props unchanged; `spa_alsa` journal count 0 | PASS |
+| RT scheduling | FF 88; RTTIME 200000/200000 | `pipewire` and `data-loop.0` FF/88; RTTIME 200000/200000 | PASS |
+| USB power | as AC17 | `bMaxPower=500mA`, devnum 2 | PASS |
+| Services | no failed units, no restarts | no failed system or user units; all 9 audio user units active, NRestarts 0 at 10 min (uptime 0:10, same boot id); no system unit with restarts | PASS |
+| Thermal | < 75 °C, no throttling | peak 65.55 °C during the deploy, 66.1 °C at 10 min; 2.4 GHz of 2.4 GHz, `performance` governor; no undervoltage alarm; no cooling devices (passive case, valid) | PASS |
+| PRE / POST read sets | PASS | both PASS, 0 recovery findings | PASS |
+
+### Notes
+
+- **deploy-src git metadata (QE, non-blocking).** The eval stderr shows
+  "could not read HEAD ref … using 'master'" for the deploy-src export.
+  Harmless here because configurationRevision came out correct. If future
+  evidence relies on the export's git metadata beyond `self.rev`, the
+  export needs a real ref (backlog, PM).
+- Evidence: the `ac19-run-20261025T194712Z/` directory (17 files, 0600)
+  plus the `ac19-nixdiff-*`, `ac19-evals-pi4-sdcard-07a65f9e.txt` and
+  `ac19-drvpath-07a65f9e.txt` files in the operator's private evidence
+  directory.
