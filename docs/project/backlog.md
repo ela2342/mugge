@@ -735,6 +735,38 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       US-172.md, stories-index.md, status.md. The CM commits v8 last
       in the head move (worker-1: merge main 45593097 and TW
       9a7e9562, nix-diff proof, then B3 v8 and the lab notes).
+    - B3 v9 (PM, 2026-10-25; supersedes v8; v8's US-172 changes
+      kept): US-163 AC19 only. QE's EEPROM trigger rule replaces
+      "output sha recorded by the CM". Baseline: CM-OBS-.89-DRM1,
+      ~/mugge-pi5-prewipe-20261024/drm-observe-20261025T153439Z.txt
+      sha256
+      4d7b6864071ea88cc8b753a009336593a4f972ba7b310bdfc5af656e42e87cf6
+      (section 10; script 4c329c1f). Cold trigger (QE) if the
+      bootloader_version hash differs from
+      000d3ca289ae790a2e46225eb11b319c67642b1a,
+      or the timestamp differs from 1756339608, or the
+      bootloader_config sha256 differs from
+      916ce18ae8ae88dc5db54cb8cc50f493c51cdd59ae2a7ac2b6259ad9203940e1.
+      PM checked all three values against the file (lines 89, 90,
+      102). QE accepted the baseline as the AC19
+      reference. MANIFEST.txt sha 6bf75232...; v8 kept as
+      MANIFEST-v8-superseded.txt. The B3 commit uses v9.
+    - Head-move prep (CM): worker-1 done locally at 7e507948,
+      nothing pushed yet. nix-diff against 2wf21ydg shows only
+      configurationRevision; the Pi 4 is still j2ykkiil.
+    - CM-OBS-.89-DRM1 CLOSED 15:36:05Z, read-only. Outputs:
+      drm-observe 4d7b6864 (script 4c329c1f), s5 9868a2fc (script
+      2d67c46b), s1011 3fd2c3c3 (script ea07e490, identical to the
+      pre-approved text). Finding: all display DT nodes disabled;
+      the FAT root has no overlays/. Diagnosis with the Architect;
+      goes to US-172 unless the conditional ride-in applies.
+    - CONDITIONAL (PO; applies only if the Architect confirms the
+      bootloader.nix config.txt ordering bug BEFORE the head move and
+      the fix rides in; otherwise dropped): a US-163 /dev/dri AC with
+      greetd explicitly disabled and inactive (one line in
+      boards/pi5/default.nix), AC17 repeated at the new head (2 owner
+      cold cycles, one request), US-172 greetd AC becomes "ordered
+      after the DRM device and enabled". Not pre-written into B3.
     - AD APPROVE is comment 6398339160 (CM). AD M2 precise: the
       f0fbefd1 -> final diffstat is docs-only AND the
       mugge-pi5-deploy nix-diff shows only configurationRevision,
@@ -1799,6 +1831,16 @@ merge needs update-branch and 7 reconfirmations at the new head.
   with every test-* step run. Close the record after QE confirms
   AC1-AC6 (records follow-up, not in the #50 head move).
 - #50 US-163: open; see the US-163 section (PR #50 block).
+- STANDING OWNER PERMISSION (2026-10-25, verbatim via team-lead):
+  "Also, standing permission to merge if the team approves, without
+  my additional approval. Let's ensure you can make progress
+  autonomously." Once the CM's check is complete (all 7 Rule 13
+  approvals at the final head, CI T1-T3 green with real counts, main
+  protection respected, no --admin), the CM merges without owner
+  acceptance and reports the merge SHA to team-lead. Applies to #50.
+  NOT covered: direct pushes to main (including the local 95306f66),
+  release or tag dispatch, permission-system blocks. Vetoes and
+  safety rules are unchanged.
 - #43, #45, #44: need #49 on main and real green CI; #45 before #44.
 - #36, #40: no Rule 13 review; owner direction needed (#40 IDs clash).
 - chore/backlog (this file): no PR yet; docs-only.
