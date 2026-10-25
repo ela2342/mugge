@@ -289,6 +289,7 @@ system profile generation to return to (`ls -l /nix/var/nix/profiles/`):
 ```sh
 sudo nix-env --profile /nix/var/nix/profiles/system --switch-generation N
 sudo /nix/var/nix/profiles/system/bin/switch-to-configuration boot
+grep -n '^os_prefix=' /boot/firmware/config.txt   # must name the gens/<id>/ of generation N
 ```
 
 Then one announced reboot. `switch-to-configuration boot` rewrites the
@@ -334,4 +335,93 @@ firmware's tryboot, then nixos-anywhere without its kexec phase.
 **WARNING:** Step 4 erases the SD card. Everything before it is reversible:
 a power cycle brings Raspberry Pi OS back.
 
-<!-- TW: commands below to be filled from worker-1's install record -->
+The commands below are the ones run in US-163 on 2026-10-24 (Raspberry Pi
+OS on `.88`; the installer and NixOS came up on `.89`). Store paths and
+SHAs are examples from that run. `<installer known_hosts>` and
+`<pinned known_hosts>` are the files described in step 6.
+
+**1. Build the tryboot bundle.** It contains `nixos-installer/` (Image,
+initrd, `cmdline.txt`, bcm2712 DTBs, overlays), `tryboot.txt` and
+`SHA256SUMS`. The installer is defined in
+`nix/nixos/boards/pi5/installer.nix`.
+
+```sh
+nix build -L --out-link ./pi5-out \
+  .#nixosConfigurations.pi5-installer.config.system.build.pi5TrybootBundle \
+  .#nixosConfigurations.mugge-pi5-bootstrap.config.system.build.toplevel
+```
+
+In US-163 this ran on the Pi itself, under a temporary single-user Nix on
+Raspberry Pi OS, from a git bundle checked out at a declared commit. That
+builder no longer exists. Building the bundle on the Mac's aarch64-linux
+builder and copying it over has not been tried yet.
+
+**2. Stage the bundle on Raspberry Pi OS's `/boot/firmware`.** On the Pi,
+with `F=/boot/firmware` and `B=<bundle path>`:
+
+```sh
+cp $F/config.txt ~/config.txt.pre-install          # keep a copy
+sudo cp -r --no-preserve=mode,ownership,timestamps $B/nixos-installer $B/tryboot.txt $F/
+sync
+cd $F && sha256sum -c $B/SHA256SUMS                # every file OK; config.txt unchanged
+```
+
+`config.txt` is not modified, so the normal boot is still Raspberry Pi OS.
+If the FAT partition is too small for the bundle, the planned fallback was
+the same installer on a USB stick. That was never needed, and no commands
+for it were written or run.
+
+**3. Tryboot into the RAM installer (announced reboot).** On the Pi:
+
+```sh
+sudo systemd-run --on-active=2 /usr/sbin/reboot "0 tryboot"
+```
+
+The firmware boots `tryboot.txt` once. The installer runs from RAM and
+permits key-only root login (owner-approved, installer only). A plain
+reboot or power cycle returns to Raspberry Pi OS; US-163 tested this.
+
+**4. Install with nixos-anywhere. This erases the SD card.** From the Mac,
+in a clean checkout:
+
+```sh
+nix run --inputs-from . nixpkgs#nixos-anywhere -- \
+  --build-on remote \
+  --phases disko,install \
+  --flake .#mugge-pi5-bootstrap \
+  --ssh-option UserKnownHostsFile=<installer known_hosts> \
+  --ssh-option StrictHostKeyChecking=yes \
+  --ssh-option ForwardAgent=no \
+  root@<installer IP>
+```
+
+- `--phases disko,install` skips kexec: the installer is already running.
+  This is why the command connects as `root@`.
+- `--build-on remote`: the installer builds the closure itself, from signed
+  caches.
+- nixos-anywhere's `reboot` phase is not used; reboot manually (step 5).
+- US-163: nixos-anywhere 1.13.0, rc 0, 181 s.
+
+**5. First boot, then switch to the RT configuration.** On the installer,
+as root: `systemd-run --no-block systemctl reboot` (announced). The
+`mugge-pi5-bootstrap` system boots with the non-RT kernel. Pin its host key
+(step 6), then deploy `mugge-pi5-deploy` as in Section 8.3 and do one
+announced reboot. After every reboot, compare
+`/proc/sys/kernel/random/boot_id` and `uname -r` with the values from
+before, to confirm that the Pi really booted again.
+
+**6. Host keys.**
+
+- **Installer hop:** the installer's host key exists only in RAM. In
+  US-163 it was recorded trust-on-first-use (`accept-new`) into a fresh,
+  throwaway file, `<installer known_hosts>`.
+- **Installed system:** at the first NixOS boot, record the host key once
+  (`accept-new`) into `<pinned known_hosts>`. From then on, every connection uses that
+  file with `StrictHostKeyChecking=yes`, `BatchMode=yes` and
+  `ForwardAgent=no` (Section 8.1).
+- **Observed in the US-163 install log:** nixos-anywhere passes its own
+  `-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no` ahead of
+  the `--ssh-option` values. OpenSSH uses the first value it gets, so the
+  installer-hop pin was most likely not in effect for nixos-anywhere's own
+  connections. This affects only the throwaway installer hop and is on the
+  backlog.
