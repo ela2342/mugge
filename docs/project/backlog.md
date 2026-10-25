@@ -635,6 +635,11 @@ Next free: F-370, US-173, D-069, T66.
          N), the booted generation and the os_prefix target among
          them, no gens/*.tmp. 1 generation or a missing .complete =
          FAIL and STOP.
+       - Count levels (QE, 2026-10-25: "both, at different levels"):
+         in the DEPLOY grant (AC18b/AC18c/T54b, steps (a)-(e)) the
+         pass criterion is EXACTLY gens = {M, N}, both .complete; any
+         other count or any other id FAILS. AC2a and AC18c as general
+         story ACs keep ">= 2, booted among them".
        - (c) is the F-369 regression proof.
        - Restriction: no no-op deploy while N is active (N's old hook
          would collapse the FAT to 1 generation).
@@ -649,7 +654,9 @@ Next free: F-370, US-173, D-069, T66.
        generations on the FAT, and the booted generation is among
        them." QE AC18b criteria: (i) MAP shows >= 2 present (M +
        nkifli3r) after the deploy and after the reboot; (ii) AC18c on
-       the fixed head still leaves >= 2. Sequence (PO; CM sequences):
+       the fixed head still leaves >= 2. [SUPERSEDED by the exact
+       {M, N} criterion for this run (QE, 2026-10-25).] Sequence (PO;
+       CM sequences):
        fix deploy -> AC18b + AC18c in one run (saves reboots); T54
        runs on the fixed state (PO). RESOLVED as **T54b** (QE; PO
        adopts it, withdrawing "no re-run unless the Architect finds
