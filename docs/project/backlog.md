@@ -1404,7 +1404,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      PR after #50 merges (not #45; in #50 only if its head moves
      again for another reason); AE signs off the diff. Done on
      docs/US-163-postmerge at 1472206a (TW, AE wording); AD sees
-     the widened row 14 (PM routed it).
+     the widened row 14 (PM routed it). In review as PR #51.
+  NEXT safety.md TOUCH (#51 reviews, non-blocking, fail safe; TW
+  drafts, AE owns the wording, this list follows per the mirror
+  rule): (1) AD L1 = UX (a): the lead-in "holds" (closed and
+  verified) conflicts with row 14's interim-rule option; add
+  "unless the row says otherwise (row 14)". (2) AD L2: the Gate
+  bullet "while any item of the list above is open" literally
+  includes the Pi 4-only row 4; say "any Pi 5 row (1-3, 5-14)".
+  (3) UX (b): "(planned in PR #45)" goes stale; once #45 lands,
+  name the section instead. AD nit, no change: §8.5 "the Mac" means
+  any machine with Nix and the repo.
   MIRROR RULE (AE via TW, 2026-10-25): safety.md "Pi 5 Platform
   Status" carries this full table (13 items in #50; 14 rows on
   docs/US-163-postmerge 1472206a, the first post-merge docs PR) with
@@ -1999,9 +2009,30 @@ merge needs update-branch and 7 reconfirmations at the new head.
   still says open; F-335 AC4 asks for dispatched T1+T2 green ON MAIN
   with every test-* step run. Close the record after QE confirms
   AC1-AC6 (records follow-up, not in the #50 head move).
-- #50 US-163: open; head 22370317 (docs-only move), 6/7 approved
-  (QE open), CI 40210023435 green, release run 40226857537 green;
-  see the US-163 section (PR #50 block).
+- #50 US-163: MERGED 07a65f9e (2026-10-25 19:43:14Z, CM, standing
+  owner permission; merge commit pinned to 22370317, tree
+  identical). 7/7 at 22370317: SecSpec 6399942686, AE 6399947753,
+  UX 6399948019, Architect 6399948245, TW 6399960981, AD
+  6399961232, QE APPROVED 6402290391. CI 40210023435 green (counts
+  identical to #49 run 40198678554); T3 release run 40226857537
+  green (artifact sd-card-image, digest 91b546c4...). US-163 stays
+  OPEN until AC19 passes: DEPLOY session CM-DEP-.89-AC19 granted to
+  worker-1. A US-163 done-records batch (PM) follows the AC19 PASS.
+  QE non-blocking (new): the guard count is not echoed in the CI log
+  (it is in $out only); add a dev-howto line on unstaged test files
+  (Nix flakes ignore them). Already tracked: F-370, F-371, F-373;
+  lsmod hifiberry/pcm512 is in the AC19 read set (B3 v10/v11).
+- #51 docs/US-163-postmerge (TW: safety.md row 14, row 4 N/A, the
+  §8.5 note; nixos-upgrade.md), docs-only: head 667b7a8f (1472206a
+  + merge of main 07a65f9e); review bundle /tmp/pr51-review-667b7a8f/
+  (SHA256SUMS 2127d70c). PM read: rows 4 and 14 at 667b7a8f match
+  this file verbatim. At 667b7a8f: UX APPROVED 6402324487, QE
+  APPROVED 6402324704, SecSpec APPROVE 6402324907, TW APPROVED
+  6402325121, AD APPROVE 6402325340 (not covering CI or later heads;
+  M4 resolved by the AE row 14 wording). 5/7; AE and Architect open.
+  CI: changes, nixos-eval, ci-gate success; test-and-build skipped
+  (docs-only); GitHub CLEAN. PR numbering (team-lead): #51 is this
+  docs PR, not US-172; the US-172 PR gets the next free number.
 - New branches at 22370317 (CM, 2026-10-25; owner via team-lead:
   "start the next work now"; disjoint file sets):
   story/US-172-pi5-drm (worker-2: bootloader.nix reorder, greetd
@@ -2011,7 +2042,8 @@ merge needs update-branch and 7 reconfirmations at the new head.
   US-172.md and the backlog stay PM. B4 (PM, US-172 story batch for
   worker-2's branch: US-172.md + the stories-index row; MANIFEST
   eff8d9b1...): status in progress, the starter set, AC1 ride-in
-  exception marked LAPSED (TW N2).
+  exception marked LAPSED (TW N2). B4 passed to worker-2 (CM). The
+  docs branch is PR #51 (above).
 - STANDING OWNER PERMISSION (2026-10-25, verbatim via team-lead):
   "Also, standing permission to merge if the team approves, without
   my additional approval. Let's ensure you can make progress
