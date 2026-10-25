@@ -168,24 +168,32 @@ $ ps -L -o pid,tid,cls,rtprio,pri,ni,comm -p 1165
 | systemd --user limits | rtprio 95 | 95/95 | PASS |
 | T49 at 11 min uptime | NRestarts <= 3, no failed units | max 0, both lists empty | PASS |
 | USBStreamer sink | S32LE, 8 ch, 48 kHz | S32LE, 8, 48000 (pw-dump and ALSA hw_params) | PASS |
-| Gains (AC14), both rounds | all linear Mult/Add 0 | 16 values (8 nodes), all exactly 0 | PASS |
+| USBStreamer capture PCM (AC12) | ALSA capture PCM, 8 ch, 48 kHz | `pcmC1D0c` present; capture stream closed, so no hw_params recorded | OPEN |
+| Gains (AC14), both rounds | all linear Mult/Add 0 | 24 enumerated, 16 gain-relevant (8 nodes x Mult/Add), all exactly 0 | PASS |
 | HiFiBerry blocked | no card, modules, nodes | none in /proc/asound/cards; 4 modules not loaded; 0 objects | PASS |
 | Thermal | < 80 °C | max 66.65 °C (21 samples) | PASS |
 
 ### Deviations from Plan
 
-- The reboot was `systemctl reboot` (warm). A power-cycle cold boot (T48) is
-  still open.
+- The reboot was `systemctl reboot` (warm). Accepted for AC13 (AE): the RT
+  setup is applied fresh at every PipeWire start. The T48 power cycle is
+  still open; it records the PipeWire `ps -L` once as a confirmation, not
+  a gate.
 - `aplay`/`arecord` are not on the image; the HiFiBerry check used
-  `/proc/asound/cards` instead.
-- AC14 was specified as 24 values; the convolver config has 8 linear nodes,
-  i.e. 16 Mult/Add values. Pending AE/PO ruling.
+  `/proc/asound/cards` instead (accepted by AE and QE).
+- AC14: `pw-cli enum-params` lists 24 values, 8 linear nodes x (Control,
+  Mult, Add). Control only feeds the notify port, not the audio path, so
+  16 are gain-relevant (AE).
+- AC12 capture: PipeWire has no USBStreamer capture node by design (F-295;
+  GraphManager adds it for Live mode). The ALSA-level capture evidence is
+  still to be recorded.
 
 ### Notes
 
 - **No mod.rt journal lines** for PipeWire: `log.level` is 2, so module-rt's
-  info lines are not logged. The absence of the "could not set nice-level"
-  warning is the evidence that the nice step is gone.
+  info lines are not logged. The evidence is the merged module properties
+  plus the thread classes from `ps -L` (accepted by QE), and the absence
+  of the "could not set nice-level" warning.
 - **Gain readings:** `pw-cli enum-params` prints six decimals, so a tiny
   non-zero value would read as `0.000000`. AC14 was checked from `pw-dump`
   JSON against exact 0.
@@ -193,10 +201,12 @@ $ ps -L -o pid,tid,cls,rtprio,pri,ni,comm -p 1165
   has no PCM device.
 - **WirePlumber** logs "mod.rt: could not set nice-level to -11: Permission
   denied" on every start and activates rtkit-daemon at boot; it loads its own
-  module-rt with stock args. Not in the audio data path. Routed to the
-  Architect and PM.
+  module-rt with stock args. Not in the audio data path. Backlog.
 - **Metering bridges** (pcm-bridge x2, level-bridge x3) stay active after a
   PipeWire restart but their nodes do not come back (7 nodes instead of 12,
-  6 min later). Routed to the PM backlog.
+  6 min later). Dead meters look like "no signal". Not a US-163 blocker,
+  but an **open amps-on precondition** (AE, Architect; backlog P1). Until
+  it is fixed: after any PipeWire restart, restart pcm-bridge and
+  level-bridge and confirm live meters before the amps go on.
 - **Pi 4:** the fragment is shared by all boards, so Pi 4 drvPaths change.
   Pi 4 runtime is unverified.
