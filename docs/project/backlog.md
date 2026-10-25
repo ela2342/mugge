@@ -1654,7 +1654,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   CHANGE. Test boot after US-163 AC19 closes. Story batch B4b (PM,
   base 951d5162, MANIFEST d646d2c3; US-172.md only, index row
   unchanged): the new Step 1, the branch head and PR #52, and the
-  out-of-scope note for F-376.
+  out-of-scope note for F-376. SUPERSEDED (CM held B4b; it carried
+  the Architect's FIRST ruling): final test plan (Architect; worker-2
+  implements it with pinned scripts), both after AC19. STEP 1 =
+  CHANGE: one TRYBOOT of the CURRENT generation; tryboot.txt holds
+  the reordered config.txt, config.txt is never written; the tar
+  backup of the FAT is deleted after a cmp; announced
+  `reboot '0 tryboot'`, TRYBOOT reads, restore, announced normal
+  reboot, RESTORED reads; a power cycle recovers. STEP 2 = DEPLOY,
+  only after a step 1 PASS: the branch as a new generation
+  (nixos-rebuild boot), announced reboot, pre/post reads, 8.5
+  rollback. The /dev/mem fallback read is CHANGE with its own CM go.
+  B4c (2b92af26) also superseded. Story batch B4d (PM, base
+  951d5162, MANIFEST 4474a3fc; US-172.md only, whole-file replace of
+  B4b/B4c, index row unchanged).
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -1809,7 +1822,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     wrong filter under H costs sound quality, not the driver.
   - These go into US-173.md as story batch B5b (PM, pending) for
     worker-3. The AE signs off the H row and D-070 exception drafts
-    when the TW has them.
+    when the TW has them. DONE: B5b (MANIFEST caebf509, base
+    ad478593 = worker-3's B5 commit) verified by the CM and relayed
+    to worker-3.
+  Lane additions (CM, Architect, 2026-10-25): worker-3 also gets the
+  venue YAML, the WAVs in configs/coeffs/venues/home-lab-chn50p-
+  ultimax/, test_committed_venue_coeffs.py and the pipewire.nix
+  install path (Architect: tmpfiles `C` never replaces the DIRAC
+  placeholders), plus one ci.yml T1 step and one development.md line
+  (QE DoD); no other lane touches them. AE install requirements for
+  the venue WAVs (to worker-3): L+ symlinks preferred, atomic; the
+  200 Hz set is home-lab-only per F-321; sub2 stays dirac; the PW
+  restart is announced; a Nix sha assertion.
   SecSpec (2026-10-25): F-318 (a), the WP rule, is accepted ALONE as
   the interim for the supervised session; F-318 stays OPEN until
   layer (b), now US-175 (P1 below). The amps call is the AE's.
@@ -1887,7 +1911,42 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   precondition, the UMIK-1 wording; sent to the CM for worker-4.
   worker-4 found the purifi Qts test failure on b0666c02: that is
   F-363 (P2), not a new item; it can block a green T1 on the US-174
-  PR too, and worker-4 does not fix it there.
+  PR too, and worker-4 does not fix it there. QE: F-363 is NOT a
+  pre-gate for US-174's T1 (see F-363).
+  B6 pushed (CM): story/US-174-room-correction = 858fa861 (13 blobs
+  = a0f9b60c); B6b verified (a8a7b6c9), with worker-4.
+  AE refinement (2026-10-25, after worker-4 found that correction.py
+  has no level reference: the cut follows the measurement level 1:1,
+  so a +12 dB mode gets about a 29 dB cut). Supersedes the dip-fill,
+  X and Y parts of the 174a numbers above: slice 1 is cut-only, NO
+  dip-fill; per-bin cut <= the measured excess and <= 18 dB
+  (required; if the frozen API blocks the kwarg, it goes to the AE
+  and the Architect, not dropped); level reference = per-channel
+  median, 1/6 octave, sats 400 Hz-4 kHz, sub 30-150 Hz; new ACs:
+  level invariance (IR x0.1/x1/x10 -> same filter within 0.1 dB),
+  cut accuracy +/-2 dB of each injected mode's excess, verify
+  tolerance default 8 -> 3 dB. Residual one-sided: positive <= +3
+  dB, below target unchanged within 0.5 dB; bands sub 30-200 Hz,
+  sats 250-500 Hz, system summed 30-500 Hz; metric max positive
+  deviation at 1/6 octave. Off-position (Y) DEFERRED, not waived
+  (the simulator has the same modes at every position) to
+  US-174b-sim; positions B = +0.5 m lateral, C = +1.0 m depth; Y
+  unchanged. Sub delay truth = geometric direct path, +/-0.2 ms.
+  Min-phase gate and GD unchanged; the Architect accepts the AE's
+  3.5 ms GD budget as binding.
+  Architect (2026-10-25): slice 1 adds a pure pipeline function
+  (runner.py delegates), the correction.py level-normalization fix
+  with a level-invariance test, and speaker_sim in
+  simulate_measurement. NEW sub-story US-174b-sim, after slice 1: a
+  position-dependent modal sum in mock/room_simulator.py (unlocks
+  AC4 and spatial averaging). Fence change: crossover.py,
+  test_crossover.py and the generate_profile_filters.py type
+  pass-through are worker-5's (F-374) until F-374 merges; worker-4
+  picks them up by merging main (CM fence script).
+  Story batches B6c (MANIFEST ea7c48d5: the refinement, slice-1
+  lines, US-174b-sim, the F-374 lane and fence) and B6d (MANIFEST
+  946cd203, on top of B6c: AC3 bands, cut-cap rule, AC4 positions,
+  AC6 tolerance), each a whole-file replace of US-174.md.
   Existing assets on main: src/room-correction/ (room_correction/,
   runner.py, analyze_measurement.py, gain_calibration.py,
   thermal_ceiling.py, tests/, mock/ with 3 scenarios),
@@ -2040,6 +2099,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   session (else an audible boom at 140-280 Hz). The file sits inside
   worker-4's US-174b fence (src/room-correction/**). Lane (US-173,
   US-174 or its own small PR): pending the Architect, CM relays.
+  RULED (Architect, team-lead, CM; 2026-10-25; option (iii)): its
+  own branch fix/F-374-lr-crossover off main b0666c02 (pushed), a
+  dedicated worker-5, its own PR merged FIRST; US-173 and US-174
+  then merge main. worker-5's files: crossover.py, test_crossover.py
+  and the type pass-through in generate_profile_filters.py (carved
+  out of worker-4's fence). The Architect's earlier "owned by
+  worker-3" is superseded. Legacy callers on the old crossover
+  alignment (Architect): runner.py:200 (worker-4, switch in 174b
+  after F-374) and generate_bose_filters.py:103/113 (switch, or
+  retire if obsolete).
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
@@ -2115,7 +2184,39 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   on main b0666c02 in the US-174 worktree before any edits (1
   failed, 1197 passed, 1 skipped); filed as F-378, withdrawn as a
   duplicate. Can block T1 on the US-174 PR as well; not fixed there.
-  Routed to QE (classification, owner).
+  Routed to QE (classification, owner). QE RULING (2026-10-25):
+  Medium, P2; test and data fixed together as ONE item, outside
+  US-174. Test (required): (1) deterministic: sorted() iteration and
+  ALL records (2346) via validate_all_drivers (check_files=False);
+  if runtime is an issue, a fixed named list, never slicing
+  directory order; (2) report every failing record. Data
+  (required): (3) check Purifi against its datasheet (the record's
+  datasheet_file, v0.91) and correct the wrongly scraped field; if
+  the datasheet itself is inconsistent (rounding), keep its values,
+  note it in ts_measurement_notes with the quote, and add a
+  documented per-record exemption mechanism (not a skip); (4) do NOT
+  widen the 10% tolerance (validate_driver.py:313); (5) fix any
+  other records the full set surfaces under the same rule in the
+  same PR (expect more than one; check the other 36386c75 records).
+  QE approval evidence: the full-set test passing locally and in CI
+  with the validated-record count in the output; a mutation check
+  (the bad Purifi triple back -> fails naming the record); a
+  datasheet citation per corrected record. Why only Medium: no
+  safety or production-path impact (room-correction tooling only),
+  but it can fail T1 at random for any PR. It passed in CI on #50
+  (1198 passed) only by directory order.
+  US-174 T1 (QE): NOT a pre-gate. US-174 changes nothing under
+  configs/drivers or the tested code, so CI picks the same sample as
+  main. If US-174's T1 is green, no wait; if it goes red on this
+  test, the failed job blocks and US-174 waits for the F-363 fix and
+  rebases onto it. Never a skip, xfail or tolerance change for this
+  test inside US-174. A local failure of this one test does not void
+  worker-4's local T1 evidence, if every other test passes and the
+  evidence names it as F-363. Owner: someone other than worker-4
+  while US-174 runs; disjoint files (test_driver_validation.py +
+  driver.yml records), parallel branch OK; the CM checks the shared
+  working directory sequencing. CM: urgent for #52 and the F-374 PR
+  (a CI failure blocks under Q2). Owner: the CM finds one.
 - US-159 G16 with AE amendments a-e and architect additions 1-3; test
   T65 (not T62). Medium; re-rate on (i) volume after replug, (ii) relink
   with gate_open true. Match by node and direction.
@@ -2349,6 +2450,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   tryboot.txt with os_prefix= after the dt lines, the order US-172
   fixes in bootloader.nix. Architect: out of US-172 (the installer
   is used up); backlog only.
+- Merge scripts/generate-room-sim-ir.py (used by local-demo) into
+  the single room simulator (mock/room_simulator.py) as a thin
+  wrapper (Architect, 2026-10-25). Not in 174b: the script is
+  read-only for that lane.
 
 ## Open PRs (2026-10-24, per CM)
 
