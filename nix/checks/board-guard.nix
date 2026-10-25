@@ -51,6 +51,18 @@ let
   configTxt = c: c.system.build.pi5ConfigTxt;
   txtLines = c: lib.splitString "\n" (configTxt c);
   hasVc4 = c: lib.hasInfix "dtoverlay=vc4-kms-v3d-pi5" (configTxt c);
+  # US-172: os_prefix= and the OS file lines precede every dtoverlay=/dtparam=.
+  lineIdx = c: re: lib.lists.findFirstIndex (l: builtins.match re l != null) null (txtLines c);
+  firstDt = c: lineIdx c "dt(overlay|param)=.*";
+  osFilesFirst = c: firstDt c != null && lib.all (re: let i = lineIdx c re; in i != null && i < firstDt c)
+    [ "os_prefix=gens/@ID@/" "kernel=Image" "initramfs initrd followkernel" "cmdline=cmdline.txt" ];
+  # US-172: dtparam=audio=off sets the vc4 overlay's parameter, so it
+  # must directly follow that overlay line.
+  audioOffAfterVc4 = c: let i = lineIdx c "dtoverlay=vc4-kms-v3d-pi5,noaudio"; in
+    i != null && builtins.elemAt (txtLines c) (i + 1) == "dtparam=audio=off";
+  greetdOnVc4 = c: lib.hasInfix
+    ''DRIVERS=="vc4-drm", TAG+="systemd", ENV{SYSTEMD_WANTS}+="greetd.service"''
+    c.services.udev.extraRules;
   # Audio, display and remote-desktop units the bootstrap must not have.
   audioUnitRe = ".*(pipewire|wireplumber|filter-chain|level-bridge|pcm-bridge|pi4audio|pi4-audio|wayvnc|labwc).*";
   audioUnits = c: builtins.filter (n: builtins.match audioUnitRe n != null)
@@ -131,6 +143,7 @@ let
     { name = "no account with a password"; ok = withPassword c == { }; }
     { name = "firewall and nftables enabled"; ok = firewalled c; }
     { name = "disable-bt-pi5 in config.txt"; ok = lib.hasInfix "dtoverlay=disable-bt-pi5" (configTxt c); }
+    { name = "config.txt: os_prefix and OS files before any dtoverlay/dtparam (US-172)"; ok = osFilesFirst c; }
     { name = "no root authorized_keys"; ok = rootKeys c == [ ] && c.users.users.root.openssh.authorizedKeys.keyFiles == [ ]; }
     { name = "PermitRootLogin no"; ok = (ssh c).PermitRootLogin == "no"; }
     { name = "no password authentication"; ok = !(ssh c).PasswordAuthentication; }
@@ -157,6 +170,9 @@ let
       { name = "local NVMe not stripped"; ok = kconf c "BLK_DEV_NVME" == null; }
       { name = "bootstrap.minimal unset"; ok = !c.mugge.bootstrap.minimal; }
       { name = "vc4-kms overlay with noaudio"; ok = lib.hasInfix "dtoverlay=vc4-kms-v3d-pi5,noaudio" (configTxt c); }
+      { name = "dtparam=audio=off directly after the vc4 overlay (US-172)"; ok = audioOffAfterVc4 c; }
+      { name = "greetd skipped without a DRM card (F-367)"; ok = c.systemd.services.greetd.unitConfig.ConditionPathExistsGlob == "/dev/dri/card*"; }
+      { name = "greetd started by the vc4 DRM card (US-172 AC8)"; ok = greetdOnVc4 c; }
       { name = "PipeWire enabled"; ok = c.services.pipewire.enable; }
       { name = "module-rt direct, RTKit off (F-358)"; ok = rtDirect c; }
       { name = "WirePlumber disables other ALSA cards"; ok = hasCardBlock c; }
