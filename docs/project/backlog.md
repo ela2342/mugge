@@ -829,6 +829,21 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       release.yml run pending via team-lead (release dispatch is the
       owner's, not covered by the standing permission). All 7
       re-review at 22370317.
+    - Re-review at 22370317 (posted verbatim by the CM): SecSpec
+      APPROVE 6399942686 (conditions: a re-review for any non-docs
+      commit after 22370317; no failed CI job beyond the known F-363
+      at the final head, run 40210023435 counts; CM: Q2 still
+      applies, so an F-363 failure blocks too and gets a rerun); AE
+      APPROVE 6399947753 (no veto; re-run condition met, main still
+      45593097; after the merge a warm reboot plus QE's EEPROM read
+      is enough; assumes CI 40210023435 green, QE's call); UX
+      APPROVED 6399948019 (df807900 notes 1 and 2 resolved; note 3
+      on the backlog with F-373); Architect APPROVE 6399948245 (#49
+      N1-N3 unchanged); TW APPROVED 6399960981 (B1, S1, N1, N3
+      resolved; N2 to the backlog, US-172); AD APPROVE 6399961232
+      (M3, L5 resolved; L6 with F-373; M4 to the backlog, amps-on
+      item 14; not covering CI, AC19 or any later head). Tally 6/7;
+      QE open (needs CI and T3).
     - AD APPROVE is comment 6398339160 (CM). AD M2 precise: the
       f0fbefd1 -> final diffstat is docs-only AND the
       mugge-pi5-deploy nix-diff shows only configurationRevision,
@@ -1321,17 +1336,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
 
 - **AMPS-ON PRECONDITION LIST (Pi 5)** (PO, 2026-10-25; the single
   consolidated list). Gates ANY amps, HP or IEM use of the Pi 5. Every
-  item must hold; each links to its own entry:
+  item must hold (row 4 is N/A on the Pi 5); each links to its own
+  entry:
   1. Owner re-confirmation plus the S-012/safety.md pre-flight.
   2. F-341 AC3 PASS on the Pi 5. Until then also NO signal-gen
      measurement session on the Pi 5 (AE, PO).
   3. US-172 condition: HiFiBerry layer (a) restored, or the AE
      re-rules (P1 US-172 GATE; layer deviation accepted only while
      nothing is connected).
-  4. US-170 A1 item (QE): the Pi 4 AC13 A1 precondition before
-     amps-on (Pi 4 runtime unverified); F-358 runtime verification
-     before any Pi 4 audio use (AE), including "no SIGKILL at startup
-     with production coefficients" (AD L1).
+  4. US-170: N/A on the Pi 5 (not counted). Pi 4 only: the F-358
+     runtime check on the Pi 4 before any Pi 4 audio use. (TW final
+     safety.md row text, UX P3; pending the AE's sign-off of the
+     safety.md diff, re-matched if the AE changes it. Detail kept:
+     the Pi 4 AC13 A1 precondition (QE), including "no SIGKILL at
+     startup with production coefficients" (AD L1).)
   5. F2: pcm-bridge/level-bridge PW nodes back after a PW restart
      (P1 below), or the INTERIM RULE (restart both bridges, confirm
      live meters).
@@ -1359,8 +1377,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      (by GraphManager or WirePlumber) comes up gated: gains 0, gate
      closed, and audio returns only when the operator re-opens it
      through the D-063 ramp. Tested (AE)".
+  14. Gate-authority defects (AD M4, verbatim, corrected by AD to add
+     F-338 and F-339): "F-320, F-314, F-325, F-338, F-339, F-349 (and
+     F-321/F-322 for CHN-50P) are closed, or their interim rules are
+     in safety.md (PR #45) and are followed." Why (AD): the interim
+     rules (status.md rules 5-7 and 12; safety.md §10 via PR #45) are
+     not on main; F-338 (Close Gate disabled in the UI while the gate
+     shows CLOSED) and F-339 (CloseGate reports success without
+     writing the gains) make the F-320 interim rules impossible to
+     carry out or to trust. safety.md mirror: TW, in the first docs
+     PR after #50 merges (not #45; in #50 only if its head moves
+     again for another reason); AE signs off the diff.
   MIRROR RULE (AE via TW, 2026-10-25): safety.md "Pi 5 Platform
-  Status" carries this full 13-item table with this numbering. Where
+  Status" carries this full table (13 items in #50; item 14 follows
+  in the first post-merge docs PR) with this numbering. Where
   the two differ, this list follows safety.md. Any add, removal or
   renumbering here goes to the TW as a matching safety.md update.
   Related UX item (not a precondition): a persistent web UI banner
@@ -1475,6 +1505,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     US-172.md gets this in a later story batch, not in #50 (CM).
     Architect: the starter set goes into the story when US-172 is
     activated.
+  - TW N2 (#50 re-review, non-blocking): US-172.md:36 still carries
+    the AC1 ride-in exception, which lapsed when the window closed;
+    remove or mark it lapsed in the next US-172 story batch.
   US-172 scope extensions:
   - (PO, new AC) "D-022 re-confirmed on the Pi 5: /dev/dri/card*
     present, labwc/greetd running, Mixxx with hardware GL (no
@@ -1661,7 +1694,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
 - nixos-upgrade.md §8.5 card-reader recovery (UX P3, TW): step 2
   says to pick the newest present generation other than the one
   that just failed; step 3 names where the off-Pi copy of
-  config.txt/MAP.txt is kept (save one after each deploy).
+  config.txt/MAP.txt is kept (save one after each deploy). UX P3
+  (#50 re-review): state up front that card-reader recovery step 3
+  needs the Mac with the repo checkout. TW: in the first docs PR
+  after #50 merges.
 - **F-363** Purifi Qts test is order-dependent (`iterdir()[:20]`).
   AE rating (2026-10-25): Low while no venue config uses this
   driver; Medium if one does (the T/S data feeds the D-031 design).
@@ -1945,9 +1981,9 @@ merge needs update-branch and 7 reconfirmations at the new head.
   still says open; F-335 AC4 asks for dispatched T1+T2 green ON MAIN
   with every test-* step run. Close the record after QE confirms
   AC1-AC6 (records follow-up, not in the #50 head move).
-- #50 US-163: open; head 22370317 (docs-only move), all 7
-  re-reviewing, CI 40210023435 running, owner release.yml run
-  pending; see the US-163 section (PR #50 block).
+- #50 US-163: open; head 22370317 (docs-only move), 6/7 approved
+  (QE open), CI 40210023435 running, owner release.yml run pending;
+  see the US-163 section (PR #50 block).
 - STANDING OWNER PERMISSION (2026-10-25, verbatim via team-lead):
   "Also, standing permission to merge if the team approves, without
   my additional approval. Let's ensure you can make progress
