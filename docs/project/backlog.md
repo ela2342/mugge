@@ -214,13 +214,24 @@ Next free: F-369, US-173, D-069, T66.
     Pi 4 precondition (AE, via Architect): "Pi 4: AC13 A1 must pass
     before next amps-on use". The fragment is shared; on the Pi 4 it
     is unverified on hardware and T55 is build-only.
+    Placement is SHARED (configs/pipewire + pipewire.nix) and
+    intentionally changes the Pi 4 drvPaths: flag it in the PR; T55
+    rebuilds the Pi 4; Pi 4 runtime stays unverified (CM).
+    More acceptance (accepted via CM): main thread FF 88 with ni
+    unchanged (TS or ni 19 is a FAIL). QE evidence: the full set after
+    the cold boot AND after the PW restart; a board-guard assert that
+    the fragment is present and rtkit is off, plus one mutation run;
+    T51 on the new deploy.
     Update the F-358 record (High) and status.md.
   - **F-367** T49 FAIL: greetd crash-loops every ~10 s (~45 restarts
     in 8 min, not marked failed): no DRM device (vc4/v3d =m but not
     loaded, /sys/class/drm empty), so the labwc greeter cannot start.
     Medium. PO RULING (2026-10-25): guard on US-163, real fix in
-    US-172 (P1). Amend the T49 criterion (QE): no failed units, and
-    no service with NRestarts > 3 after 10 minutes of uptime. New
+    US-172 (P1). Amend the T49 criterion (QE): after >= 10 minutes
+    of uptime, NRestarts <= 3 for every service, and both `systemctl
+    --failed` and `systemctl --user --failed` are empty. Architect
+    post-reboot checks: greetd condition-skipped; user@1000 active
+    from boot without SSH; systemd --user at rtprio 95. New
     US-163 AC "no-crashloop" (PO):
     after boot no systemd unit (system or user) is failed or
     restart-looping; the display stack is disabled or guarded on this
@@ -261,9 +272,30 @@ Next free: F-369, US-173, D-069, T66.
   - US-163 waits on (team-lead, 2026-10-25; CM update): the F-358
     fix commit (05-rt-direct.conf) and its AE + Architect review; the
     deploy; then the owner's cold boot for T48 and AC13. The F-367
-    guard f87c162b (ConditionPathExistsGlob) has all its reviews (AE
-    APPROVED, SecSpec OK on the linger change, Architect APPROVED; no
-    hold on the display diagnosis) and is clear for the CM to push.
+    guard f87c162b (ConditionPathExistsGlob) has all its reviews (AE,
+    SecSpec on linger, Architect: APPROVED) and is pushed
+    (story/US-163 = f87c162b). f87c162b and the F-358 commit share ONE
+    deploy and ONE cold boot; reboot announced only (CM).
+  - US-163 PR known deviations (PO, 2026-10-25, verbatim):
+    - "Pi 5 firmware merges none of the config.txt dtoverlay lines
+      (vc4-kms-v3d-pi5, disable-bt-pi5). The bootloader writes
+      correctly and the firmware looks in the right directory, but
+      nothing is merged. Effects: no DRM device (see F-367/US-172),
+      Bluetooth stays active. No US-163 AC depends on it (architect +
+      PO). Fix: in US-172."
+    - "The board-guard check 'disable-bt-pi5 in config.txt' is green
+      but has no effect (firmware doesn't apply overlays). No false
+      assurance: it only checks the file, not the effect."
+  - US-163 verification note (PO): the HiFiBerry block and AC12 are
+    judged against the live state (aplay/arecord -l, modules,
+    /proc/device-tree), not config.txt.
+    AC "hifiberry-blocked" refined (PO; AE cc'd, veto domain): PASS =
+    no HiFiBerry ALSA card (aplay/arecord -l), driver module not
+    loaded, no WP/PW node, AND layers (b) module blacklist and (c) WP
+    rule verified live. If layer (a) force_eeprom_read=0 has no
+    effect: listed as a layer deviation (defence in depth 3 -> 2
+    layers), fixed in US-172. A live result that isn't clean is a
+    FAIL.
   - Pi 5 cooling (Architect via CM): the cooling_fan DT node is
     "disabled" and there is no fan hwmon, so an Active Cooler would
     not spin. OPEN owner question: is a fan fitted? If yes: small Pi 5
@@ -356,7 +388,21 @@ Next free: F-369, US-173, D-069, T66.
   build. Evidence: ~/mugge-pi5-prewipe-20261024/
   diag-F367-overlay*-798f2dc7.txt. greetd must also be ordered after
   the DRM device, because the f87c162b condition is checked once at
-  boot.
+  boot. Firmware 2025-08-28, variant start_cd (CM; worker-1 reads at
+  08:34:52Z). The Architect cancelled the overlay diagnosis for
+  US-163; it is the US-172 starting point.
+  US-172 scope extensions:
+  - (PO) "dtoverlays are applied on the Pi 5 (vc4-kms-v3d-pi5,
+    disable-bt-pi5); verified via the live device tree."
+  - (Architect + SecSpec) board-guard checks on config.txt content
+    (disable-bt-pi5, vc4 overlay) give false assurance; replace them
+    with checks against the live state.
+  - (PO) replace the BT check with one that works: a module blacklist
+    (hci_uart/btbcm) or a runtime check (no hci0) in T48.
+  - (PO, Architect) confirm against the live state that the firmware
+    honours the non-overlay safety lines (dtparam=audio=off,
+    force_eeprom_read=0); HiFiBerry layer (a) depends on
+    force_eeprom_read.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect)
@@ -418,6 +464,9 @@ Next free: F-369, US-173, D-069, T66.
 
 ## P3
 
+- Bluetooth stays active on the Pi 5 (disable-bt-pi5 not applied; BT
+  on serial@7d50c000). No hardware.bluetooth, no bluetoothd. LOW,
+  home lab, no owner question now; fix with US-172. (SecSpec, PO)
 - ela's PAM loginLimits (nix/nixos/audio/pipewire.nix:83-86; Pi 4 and
   Pi 5) set rtprio 95 and memlock unlimited: every ela process (SSH
   sessions, Mixxx) may go to FIFO 95, above PipeWire's 88, and lock
