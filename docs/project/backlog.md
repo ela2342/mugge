@@ -448,21 +448,24 @@ Next free: F-369, US-173, D-069, T66.
        boot, no intervention: SSH within 3 min; new boot_id; readlink
        + configurationRevision; both failed lists empty; kernel log
        scan with per-line disposition; get_throttled 0x0; AC14/#10.
-       get_throttled: OPEN, QE to rule. No vcgencmd on the image. QE
-       proposal: (a) rpi_volt hwmon in0_lcrit_alarm 0; (b) every
-       cpufreq cooling_device cur_state 0, SoC temp recorded; (c) no
-       undervoltage/throttling kernel-log lines, per-line disposition;
-       if (a) is absent, (c) covers undervoltage and the sticky
-       history is recorded as not observable (not a FAIL). Architect
-       proposal: (1) OBSERVE: /proc/config.gz SENSORS_RASPBERRYPI_HWMON
-       and BCM_VCIO, /dev/vcio, hwmon names; (2) if /dev/vcio exists:
-       `nix shell nixpkgs#libraspberrypi -c vcgencmd get_throttled`
-       per boot (CHANGE, adds to the Pi store), AC17 keeps 0x0; (3)
-       else: rpi_volt alarm 0 + no Undervoltage/throttl kernel lines
-       + cpuinfo_cur_freq never below max in the sampled run; record
-       that short events between samples are not seen. Governor is
-       already performance (rt-tuning.nix:33, F-291), so idle
-       scaling does not false-FAIL a freq check (Architect).
+       get_throttled RULED (QE adopts the Architect's tiered
+       wording; the sticky since-boot bits 16-19 are the point). No
+       vcgencmd on the image. (1) OBSERVE once, before the power
+       cycles: /proc/config.gz grep SENSORS_RASPBERRYPI_HWMON and
+       BCM_VCIO; `ls -l /dev/vcio`; hwmon names. (2) If /dev/vcio
+       exists: ONE CHANGE before the first power cycle fetches
+       libraspberrypi into the Pi store once (store add only, no
+       config or service change, not the audio path; CM sets the
+       tier); each boot runs `sudo vcgencmd get_throttled` from that
+       same store path; PASS = 0x0; record the store path and that no
+       GC ran between the boots. (3) Else: rpi_volt in0_lcrit_alarm =
+       0, no Undervoltage/throttl kernel-log lines (per-line
+       disposition), cpuinfo_cur_freq never below max in the sampled
+       window; record that short events between samples are not
+       visible (not a FAIL). Both branches also record every cpufreq
+       cooling_device cur_state = 0 and the SoC temperature. Governor
+       is already performance (rt-tuning.nix:33, F-291), so the freq
+       check is a valid throttle signal (QE concedes).
     5. AC1a: PASS (Architect) at bbff469e vs origin/main 289390bf:
        the only change is toplevel -> etc -> pipewire-configs ->
        pi4audio-pipewire-configs (+05-rt-direct.conf, store path
@@ -529,7 +532,9 @@ Next free: F-369, US-173, D-069, T66.
     v62's "cpu0 scaling_cur_freq" wording) for every Pi 5 load run.
     Precondition (read-only): scaling_governor = performance on all
     cores (production default, rt-tuning.nix:33, F-291); a mismatch
-    is a finding. Sample every 10 s: thermal_zone0, cpu0
+    is a finding, a deploy defect; nobody sets it by hand (AE). Live
+    evidence: postboot-T48-50-link-798f2dc7, cpu0 performance
+    2400000/2400000 at idle (AE). Sample every 10 s: thermal_zone0, cpu0
     cpuinfo_cur_freq (root; actual clock from firmware, not
     scaling_cur_freq), every cpufreq cooling_device cur_state, the
     rpi_volt undervoltage alarm. worker-1 confirms on the Pi that
