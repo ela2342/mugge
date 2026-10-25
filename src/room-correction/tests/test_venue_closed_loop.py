@@ -439,12 +439,15 @@ class TestResidualPerChannel:
 
     @pytest.mark.parametrize("name", VACUOUS_SCENARIOS)
     def test_excluded_scenarios_are_vacuous(self, bundle, name):
-        # If this fails the scenario now has coverage: add it to RESIDUAL_SCENARIOS.
+        # If the uncorrected check fails the scenario now has coverage: add it
+        # to RESIDUAL_SCENARIOS. The corrected check is the do-no-harm bar (QE).
         _, sim, result = _run(bundle, name)
         for spk in result.corrections:
-            _, _, unc = _corrected_and_uncorrected(bundle, sim, result, spk)
+            _, cor, unc = _corrected_and_uncorrected(bundle, sim, result, spk)
             dev = closed_loop.max_positive_deviation_db(unc, np.zeros_like(unc))
             assert dev <= MAX_POSITIVE_DEVIATION_DB, f"{name} {spk}: {dev:+.2f} dB"
+            harm = closed_loop.max_positive_deviation_db(cor, np.zeros_like(cor))
+            assert harm <= MAX_POSITIVE_DEVIATION_DB, f"{name} {spk}: {harm:+.2f} dB corrected"
 
 
 # -- AC6a: noise robustness -------------------------------------------------
