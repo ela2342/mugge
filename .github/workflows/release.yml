@@ -78,11 +78,18 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6 (= v6.1.0)
 
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b  # v31 = upstream master HEAD on 2026-10-24 (2 commits after v31.11.2; ships Nix 2.35.4)
+        with:
+          install_url: https://releases.nixos.org/nix/nix-2.35.4/install
 
-      - uses: cachix/cachix-action@v17
+      - name: Verify Nix version
+        run: |
+          nix --version
+          test "$(nix --version)" = "nix (Nix) 2.35.4"
+
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866  # v17
         with:
           name: mugge
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
@@ -131,7 +138,7 @@ jobs:
 
       - name: Create GitHub release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2 (= v2.6.2)
         with:
           files: ${{ steps.artifacts.outputs.img }}
           fail_on_unmatched_files: true
@@ -156,7 +163,7 @@ jobs:
 
       - name: Upload image as workflow artifact
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4 (= v4.6.2)
         with:
           name: sd-card-image
           path: ${{ steps.artifacts.outputs.img }}
