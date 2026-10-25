@@ -2333,6 +2333,25 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   test-room-sim-e2e 75 passed / 1 skipped, exit 0. Both with the
   QE. QE APPROVED R1 at bcc353ed (CM, 2026-10-25): the test-side
   items are met at branch level; worker-4 is drafting the PR body.
+  PR #57 OPEN as DRAFT (CM, 2026-10-25) at bcc353ed, body
+  cb31c9bb; CI run 40235962276 in progress. PO RULING (2026-10-25):
+  (1) AC2 stays in US-174b, amended in place: "verify tolerance is
+  AE-ruled; the default or a per-call argument, as the AE+QE
+  decide; the suite impact is handled by the QE". AE RULING on AC2
+  (supersedes "verify tolerance default 8 -> 3 dB" above): a
+  PER-CALL argument, default stays 8 dB. The existing callers
+  (verify.py verify_all l.493, runner.py l.344) check the filter
+  WAV against its own passband average, and a correct filter
+  departs from flat by the correction depth; only the venue closed
+  loop (corrected acoustic response vs target) passes
+  tolerance_db=3.0, with tests failing at 3.1 and passing at 2.9;
+  any other caller verifying a measured response gets its own AE
+  ruling. worker-4 is implementing it. Story batch B6f (PM,
+  MANIFEST efcdcb2f, on top of B6e, whole-file replace of
+  US-174.md) carries the amended AC2. (2) No split: AC3 and AC5
+  stay; #57 stays a draft until #55 merges, then the head is
+  updated. Re-open trigger: if #55 stalls (blocked review, or CI
+  red with no fix in sight), back to the PO for a split.
   Measurement SNR check (AE, P2, AE-owned; 2026-10-25): US-174b
   shows the correction raises up to +0.67 dB in below-target
   regions at -40 dB noise re peak, clean at -60. The sweep capture
@@ -3295,6 +3314,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   softwareupdated has been running ~40 min. With team-lead and the
   owner; the CM has no sudo. Later (CM): 2.5 GiB; worker-3's
   22:27 CET nix build is still running and the CM lets it finish.
+  It finished at 22:31:42 CET; disk recovered to 2.8 GiB, still
+  below the 3.0 line, so the hold stays (CM).
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
