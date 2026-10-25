@@ -56,9 +56,9 @@ Next free: F-369, US-173, D-069, T66.
     nftables default DROP and the v4/v6 scan stay.
   - AC15: "HTTPS reachable from the LAN"; allowlist part dropped.
   - AC20: F-037 accepted as known risk; the Pi 5 is not gig-ready; no
-    amps or HP/IEM connected while F-037 is open. F-358 now blocks
-    US-163 (AC13 must PASS); list it next to F-037 only if the
-    Architect's fallback applies (AC13 FAIL) (PO, 2026-10-25).
+    amps or HP/IEM connected while F-037 is open. F-358 is resolved
+    on the Pi 5 (AC13 PASS at 132997f9), so it is not listed next to
+    F-037; the fallback did not apply (PO, 2026-10-25).
   - AC21: drop the allowlist runbook part.
   - T53: negative case is "5900 refused (v4 and v6)".
   - The allowlist fail-closed + IPv6 AC moves to the backlog with F-037.
@@ -165,7 +165,11 @@ Next free: F-369, US-173, D-069, T66.
     kz0j0c6f, PREEMPT_RT 6.12.62). Test text changes to `--no-trust`;
     `--sigs-needed 0` is wrong (it does not skip the trust check on
     this Nix).
-  - **F-358** HIGH, BLOCKS US-163 (AE; worker-1 agrees): AC13 FAIL,
+  - **F-358** STATUS (PO, 2026-10-25): RESOLVED for the Pi 5 (via
+    05-rt-direct.conf in US-163; AC13 PASS at 132997f9). Pi 4:
+    unverified. Keep the record OPEN as "Pi 4 verification
+    outstanding", linked to US-170 (Pi 4 parity); do not close.
+    History: HIGH, BLOCKED US-163 (AE; worker-1 agrees): AC13 FAIL,
     PipeWire data-loop.0 at RR/20, not FIFO 88 (no daemon-reload
     involved). PO RULING (2026-10-25, supersedes the earlier "known
     deviation" ruling): "F-358 is High and BLOCKS US-163. AC13 must
@@ -247,7 +251,8 @@ Next free: F-369, US-173, D-069, T66.
     the cold boot AND after the PW restart; a board-guard assert that
     the fragment is present and rtkit is off, plus one mutation run;
     T51 on the new deploy.
-    Update the F-358 record (High) and status.md.
+    Update the F-358 record and status.md: resolved on Pi 5, open
+    for Pi 4 verification (US-170).
   - **F-367** T49 FAIL: greetd crash-loops every ~10 s (~45 restarts
     in 8 min, not marked failed): no DRM device (vc4/v3d =m but not
     loaded, /sys/class/drm empty), so the labwc greeter cannot start.
@@ -300,15 +305,20 @@ Next free: F-369, US-173, D-069, T66.
   profile system-3, boot_id 1531f01f-e66f-4f6f-9b15-a5e9c362ee10.
   Deploy 08:49:41-08:50:05Z, warm reboot 08:51:50Z, PW restart
   08:56:26Z.
-  - AC13 (F-358) PASS: A1, A1b, A2 recorded (xhci FF 50), RTTIME
-    200000/200000, no startup kill; all after the boot AND after the
-    PW restart. PENDING: AE rules whether the warm reboot satisfies
-    "cold boot" (else re-check at the T48 power cycle).
+  - **AC13 PASS** at 132997f9 (AE; PO record): main thread and
+    data-loop.0 at FF/88 after the reboot AND after the announced PW
+    restart; one module-rt (A1b); RTTIME 200000/200000; no RTKit;
+    NRestarts 0; A2 recorded (xhci FF 50); no startup kill. The warm
+    reboot is ACCEPTED as A1 (AE). The T48 power cycle adds a
+    confirmation `ps -L`, not a gate.
   - no-crashloop / F-367 PASS: greetd condition-skipped; user@1000 up
     from boot via linger. T49 PASS: 11 min, max NRestarts 0.
   - T51 PASS (958 paths). Thermal max 66.65 C (below the 80 C STOP).
-  - AC14 PASS (all 0); count is 16 (8 linear x Mult/Add), not 24:
-    AE/PO to confirm the expected count.
+  - **AC14 PASS**: 16/16 gain values (8 linear x Mult/Add), all 0.
+    The earlier "24" included the 8 Control ports, which don't affect
+    audio; the AC14 count is corrected to 16 (PO).
+  - Unchanged (PO): amps-on/HP/IEM use of the Pi 5 still needs owner
+    re-confirmation plus pre-flight; the hifiberry US-172 gate stands.
   - hifiberry-blocked PASS via /proc/asound/cards (aplay/arecord are
     not on the image). Sink S32LE/8ch/48k.
   - P2 main-thread item NOT triggered (no startup kill).
@@ -316,18 +326,17 @@ Next free: F-369, US-173, D-069, T66.
   - Wording: aplay/arecord are not on the image, so the AC12 and
     hifiberry-blocked checks must allow /proc/asound/cards as live
     evidence. Pre-PR batch.
-  - Recovery: the firmware partition keeps 2 gens, now nkifli3r +
-    x83m7bir; p9mz... was pruned, so any recorded p9mz recovery line
-    is obsolete. New recovery line:
-    gens/x83m7bircd4b7j8wchx9k1mnilzi8kl4/. Pre-PR batch.
-  - F2 (pcm-bridge/level-bridge nodes after PW restart): see P2.
-  - US-163 waits on (team-lead, 2026-10-25; CM update): the F-358
-    fix commit (05-rt-direct.conf) and its AE + Architect review; the
-    deploy; then the owner's cold boot for T48 and AC13. The F-367
-    guard f87c162b (ConditionPathExistsGlob) has all its reviews (AE,
-    SecSpec on linger, Architect: APPROVED) and is pushed
-    (story/US-163 = f87c162b). f87c162b and the F-358 commit share ONE
-    deploy and ONE cold boot; reboot announced only (CM).
+  - Recovery (Architect): the firmware partition keeps 2 gens, now
+    nkifli3r + x83m7bir; p9mz... was pruned. The PR text and recovery
+    notes use gens/x83m7bircd4b7j8wchx9k1mnilzi8kl4/ as the fallback
+    generation; drop any p9mz line. Pre-PR batch.
+  - F2 (pcm-bridge/level-bridge nodes after PW restart): P1, see P1;
+    the US-163 PR mentions it as observed.
+  - US-163 status after deploy 2: the F-358 fix and the F-367 guard
+    f87c162b are approved, deployed together (132997f9) and PASS.
+    Still open: the T48 owner power cycle (also the AC13 confirmation
+    `ps -L`, not a gate); the fan question; the pre-PR tracking batch;
+    then the PR and Rule 13.
   - US-163 PR known deviations (PO, 2026-10-25, verbatim):
     - "Pi 5 firmware merges none of the config.txt dtoverlay lines
       (vc4-kms-v3d-pi5, disable-bt-pi5). The bootloader writes
@@ -405,7 +414,8 @@ Next free: F-369, US-173, D-069, T66.
   .claude/team); include the nixos-rebuild-ng deploy verb. Deploy-2
   finding F3 (CM): nixpkgs 26.11 renamed the darwin nixos-rebuild-ng
   binary to `nixos-rebuild`; the deploy-verb docs (.89 batch and the
-  HOWTO) must name the binary per nixpkgs version.
+  HOWTO) use the explicit store path or the version-checked binary
+  name (Architect).
 - Host key a5kILUyr ACCEPTED as is (joint Architect + SecSpec): TOFU
   on a MAC-verified LAN host, current-system p9mzphhy and revision
   fb7d557e matching. CLOSED, do not re-open. No extra check for
@@ -431,6 +441,15 @@ Next free: F-369, US-173, D-069, T66.
 
 ## P1
 
+- After a PW restart the pcm-bridge and level-bridge PW nodes don't
+  come back (7 vs 12 nodes after 6 min), so web-UI metering is dead
+  until the bridges restart. P1 (Architect RULING): the web UI can
+  show no levels while audio is flowing; the AE rules whether it
+  blocks amps-on use. Likely fix: PartOf=/BindsTo=pipewire.service on
+  both bridge units, or reconnect logic. Pre-existing, not US-163
+  scope; the US-163 PR mentions it as observed. Related to F-090
+  (resolved; links lost on restart), but this is the nodes. (CM,
+  deploy-2 finding F2)
 - **US-172** Pi 5 local display (D-022): vc4/DRM on the Pi 5,
   greetd/labwc up, Mixxx usable on HDMI. Prerequisite for DJ mode on
   the Pi 5; sits next to the F-358/F-291 work. Starting point: the
@@ -469,9 +488,14 @@ Next free: F-369, US-173, D-069, T66.
     US-172 restores HiFiBerry layer (a) or the AE re-rules.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
-  US-163. (Architect) Deploy-2 finding F1 (CM): WirePlumber's own
-  module-rt also hits nice -11 EPERM and activates rtkit-daemon at
-  boot. Architect rules fix vs backlog.
+  US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
+  132997f9 WirePlumber's own module-rt still logs "mod.rt: could not
+  set nice-level to -11: Permission denied" and activates
+  rtkit-daemon via D-Bus; PW data-loops are unaffected (FF 88). WP
+  has its own module-rt config, so the F-358 fragment doesn't cover
+  it. Architect RULING: BACKLOG, merged here (not a new item); later
+  fix = the same module.rt.args override in a wireplumber.conf.d
+  fragment. AC13 covers PipeWire only.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -489,11 +513,6 @@ Next free: F-369, US-173, D-069, T66.
 
 ## P2
 
-- After a PW restart the pcm-bridge and level-bridge PW nodes don't
-  come back (7 vs 12 nodes after 6 min), so web-UI metering is dead
-  until the bridges restart. Probably pre-existing; related to F-090
-  (resolved; links lost on restart), but this is the nodes. Backlog
-  unless the Architect objects. (CM, deploy-2 finding F2)
 - "PipeWire main thread back to SCHED_OTHER: drop the F-020
   CPUSchedulingPolicy=fifo/88 from the pipewire user unit, now that
   module-rt promotes the data loops directly (F-358). At equal FIFO
