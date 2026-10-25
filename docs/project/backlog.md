@@ -205,11 +205,13 @@ Next free: F-369, US-173, D-069, T66.
     ARCHITECT RULING (2026-10-25, via CM): MINIMAL; the fallback does
     NOT apply. Cause: RLIMIT_NICE=0, so module-rt's nice -11 gets
     EPERM and RTKit then grants RR/20. Fix: one commit, all boards: a
-    new PW conf.d fragment 05-rt-direct.conf sets module.rt=false and
-    loads module-rt with nice.level=20 ("don't change"), rt.prio=88,
-    rtkit and portal disabled, flags ifexists nofail. The user@ RTPRIO
-    path is moot. No unit, PAM or limit change (narrower than the
-    SecSpec condition). AE + Architect review the diff before deploy;
+    new PW conf.d fragment 05-rt-direct.conf. FORM CHANGED in the F-358
+    review (Architect, via CM): it uses the upstream `module.rt.args =
+    {...}` override; no module.rt=false and no second module-rt entry
+    (supersedes the earlier two-entry form). The commit lands on top
+    of b809f9c6. The user@ RTPRIO path is moot. No unit, PAM or limit
+    change (narrower than the SecSpec condition). AE + Architect
+    review the diff before deploy;
     AC13 must PASS with A1, A1b, A2-A4; Pi 4 recorded as unverified.
     Pi 4 precondition (AE, via Architect): "Pi 4: AC13 A1 must pass
     before next amps-on use". The fragment is shared; on the Pi 4 it
@@ -296,6 +298,13 @@ Next free: F-369, US-173, D-069, T66.
     effect: listed as a layer deviation (defence in depth 3 -> 2
     layers), fixed in US-172. A live result that isn't clean is a
     FAIL.
+    AE ACCEPTS the 3 -> 2 layer deviation (no veto) for the no-audio
+    bring-up: two live-verified layers (blacklist of 4 modules, all
+    =m, N2 PASS; WP rule) plus a clean live result suffice.
+    Conditions (AE + PO): (1) re-check the live result at the AC13
+    cold boot (no HiFiBerry card in aplay -l, the 4 modules not
+    loaded, no PW/WP node), evidence in the lab note; (2) the
+    deviation holds only while nothing is connected (US-172 gate).
   - Pi 5 cooling (Architect via CM): the cooling_fan DT node is
     "disabled" and there is no fan hwmon, so an Active Cooler would
     not spin. OPEN owner question: is a fan fitted? If yes: small Pi 5
@@ -403,6 +412,8 @@ Next free: F-369, US-173, D-069, T66.
     honours the non-overlay safety lines (dtparam=audio=off,
     force_eeprom_read=0); HiFiBerry layer (a) depends on
     force_eeprom_read.
+  - GATE (AE + PO): before any amps/HP/IEM or HiFiBerry use, either
+    US-172 restores HiFiBerry layer (a) or the AE re-rules.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect)
@@ -464,6 +475,13 @@ Next free: F-369, US-173, D-069, T66.
 
 ## P3
 
+- nix/nixos/audio/pipewire.nix copies PW conf.d fragments with
+  `cp ${file} dir/`, so they keep the store hash prefix (e.g.
+  z7h7hys4...-30-filter-chain-convolver.conf) and load in hash
+  order, not NN- order. Pre-existing, harmless today; the ordering is
+  accidental. Only 05-rt-direct.conf (F-358) is copied under its
+  plain name. Option (A) in the F-358 review. Owner: Architect.
+  (worker-1, Architect)
 - Bluetooth stays active on the Pi 5 (disable-bt-pi5 not applied; BT
   on serial@7d50c000). No hardware.bluetooth, no bluetoothd. LOW,
   home lab, no owner question now; fix with US-172. (SecSpec, PO)
