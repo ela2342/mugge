@@ -288,11 +288,11 @@ directly -- you regenerate the FIR coefficients.
    ```
 
 2. **Select the crossover slope.**
-   The crossover is a Linkwitz-Riley target, realised as a minimum-phase
-   FIR (F-374). Two slopes are supported: 24 dB/oct (LR4) and 48 dB/oct
-   (LR8). The speaker editor offers only these. Saving a profile,
-   generating filters or starting a measurement session with any other
-   slope is refused.
+   The crossover uses a Linkwitz-Riley magnitude target, realised as a
+   minimum-phase FIR (F-374), so the two legs sum flat. Two slopes are
+   supported: 24 dB/oct (LR4) and 48 dB/oct (LR8). The speaker editor
+   offers only these. Saving a profile, generating filters or starting a
+   measurement session with any other slope or type is refused.
    - 48 dB/oct (LR8): the default, used by most shipped profiles
    - 24 dB/oct (LR4): used by the 200 Hz markaudio/Ultimax profile
 
