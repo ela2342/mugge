@@ -759,14 +759,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       2d67c46b), s1011 3fd2c3c3 (script ea07e490, identical to the
       pre-approved text). Finding: all display DT nodes disabled;
       the FAT root has no overlays/. Diagnosis with the Architect;
-      goes to US-172 unless the conditional ride-in applies.
-    - CONDITIONAL (PO; applies only if the Architect confirms the
-      bootloader.nix config.txt ordering bug BEFORE the head move and
-      the fix rides in; otherwise dropped): a US-163 /dev/dri AC with
-      greetd explicitly disabled and inactive (one line in
-      boards/pi5/default.nix), AC17 repeated at the new head (2 owner
-      cold cycles, one request), US-172 greetd AC becomes "ordered
-      after the DRM device and enabled". Not pre-written into B3.
+      goes to US-172 (no ride-in, see below).
+    - CONDITIONAL ride-in DROPPED (PO, 2026-10-25): the window closed
+      with worker-1's B3 v9 commit; the Architect could not confirm
+      the config.txt ordering bug without a test boot. Dropped: the
+      US-163 /dev/dri AC, greetd explicitly disabled, the AC17 repeat
+      (2 owner cold cycles). #50 ships headless as documented; the
+      owner line "no more power-cable pulls after the merge" stays
+      valid, no note needed. The Architect's #50 approval is
+      unaffected. The fix goes to US-172 (starter set there).
     - AD APPROVE is comment 6398339160 (CM). AD M2 precise: the
       f0fbefd1 -> final diffstat is docs-only AND the
       mugge-pi5-deploy nix-diff shows only configurationRevision,
@@ -1372,6 +1373,34 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   boot. Firmware 2025-08-28, variant start_cd (CM; worker-1 reads at
   08:34:52Z). The Architect cancelled the overlay diagnosis for
   US-163; it is the US-172 starting point.
+  US-172 starter set (Architect, PO, CM; 2026-10-25, from
+  CM-OBS-.89-DRM1; supersedes the "candidate causes" above):
+  - Diagnosis (Architect; evidence drm-observe 4d7b6864, s5
+    9868a2fc, s1011 3fd2c3c3): the firmware applies ZERO overlays
+    with our config.txt. disable-bt-pi5 is not applied (BT node has
+    no status); every display node stays at the base-DTB "disabled".
+    Our artefacts are fine: offline fdtoverlay applies the KMS
+    overlay cleanly. So it is our bug in the bootloader.nix
+    config.txt layout. Lead cause, NOT yet proven: every
+    dtoverlay/dtparam line comes before os_prefix=gens/<id>/, and
+    nothing is at the FAT root.
+  - First fix candidate: in configTxt emit os_prefix= (with kernel/
+    initramfs/cmdline) before the dt lines, ~5 lines reordered. Also
+    switch greetd off explicitly until it is ordered after DRM
+    (Architect addendum); then greetd ordered after DRM (AC8, PO).
+  - Step 1 = one CHANGE test boot (CM): (1) back up config.txt to
+    config.txt.pre-drm on the FAT; (2) write the reordered copy via
+    write-new + fsync + rename; (3) announced reboot, then read the
+    BT status, axi/v3d@2000000 status, /dev/dri, lsmod vc4/v3d;
+    (4) restore and check config.txt is byte-identical to the
+    backup. PASS = BT disabled + v3d okay (order theory confirmed);
+    no change = order theory wrong. The reboot announcement names
+    the recovery route: FAT backup, card reader/owner as fallback
+    (PO).
+  - Fallback if no change: firmware log via vclog.
+  - The F-367 guard stays in place until the fix is confirmed (PO).
+  - Timing: after #50 merges (focus); the CM schedules the session.
+    US-172.md gets this in a later story batch, not in #50 (CM).
   US-172 scope extensions:
   - (PO, new AC) "D-022 re-confirmed on the Pi 5: /dev/dri/card*
     present, labwc/greetd running, Mixxx with hardware GL (no
