@@ -768,6 +768,67 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       owner line "no more power-cable pulls after the merge" stays
       valid, no note needed. The Architect's #50 approval is
       unaffected. The fix goes to US-172 (starter set there).
+    - Review round at df807900 (2026-10-25; ALL LAPSED by the head
+      move to 22370317, re-review requested): SecSpec APPROVE
+      6399790617; Architect APPROVE 6399796811; AE APPROVE 6399797048
+      (AC19: no cold trigger in the nix-diff, warm reboot enough, on
+      condition the nix-diff is re-run if main moves past 45593097
+      before the merge; AC12a "PASS (2 layers)" accepted; non-blocking
+      table cell "while nothing is connected to the HAT; US-172"); UX
+      APPROVED with a must-fix 6399797327 (safety.md "Pi 5 Platform
+      Status" listed 8 of 13 amps-on items; afbc04ae recovery-line
+      note fixed); AD APPROVE 6399805948 (M1, M2, L1, L2, L3 resolved;
+      L4 stays backlog; not covered: CI, post-merge AC19, any later
+      head); QE verified block 6399806200 (APPROVE pending CI, T3
+      proof, line edits); TW CHANGES REQUESTED 6399817933 (one
+      safety.md blocker, fixed on the TW branch, 28dcba6e).
+    - AD ruling (via CM): AD M3 (CLAUDE.md boot-gain contradiction,
+      line 408 vs the 462 quick reference) and L5 (CLAUDE.md "Current
+      Mission" still Pi 4 / V3D GL) ride in this docs move (TW text,
+      AE confirms wording), plus safety.md 458-459 aligned. PM read
+      at 22370317: TW 28dcba6e "Pi 5 CLAUDE.md fixes" changes both
+      places; the reviewers judge them.
+    - QE T3 (via CM, verbatim): "QE: I've verified the image nix-diff
+      myself. sha ab5b35bb… matches. The derivation chain is exactly
+      the 6 nodes you listed. The only leaf is the input source "+
+      05-rt-direct.conf" in pi4audio-pipewire-configs. I masked the
+      store hashes in the --environment part and compared all 9
+      changed pairs. None differ. This is consistent with the Pi 4
+      toplevel staying j2ykkiil since f0fbefd1: 316cc3eb is from
+      before AC1a. T3 plan confirmed. Once the owner's dispatch is
+      green with an image artifact, and the final head has
+      images.sd-card drvPath == r4hqi43b…, T3 is met for me."
+    - B3 v10 (PM; on v9): US-163.md only (057787f1...): QE's AC17
+      wording correction (AC12a cold re-check covered by the AFTER
+      /proc/asound/cards and PW node reads; module state not read
+      cold) and the AC19 read-set addition `lsmod | grep -iE
+      'hifiberry|pcm512'` (expect empty). MANIFEST 801336d1...; never
+      landed (single head move, CM).
+    - B3 v11 (PM; v10 + D-069.md ad218bbe...): TW S1, D-069 "Impact"
+      bullet 1 records the Pi 5 sections in rt-audio-stack.md and
+      CLAUDE.md as done in #50 (Architect OK; headings at
+      rt-audio-stack.md:196/:367, CLAUDE.md:384). MANIFEST
+      c8658c6c...; v10 kept as MANIFEST-v10-superseded.txt. CM
+      verified 26/26. PM read: both files at 22370317 match v11.
+    - Ruling (team-lead, 2026-10-25): the standing merge permission
+      covers #50's CLAUDE.md changes (the owner's words have no
+      exception; team-lead told the owner that merging #50 adopts
+      D-069 and the CLAUDE.md edits and offered to show them; the
+      owner did not ask). The Architect's "accepted once the owner
+      accepts #50" is met by the CM merge under the standing
+      permission; team-lead reports the merge and the CLAUDE.md
+      change to the owner afterwards.
+    - HEAD MOVE (CM, docs-only, pushed by SHA, ls-remote verified):
+      22370317d461a0008f1bc619319d88b77058b548 = db375821 (merge of
+      TW 28dcba6e) + 22370317 (B3 v11). Body applied (sha256
+      93eee073). Proofs: comment 6399926788; bundle
+      /tmp/pr50-review-22370317/ (SHA256SUMS 0120a6b1). Rule (d)
+      holds: configurationRevision only, Pi 4 j2ykkiil, sd-card
+      r4hqi43b unchanged. Main still 45593097. CI run 40210023435 in
+      progress (the df807900 run was cancelled by the push). Owner's
+      release.yml run pending via team-lead (release dispatch is the
+      owner's, not covered by the standing permission). All 7
+      re-review at 22370317.
     - AD APPROVE is comment 6398339160 (CM). AD M2 precise: the
       f0fbefd1 -> final diffstat is docs-only AND the
       mugge-pi5-deploy nix-diff shows only configurationRevision,
@@ -1277,10 +1338,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   6. F-037/AC20: the open 8080 web UI is accepted only while nothing
      is connected.
   7. F-361 link-audit fix (P1 below: "before any amps-on use").
-  8. F-373 fixed and re-tested with a physical replug (AE ruling,
-     PO, 2026-10-25; replaces "usbstreamer-volume-replug (AC17-B)
-     PASS", which is deferred to F-373). A volume rise after the
-     replug makes G16 High and an amps-on blocker (US-159).
+  8. F-373 (AE, verbatim; follows safety.md in #50): "After a USB
+     re-enumeration the USBStreamer sink recovers without a PipeWire
+     restart. The fix is re-tested with a physical replug:
+     afterwards the USBStreamer hardware mixer reads no higher than
+     before, all 16 gain values are 0 and the gate is closed (AE)".
+     (Replaces "usbstreamer-volume-replug (AC17-B) PASS", deferred
+     to F-373; a volume rise after the replug makes G16 High and an
+     amps-on blocker, US-159.)
   9. The AC20 open blockers for amps-on / gig use: F-317, F-318,
      F-352, F-354, F-355 (F-358 resolved on the Pi 5; Pi 4 US-170).
   10. The 60-min flight-case thermal soak (GIG-READINESS entry, P1)
@@ -1289,8 +1354,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   12. RTTIME soft = hard (AD L1): an overrun SIGKILLs PipeWire with
      no SIGXCPU stage, which interrupts the USBStreamer and needs the
      F2 procedure. Documented in safety.md before amps-on.
-  13. F-373 (P1 below): the USBStreamer sink recovery after USB
-     re-enumeration, defined under US-159 G16 and tested (AE).
+  13. US-159 G16 (F-373) (AE, verbatim; follows safety.md in #50):
+     "Any re-adoption of the USBStreamer sink after a re-enumeration
+     (by GraphManager or WirePlumber) comes up gated: gains 0, gate
+     closed, and audio returns only when the operator re-opens it
+     through the D-063 ramp. Tested (AE)".
+  MIRROR RULE (AE via TW, 2026-10-25): safety.md "Pi 5 Platform
+  Status" carries this full 13-item table with this numbering. Where
+  the two differ, this list follows safety.md. Any add, removal or
+  renumbering here goes to the TW as a matching safety.md update.
   Related UX item (not a precondition): a persistent web UI banner
   "DEV IMAGE -- not gig-capable. Amps, HP and IEM off." while any
   item here is open, driven by a build or config flag (UX).
@@ -1401,6 +1473,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - The F-367 guard stays in place until the fix is confirmed (PO).
   - Timing: after #50 merges (focus); the CM schedules the session.
     US-172.md gets this in a later story batch, not in #50 (CM).
+    Architect: the starter set goes into the story when US-172 is
+    activated.
   US-172 scope extensions:
   - (PO, new AC) "D-022 re-confirmed on the Pi 5: /dev/dri/card*
     present, labwc/greetd running, Mixxx with hardware GL (no
@@ -1472,7 +1546,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   AE domain rating (2026-10-25): Medium; fix before the next filter
   deploy via the UI; the guard must fail loudly. The record rating
   stays High (QE, SecSpec). One item (PM ruling): QE's "1 skipped"
-  is this guard.
+  is this guard. AD (#50 review): keep F-362 high on the
+  post-US-163 list, because it hides the S-001 and D-009 tests.
 - **F-373** (AE; availability HIGH, safety-relevant; amps-on item
   13; linked US-159 G16): the USBStreamer sink does not recover after
   USB re-enumeration. AC17-B step (a), CM-CHG-.89-5: authorized 0->1
@@ -1504,6 +1579,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   exactly 0 and the gate is closed (D-063); levels return only
   through a deliberate gate open/ramp. Meters recover (F2). There is
   never an abrupt resume at the previous gain."
+  AC addition (AD L6, #50 review): the web UI and GraphManager must
+  not show a zombie sink as "running" or with live levels.
+  UX P1 (amps-on, also US-159 G16): a red web UI state "OUTPUT
+  DEVICE LOST — USBStreamer not playing. Amps off before recovery.",
+  backend-driven (PCM closed or spa.alsa errors), never inferred
+  from meters; recovery offered only through the D-063 gate; U8
+  order just below CLOSE FAILED. Design follows from UX.
 - **F-372** (SecSpec, MEDIUM; amps-on/gig blocker class next to
   F-037): the S-001 fix is weak. filter_routes.py:545 tests
   abspath(output_dir).startswith(abspath(DEFAULT_OUTPUT_DIR)), a
@@ -1576,6 +1658,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
 - .89 docs batch (CM): the flake.nix comment on mugge-pi5-deploy still
   says "built natively on the Pi ... nixos-rebuild switch"; the real
   route is the Mac `nixos-rebuild boot --no-reexec`. Low.
+- nixos-upgrade.md §8.5 card-reader recovery (UX P3, TW): step 2
+  says to pick the newest present generation other than the one
+  that just failed; step 3 names where the off-Pi copy of
+  config.txt/MAP.txt is kept (save one after each deploy).
 - **F-363** Purifi Qts test is order-dependent (`iterdir()[:20]`).
   AE rating (2026-10-25): Low while no venue config uses this
   driver; Medium if one does (the T/S data feeds the D-031 design).
@@ -1859,7 +1945,9 @@ merge needs update-branch and 7 reconfirmations at the new head.
   still says open; F-335 AC4 asks for dispatched T1+T2 green ON MAIN
   with every test-* step run. Close the record after QE confirms
   AC1-AC6 (records follow-up, not in the #50 head move).
-- #50 US-163: open; see the US-163 section (PR #50 block).
+- #50 US-163: open; head 22370317 (docs-only move), all 7
+  re-reviewing, CI 40210023435 running, owner release.yml run
+  pending; see the US-163 section (PR #50 block).
 - STANDING OWNER PERMISSION (2026-10-25, verbatim via team-lead):
   "Also, standing permission to merge if the team approves, without
   my additional approval. Let's ensure you can make progress
