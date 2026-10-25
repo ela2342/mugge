@@ -339,8 +339,8 @@ Next free: F-369, US-173, D-069, T66.
   - hifiberry-blocked PASS via /proc/asound/cards (aplay/arecord are
     not on the image). Sink S32LE/8ch/48k.
   - P2 main-thread item NOT triggered (no startup kill).
-  - Still open: T48 (now the first AC17 cycle, see pre-merge runs);
-    the fan question.
+  - Still open: T48 (now the first AC17 cycle, see pre-merge runs).
+    Fan question ANSWERED (owner, 2026-10-25), see Pi 5 cooling.
   - Wording: aplay/arecord are not on the image; /proc/asound/cards
     as live evidence for hifiberry-blocked is ACCEPTED (AE, QE).
     AC12/hifiberry text updated in the pre-PR batch.
@@ -368,8 +368,7 @@ Next free: F-369, US-173, D-069, T66.
     f87c162b are approved, deployed together (132997f9) and PASS.
     PASS on deploy 2 (QE): AC13 (closed), T49, T51, AC12. Still
     open: the pre-merge runs below (T48 is now the first AC17 cycle);
-    the fan question; the pre-PR tracking batch; then the PR and
-    Rule 13.
+    the pre-PR tracking batch; then the PR and Rule 13.
   - **US-163 pre-merge runs** (rulings 2026-10-25: PO scope, QE
     adequacy, Architect technical, SecSpec scan). QE needs items 1-5
     BEFORE its Rule 13 approval; only T56/AC19 come after merge.
@@ -387,7 +386,10 @@ Next free: F-369, US-173, D-069, T66.
     recorded keeps AC18b/AC17 valid; any non-docs change reruns both.
     Status (CM): CM-DEP-.89-T54 granted to worker-1, starts after
     CM-OBS-.89-T53 ends; three announced reboots.
-    1. OPEN: T53-on-deploy + external scan, ONE read-only OBSERVE on
+    1. RUNNING (CM-OBS-.89-T53): identity and sshd -T PASS; full nmap
+       scans (v4 + two global SLAAC v6 addresses) until ~11:20Z; T54
+       starts after that. T53-on-deploy + external scan, ONE read-only
+       OBSERVE on
        the running deploy (SecSpec precondition; PO, QE). A worker runs
        it from the Mac; SecSpec reviews the raw output under Rule 13.
        Host key a5kILUyr + MAC first. v4: `nmap -Pn -p-` shows exactly
@@ -443,9 +445,14 @@ Next free: F-369, US-173, D-069, T66.
        boot, no intervention: SSH within 3 min; new boot_id; readlink
        + configurationRevision; both failed lists empty; kernel log
        scan with per-line disposition; get_throttled 0x0; AC14/#10.
-    5. AC1a: PASS (Architect eval vs 8nv9psc1); confirm vs 289390bf
-       (worker-1) and re-run on M pending (CM correction; v59's "DONE
-       at j2ykkiil" was premature). AMENDED (PO, verbatim): "The Pi 4
+    5. AC1a: PASS (Architect) at bbff469e vs origin/main 289390bf:
+       the only change is toplevel -> etc -> pipewire-configs ->
+       pi4audio-pipewire-configs (+05-rt-direct.conf, store path
+       c6ry7vzk...); raw diff ac1a-nixdiff-289390bf-vs-bbff469e.txt
+       (worker-1). Pending: re-run on M, same criterion; raw diff
+       attached to the PR (QE). (v59's "DONE at j2ykkiil" was
+       premature; the earlier eval was vs local 8nv9psc1.)
+       AMENDED (PO, verbatim): "The Pi 4
        drvPath differs from main only by intended all-board changes
        listed in the PR (at least the F-358 fragment
        05-rt-direct.conf; the architect lists any others). The diff
@@ -455,9 +462,7 @@ Next free: F-369, US-173, D-069, T66.
        etc -> pipewire-configs -> pi4audio-pipewire-configs differs
        (+05-rt-direct.conf, one cp); kernel drv hsf3x9wz unchanged.
        Intended all-board list = exactly 05-rt-direct.conf.
-       Pending: worker-1's diff against origin/main 289390bf, sent to
-       the Architect for PASS/FAIL; the raw diff attached to the PR
-       (QE); the Architect's re-run on M. Base = origin/main 289390bf,
+       Base = origin/main 289390bf,
        NOT 95306f66 (local-only, unpushed; owner: leave it alone; never
        a base). Merge base
        c34f7da7; c34f7da7..289390bf is docs/tracking only. worker-1
@@ -496,10 +501,14 @@ Next free: F-369, US-173, D-069, T66.
     deviation holds only while nothing is connected (US-172 gate).
   - Pi 5 cooling (Architect via CM): the cooling_fan DT node is
     "disabled" and there is no fan hwmon, so an Active Cooler would
-    not spin. OPEN owner question: is a fan fitted? If yes: small Pi 5
-    config fix by worker-1, AE + Architect review. Interim rule for
-    every Pi load test (T48-T55, T57): record thermal_zone0, STOP at
-    >= 80 C.
+    not spin. Owner question ANSWERED (2026-10-25, verbatim, via
+    team-lead): "No fan, but a metal case that provides a little bit
+    of cooling. Let me know if you run into temperature issues." So no
+    fan config fix is needed (the disabled cooling_fan node is
+    correct). Rule for every Pi load test (T48-T55, T57): record
+    thermal_zone0, STOP at >= 80 C; any reading near the 80 C stop
+    line goes to team-lead for the owner. Reference: deploy 2 max
+    66.65 C.
   - QE request: commit a SecSpec-vetted subset of the deploy evidence
     into the US-163 PR.
 - 2026-10-24 20:28:03: Pi 5 restart CONFIRMED as the owner's power
