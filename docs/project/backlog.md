@@ -10,13 +10,13 @@ land here. Maintained by the PM; the CM commits changes.
 
 Taken (not yet filed as records): F-361, F-362, F-363, F-364 (below);
 F-365; F-366, F-367, F-369 (US-163 section); F-370 (P2);
-F-371 (P3); F-372 (P1);
+F-371 (P3); F-372, F-373 (P1);
 D-068 (T57 gate dropped); T65 =
 US-159 G16 reconciler test; US-172 (P1, Pi 5
 local display). F-368 WITHDRAWN, never to be reused (was a
 duplicate of the existing F-358 for AC13).
 D-069 (Architect: Pi 5 platform baseline under NixOS, PROPOSED).
-Next free: F-373, US-173, D-070, T66.
+Next free: F-374, US-173, D-070, T66.
 
 ## US-163 text updates (critical path; one tracking batch before the PR)
 
@@ -561,6 +561,38 @@ Next free: F-373, US-173, D-070, T66.
       and F-358 get "Update 2026-10-25" sections; headers and index
       rows unchanged. US-159 G16 AE a-e from the AE's verbatim text;
       T65 lists AE's five cases plus the Architect's two.
+    - v80 committed at f075d26d (CM). B3 verified by the CM (all
+      files pass shasum -c; D-069 byte-identical; none of the 11
+      modified files touched on the branch since afbc04ae).
+    - B3 v2 (PM, 2026-10-25): adds defects/F-373.md, the F-373
+      defects-index row and the status.md F-373 row (next free
+      F-374). 26 files (15 new, 11 modified). New MANIFEST.txt sha
+      3fdd2a28...; v1 kept as MANIFEST-v1-superseded.txt. The CM
+      commits B3 at the single head move after #49 merges, with the
+      TW's 9a7e9562 and the lab notes (82fcf9e8, afd6e065).
+    - QE on #50 (6398380045): NOT APPROVED until T1-T3 green with
+      counts > 0 and the Nix version in the log on the final head,
+      the head-move drvPath proof, and AC17 Session B plus the cycles
+      accepted. QE's Nix-pin request on #50 and its `toString ./.`
+      one-liner are withdrawn (covered by F-335/#49).
+    - AD on #50: T1 cannot pass until #49 merges and #50 merges main.
+      That merge touches flake.nix, so the AD M2 proof is the
+      mugge-pi5-deploy nix-diff vs f0fbefd1/2wf21ydg showing only
+      configurationRevision, plus the Pi 4 drvPath unchanged; else
+      AC17 is re-run. A docs-only diffstat is not enough. Merge order:
+      #49, then #50.
+    - F-362 identity (PM ruling): ONE item. QE's "module-level skip
+      reads as 1 skipped" is the same test_filter_routes.py:34-35
+      guard. #50 body: F-362 open, pre-existing, NOT a #50 merge
+      blocker (settles AD M1 on #50).
+    - TW branch docs/US-163-ac21-batch: f2a1ee0c (B1/B2, ACKed),
+      head e7086f9e (+ safety.md 5 lines, AD L1); the AE reviews it
+      with the rest of safety.md at the re-review. Section 8.7 waits
+      on worker-1's commands file (relayed).
+    - AC17 Session B (CM-CHG-.89-5): step (a) software
+      re-enumeration PASSED on safety (nothing raised); recovery
+      finding F-373. Step (b), the owner's physical replug, is
+      cleared.
     - AD APPROVE is comment 6398339160 (CM). AD M2 precise: the
       f0fbefd1 -> final diffstat is docs-only AND the
       mugge-pi5-deploy nix-diff shows only configurationRevision,
@@ -1081,6 +1113,8 @@ Next free: F-373, US-173, D-070, T66.
   12. RTTIME soft = hard (AD L1): an overrun SIGKILLs PipeWire with
      no SIGXCPU stage, which interrupts the USBStreamer and needs the
      F2 procedure. Documented in safety.md before amps-on.
+  13. F-373 (P1 below): the USBStreamer sink recovery after USB
+     re-enumeration, defined under US-159 G16 and tested (AE).
   Related UX item (not a precondition): a persistent web UI banner
   "DEV IMAGE -- not gig-capable. Amps, HP and IEM off." while any
   item here is open, driven by a build or config flag (UX).
@@ -1231,6 +1265,26 @@ Next free: F-373, US-173, D-070, T66.
   `_PROFILES_DIR`, which filter_routes.py no longer defines (now
   `_profiles_dir()` at :54), so the ImportError is permanent. Rating
   stays High. Must be defined in the PR #50 body (AD M1).
+  AE domain rating (2026-10-25): Medium; fix before the next filter
+  deploy via the UI; the guard must fail loudly. The record rating
+  stays High (QE, SecSpec). One item (PM ruling): QE's "1 skipped"
+  is this guard.
+- **F-373** (AE; availability HIGH, safety-relevant; amps-on item
+  13; linked US-159 G16): the USBStreamer sink does not recover after
+  USB re-enumeration. AC17-B step (a), CM-CHG-.89-5: authorized 0->1
+  left sink node id 33 "running" on a dead PCM; spa.alsa
+  "hw:USBStreamer,0p: No such device" from 13:46:33Z; no reopen
+  after authorized 1 at 13:46:38Z; hw Playback Channel Map all 0.
+  Raw: ~/mugge-pi5-prewipe-20261024/
+  ac17-B-replug-a-20261025T134631Z.txt (sha 455610c2...). Likely
+  cause: a static pipewire.conf.d adapter with no hotplug path; only
+  a PW restart recovers it, which also kills the meters (F2). Safety:
+  a self-recovery would resume programme at full gain, not Mult 0.
+  Required behaviour (G16/US-159): every recovery goes through the
+  D-063 gate (gains 0, then a deliberate ramp), or no self-recovery
+  and an operator-initiated restart only. Not a US-163 blocker (AC17
+  step (a) PASSED). Step (b) shows whether a power-cycled device
+  behaves the same way. Record: B3 v2.
 - **F-372** (SecSpec, MEDIUM; amps-on/gig blocker class next to
   F-037): the S-001 fix is weak. filter_routes.py:545 tests
   abspath(output_dir).startswith(abspath(DEFAULT_OUTPUT_DIR)), a
@@ -1301,6 +1355,8 @@ Next free: F-373, US-173, D-070, T66.
   says "built natively on the Pi ... nixos-rebuild switch"; the real
   route is the Mac `nixos-rebuild boot --no-reexec`. Low.
 - **F-363** Purifi Qts test is order-dependent (`iterdir()[:20]`).
+  AE rating (2026-10-25): Low while no venue config uses this
+  driver; Medium if one does (the T/S data feeds the D-031 design).
   Medium; QE ACs 1-4. (worker-2) Re-found by worker-1 (2026-10-25):
   test_driver_validation.py::TestRealDriverRecords::
   test_sample_real_drivers_pass FAILS on darwin on main 95306f66 and
@@ -1348,6 +1404,36 @@ Next free: F-373, US-173, D-070, T66.
 
 ## P3
 
+- development.md, ONE docs item (TW offers to write it; merges UX,
+  QE, Arch N2, AD L2, TW F1-F3): run `nix build
+  .#checks.<system>.app-source-paths` locally (test-all no longer
+  includes the guard; it runs in CI only); the apps run from a store
+  snapshot of the tracked tree, so new files must be git-added first;
+  the CI section 7.2 pin and guard text; the PytestCacheWarning note.
+- AD L1 (#49): the lint only catches `toString ./.` and `toString
+  self`, and the closure check covers apps only: widen the lint or
+  document the limit.
+- AD L3 (#49; SecSpec): `cachix watch-exec` pushes the full tracked
+  tree (.claude/, the lab notes) into mugge.cachix. Confirm the
+  cache's visibility is no wider than the repo's.
+- AD L4 / Arch N3 (#49; SecSpec): install-nix-action is pinned to an
+  untagged master commit. Move it to the next tag, or decide whether
+  the v31.11.2 tag is enough.
+- Low (worker-1): nixos-anywhere 1.13.0 puts its own
+  `-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no`
+  before our --ssh-option values; OpenSSH takes the first value, so
+  the host-key pin on the RAM-installer hop was likely not in effect
+  (7 "Permanently added" lines in install-fb7d557e.log). That hop was
+  TOFU, within the ruling; the final host has been pinned with
+  StrictHostKeyChecking=yes since 19:00Z. Untested whether an earlier
+  `-o` wins: whoever does the next nixos-anywhere install checks it.
+- Low (worker-1): nix/nixos: ela has no per-user GC-root dir on NixOS
+  (/nix/var/nix/gcroots/per-user/ela is missing and ela can't create
+  it), so `nix-store --add-root` under per-user fails. Ad-hoc tool
+  copies are unrooted (CM: accepted deviation for AC17). Fix: create
+  the dir via systemd.tmpfiles, or root under ~ with --out-link. Not
+  a US-163 blocker.
+
 - **F-371** (worker-1, AC11 side finding; Low): the mugge-pi5-deploy
   closure (2wf21ydg) contains the full nixpkgs source (8ggk1060, rev
   812b3986; presumably via nix.registry/NIX_PATH), which ships 25
@@ -1384,7 +1470,11 @@ Next free: F-373, US-173, D-070, T66.
   LOW, not blocking US-163. (SecSpec)
 - **F-364** local-demo seeds are copied 0444, so saving a profile fails
   with EACCES (local-demo.sh:676-680; speaker_routes.py:136;
-  hardware_routes.py:120). Low. (worker-2)
+  hardware_routes.py:120). Low. (worker-2) Same item as Arch #49 N1
+  and the AE local-demo note: the fix is one `chmod -R u+w` line; not
+  folded into #49 (a code commit would void the approvals). AD (a):
+  most likely pre-existing (the store copy was read-only on Nix 2.34
+  and earlier too).
 - Security (owner: postponed): L6 allowlist format; SSH tunnel check on
   mugge-pi5; fail-closed allowlist and US-170
   parity before any amps-on use; CI: pin dorny/paths-filter,
@@ -1514,6 +1604,17 @@ merge needs update-branch and 7 reconfirmations at the new head.
   2026-10-25): #50's test-and-build fails on F-335, so #49 lands
   first, limited to F-335 (no scope additions). CM holds the push
   until worker-2 reports.
+  Pushed (CM): head 316cc3eb = b959e5c9 + merge of main 289390bf
+  (docs-only, no overlap), up to date with main. All 7 APPROVE at
+  316cc3eb: UX 6398401666, AE 6398401922 (no veto), QE 6398402123
+  (C1 CI green with "Checked 18 app scripts", C2 local negative
+  control, C3 T3 status explicit), SecSpec 6398402382 (no veto), AD
+  6398415695, Architect 6398416014, TW 6398427590 (C1). TW C1 and
+  AD M1 resolved by body v2 (6398461001, 6398461280). Open: CI run
+  40198678554 (QE C1), QE C2 (worker-2), the owner's T3 ruling (QE
+  C3, via team-lead), owner acceptance. Next body touch (worker-2):
+  AD (a) F-364 "most likely pre-existing"; TW N1 "No other job uses
+  GITHUB_TOKEN" is imprecise (actions/checkout uses it by default).
 - #50 US-163: open; see the US-163 section (PR #50 block).
 - #43, #45, #44: need #49 on main and real green CI; #45 before #44.
 - #36, #40: no Rule 13 review; owner direction needed (#40 IDs clash).
