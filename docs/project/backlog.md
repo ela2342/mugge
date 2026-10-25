@@ -34,8 +34,9 @@ phase); F-384 (P1, correction.py step 9 re-clip); F-385 (P1, D-031
 subsonic vs crossover phase; PM checked free across main, origin
 and all worktrees, 2026-10-25); F-386 (P2, gain values read from
 pw-dump; PM checked free across main, origin and all worktrees,
-2026-10-25).
-Next free: F-387, US-176, D-071, T66.
+2026-10-25); F-387 (Low, web-ui teardown flake; QE N2 on #55; PM
+checked free across main, origin and all worktrees, 2026-10-25).
+Next free: F-388, US-176, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -1787,6 +1788,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   route to the VC log, mmap of /dev/vc-mem at 0x3ff22000. It maps
   physical memory uncached and bypasses STRICT_DEVMEM, so it needs a
   SecSpec/Architect ruling like the /dev/mem read. NOT in run 2.
+  SecSpec (via CM, 2026-10-25): same class as /dev/mem but stricter,
+  because it bypasses STRICT_DEVMEM: the same six conditions, plus
+  an explicit Architect ruling that the mapping is PROT_READ only.
   Facts: vclog is not in nixpkgs (raspberrypi/utils); the vc-mem
   DMA path returns ENXIO on the Pi 5.
   H1 QE conditions (a)-(d) adopted (CM, 2026-10-25): copy sha256 and
@@ -2039,6 +2043,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     captures, to confirm the PW 1.6.2 input marker before the
     operator docs name it, and that AUX0..7 carry only
     convolver-out. Gate-2 follows US-172 H1 on the Pi.
+  - Pushed (CM, 2026-10-25): story/US-173-first-dj-session =
+    142a3523 (the F-380 revert of c7dde808, SecSpec fixes and
+    Architect N1 in a9addc52, merge of main dfdbbbd6).
   worker-3 findings (not fixed):
   - a) A WirePlumber restart re-creates the ports of nodes it adopts
     and drops their links, even with the policy disabled;
@@ -2183,6 +2190,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (CM). Merge order (Architect, as given): F-363, then
   chore/rc-check-configs, then the 174b PR; US-173 merges main after
   chore/rc-check-configs. F-374 merges first per the earlier ruling.
+  Pushed (CM, 2026-10-25, later): story/US-174-room-correction =
+  d595613f (US-174b).
+  Measurement SNR check (AE, P2, AE-owned; 2026-10-25): US-174b
+  shows the correction raises up to +0.67 dB in below-target
+  regions at -40 dB noise re peak, clean at -60. The sweep capture
+  must estimate SNR and warn or refuse below 60 dB re peak.
   Pushed (CM, 2026-10-25): US-174 head e071452b = US-174b code
   a3bc538c (55 new tests; local 1252 passed / 1 F-363 fail; sim-e2e
   130 passed) plus B6e. Its sandbox check stays red on the new
@@ -2325,8 +2338,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   ::TestPipeWireCollectorRPC::test_backoff_resets_on_connect, an
   asyncio _SelectorTransport.__del__ GC race. Does not touch
   room_correction. Low.
-- Flaky web-ui test teardown (worker-5, via CM, 2026-10-25;
-  pre-existing): teardown ERROR in
+- **F-387** Flaky web-ui test teardown (worker-5, via CM,
+  2026-10-25; pre-existing; ID per QE N2 on #55): teardown ERROR in
   test_measurement_integration.py::TestGMFullSessionLifecycle::
   test_gm_mode_transitions_during_happy_path. The mock GM returns
   None at session.py:480, then a starlette CancelledError at
@@ -2430,12 +2443,45 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   AD APPROVE (not covering CI or a later head). Pending: SecSpec,
   TW, QE, Architect, UX. AD note: updating the branch after F-363
   merges voids all approvals and needs a re-review round.
+  TALLY (CM-confirmed, 2026-10-25; supersedes "Pending" above; all 7
+  posted verbatim, copies /tmp/pr55-verdicts-6e05fd64/): 5/7.
+  APPROVE: AE, AD, SecSpec (no veto), Architect, TW. CHANGES
+  REQUESTED: QE (evidence only, in the PR body: R1 the bug
+  reproduced on base b0666c02; R2 mutants M1-M3, red then green);
+  UX U1 BLOCKING (the speaker editor offers 96 dB/oct,
+  speaker-config.js:28, and a free-text Type that the generator now
+  rejects (LR only, 24 or 48 dB/oct), with no check on save, so a
+  venue session fails only at filter generation (CP-5) after all
+  sweeps; fix: the editor and the save or session start reject the
+  same values, with a test; if the AE keeps 96, the generator needs
+  a non-LR route). The CM asked the AE whether 96 must stay and the
+  Architect about scope. Every reviewer re-reviews the merge-main
+  head after F-363 merges (strict protection).
+  Non-blocking #55 notes: Architect N1: extend the phase check to
+  24 dB/oct. UX N1: slope-error tuple wording; UX N2: release note
+  "a crossover section without `type` now means LR" (TW). QE N2:
+  the web-ui teardown flake is F-387 (cited in the #55 body). QE
+  N3: F-383 cites the #55 post-combine test by name (sum margin 0.1
+  dB). AD N2: until runner.py and the bose generator are migrated,
+  anything naming "the generated files" (F-321) must say which
+  generator produced them.
+  TW notes (docs, TW-owned): (1) a user-facing profile crossover
+  schema section (`type`, slopes 24/48, missing type = LR);
+  speaker-management-requirements.md section 4 still shows an
+  older list-style schema (`slope: 96`, `type: HP/LP`). (2) A
+  one-line clarification "LR magnitude target as min-phase FIR, not
+  LR IIR" in CLAUDE.md Critical Design Decisions 1, D-001,
+  design-rationale.md and user-journeys.md. (3) F-374, F-383 and
+  F-385 exist only in this backlog: no defect records or
+  defects-index rows on main; closing F-374 on merge needs the usual
+  tracking batch.
   #55 backlog (AD, 2026-10-25): L1 a loose-bounds regression test
   on the real, unmodified markaudio profile (sum, max|H|, phase),
   tightened with F-385/F-383. L2 default_profile.yml has no
   crossover `type`; with "missing = LR" it changes silently once
-  runner.py is migrated: add `type`, and document the default in
-  the schema docs.
+  runner.py is migrated: add `type` when runner.py and the bose
+  generator are migrated, and document the default in the schema
+  docs.
   #55 backlog (AE, 2026-10-25; verdict
   /tmp/pr55-review-6e05fd64/AE-verdict.md): the D-009 max|H| test
   in test_generate_profile_filters covers only 20 Hz..20 kHz;
@@ -2720,7 +2766,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     marked metadata.ts_consistency: datasheet-inconsistent, unless a
     measured T/S override is present. The F-363 PR only adds a test
     that no profile under configs/ references a marked record
-    today. AE-owned; priority P2 pending the AE.
+    today. AE-owned; P2 (AE confirmed, 2026-10-25). The F-363
+    configs/ assertion is the interim guard.
+  - Dual-voice-coil Re (AE, P3): Earthquake/Image Dynamics records
+    store series Re as if per-coil; the IDMAX10D2 Re 3.44 is in no
+    manufacturer document. AE-owned.
+  - Decimal-comma parse bug (QE, P2 until worker-6's scan is in):
+    datasheet ingestion read European decimal commas wrongly;
+    accuton-c173-11-191 stored Qts 34.0 / Qms 527.0 where the
+    retailer page prints "0,34" / "5,27". Other records from the
+    same source may be affected (worker-6 scanning). AC: a parser
+    test with comma decimals plus a Qts/Qms range sanity check in
+    the data tests. QE-owned.
 - **F-379** (worker-4, Architect ruling; 2026-10-25) Web-UI
   correction level defect: src/web-ui/app/filter_routes.py:231 calls
   correction.generate_correction_filter directly, with no IR level
