@@ -648,6 +648,31 @@ Next free: F-374, US-173, D-070, T66.
       files unchanged from v5.
     - AE: the USBStreamer is bus-powered on root port 1-1. Each cold
       cycle records bmAttributes (expected 0x80) and bMaxPower.
+    - AC17 COLD CYCLES 1 AND 2: PASS (CM, 2026-10-25). The owner
+      pulled the cable after the CM's GO each time. Boots 7f56af91
+      and 8c6239cb, booted == 2wf21ydg. Each cycle: USB
+      re-enumeration; USBStreamer bus-powered (1-1, bmAttributes 80,
+      500 mA); nothing louder than the step-(a) BEFORE values; gains
+      0, gate closed; 24/24 links; one sink running; spa.alsa errors
+      0. ps -L: PW main and data-loop.0 at FF 88, RTTIME
+      200000/200000, so F-358 survives a real cold boot. Thermal max
+      63.9 C. CM-CHG-.89-5 released 15:30Z. The owner is done at the
+      Pi; no more physical steps for US-163 (CM). QE ruling on AC17
+      pending.
+    - Evidence limits (CM, recorded): the USB devnum stays 2 on a
+      fresh enumeration, so the proof of a cold cycle is the owner's
+      pull plus the down windows. Early-boot journal timestamps come
+      before the clock is synced.
+    - Lab note d15a1bec (CM, local, on top of 1443401d) joins the #50
+      head move.
+    - Open (AE + Architect ruling): the image-status notes say the PW
+      main thread is SCHED_OTHER, but it is FF 88 on both cold boots
+      (cf. the P2 "PW main thread back to SCHED_OTHER" item).
+    - Open (PM -> CM/QE): AC19 says the Pi is redeployed from the
+      merged main SHA "and AC17 is re-checked". Does that need two
+      more owner cold cycles, or does rule (d) (docs-only after M)
+      cover it? The CM says no more physical steps; the PM's owner
+      status (via team-lead) said two more cycles after the merge.
     - AD APPROVE is comment 6398339160 (CM). AD M2 precise: the
       f0fbefd1 -> final diffstat is docs-only AND the
       mugge-pi5-deploy nix-diff shows only configurationRevision,
@@ -1691,8 +1716,10 @@ merge needs update-branch and 7 reconfirmations at the new head.
   CI run 40198678554 at 316cc3eb GREEN, counts identical to
   df4a6a9b. QE C1 MET (6399369458): "Checked 18 app scripts" read
   from the signed cachix output of the CI guard derivation (it is in
-  $out, not in the log). C3 pending on T3 run 40205694612
-  (release.yml, dispatched by the owner at 316cc3eb), in progress.
+  $out, not in the log). T3 run 40205694612 (release.yml,
+  dispatched by the owner at 316cc3eb) GREEN (CM): artifact
+  sd-card-image ~1.04 GB, digest 7a9ae2ce...; verify-ci skipped by
+  design (tag-only). QE ruling on C3 and the final APPROVE pending.
 - #50 US-163: open; see the US-163 section (PR #50 block).
 - #43, #45, #44: need #49 on main and real green CI; #45 before #44.
 - #36, #40: no Rule 13 review; owner direction needed (#40 IDs clash).
