@@ -458,6 +458,15 @@ def _sub_correction(bundle, sim):
 
 class TestAC6aNoise:
 
+    def test_noise_path_is_live(self, bundle, home_lab):
+        # QE: the noise tests must not pass on a silently disabled noise path.
+        assert venue_sim.DEFAULT_NOISE_DB is not None
+        assert dsp_utils.db_to_linear(GATED_NOISE_DB) > 0.0
+        sim, _ = home_lab
+        clean = _simulate(bundle, "home_lab", noise_db=None)
+        for spk, ir in clean.measured_irs.items():
+            assert not np.array_equal(ir, sim.measured_irs[spk]), spk
+
     def test_noise_adds_no_cuts_below_30_hz(self, bundle, run):
         # AE: at the gated noise, no sub cut below 30 Hz that the noise-free
         # measurement would not make (within 1 dB).
