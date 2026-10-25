@@ -55,6 +55,13 @@
     SUBSYSTEM=="drm", KERNEL=="card[0-9]*", DRIVERS=="vc4-drm", TAG+="systemd", ENV{SYSTEMD_WANTS}+="greetd.service"
   '';
 
+  # The udev rule is greetd's only starter (Architect). graphical.target
+  # would otherwise start it twice over: through wantedBy, and through the
+  # display-manager.service alias, which systemd's graphical.target Wants.
+  # Either could start labwc on a v3d-only card before KMS exists.
+  systemd.services.greetd.wantedBy = lib.mkIf config.services.greetd.enable (lib.mkForce [ ]);
+  systemd.services.greetd.aliases = lib.mkIf config.services.greetd.enable (lib.mkForce [ ]);
+
   # ela's user manager (PipeWire and the audio stack) was started by the
   # greetd autologin. With greetd skipped, linger starts it at boot.
   users.users.ela.linger = true;

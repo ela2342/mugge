@@ -173,6 +173,7 @@ let
       { name = "dtparam=audio=off directly after the vc4 overlay (US-172)"; ok = audioOffAfterVc4 c; }
       { name = "greetd skipped without a DRM card (F-367)"; ok = c.systemd.services.greetd.unitConfig.ConditionPathExistsGlob == "/dev/dri/card*"; }
       { name = "greetd started by the vc4 DRM card (US-172 AC8)"; ok = greetdOnVc4 c; }
+      { name = "greetd started only by the udev rule (US-172 AC8)"; ok = c.systemd.services.greetd.wantedBy == [ ] && c.systemd.services.greetd.aliases == [ ]; }
       { name = "PipeWire enabled"; ok = c.services.pipewire.enable; }
       { name = "module-rt direct, RTKit off (F-358)"; ok = rtDirect c; }
       { name = "WirePlumber disables other ALSA cards"; ok = hasCardBlock c; }
