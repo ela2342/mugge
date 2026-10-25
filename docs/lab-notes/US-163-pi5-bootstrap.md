@@ -349,7 +349,7 @@ method rewrites `gens/x83…/` from the store if a rollback to it is needed.
 
 ## Task AC17 Session B: USBStreamer re-enumeration (CM-CHG-.89-5)
 
-**Date:** 2026-10-25 13:45-15:12 UTC
+**Date:** 2026-10-25 13:45-15:29 UTC
 **Operator:** Claude (worker-1, under change-manager session CM-CHG-.89-5)
 **Host:** mugge (Pi 5), booted `2wf21ydgfyqsz35iqy5hfjlyp37jrsqn` (boot_id `eeddb8b6…`)
 
@@ -365,10 +365,16 @@ Steps:
   sysfs `authorized` file;
 - (b) the owner's physical unplug and replug;
 - (c) a PipeWire restart, then a restart of the metering bridges (the
-  interim rule from the F-358 notes).
+  interim rule from the F-358 notes);
+- cycles 1 and 2: the owner pulls the Pi's power and plugs it back in. The
+  wrapper only reads (no restarts, no writes): it polls SSH every 5 s for a
+  new boot_id (up to 900 s), waits 60 s, then takes the read set.
 
 Each step compares a full read set taken after it with the read set taken
-before step (a).
+before step (a). Each power cycle also reads the USBStreamer's sysfs
+`bmAttributes` and `bMaxPower` before and after (AE: expected port 1-1,
+`80` = bus-powered), and the scheduling class and RT priority of the
+PipeWire main and `data-loop.0` threads plus their `RTTIME` limit.
 
 ### Procedure
 
@@ -383,6 +389,13 @@ $ systemctl --user restart pipewire                          # 15:10:59Z
 $ systemctl --user restart level-bridge-hw-in level-bridge-hw-out \
     level-bridge-sw pcm-bridge-capture-usb pcm-bridge-monitor  # 15:11:10Z
 # 30 s wait, then the AFTER-c read set
+
+# Cycles 1 and 2 (read-only wrapper, then the owner's power pull)
+$ ac17-B-change.sh cycle 1                                   # POLLING 15:18:21Z
+$ ac17-B-change.sh cycle 2                                   # POLLING 15:24:51Z
+$ cat /sys/bus/usb/devices/1-1/{bmAttributes,bMaxPower}
+$ ps -L -o pid,tid,cls,rtprio,comm -p "$(systemctl --user show -p MainPID --value pipewire)"
+$ grep 'Max realtime timeout' /proc/<pipewire pid>/limits
 ```
 
 ### Validation
@@ -394,14 +407,20 @@ $ systemctl --user restart level-bridge-hw-in level-bridge-hw-out \
 | (a) gate | closed | `gate_open: false`, no pending gains | PASS |
 | (a) links | unchanged | 24 before, 24 after, same set by name | PASS |
 | (a) sink recovery | recorded | no recovery: PipeWire never reopened the device (F-373, below) | FINDING |
-| (b) physical replug | replug seen within 1800 s | not seen: poll 13:54:48-14:25:31Z ended in a timeout | NOT RUN |
+| (b) physical replug | replug seen within 1800 s | not seen: poll 13:54:48-14:25:31Z ended in a timeout | DEFERRED (F-373) |
 | (c) nothing louder | as in (a) | all hw and PW values identical to BEFORE | PASS |
 | (c) gains, gate, links | 16 x 0, closed, 24 | 16 x 0, closed, 24 (same set by name) | PASS |
 | (c) nodes | the same 12 node names as BEFORE, all 5 bridge nodes | 12/12, all 5 bridges | PASS |
 | (c) sink | exactly one, running, no error, no `spa.alsa` lines from 5 s after the restart | one (`running`), `spa.alsa` count 0 | PASS |
 | (c) PCM open | Playback Channel Map as BEFORE | `3,4,7,8,5,6,12,13` again | PASS |
 | (c) services | all active, no restarts | PipeWire, WirePlumber, the 5 bridges, GraphManager, signal-gen active; NRestarts 0; no failed units | PASS |
-| Thermal | < 75 °C, no throttling | max 65.55 °C (a), 65.0 °C (b), 63.35 °C (c); 2.4 GHz throughout; no cooling devices; undervoltage alarm 0 | PASS |
+| Cycles 1, 2: reboot | new boot_id, same generation | down 15:20:20Z / up 15:20:43Z, then down 15:26:12Z / up 15:26:49Z; `eeddb8b6…` → `7f56af91…` → `8c6239cb…`; booted `2wf21ydg` both times; PREEMPT_RT | PASS |
+| Cycles 1, 2: nothing louder | as in (a), against the BEFORE-(a) reads | all hw and PW values identical; 16 gains 0; gate closed; 24 links, same set | PASS |
+| Cycles 1, 2: USBStreamer | one device at 1-1, bus-powered | `usb 1-1: new high-speed USB device number 2` in each boot; 1-1, `bmAttributes=80`, `bMaxPower=500mA` before and after | PASS |
+| Cycles 1, 2: sink and nodes | 12 nodes, one sink running, no `spa.alsa` errors | 12/12, one sink (`running`), `spa.alsa` count 0 | PASS |
+| Cycles 1, 2: services, power | no failed units, no throttling | 9/9 user units active, no failed units; `get_throttled=0x0`; no undervoltage | PASS |
+| Cycles 1, 2: RT scheduling | `pipewire` and `data-loop.0` FF 88; RTTIME 200000/200000 | FF 88 for both threads in both boots; RTTIME 200000/200000 µs | PASS |
+| Thermal | < 75 °C, no throttling | max 65.55 °C (a), 65.0 °C (b), 63.35 °C (c), 63.9 °C (cycle 1), 62.25 °C (cycle 2); 2.4 GHz throughout; no cooling devices; undervoltage alarm 0 | PASS |
 
 **F-373, zombie sink after re-enumeration** (AE: High, availability and
 safety-relevant, amps-on item 13; not a US-163 blocker). The AE's timeline:
@@ -437,10 +456,24 @@ louder, and the gate stayed closed.
   roots. The paths are read-only tools, the Pi has no GC timer and nobody
   runs GC by hand; if they are ever collected, a new `nix copy` restores
   them. The planned `unroot` step is dropped.
-- **Step (b) not run.** The replug poll ran its full 1800 s (13:54:48Z to
-  14:25:31Z, rc 4) and saw no unplug. The owner request was never relayed,
-  so this is not a Pi finding. The CM, AE and QE decide whether (b) stays
-  in US-163 or goes to the backlog; step (c) was granted without it. If (b)
-  runs later, it starts from a healthy sink.
+- **Step (b) not run, deferred to F-373.** The replug poll ran its full
+  1800 s (13:54:48Z to 14:25:31Z, rc 4) and saw no unplug. The owner
+  request was never relayed, so this is not a Pi finding. The AE and QE
+  deferred (b) from US-163 to F-373, and the two power cycles were run
+  instead. If (b) runs later, it starts from a healthy sink.
 - **Step (b) baseline only.** The BEFORE-b read set (taken at 13:54Z) is
   complete; AC14 16 gains all 0 at that point.
+- **The power-cycle reads do not prove a cold power-off.** The USBStreamer
+  gets device number 2 on every fresh enumeration, and every boot logs
+  `new high-speed USB device`, so a warm reboot would look the same. The
+  evidence for a cold cycle is the owner pulling the plug after the CM's go
+  (15:19Z for cycle 1) and the 23 s and 37 s down windows.
+- **Early-boot journal timestamps are not usable.** In both boots the
+  kernel stamps the USBStreamer enumeration before the poll saw the Pi go
+  down (15:19:35Z vs 15:20:20Z, 15:24:59Z vs 15:26:12Z). The likely cause
+  is a clock that was not yet set at boot. The timeline above uses the
+  Mac-side poll times.
+- **PipeWire main thread at FF 88.** After both power cycles the
+  `pipewire` main thread runs SCHED_FIFO 88, like `data-loop.0`. This
+  differs from P2 in the image status notes (main thread SCHED_OTHER). The
+  AE and Architect decide whether P2 still holds.
