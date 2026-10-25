@@ -374,7 +374,8 @@ Next free: F-370, US-173, D-069, T66.
   - Suites at 9b2879eb: darwin leg ACCEPTED (QE; nix 2.34.8 < 2.35,
     all counts > 0), all green except F-363 (pre-existing, not US-163
     scope). Lab note 9b2879eb, SecSpec OK, no cuts; story/US-163 now
-    bbff469e (CM, 2026-10-25).
+    bbff469e (CM, 2026-10-25). Later: story/US-163 = 976ed8c5
+    (lab-note docs commit, pushed; CM).
   - Recovery (Architect): the firmware partition keeps 2 gens, now
     nkifli3r + x83m7bir; p9mz... was pruned. The PR text and recovery
     notes use gens/x83m7bircd4b7j8wchx9k1mnilzi8kl4/ as the fallback
@@ -397,7 +398,10 @@ Next free: F-370, US-173, D-069, T66.
     ORDER (Architect + QE, agreed): T54 -> AC18a (no-op from a clean
     tree at 132997f9) -> land all pending branch docs commits -> CM
     merges origin/main 289390bf into the branch = M -> AC18b deploys M
-    from a clean checkout -> the PR opens at M -> AC17 on M. The FAT
+    from a clean checkout -> the PR opens at M -> AC17 on M.
+    SUPERSEDED ORDER (CM, after F-369; PO + QE): F-369 fix + offline
+    test -> review -> merge origin/main -> deploy of the resulting
+    head (M) -> AC18b + AC18c in one DEPLOY run -> T54b -> AC17. The FAT
     keeps 2 gens, so AC18b evicts x83m7bir; T54 runs first. (Actual:
     AC18a evicted x83; see F-369, item 7.) Item 1 can
     run at any point. QE conditions: (a) the merge diff stat is
@@ -484,8 +488,9 @@ Next free: F-370, US-173, D-069, T66.
        gens/nkifli3r.../.)
     4. OPEN: AC17, two cold power cycles stay (PO). ONE owner request
        for two back-to-back cycles on the FINAL deployed SHA (after
-       AC18b; QE). The first counts as T48 (incl. AE's ps -L). Per
-       boot, no intervention: SSH within 3 min; new boot_id; readlink
+       AC18b; QE; now after T54b, see item 7). The first counts as
+       T48 (incl. AE's ps -L). Per boot, no intervention: SSH within
+       3 min; new boot_id; readlink
        + configurationRevision; both failed lists empty; kernel log
        scan with per-line disposition; get_throttled 0x0; AC14/#10.
        get_throttled RULED (QE adopts the Architect's tiered
@@ -554,19 +559,40 @@ Next free: F-370, US-173, D-069, T66.
        gig). QE: no boot risk, but the AC covers more. Fix (PO): the
        prune also keeps the newest other complete generation
        (nix/nixos/boards/pi5/bootloader.nix); the Architect specifies,
-       worker-1 implements, usual review. Merged into F-369 (same
-       root): keep the previous profile generation's dir (Architect);
-       document the no-op behaviour in the bootloader.nix header
-       comment. AC2a second clause (QE wording, PO): "if the boot
-       selector points at an unbooted generation, the booted one is
-       always among those kept." New **AC18c** (PO): "A no-op
+       worker-1 implements, usual review. The two earlier Low lines
+       (keep the previous profile generation's dir; a bootloader.nix
+       header comment on the no-op behaviour) are DROPPED: PO FINAL,
+       everything is in US-163, no Low follow-up. AC2a stays ">= 2
+       complete generations kept" (PO FINAL, option (B), tie-break;
+       Architect + QE voided their earlier positions; objections go
+       through the PO). AC2a second clause, PO FINAL wording: "if the
+       pointer selects an unbooted generation, the booted one stays
+       on the FAT." (Earlier QE wording: "the booted one is always
+       among those kept.") QE test-adequacy condition for the fix
+       review: an offline check runs the prune step on a fake gens/
+       dir plus profile links: (1) the no-op collapse case keeps the
+       newest other complete generation; (2) a missing or incomplete
+       alt is not recreated; (3) a normal deploy still prunes beyond
+       the keep set. The Architect's review confirms the diff touches
+       only prune/retention, not the pointer write, boot selection or
+       FAT layout (normal review item; PO). New **AC18c** (PO): "A no-op
        redeploy (boot at the same SHA) leaves >= 2 complete
        generations on the FAT, and the booted generation is among
        them." QE AC18b criteria: (i) MAP shows >= 2 present (M +
        nkifli3r) after the deploy and after the reboot; (ii) AC18c on
        the fixed head still leaves >= 2. Sequence (PO; CM sequences):
        fix deploy -> AC18b + AC18c in one run (saves reboots); T54
-       runs on the fixed state (PO). bootloader.nix changes, so
+       runs on the fixed state (PO). RESOLVED as **T54b** (QE; PO
+       adopts it, withdrawing "no re-run unless the Architect finds
+       X"): AC18c proves presence, not a usable rollback target. On M
+       after AC18c, before AC17, same DEPLOY session if practical:
+       (1) roll back to nkifli3r (profile switch +
+       switch-to-configuration boot), reboot once; PASS booted =
+       current = nkifli3r; (2) switch back to M, reboot; PASS T51
+       identity = M, #10 (gains), gate closed, MAP/gens/ >= 2 complete
+       with M booted. No second "survives reboot" leg. Reboots
+       announce-only. T54 (12:34-12:41Z) stays ACCEPTED; T54b is
+       additional. bootloader.nix changes, so
        AC18b/AC17 run on the fixed head (QE); the US-163 delta is no
        longer docs-only after the fix (QE condition (d)). Not an owner
        topic (PO). Superseded: Architect "per spec, optional Low" and
@@ -781,7 +807,11 @@ Next free: F-370, US-173, D-069, T66.
     llvmpipe)."
   - (Architect) /dev/dri root cause: likely F-367 (no overlay applied,
     so the GPU nodes are not okay and the modules have nothing to
-    bind), not yet shown on nkifli3r. One OBSERVE via the CM: status
+    bind), not yet shown on nkifli3r. OBSERVE DROPPED (Architect):
+    the 798f2dc7 disabled-node read plus the same symptom on nkifli3r
+    (overlay line present, no /dev/dri) put it in the F-367 branch; no
+    new F. US-172 re-reads the live DT as its own fix evidence (PO
+    condition). Original request: one OBSERVE via the CM: status
     and compatible of the v3d and vc4 (hvs/hdmi/kms) nodes under
     /proc/device-tree, plus lsmod | grep -E 'v3d|vc4'. Disabled or
     absent: covered by F-367. Okay but modules not loaded: a separate
