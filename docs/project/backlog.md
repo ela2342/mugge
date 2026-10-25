@@ -355,7 +355,7 @@ Next free: F-369, US-173, D-069, T66.
   - Suites at 9b2879eb: darwin leg ACCEPTED (QE; nix 2.34.8 < 2.35,
     all counts > 0), all green except F-363 (pre-existing, not US-163
     scope). Lab note 9b2879eb, SecSpec OK, no cuts; story/US-163 now
-    8bea1a7f (lab note updated per rulings).
+    bbff469e (CM, 2026-10-25).
   - Recovery (Architect): the firmware partition keeps 2 gens, now
     nkifli3r + x83m7bir; p9mz... was pruned. The PR text and recovery
     notes use gens/x83m7bircd4b7j8wchx9k1mnilzi8kl4/ as the fallback
@@ -373,9 +373,20 @@ Next free: F-369, US-173, D-069, T66.
   - **US-163 pre-merge runs** (rulings 2026-10-25: PO scope, QE
     adequacy, Architect technical, SecSpec scan). QE needs items 1-5
     BEFORE its Rule 13 approval; only T56/AC19 come after merge.
-    ORDER (QE, Architect): T54 -> AC18a -> AC18b -> AC17. The FAT
-    keeps 2 gens, so AC18b would evict x83m7bir; T54 runs first.
-    Item 1 can run at any point.
+    ORDER (Architect + QE, agreed): T54 -> AC18a (no-op from a clean
+    tree at 132997f9) -> land all pending branch docs commits -> CM
+    merges origin/main 289390bf into the branch = M -> AC18b deploys M
+    from a clean checkout -> the PR opens at M -> AC17 on M. The FAT
+    keeps 2 gens, so AC18b evicts x83m7bir; T54 runs first. Item 1 can
+    run at any point. QE conditions: (a) the merge diff stat is
+    recorded and empty under nix/, flake.*, configs/ and src/ (CM
+    verified: 132 docs/project files + 2 .claude/memories files); (b)
+    the AC18b nix-diff against nkifli3r shows ONLY
+    configurationRevision; (c) QE ACCEPTS the T54 evidence before
+    AC18b (AC18b prunes x83); (d) if the head moves: docs-only + diff
+    recorded keeps AC18b/AC17 valid; any non-docs change reruns both.
+    Status (CM): CM-DEP-.89-T54 granted to worker-1, starts after
+    CM-OBS-.89-T53 ends; three announced reboots.
     1. OPEN: T53-on-deploy + external scan, ONE read-only OBSERVE on
        the running deploy (SecSpec precondition; PO, QE). A worker runs
        it from the Mac; SecSpec reviews the raw output under Rule 13.
@@ -432,7 +443,9 @@ Next free: F-369, US-173, D-069, T66.
        boot, no intervention: SSH within 3 min; new boot_id; readlink
        + configurationRevision; both failed lists empty; kernel log
        scan with per-line disposition; get_throttled 0x0; AC14/#10.
-    5. **DONE at j2ykkiil: AC1a**, AMENDED (PO, verbatim): "The Pi 4
+    5. AC1a: PASS (Architect eval vs 8nv9psc1); confirm vs 289390bf
+       (worker-1) and re-run on M pending (CM correction; v59's "DONE
+       at j2ykkiil" was premature). AMENDED (PO, verbatim): "The Pi 4
        drvPath differs from main only by intended all-board changes
        listed in the PR (at least the F-358 fragment
        05-rt-direct.conf; the architect lists any others). The diff
@@ -442,10 +455,11 @@ Next free: F-369, US-173, D-069, T66.
        etc -> pipewire-configs -> pi4audio-pipewire-configs differs
        (+05-rt-direct.conf, one cp); kernel drv hsf3x9wz unchanged.
        Intended all-board list = exactly 05-rt-direct.conf.
-       Conditions: the raw diff is attached to the PR (QE/worker-1);
-       re-run at the final PR SHA if all-board paths change (CM
-       checks). Base = origin/main 289390bf, NOT 95306f66 (local-only,
-       unpushed; owner: leave it alone; never a base). Merge base
+       Pending: worker-1's diff against origin/main 289390bf, sent to
+       the Architect for PASS/FAIL; the raw diff attached to the PR
+       (QE); the Architect's re-run on M. Base = origin/main 289390bf,
+       NOT 95306f66 (local-only, unpushed; owner: leave it alone; never
+       a base). Merge base
        c34f7da7; c34f7da7..289390bf is docs/tracking only. worker-1
        records both drvPaths; the CM updates the branch to 289390bf
        before the PR (test merge clean).
