@@ -184,7 +184,8 @@ Next free: F-369, US-173, D-069, T66.
     `ps -L`, after a cold boot AND again after one announced PW
     restart; the pipewire journal has no RTKit lines for this boot.
     Also record the main thread's scheduling class (confirms rtkit no
-    longer demotes it).
+    longer demotes it). A1 evidence also includes 'realtime timeout'
+    = 200000/200000 (AE, via CM).
     A2: record the USB interrupt thread priority, to show 88 sits
     above it; for information, not pass/fail (recorded: USB IRQs at
     FIFO/50).
@@ -208,10 +209,29 @@ Next free: F-369, US-173, D-069, T66.
     new PW conf.d fragment 05-rt-direct.conf. FORM CHANGED in the F-358
     review (Architect, via CM): it uses the upstream `module.rt.args =
     {...}` override; no module.rt=false and no second module-rt entry
-    (supersedes the earlier two-entry form). The commit lands on top
-    of b809f9c6. The user@ RTPRIO path is moot. No unit, PAM or limit
-    change (narrower than the SecSpec condition). AE + Architect
-    review the diff before deploy;
+    (supersedes the earlier two-entry form). The user@ RTPRIO path is
+    moot. No unit, PAM or limit change (narrower than the SecSpec
+    condition).
+    Commits (team-lead + CM, 2026-10-25): b809f9c6 (first form) +
+    f29e8a0f (QE board-guard, old form) were reworked; the AE's
+    b809f9c6 approval is WITHDRAWN as superseded and b809f9c6 is not
+    deployed alone. Pushed: c1ff084c (fix), 42c83376 (board-guard),
+    132997f9 (story/US-163 = 132997f9). Effective args: nice.level=20,
+    rt.prio=88, rtkit/rtportal false, rt.time.soft/hard = 200000.
+    rt.time (AE request, Architect agrees; replaces the earlier "keep
+    rt.time defaults" constraint, whose premise was wrong): on the
+    direct path the default -1 = RLIM_INFINITY (Architect, confirmed
+    in source), so without it a runaway FIFO-88 loop would buzz into
+    the amps instead of being killed and failing safe; 200 ms
+    restores the RLIMIT_RTTIME watchdog.
+    Reviews: Architect APPROVED f87c162b..42c83376; QE ACCEPTED the
+    board-guard (token-exact since 132997f9, folds in QE nit (a)).
+    AE + Architect re-review through 132997f9 before DEPLOY.
+    RISK (Architect): the PW main thread is now really FIFO 88, so
+    the 200 ms RTTIME also covers PW startup (filter-chain init, 8
+    convolvers x 16k taps; unmeasured). Post-boot evidence: pipewire
+    NRestarts=0, no SIGKILL/SIGXCPU, limits 200000/200000. If PW is
+    killed at startup: STOP and report to the Architect.
     AC13 must PASS with A1, A1b, A2-A4; Pi 4 recorded as unverified.
     Pi 4 precondition (AE, via Architect): "Pi 4: AC13 A1 must pass
     before next amps-on use". The fragment is shared; on the Pi 4 it
@@ -220,7 +240,8 @@ Next free: F-369, US-173, D-069, T66.
     intentionally changes the Pi 4 drvPaths: flag it in the PR; T55
     rebuilds the Pi 4; Pi 4 runtime stays unverified (CM).
     More acceptance (accepted via CM): main thread FF 88 with ni
-    unchanged (TS or ni 19 is a FAIL). QE evidence: the full set after
+    unchanged (TS or ni 19 is a FAIL; see the P2 main-thread item).
+    QE evidence: the full set after
     the cold boot AND after the PW restart; a board-guard assert that
     the fragment is present and rtkit is off, plus one mutation run;
     T51 on the new deploy.
@@ -434,6 +455,14 @@ Next free: F-369, US-173, D-069, T66.
 
 ## P2
 
+- "PipeWire main thread back to SCHED_OTHER: drop the F-020
+  CPUSchedulingPolicy=fifo/88 from the pipewire user unit, now that
+  module-rt promotes the data loops directly (F-358). At equal FIFO
+  88, main-loop work (filter-chain reload, GM link changes) can't be
+  preempted by data-loop.0 on a shared core, which is an xrun risk.
+  Acceptance: data loops still FF 88 (AC13 A1)." Pulled into US-163
+  ONLY if the post-deploy PW startup is killed by RTTIME. When done,
+  re-word the AC13 "main thread FF 88" criterion. (AE + Architect)
 - Pi 5 DHCP address: RESOLVED by the owner pinning .89 on the router
   (DNS mugge.lab.andreas.org; see US-163 first-boot entry). Remaining:
   record the final address in the AC and lab note after the Architect
@@ -475,6 +504,12 @@ Next free: F-369, US-173, D-069, T66.
 
 ## P3
 
+- Legacy scripts/deploy/deploy.sh doesn't ship
+  configs/pipewire/05-rt-direct.conf (F-358). Only relevant if that
+  path is still used. LOW. (AE N3)
+- Board-guard: assert that no other deployed pipewire.conf.d file
+  mentions module.rt or rtkit (QE nit (b)). Not done: needs IFD or a
+  repo-dir scan that would miss Nix-generated config. LOW. (QE, CM)
 - nix/nixos/audio/pipewire.nix copies PW conf.d fragments with
   `cp ${file} dir/`, so they keep the store hash prefix (e.g.
   z7h7hys4...-30-filter-chain-convolver.conf) and load in hash
