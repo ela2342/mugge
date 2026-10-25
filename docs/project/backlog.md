@@ -53,7 +53,8 @@ Next free: F-369, US-173, D-069, T66.
 - PO ruling on the owner's "web ui stays open":
   - AC10: 8080 open on the LAN by owner decision (F-037 known risk);
     5900 not listening or refused; 4001/4002/9100 localhost only;
-    nftables default DROP and the v4/v6 scan stay.
+    nftables default DROP stays. The v4/v6 scan is DROPPED (owner,
+    2026-10-25: no port scans in QA); evidence = on-device ss.
   - AC15: "HTTPS reachable from the LAN"; allowlist part dropped.
   - AC20: F-037 accepted as known risk; the Pi 5 is not gig-ready; no
     amps or HP/IEM connected while F-037 is open. F-358 is resolved
@@ -370,7 +371,7 @@ Next free: F-369, US-173, D-069, T66.
     open: the pre-merge runs below (T48 is now the first AC17 cycle);
     the pre-PR tracking batch; then the PR and Rule 13.
   - **US-163 pre-merge runs** (rulings 2026-10-25: PO scope, QE
-    adequacy, Architect technical, SecSpec scan). QE needs items 1-5
+    adequacy, Architect technical, SecSpec). QE needs items 1-5
     BEFORE its Rule 13 approval; only T56/AC19 come after merge.
     ORDER (Architect + QE, agreed): T54 -> AC18a (no-op from a clean
     tree at 132997f9) -> land all pending branch docs commits -> CM
@@ -386,28 +387,23 @@ Next free: F-369, US-173, D-069, T66.
     recorded keeps AC18b/AC17 valid; any non-docs change reruns both.
     Status (CM): CM-DEP-.89-T54 granted to worker-1, starts after
     CM-OBS-.89-T53 ends; three announced reboots.
-    1. RUNNING (CM-OBS-.89-T53): identity and sshd -T PASS; full nmap
-       scans (v4 + two global SLAAC v6 addresses) until ~11:20Z; T54
-       starts after that. T53-on-deploy + external scan, ONE read-only
-       OBSERVE on
-       the running deploy (SecSpec precondition; PO, QE). A worker runs
-       it from the Mac; SecSpec reviews the raw output under Rule 13.
-       Host key a5kILUyr + MAC first. v4: `nmap -Pn -p-` shows exactly
-       22 and 8080 open. v6: every address (link-local with scope,
-       e.g. %en0, plus SLAAC/global/ULA): 22 open, nothing open
-       outside {22, 8080} (8080 closed on v6 is fine if the web UI
-       binds 0.0.0.0 only). 5900 not open (filtered or closed; DROP
-       policy). 5353/udp by the existing ss + nft evidence, no UDP
-       scan. `sudo sshd -T`: permitrootlogin, passwordauthentication,
-       kbdinteractiveauthentication all no; no root authorized_keys.
-       `ss -ltnp`: 4001/4002/9100 on 127.0.0.1 only. AC15 services
-       up, GM gate CLOSED. 8080 HTTPS reachable from the Mac. The 8080
-       allowlist pos/neg test is moot (QE): AC10/AC15 amendment from
-       the owner ruling, F-037 known risk; PO words it. PO accepts
-       SecSpec's wording: "5900 filtered or closed (v4, and v6 if the
-       Pi has a global or ULA address; link-local only is recorded as
-       such); nmap -Pn -p- shows exactly 22 and 8080 open" (superseded
-       in scope by the v6 union above, SecSpec + QE agreed).
+    1. OPEN (CM-OBS-.89-T53): T53-on-deploy, ONE read-only OBSERVE
+       on the running deploy. NO external port scan (owner directive,
+       see the test-process rule below); the running nmap scans were
+       stopped. Checks: host key a5kILUyr + MAC (PASS); `sudo sshd -T`:
+       permitrootlogin, passwordauthentication,
+       kbdinteractiveauthentication all no (PASS); no root
+       authorized_keys; `sudo ss -ltnup` with bind addresses (v4 and
+       v6): only 22 and 8080 reachable off-host, 5900 not listening,
+       4001/4002/9100 on 127.0.0.1 only, 5353/udp as expected; AC15
+       services up, GM gate CLOSED; 8080 HTTPS reachable from the Mac.
+       The 8080 allowlist pos/neg test is moot (QE): AC10/AC15
+       amendment from the owner ruling, F-037 known risk; PO words it.
+       SecSpec's public-IPv6 point (two global SLAAC addresses on
+       end0, one EUI-64) is answered by the on-device bind addresses;
+       the rest goes to backlog (P2 router inbound-v6 item). Not an
+       owner question (owner). SecSpec reviews the raw output under
+       Rule 13. T54 starts once T53 closes.
     2. OPEN: T54 rollback, mandatory, no re-scope (PO). Method
        (Architect, safe now): (0) gens/MAP.txt shows "2 x83m7bir...
        present" and "3 nkifli3r... present", config.txt -> nkifli3r;
@@ -582,9 +578,21 @@ Next free: F-369, US-173, D-069, T66.
   T52 and AE check #10 are deploy-image only. SecSpec: AC9b full
   PASS; T48-T53 host-side PASS. @temp-ports CLOSED (empty; worker-1's
   secspec-T48-T53-raw.txt, collected 19:02Z); UDP accepted on ss + nft
-  evidence. Only the external TCP scan (nmap -p-) stays deferred to
-  the US-163 PR Rule 13 review (owner: "I don't know why you do the
-  portscan now?"); the early partial run was stopped, output filed.
+  evidence. The external TCP scan (nmap -p-) is DROPPED (owner
+  2026-10-25, see the test-process rule; earlier: "I don't know why
+  you do the portscan now?"); the early partial run's output is
+  filed.
+- **TEST-PROCESS RULE (OWNER DIRECTIVE, 2026-10-25, verbatim, via
+  team-lead):** "Do not make the port scan a regular part of your
+  QA. It takes forever, and does not add any value on top of an lsof
+  or netstat on the device." External nmap/port scans are removed
+  from T53 and from all acceptance checks from now on. Listening-port
+  evidence = on-device `ss`/`netstat`/`lsof` with bind addresses (v4
+  and v6). Anything left open after the on-device check goes to the
+  backlog, not to the owner. Docs check (PM): no test doc names an
+  external port scan (only the SecSpec role's threat-model line
+  "nmap-and-poke level", which stays); nothing for the .89 docs
+  batch.
 
 ## P1
 
@@ -723,6 +731,10 @@ Next free: F-369, US-173, D-069, T66.
   (DNS mugge.lab.andreas.org; see US-163 first-boot entry). Remaining:
   record the final address in the AC and lab note after the Architect
   + SecSpec IP-vs-name ruling. (worker-1)
+- Pi 5 public IPv6 (SecSpec; left open after the on-device check):
+  end0 has two global SLAAC addresses, one EUI-64 (MAC-derived).
+  Check the router's inbound-v6 policy and consider privacy
+  addresses. Not an owner question; not US-163. Low.
 - .89 docs batch (CM): the flake.nix comment on mugge-pi5-deploy still
   says "built natively on the Pi ... nixos-rebuild switch"; the real
   route is the Mac `nixos-rebuild boot --no-reexec`. Low.
