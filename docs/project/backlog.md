@@ -844,6 +844,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       (M3, L5 resolved; L6 with F-373; M4 to the backlog, amps-on
       item 14; not covering CI, AC19 or any later head). Tally 6/7;
       QE open (needs CI and T3).
+    - CI and T3 (CM): CI 40210023435 green; the owner's release run
+      40226857537 GREEN with the sd-card-image artifact. Only the QE
+      verdict is open (6/7).
     - AD APPROVE is comment 6398339160 (CM). AD M2 precise: the
       f0fbefd1 -> final diffstat is docs-only AND the
       mugge-pi5-deploy nix-diff shows only configurationRevision,
@@ -1335,21 +1338,22 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
 ## P1
 
 - **AMPS-ON PRECONDITION LIST (Pi 5)** (PO, 2026-10-25; the single
-  consolidated list). Gates ANY amps, HP or IEM use of the Pi 5. Every
-  item must hold (row 4 is N/A on the Pi 5); each links to its own
-  entry:
+  consolidated list). Gates ANY amps, HP or IEM use of the Pi 5. Each
+  item links to its own entry. Lead-in (AE-final, verbatim, safety.md
+  1472206a on docs/US-163-postmerge): "The list has 14 rows. On the
+  Pi 5, rows 1-3 and 5-14 must ALL hold; row 4 applies to the Pi 4
+  only."
   1. Owner re-confirmation plus the S-012/safety.md pre-flight.
   2. F-341 AC3 PASS on the Pi 5. Until then also NO signal-gen
      measurement session on the Pi 5 (AE, PO).
   3. US-172 condition: HiFiBerry layer (a) restored, or the AE
      re-rules (P1 US-172 GATE; layer deviation accepted only while
      nothing is connected).
-  4. US-170: N/A on the Pi 5 (not counted). Pi 4 only: the F-358
-     runtime check on the Pi 4 before any Pi 4 audio use. (TW final
-     safety.md row text, UX P3; pending the AE's sign-off of the
-     safety.md diff, re-matched if the AE changes it. Detail kept:
-     the Pi 4 AC13 A1 precondition (QE), including "no SIGKILL at
-     startup with production coefficients" (AD L1).)
+  4. US-170 (AE-final, verbatim, safety.md 1472206a): "Pi 4 only
+     (N/A on the Pi 5): the F-358 runtime check on the Pi 4 before
+     any Pi 4 audio use". (UX P3. Detail kept: the Pi 4 AC13 A1
+     precondition (QE), including "no SIGKILL at startup with
+     production coefficients" (AD L1).)
   5. F2: pcm-bridge/level-bridge PW nodes back after a PW restart
      (P1 below), or the INTERIM RULE (restart both bridges, confirm
      live meters).
@@ -1377,20 +1381,34 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      (by GraphManager or WirePlumber) comes up gated: gains 0, gate
      closed, and audio returns only when the operator re-opens it
      through the D-063 ramp. Tested (AE)".
-  14. Gate-authority defects (AD M4, verbatim, corrected by AD to add
-     F-338 and F-339): "F-320, F-314, F-325, F-338, F-339, F-349 (and
-     F-321/F-322 for CHN-50P) are closed, or their interim rules are
-     in safety.md (PR #45) and are followed." Why (AD): the interim
+  14. Gate-authority defects (AD M4) (AE-final, verbatim, safety.md
+     1472206a; supersedes AD's v92 text): "F-320, F-314, F-325,
+     F-338, F-339 and F-349 are closed, or each has an interim
+     operating rule in the merged safety.md (planned in PR #45) that
+     is followed. For the two Critical ones (F-314, F-349) the
+     interim rule must be AE-accepted. For any own-speaker venue
+     (e.g. CHN-50P), F-321 and F-322 are also closed". AE reasons:
+     "(PR #45)" pointed at an unmerged PR, so the row could not be
+     checked against the repo; F-314 and F-349 are Critical and
+     F-349 can't be seen by an operator, so their interim rules need
+     AE acceptance; F-321/F-322 apply to every own-speaker venue,
+     not only CHN-50P. AD's v92 text (superseded): "F-320, F-314,
+     F-325, F-338, F-339, F-349 (and F-321/F-322 for CHN-50P) are
+     closed, or their interim rules are in safety.md (PR #45) and
+     are followed." Why (AD): the interim
      rules (status.md rules 5-7 and 12; safety.md §10 via PR #45) are
      not on main; F-338 (Close Gate disabled in the UI while the gate
      shows CLOSED) and F-339 (CloseGate reports success without
      writing the gains) make the F-320 interim rules impossible to
      carry out or to trust. safety.md mirror: TW, in the first docs
      PR after #50 merges (not #45; in #50 only if its head moves
-     again for another reason); AE signs off the diff.
+     again for another reason); AE signs off the diff. Done on
+     docs/US-163-postmerge at 1472206a (TW, AE wording); AD sees
+     the widened row 14 (PM routed it).
   MIRROR RULE (AE via TW, 2026-10-25): safety.md "Pi 5 Platform
-  Status" carries this full table (13 items in #50; item 14 follows
-  in the first post-merge docs PR) with this numbering. Where
+  Status" carries this full table (13 items in #50; 14 rows on
+  docs/US-163-postmerge 1472206a, the first post-merge docs PR) with
+  this numbering. Where
   the two differ, this list follows safety.md. Any add, removal or
   renumbering here goes to the TW as a matching safety.md update.
   Related UX item (not a precondition): a persistent web UI banner
@@ -1982,8 +2000,18 @@ merge needs update-branch and 7 reconfirmations at the new head.
   with every test-* step run. Close the record after QE confirms
   AC1-AC6 (records follow-up, not in the #50 head move).
 - #50 US-163: open; head 22370317 (docs-only move), 6/7 approved
-  (QE open), CI 40210023435 running, owner release.yml run pending;
+  (QE open), CI 40210023435 green, release run 40226857537 green;
   see the US-163 section (PR #50 block).
+- New branches at 22370317 (CM, 2026-10-25; owner via team-lead:
+  "start the next work now"; disjoint file sets):
+  story/US-172-pi5-drm (worker-2: bootloader.nix reorder, greetd
+  ordered after DRM, vclog fallback prep; no Pi access; the test
+  boot comes after the #50 merge and AC19); docs/US-163-postmerge
+  (TW: safety.md row 14, row 4 N/A, the §8.5 note; at 1472206a).
+  US-172.md and the backlog stay PM. B4 (PM, US-172 story batch for
+  worker-2's branch: US-172.md + the stories-index row; MANIFEST
+  eff8d9b1...): status in progress, the starter set, AC1 ride-in
+  exception marked LAPSED (TW N2).
 - STANDING OWNER PERMISSION (2026-10-25, verbatim via team-lead):
   "Also, standing permission to merge if the team approves, without
   my additional approval. Let's ensure you can make progress
