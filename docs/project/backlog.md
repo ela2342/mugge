@@ -3171,7 +3171,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   build: the build dir is /build (CI log l.1787, 1912), the Linux
   sandbox default". Then the QE text-approves; that approval carries
   into the seven-reviewer re-review after F-363 (update-branch
-  voids the approvals anyway).
+  voids the approvals anyway). FINAL (CM, 2026-10-25): body posted
+  at ac0072af and QE text-APPROVED; posted text matches the file
+  (trailing newline aside); head unchanged at 320c3ae6. Correction
+  (worker-7, QE checked): the "(CI log l.1787, 1912)" quote above
+  is superseded. Those lines are camilladsp dependency builds; the
+  check's own line is l.1951 "test-room-correction> rootdir:
+  /build/src/room-correction". The bullet now reads "(CI log
+  l.1951; also l.1787, 1912 for camilladsp)".
   Pi build queue (Architect, 2026-10-25): F-365, then the F-374
   PR-head suite, then the wireplumber-no-bypass check; each from a
   tarball at the declared SHA with sandbox=true. WP check
