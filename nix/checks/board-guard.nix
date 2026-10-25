@@ -69,15 +69,19 @@ let
 
   # F-358: module-rt direct path, shared by all boards. The fragment is
   # checked in source (eval-only, no build) and must be the one copied into
-  # the PipeWire config package.
+  # the PipeWire config package. It only overrides the stock entry's args
+  # (module.rt.args), so it must not load a module of its own.
   rtFragment = let
     lines = lib.splitString "\n" (builtins.readFile ../../configs/pipewire/05-rt-direct.conf);
     code = builtins.filter (l: builtins.match "[[:space:]]*#.*" l == null) lines;
   in lib.concatStringsSep " " (builtins.filter (t: builtins.isString t && t != "")
     (builtins.split "[[:space:]]+" (lib.concatStringsSep " " code)));
-  rtDirect = c: builtins.length (lib.splitString "libpipewire-module-rt" rtFragment) == 2
+  rtDirect = c: lib.hasPrefix "module.rt.args = {" rtFragment
+    && builtins.length (lib.splitString "module.rt.args" rtFragment) == 2
+    && !lib.hasInfix "context.modules" rtFragment
+    && !lib.hasInfix "module.rt =" rtFragment
     && lib.all (kv: lib.hasInfix kv rtFragment) [
-      "module.rt = false" "nice.level = 20" "rt.prio = 88"
+      "nice.level = 20" "rt.prio = 88"
       "rtkit.enabled = false" "rtportal.enabled = false" ]
     && builtins.any (p: lib.hasInfix "pipewire.conf.d/05-rt-direct.conf" (p.buildCommand or ""))
       c.services.pipewire.configPackages;
