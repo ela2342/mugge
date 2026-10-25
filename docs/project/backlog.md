@@ -309,23 +309,33 @@ Next free: F-369, US-173, D-069, T66.
     data-loop.0 at FF/88 after the reboot AND after the announced PW
     restart; one module-rt (A1b); RTTIME 200000/200000; no RTKit;
     NRestarts 0; A2 recorded (xhci FF 50); no startup kill. The warm
-    reboot is ACCEPTED as A1 (AE). The T48 power cycle adds a
-    confirmation `ps -L`, not a gate.
+    reboot is ACCEPTED as A1 (AE: RT setup is fresh at every PW
+    start). The T48 power cycle adds a confirmation `ps -L`, not a
+    gate. QE verdict: AC13 PASS/CLOSED; the evidence substitute for
+    the missing mod.rt journal lines is ACCEPTED, no log-level change
+    (the WP nice/RTKit lines are WP's own module-rt, see the WP P1
+    line).
   - no-crashloop / F-367 PASS: greetd condition-skipped; user@1000 up
     from boot via linger. T49 PASS: 11 min, max NRestarts 0.
   - T51 PASS (958 paths). Thermal max 66.65 C (below the 80 C STOP).
   - **AC14 PASS**: 16/16 gain values (8 linear x Mult/Add), all 0.
-    The earlier "24" included the 8 Control ports, which don't affect
-    audio; the AC14 count is corrected to 16 (PO).
-  - Unchanged (PO): amps-on/HP/IEM use of the Pi 5 still needs owner
-    re-confirmation plus pre-flight; the hifiberry US-172 gate stands.
+    The earlier "24" = 8 linear x (Control, Mult, Add); Control
+    doesn't affect audio. AC14 count corrected to 16 (PO, AE). Future
+    evidence wording: "N enumerated, 16 gain-relevant" (AE).
+  - AE: the no-amps/HP/IEM condition tied to AC13 is LIFTED from the
+    RT side. Any amps-on/HP/IEM use of the Pi 5 still needs the
+    owner's explicit re-confirmation plus the S-012/safety.md
+    pre-flight, and the F2 metering precondition (P1). The hifiberry
+    2-layer condition and the US-172 gate still stand (PO, AE).
   - hifiberry-blocked PASS via /proc/asound/cards (aplay/arecord are
     not on the image). Sink S32LE/8ch/48k.
   - P2 main-thread item NOT triggered (no startup kill).
   - Still open: T48 owner power cycle; the fan question.
-  - Wording: aplay/arecord are not on the image, so the AC12 and
-    hifiberry-blocked checks must allow /proc/asound/cards as live
-    evidence. Pre-PR batch.
+  - Wording: aplay/arecord are not on the image; /proc/asound/cards
+    as live evidence for hifiberry-blocked is ACCEPTED (AE, QE).
+    AC12/hifiberry text updated in the pre-PR batch.
+  - OPEN (QE): the AC12 ALSA capture evidence (8 ch at 48 kHz) and
+    the suite results; CM asked worker-1.
   - Recovery (Architect): the firmware partition keeps 2 gens, now
     nkifli3r + x83m7bir; p9mz... was pruned. The PR text and recovery
     notes use gens/x83m7bircd4b7j8wchx9k1mnilzi8kl4/ as the fallback
@@ -334,9 +344,11 @@ Next free: F-369, US-173, D-069, T66.
     the US-163 PR mentions it as observed.
   - US-163 status after deploy 2: the F-358 fix and the F-367 guard
     f87c162b are approved, deployed together (132997f9) and PASS.
-    Still open: the T48 owner power cycle (also the AC13 confirmation
-    `ps -L`, not a gate); the fan question; the pre-PR tracking batch;
-    then the PR and Rule 13.
+    PASS on deploy 2 (QE): AC13 (closed), T49, T51. Still open: T48
+    (OPEN, owner power cycle; the PW thread list is recorded once as
+    a confirmation, not a gate); the AC12 capture evidence and suite
+    results (QE); the fan question; the pre-PR tracking batch; then
+    the PR and Rule 13.
   - US-163 PR known deviations (PO, 2026-10-25, verbatim):
     - "Pi 5 firmware merges none of the config.txt dtoverlay lines
       (vc4-kms-v3d-pi5, disable-bt-pi5). The bootloader writes
@@ -441,15 +453,41 @@ Next free: F-369, US-173, D-069, T66.
 
 ## P1
 
-- After a PW restart the pcm-bridge and level-bridge PW nodes don't
-  come back (7 vs 12 nodes after 6 min), so web-UI metering is dead
-  until the bridges restart. P1 (Architect RULING): the web UI can
-  show no levels while audio is flowing; the AE rules whether it
-  blocks amps-on use. Likely fix: PartOf=/BindsTo=pipewire.service on
-  both bridge units, or reconnect logic. Pre-existing, not US-163
-  scope; the US-163 PR mentions it as observed. Related to F-090
-  (resolved; links lost on restart), but this is the nodes. (CM,
-  deploy-2 finding F2)
+- **AMPS-ON PRECONDITION** (AE + Architect): "pcm-bridge/level-bridge
+  PW nodes don't come back after a PipeWire restart, so metering is
+  dead until the bridges restart." P1. Seen at deploy 2: 7 vs 12
+  nodes after 6 min. Why: dead meters look like "no signal", and
+  with the F-358 RTTIME kill PW can restart on its own. Done when
+  either: (a) preferred: the bridges follow PW restarts
+  (PartOf=/BindsTo=pipewire.service or reconnect logic), verified by
+  an announced PW restart with 12/12 nodes and live levels; or (b)
+  defence in depth: the web UI shows meters as STALE/disconnected,
+  not zero, when a bridge has no PW node. INTERIM RULE: after any PW
+  restart, restart both bridges and confirm live meters before amps
+  on. Pre-existing; does not block US-163; the US-163 PR mentions it
+  as observed. Related to F-090 (resolved; links lost on restart),
+  but this is the nodes. (CM, deploy-2 finding F2)
+  UX design for (b) (UX; attached, no active work):
+  1. Source of truth is the backend: the bridge or GM reports per
+     meter whether its PW node is present plus the last-frame time.
+     STALE = node missing OR no frame for > ~1 s. A client watchdog
+     on the websocket marks everything STALE if /ws drops.
+  2. Look: the bar is replaced (not held, not zero) by a hatched grey
+     bar reading "NO SIGNAL DATA", never "-inf dB"; peak hold and
+     clip cleared; numeric readout "--"; never green, never an empty
+     black meter.
+  3. Amber status-bar badge "METERS STALE -- level bridge
+     disconnected (k of n)", wraps, never truncated (like the U8
+     banners); in the U8 priority below CLOSED as an information
+     line, not a gate state; with the gate Open it turns red: "Levels
+     unknown -- gate open".
+  4. Recovery: live values only after fresh frames, no false peak
+     from stale buffers; the badge clears on its own.
+  5. QE tests: PW restart on the real stack -> every meter STALE
+     within 2 s (not a zero meter); kill one bridge -> only its
+     meters stale, right k of n; drop /ws -> all STALE; recovery
+     after the node returns; E2E checks DOM text, not only a CSS
+     class.
 - **US-172** Pi 5 local display (D-022): vc4/DRM on the Pi 5,
   greetd/labwc up, Mixxx usable on HDMI. Prerequisite for DJ mode on
   the Pi 5; sits next to the F-358/F-291 work. Starting point: the
