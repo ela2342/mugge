@@ -1780,6 +1780,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   only reviewed excerpts quoted; (6) a one-off diagnostic, not a
   mechanism. Debug-UART capture needs the owner's hands: last
   resort.
+  Same deferred class (worker-2, via CM, 2026-10-25): a non-/dev/mem
+  route to the VC log, mmap of /dev/vc-mem at 0x3ff22000. It maps
+  physical memory uncached and bypasses STRICT_DEVMEM, so it needs a
+  SecSpec/Architect ruling like the /dev/mem read. NOT in run 2.
+  Facts: vclog is not in nixpkgs (raspberrypi/utils); the vc-mem
+  DMA path returns ENXIO on the Pi 5.
   H1 QE conditions (a)-(d) adopted (CM, 2026-10-25): copy sha256 and
   path length shown before the reboot; DT status is the primary
   oracle, dmesg and /dev/dri secondary; RESTORED = o/ gone +
@@ -2313,6 +2319,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   ::TestPipeWireCollectorRPC::test_backoff_resets_on_connect, an
   asyncio _SelectorTransport.__del__ GC race. Does not touch
   room_correction. Low.
+- Flaky web-ui test teardown (worker-5, via CM, 2026-10-25;
+  pre-existing): teardown ERROR in
+  test_measurement_integration.py::TestGMFullSessionLifecycle::
+  test_gm_mode_transitions_during_happy_path. The mock GM returns
+  None at session.py:480, then a starlette CancelledError at
+  shutdown. 1 in 15 runs at base b0666c02. Low.
+- Docs (TW; via CM, 2026-10-25): flake test apps run on a /nix/store
+  copy of the git tree, so untracked new test files are invisible
+  to `nix run .#test-*` until git-added. On darwin, test-web-ui is
+  a check (`nix build .#checks.aarch64-darwin.test-web-ui`), not an
+  app. Add to docs/guide/howto/development.md.
 - **GIG-READINESS PRECONDITION: Pi 5 cooling / thermal soak** (AE +
   Architect, merged; AE criteria supersede the Architect's 30 min /
   < 80 C; not US-163). Owner: no fan, metal case; boot/idle peak
@@ -2394,6 +2411,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     and <= 10 deg over fc/2..2fc; max|H| <= -0.5 dB absolute.
   - The PR body records the +0.6 dB per-bin-clip lift.
   - Tightening is a new F-383 AC (see F-383).
+  PR #55 OPEN (CM, 2026-10-25) at 6e05fd64: 3 commits, tests
+  1227/1/1; the only failure is F-363. F-363 merges first; #55's T1
+  stays red until then.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
@@ -2690,7 +2710,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   earlier "worker-3's ci.yml T1 step" note is superseded for that
   step. CM, 2026-10-25: worker-3's ci.yml T1 step and the
   development.md command line move from US-173 to F-380 (text to
-  follow from worker-3). F-365's Linux leg is also deferred to
+  follow from worker-3). QE conditions on this move (CM,
+  2026-10-25): (1) US-173's evidence is one sandboxed
+  aarch64-linux build of the wireplumber-no-bypass check with the
+  -L log plus the negative control (Pi route or scratch dispatch);
+  (2) F-318 is not closed or amps-on-cleared until F-380 has that
+  check gating in CI. F-365's Linux leg is also deferred to
   step 1 here (a Linux failure reopens F-365 at High).
 - US-159 G16 with AE amendments a-e and architect additions 1-3; test
   T65 (not T62). Medium; re-rate on (i) volume after replug, (ii) relink
