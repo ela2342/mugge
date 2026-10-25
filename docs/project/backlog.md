@@ -2352,6 +2352,25 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   stay; #57 stays a draft until #55 merges, then the head is
   updated. Re-open trigger: if #55 stalls (blocked review, or CI
   red with no fix in sight), back to the PO for a split.
+  AC2 RE-RULED (AE, via CM, 2026-10-25; supersedes the per-call
+  AE ruling above): the AE votes worker-4's option (A). AC2 is met
+  by the existing 3 dB residual gate on the corrected response
+  (closed_loop.max_positive_deviation_db <=
+  MAX_POSITIVE_DEVIATION_DB = 3.0), with boundary tests at 2.9/3.1
+  dB and the mutation constant -> 8; verify_target_deviation stays
+  at 8.0; no new call site and no CLI exit on simulated data. AE
+  audio note: gating only positive deviation at 3 dB is intended;
+  dips are bounded by the 174b over-cut criterion. B6f was NOT
+  applied (CM) and is VOID; B6g follows once the decision is final
+  (the CM says when). Pending: the Architect on (A)/(B), the QE on
+  (A) (their per-call conditions crossed with the re-ruling), and
+  the PO's final scope call. The QE proposed splitting AC2 out,
+  then withdrew it in favour of in-place. worker-4 has not touched
+  US-174.md (CM). #57 CI run 40235962276 still in progress.
+  New backlog item (AE + Architect, P2; 2026-10-25): option (B), a
+  verify_corrected_response gate on REAL post-correction
+  measurements, in the venue measurement pipeline story; the
+  Architect decides its API shape. No ID yet.
   Measurement SNR check (AE, P2, AE-owned; 2026-10-25): US-174b
   shows the correction raises up to +0.67 dB in below-target
   regions at -40 dB noise re peak, clean at -60. The sweep capture
