@@ -491,7 +491,8 @@ louder, and the gate stayed closed.
 
 ## Task AC19: redeploy of merged main (CM-DEP-.89-AC19)
 
-**Date:** 2026-10-25, run from 19:47Z (reboot 19:54:29-19:54:47Z)
+**Date:** 2026-10-25, run from 19:47Z (Pi down 19:54:29-19:54:47Z, Mac-side
+poll times; the Pi 5's early-boot journal runs ahead, see AC17 Session B)
 **Operator:** Claude (worker-1, under change-manager session CM-DEP-.89-AC19)
 **Host:** mugge (Pi 5), from `2wf21ydg` (f0fbefd1) to `rcyg67wd` (main `07a65f9e`)
 
@@ -509,7 +510,8 @@ evidence file and read each result in the files themselves.
   (`nixos-rebuild-ng` `boot`, see `docs/guide/howto/nixos-upgrade.md` §8.3),
   from a clean export of `07a65f9e`: `switch-to-configuration boot`, not
   `switch`, with the pinned known_hosts and `StrictHostKeyChecking=yes`.
-- One announced warm reboot (issued 19:54:15Z).
+- One announced warm reboot (issued 19:54:15Z). The down window comes from
+  the Mac-side poll, not from the Pi's journal.
 - The AC17/AC19 read set before (PRE) and after (POST) the reboot, and a
   second service read at the 10-minute mark (same boot id).
 
