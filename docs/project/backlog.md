@@ -17,13 +17,17 @@ local display). F-368 WITHDRAWN, never to be reused (was a
 duplicate of the existing F-358 for AC13).
 D-069 (Architect: Pi 5 platform baseline under NixOS, PROPOSED).
 Next free: F-374, US-173, D-070, T66.
-PROVISIONAL (PO, 2026-10-25, pending the owner via team-lead): the
+FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
-without it). PO recommends #50/US-163 scope and acceptance unchanged,
-and US-172 raised to HIGH as the next active priority directly after
-US-163. Read-only US-172 diagnosis may run in parallel if it doesn't
-touch #50. If the owner pulls US-172 into #50, the PO reports back.
-When decided: US-172.md priority line + stories index row (B3).
+without it), and ruled, verbatim: "Separate PR is fine. Just make
+sure you keep the momentum going, and don't block asking me for some
+minor details." US-172 is HIGH and the active job directly after
+US-163; #50 stays headless, scope and acceptance unchanged. One
+exception: if the Architect reports a small bug in our own boot hook
+BEFORE the #50 head move, that fix rides in the same head move with
+the /dev/dri AC. Read-only diagnosis runs now in parallel
+(CM-OBS-.89-DRM1, worker-2, for the Architect) as US-172 groundwork.
+Recorded in B3 v7/v8 (US-172.md, stories index row).
 
 ## US-163 text updates (critical path; one tracking batch before the PR)
 
@@ -676,9 +680,12 @@ When decided: US-172.md priority line + stories index row (B3).
       are byte-identical to the step-(a) BEFORE (29d42498), so the
       USBStreamer powers up at hw 0 dB and re-open trigger (iii)
       stands. Cold boots enumerate before PW, so the F-373 hot-replug
-      path is not exercised; that is scope. QE's AC17 verdict is
-      pending. B3 v7 (CM: yes) records AC17 PASS in US-163.md once QE
-      rules; the lab note alone is not enough.
+      path is not exercised; that is scope. QE: AC17 ACCEPTED, both
+      cold cycles (#50 comment 6399566294). The gate is identical to
+      the step-(a) BEFORE (33e73516), which also covers the cold
+      re-check of AC12a; amixer byte-identical (29d42498); gens
+      snapshot correct (os_prefix 2wf21ydg; MAP 3 nkifli3r and 4
+      2wf21ydg present, 1 and 2 pruned). Recorded in B3 v7/v8.
     - RULED (AE, verbatim): "Current: PW main thread and data-loop.0
       both SCHED_FIFO 88 (main thread via F-020 unit, data loop via
       module-rt / 05-rt-direct.conf), verified on 2 cold boots.
@@ -686,14 +693,48 @@ When decided: US-172.md priority line + stories index row (B3).
       so only the data loop runs at 88." The Architect owns the P2
       design. Any image-status note listing the main thread as
       SCHED_OTHER misreads P2 as the current state and is corrected
-      (the owning author; not in B3, PM checked).
-    - Open (PM -> CM -> QE, PO): AC19 says the Pi is redeployed from
-      the merged main SHA "and AC17 is re-checked". Two more owner
-      cold cycles, or rule (d) (docs-only after M)? CM recommends a
-      warm-reboot AC17 read set after the redeploy, with cold cycles
-      only if the nix-diff shows a real change. The PM's owner status
-      (via team-lead) said two more cycles after the merge; corrected
-      once QE and the PO rule.
+      (the owning author; not in B3, PM checked). Arch + AE joint
+      image-status line: "PW main thread: FF/88 now (F-020,
+      process-wide); target SCHED_OTHER (P2, backlog)". Routed to
+      worker-1 for the #50 body (CM). The Architect's AC17 item is
+      closed and their #50 approval stands. B3 v7 adds the current
+      state to US-163 AC13.
+    - AC19 FINAL (PO, RECONCILED; joint QE and PO; AE no veto;
+      replaces every earlier AC19 text; verbatim in B3 v8
+      US-163.md): after the merge, boot from the merged main SHA,
+      an announced warm reboot, then the AC17 read set against the
+      step-(a) BEFORE values. Two owner cold cycles only if the
+      nix-diff from 2wf21ydg to the main toplevel touches (a) the
+      boot chain, (b) the audio device path, (c) audio startup,
+      (d) gain defaults or (e) anything that sets the USBStreamer hw
+      volume; always if that volume is ever set below 0 dB. QE rules
+      from the diff plus the head-move proof. AE sentence: any kernel
+      version change, USB/audio driver or firmware change, or
+      persisted hw mixer below 0 dB counts under (a)/(b); a Pi 5
+      EEPROM/bootloader update is a cold trigger regardless of the
+      nix-diff. QE read-set addition (non-blocking): vcgencmd
+      bootloader_version and bootloader_config after the redeploy
+      (full libraspberrypi store path) vs the baseline the CM takes
+      in CM-OBS-.89-DRM1 (output sha to be recorded); identical =
+      no EEPROM trigger. Owner line (PO): "No more power-cable pulls
+      are needed after the merge; a software restart is enough
+      unless the startup or volume code changes." Team-lead has told
+      the owner, so no PM owner correction is needed.
+    - OPERATIONAL (QE, CM): no EEPROM update on the Pi 5 between the
+      AC17 cold cycles and AC19 without telling QE and the AE.
+    - B3 v7 (PM, 2026-10-25; supersedes v6): US-163 AC13 current
+      state, AC17 PASS, AC19 (interim text); US-172 High; stories
+      index US-172 row; status.md. MANIFEST.txt sha 3d733bea...;
+      superseded by v8 before commit.
+    - B3 v8 (PM, 2026-10-25; supersedes v7): US-163 AC19 = the
+      reconciled final text plus the AE sentence and the QE read-set
+      addition; US-172 /dev/dri AC is AC1 (former AC1-AC8 now
+      AC2-AC9), AC10 desktop with or without HDMI, including
+      hot-plug. MANIFEST.txt sha 1dffcaa9...; v7 kept as
+      MANIFEST-v7-superseded.txt. Cumulative vs v6: US-163.md,
+      US-172.md, stories-index.md, status.md. The CM commits v8 last
+      in the head move (worker-1: merge main 45593097 and TW
+      9a7e9562, nix-diff proof, then B3 v8 and the lab notes).
     - AD APPROVE is comment 6398339160 (CM). AD M2 precise: the
       f0fbefd1 -> final diffstat is docs-only AND the
       mugge-pi5-deploy nix-diff shows only configurationRevision,
@@ -1533,6 +1574,8 @@ When decided: US-172.md priority line + stories index row (B3).
 - Low (QE, #49): `cat` the guard's out path in the CI step so the
   "Checked N app scripts" count shows in the log. (QE follow-up 1 on
   the #49 APPROVE; same item.)
+- safety.md pre-flight checklist (QE, AE via team-lead): add "amps
+  on last, amps off first". (TW)
 - Low (QE follow-up 2 on #49): dev-howto note: `nix run .#test-*`
   doesn't pick up unstaged new test files, because the apps run on
   the store copy of the tracked files. (TW)
@@ -1749,7 +1792,12 @@ merge needs update-branch and 7 reconfirmations at the new head.
   sd-card-image ~1.04 GB, digest 7a9ae2ce...; verify-ci skipped by
   design (tag-only). QE APPROVED at 316cc3eb, C1/C2/C3 MET (comment
   6399540510). All 7 approvals at the head, CI green, GitHub CLEAN.
-  Owner merge consent requested via team-lead.
+  MERGED with owner consent ("Yes, merge 49."): merge commit
+  45593097 at 15:32:07Z; origin/main = 45593097. CM: F-335 closed by
+  #49. PM: the F-335 record (F-335.md, defects index, status.md)
+  still says open; F-335 AC4 asks for dispatched T1+T2 green ON MAIN
+  with every test-* step run. Close the record after QE confirms
+  AC1-AC6 (records follow-up, not in the #50 head move).
 - #50 US-163: open; see the US-163 section (PR #50 block).
 - #43, #45, #44: need #49 on main and real green CI; #45 before #44.
 - #36, #40: no Rule 13 review; owner direction needed (#40 IDs clash).
