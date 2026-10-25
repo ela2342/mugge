@@ -17,8 +17,8 @@ local display). F-368 WITHDRAWN, never to be reused (was a
 duplicate of the existing F-358 for AC13).
 D-069 (Architect: Pi 5 platform baseline under NixOS, PROPOSED).
 US-173 (P1, supervised home-lab first DJ session); D-070
-(supervised home-lab first-session exception, PROPOSED, pending
-owner).
+(supervised home-lab first-session exception, PROPOSED; owner
+inputs Q1 and Q4 answered 2026-10-25, see US-173).
 Next free: F-374, US-174, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
@@ -1346,6 +1346,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   1472206a on docs/US-163-postmerge): "The list has 14 rows. On the
   Pi 5, rows 1-3 and 5-14 must ALL hold; row 4 applies to the Pi 4
   only."
+  SUPERSEDED by the #51 text (TW, commit 2d22aa7a, AE+AD final;
+  Architect R1 / AD L1 / UX (a)), lead-in verbatim: "The list has 14
+  rows. On the Pi 5, rows 1-3 and 5-14 must ALL hold; row 4 applies
+  to the Pi 4 only. For a defect row, "holds" means the defect is
+  closed and its fix verified on the Pi 5, unless the row itself
+  names an alternative (row 14)." Gate rule verbatim (AD L2): "Do
+  not open it while any Pi 5 row (1-3, 5-14) of the list above is
+  open." Re-check both against the pushed #51 head (CM bundle).
   1. Owner re-confirmation plus the S-012/safety.md pre-flight.
   2. F-341 AC3 PASS on the Pi 5. Until then also NO signal-gen
      measurement session on the Pi 5 (AE, PO).
@@ -1384,8 +1392,31 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      (by GraphManager or WirePlumber) comes up gated: gains 0, gate
      closed, and audio returns only when the operator re-opens it
      through the D-063 ramp. Tested (AE)".
-  14. Gate-authority defects (AD M4) (AE-final, verbatim, safety.md
-     1472206a; supersedes AD's v92 text): "F-320, F-314, F-325,
+  14. Gate-authority defects (AD M4). CURRENT (#51 commit 2d22aa7a,
+     TW; AE N1 final, AD agrees; supersedes the 1472206a text
+     below), verbatim: "F-338, F-339, F-320, F-314, F-325 and F-349
+     are closed, or each has an interim operating rule in the
+     merged safety.md (planned in PR #45) that is followed. For
+     F-314, F-349, F-338 and F-339 the interim rule must be
+     AE-accepted. For F-338 and F-339 it must not rely on the web-UI
+     Close Gate or on a CloseGate success reply: the emergency stop
+     is the amp power switches (including the headphone/IEM amps),
+     and after any gate close, mute or GraphManager restart, 'muted'
+     is proven only by all 16 gain values reading 0 in pw-dump. That
+     interim covers supervised sessions only (a person at those
+     switches for the whole time the amps are on, and able to run
+     the pw-dump read); before any gig or unattended use, F-338 and
+     F-339 are closed. For any own-speaker venue (e.g. CHN-50P),
+     F-321 and F-322 are also closed". N1 history: a closed-only
+     variant (TW f7f37e87, never pushed) was withdrawn; AD wrote the
+     supervised-interim sentence. Consequence: the F-338/F-339 fixes
+     are NOT on the US-173 path; they gate any gig or unattended
+     use. #45 follow-up (TW): #45's interim rules must carry the
+     F-338/F-339 constraints (no Close Gate reliance, 16-gain
+     pw-dump proof, supervised only); no "no interim" note on the
+     F-338/F-339 records (TW withdrew it).
+     Previous text (AE-final, safety.md 1472206a; supersedes AD's
+     v92 text): "F-320, F-314, F-325,
      F-338, F-339 and F-349 are closed, or each has an interim
      operating rule in the merged safety.md (planned in PR #45) that
      is followed. For the two Critical ones (F-314, F-349) the
@@ -1650,12 +1681,38 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   session for H. Owner questions sent (team-lead): target "home-lab
   test, no room correction"; which speakers/subs; true-RMS
   multimeter and fan on hand; F-037 (web UI without auth) accepted
-  for this session. Architect: the full code fixes (worker-1 GM
+  for this session. OWNER ANSWERS (2026-10-25, verbatim via
+  team-lead): Q1 "As a milestone yes, but I want the room
+  correction too." Q2 "correct" (CHN-50P pair plus one UMII18-22).
+  Q3 "I have an oscilloscope, that should allow me to measure RMS.
+  A fan seems to be easy enough to procure, don't worry about
+  that" (team-lead asks the AE whether the oscilloscope suits H;
+  the fan is the owner's, no team action). Q4 "acceptable for home
+  lab" (F-037 with amps on, home lab). So US-173 is a MILESTONE,
+  not the end goal: room correction stays a wanted follow-up;
+  placement (next after US-173 or alongside) is with the PO.
+  Lanes (CM, 2026-10-25): branch story/US-173-first-dj-session
+  from main 07a65f9e, separate PR from US-172. F-318 (WP rule):
+  worker-1 on that branch after AC19 closes; WP files fenced to
+  F-318 (worker-2 tells the CM first if US-172 AC7 needs WP).
+  US-172 (worker-2) touches only board-guard.nix,
+  boards/pi5/bootloader.nix, boards/pi5/default.nix. Pi order:
+  AC19 -> US-172 test boot -> US-173 Pi reads (F-341 AC3, H prep).
+  AE (advisor/Mac, no worker lane; PM routed): crossover WAVs and
+  check, home-lab venue gains, F-321 sha procedure. Story batch B5
+  (PM): US-173.md, its stories-index row, D-070.md.
+  Estimate note: the +1 day for F-338/F-339 sent to team-lead is
+  withdrawn by the N1 final (row 14 above); back to 3-5 working
+  days; the PM sends the correction once the CM bundle at the new
+  #51 head exists (AE). Architect: the full code fixes (worker-1 GM
   lane F-361 -> F-373/G16 -> GM DJ mode; worker-2 lane F-362 ->
   F-372 -> F-352/F-354/F-355 -> F-338/F-339 -> F2 -> F-318 -> F-317)
   are ~6-9 working days and gate unsupervised or gig use, not this
   session.
-  D-070 (PROPOSED, pending owner; PO): supervised home-lab
+  D-070 (PROPOSED; owner inputs answered 2026-10-25: Q1 milestone
+  yes, Q4 F-037 acceptable for home lab; team-lead: no longer
+  pending owner on these; takes effect only with its own safety.md
+  change merged under Rule 13): supervised home-lab
   first-session exception. Interim rules (AE) replace the full fix
   for named amps-on rows. "The exception lists the replaced amps-on
   rows individually with their interim rule; valid only with H set
