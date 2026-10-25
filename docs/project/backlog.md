@@ -2677,6 +2677,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the isfinite asserts, and reported the AE's confirmation to them
   (CM, 2026-10-25). The CM waits for the AE's own line before
   instructing worker-4 (team-lead).
+  UPDATE (CM, 2026-10-25; supersedes the wait above): the AE confirmed
+  the joint line directly; both confirmed. worker-4 is instructed:
+  keep the metric raise, add the two-layer API (the gates return False
+  on non-finite input, never raise), and add the isfinite asserts at
+  test_venue_closed_loop.py:438/:473/:492. Then the CM verifies,
+  pushes, applies B6n (bddbe5c8) as a separate commit, pushes, updates
+  the body; QE/AE review.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -3896,6 +3903,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   QE CHANGES REQUESTED, R1: 11 marked records, not 8 (8 exemptions
   plus 3 unsourced `unverifiable`). AE pending. The TW prepares v2;
   then a diff-only re-check by all 7.
+  UPDATE (CM, 2026-10-25; supersedes "AE pending"): AE APPROVED
+  51cb3fa0 (comment 6404437370, verdict 3404e3d0); 6 APPROVE plus the
+  QE's CHANGES REQUESTED. TW v2 (MANIFEST c8a6e156) has R1, N1 and N2
+  but not yet F-388 AC-f; the CM holds it until the TW folds AC-f in,
+  so the 7 re-check only once.
   #56 backlog (AD, TW, 2026-10-25): AD L1 = TW (3), P3: the CLI
   scripts/drivers/validate_drivers.py and pytest need one shared
   exemption/bounds source (the CLI flags the 8 exempted records
