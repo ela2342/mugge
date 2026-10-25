@@ -20,6 +20,7 @@ Not covered here, on purpose:
 Acceptance values: AE, 2026-10-25.
 """
 
+import inspect
 import os
 import subprocess
 import sys
@@ -440,6 +441,26 @@ class TestResidualPerChannel:
                 biting.append(spk)
         assert biting, f"{name}: no channel where the residual bar bites"
 
+    @pytest.mark.parametrize("offset_db, passes", [(MAX_POSITIVE_DEVIATION_DB, True),
+                                                   (MAX_POSITIVE_DEVIATION_DB + 0.01, False)])
+    def test_gate_boundary(self, offset_db, passes):
+        # AE: exactly at the limit passes, 0.01 dB over fails (gate is dev <= MAX).
+        target = np.array([-2.0, -0.5, 0.0, 1.0, 2.5])
+        response = target.copy()
+        response[2] += offset_db
+        dev = closed_loop.max_positive_deviation_db(response, target)
+        assert (dev <= MAX_POSITIVE_DEVIATION_DB) is passes, f"{dev!r}"
+
+    @pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
+    @pytest.mark.parametrize("where", ["response", "target"])
+    def test_gate_fails_closed_on_non_finite(self, bad, where):
+        # AE: a NaN must FAIL the gate, never compare its way through.
+        target = np.zeros(5)
+        response = np.zeros(5)
+        (response if where == "response" else target)[3] = bad
+        with pytest.raises(ValueError, match="non-finite"):
+            closed_loop.max_positive_deviation_db(response, target)
+
     def test_gate_has_teeth(self, bundle, home_lab, capsys):
         # Architect/AE/QE: same chain as the venue asserts, only the correction
         # is degraded (cut depth capped at WEAK_CUT_DB). The residual lands
@@ -454,7 +475,10 @@ class TestResidualPerChannel:
         with capsys.disabled():
             print(f"\n  teeth home_lab sub1 (30-200 Hz): weak {weak_dev:+.2f} dB at "
                   f"{freqs[np.argmax(weak_cor)]:.1f} Hz, real {real_dev:+.2f} dB", end="")
-        assert 3.0 < weak_dev <= 8.0, f"weak case drifted: {weak_dev:+.2f} dB"
+        verify_default = inspect.signature(
+            verify.verify_target_deviation).parameters["tolerance_db"].default
+        assert MAX_POSITIVE_DEVIATION_DB < weak_dev <= verify_default, \
+            f"weak case drifted: {weak_dev:+.2f} dB"
         assert weak_dev > MAX_POSITIVE_DEVIATION_DB
         assert real_dev <= MAX_POSITIVE_DEVIATION_DB
 

@@ -31,9 +31,11 @@ from . import target_curves as tc
 SAMPLE_RATE = dsp_utils.SAMPLE_RATE
 EVAL_N_FFT = 1 << 17          # 0.37 Hz bins at 48 kHz, fine enough for Q~10 modes
 POINTS_PER_OCTAVE = 48
-# Residual gate (AE): max positive deviation of the corrected response from
-# the target, 1/6 octave, per channel. AE value for the simulated-scenario
-# gate; US-174d revisits it for real measurements.
+# Residual gate (AE, 2026-10-25): max positive deviation of the corrected
+# response from the target, 1/6 octave, per channel, simulated scenarios.
+# US-174d gets its own MEASURED_MAX_POSITIVE_DEVIATION_DB for real
+# measurements; this value is not changed by 174d. Changing or loosening it
+# needs AE review.
 MAX_POSITIVE_DEVIATION_DB = 3.0
 
 
@@ -113,8 +115,16 @@ def system_response(acoustic_ir, fir):
 
 
 def max_positive_deviation_db(response_db, target_db):
-    """Largest amount (dB) by which the response exceeds the target."""
-    return float(np.max(np.asarray(response_db) - np.asarray(target_db)))
+    """
+    Largest amount (dB) by which the response exceeds the target.
+
+    Fails closed (AE): non-finite input raises ValueError. A NaN result
+    compares False both ways, so a ``dev > limit`` check would let it pass.
+    """
+    diff = np.asarray(response_db, dtype=float) - np.asarray(target_db, dtype=float)
+    if not np.all(np.isfinite(diff)):
+        raise ValueError("max_positive_deviation_db: non-finite response or target")
+    return float(np.max(diff))
 
 
 def below_target_report(freqs, corrected_db, uncorrected_db, target_db, margin_db,
