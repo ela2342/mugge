@@ -1,6 +1,7 @@
 # Project Status
 
-Last updated: 2026-10-24 (session 15, tracking re-sync by PM). Before this,
+Last updated: 2026-10-25 (US-163 pre-PR tracking batch by PM; before
+that 2026-10-24, session 15, tracking re-sync by PM). Before this,
 the file was last updated on 2026-04-04 (session 9). Story, defect and
 decision details are in the `stories/`, `defects/` and `decisions/`
 directories. Their index files are generated from the per-item files
@@ -73,6 +74,29 @@ Amps are off, so the system is safe."
   (O-37 resolved). Still open: O-36 (the owner confirms the wipe
   after worker-1's inventory and backup).
 - Docs assume a Pi 4B throughout: F-353.
+
+**State on 2026-10-25 (US-163, PM):**
+
+- The Pi 5 runs NixOS (`mugge-pi5-deploy`, PREEMPT_RT 6.12.62) at the
+  pinned `ela@192.168.178.89`. It is identified by host key
+  SHA256:a5kILUyr... plus MAC 88:a2:9e:8c:8d:4e;
+  `mugge.lab.andreas.org` is an alias only. Raspbian is gone. Platform
+  record: D-069 (PROPOSED). T57 is no longer a pre-erase gate: D-068.
+- US-163 is in review as PR #50. #49 (the F-335 fix) merged with the
+  owner's consent at `45593097` (2026-10-25), which unblocks the #50
+  head move. AC17 PASS (QE ACCEPTED: two cold cycles). Single team
+  focus (owner).
+- Next active job after US-163: US-172 (Pi 5 GPU/display, High; PO,
+  FINAL; owner: "Separate PR is fine"). #50 stays headless; read-only
+  diagnosis runs in parallel.
+- Resolved in US-163: F-366 (RT kernel config), F-369 (FAT keep set),
+  and F-358 for the Pi 5 (AC13 PASS at `132997f9`; Pi 4 verification
+  outstanding, US-170 AC6). F-367 is guarded in US-163; the real fix
+  is US-172.
+- The Pi 5 is a dev image, not gig-capable. Nothing is connected to
+  any output (owner). Any amps, HP or IEM use waits for the AMPS-ON
+  PRECONDITION LIST (Pi 5) in the backlog (P1), which includes F-341
+  AC3, F-037, F-361, F-372 and F-373.
 
 Previous mission:
 
@@ -295,7 +319,7 @@ and the active work (#41, #45, #46, the US-163 branch) already use. PO
 ruling (2026-10-24): main plus the active PRs are canonical; nothing
 changes today. If #40 is revived, its US-157..165, F-296 (and any
 T-IDs) must be renumbered in its rebase, from the next free IDs at
-that time (currently US-172, F-361, D-068). US-166..168 exist only on
+that time (currently US-173, F-374, D-070, T66). US-166..168 exist only on
 #40 and keep their IDs; nothing new is allocated in US-166..168
 (TW, AD L1).
 
@@ -418,7 +442,7 @@ connected).
 | **F-322** | High | No per-speaker power/excursion limit on runtime gain (7 W CHN-50P can get 450 W). |
 | **F-323** | High (readiness) | No vocal-mic capture in Live mode. Fix: US-158. |
 | **F-324** | High | `graph_manager_client.py` has zero tests. |
-| **F-328** | High (Live readiness) | ada8200-in no longer deployed; how Live mode gets ADA8200 ch 1/2 is unanswered (architect). Split from F-295. |
+| **F-328** | High (Live readiness); PO advises Medium (2026-10-25, owner sets) | PW capture node deferred per F-295; ALSA 8-in verified by hw_params (US-163 AC12). Open as the capture tracker; new AC: capture opens Interface 2 Altset 1 (8 ch). Re-rate High when Live mode on the Pi 5 is prioritised. |
 | **F-314** | **Critical** | Venue switch with gate open: instant +60/+64 dB, no ramp/confirmation. Exists on main (US-113). AE veto on gate/venue/first-boot PRs. |
 | F-187 | Critical | Noise on 4 channels + broken spectrum after multiple PW restarts. Blocked — needs Pi at venue. |
 | F-271 | High | D-031 protection WAVs for ch 1-4 missing (blocks US-113 acceptance). |
@@ -439,9 +463,19 @@ connected).
 | F-330 | Medium | CI paths filter is an allowlist; unknown paths skip T1-T3 (O-22: a skip is not green). |
 | F-333 | High | T3 (SD image) not in PR CI; no PR can meet T1+T2+T3 green (O-26). |
 | **F-335** | **Critical** | CI T1 fails on main before any test runs (`src/web-ui` not found in flake source). Blocks every merge, incl. #41-#43 (O-22). |
+| F-361 | Medium (AE, architect; High if a non-AUX port name or profile) | Link audit protects only ports named `playback_AUX0..7`. Amps-on precondition 7. |
+| F-362 | High (QE) | Silent ImportError module skips hide whole test modules. Not a US-163 blocker. |
+| F-363 | Medium (QE) | Purifi Qts test is order-dependent and hides a data error. Blocks if Linux CI T1 on #50 hits the failing order. |
+| F-364 | Low | local-demo seeds are read-only, so saving a profile fails. |
+| F-365 | Not rated (QE) | Hermetic nix checks are broken in the sandbox; CI never builds `checks.*`. |
+| F-367 | Medium | greetd crash-loops on the Pi 5 (no DRM device). Guarded in US-163; real fix US-172. |
+| F-370 | Low (P2) | Pi 5 bootloader hook rewrites config.txt and MAP.txt on a no-op deploy. |
+| F-371 | Low (P3) | Pi 5 deploy closure ships the full nixpkgs source, including test private keys. Harmless. |
+| F-372 | Medium (security) | S-001 path check uses a string prefix and an unsanitised profile name. Amps-on precondition 11. |
+| F-373 | High (AE, availability; safety-relevant) | USBStreamer sink does not recover after USB re-enumeration (static adapter, no hotplug path); only a PW restart recovers it. Recovery must go through the D-063 gate (US-159 G16). Amps-on precondition 13. |
 | F-360 | High (PO, AE) | Web UI crash mid-measurement leaves measurement mode with the gate Open. Fix US-171 (GM measurement lease); interim rule 1. |
 | F-359 | High (AE) | GM `set_mode` re-links mid-stream with the gate Open: step discontinuities into the amps, a different IEM feed at level (F-342). Fix US-160 (G-a/G-b); interim rule 1. |
-| F-358 | Medium (architect, AE; High if US-163 AC13 fails) | Three fixes in #40's original records are missing on main. RT fix: measure in AC13, then a separate port PR; `period-num` 5: US-164; `node.always-process`: rejected for now. Blocks gig-capable images (security). |
+| F-358 | Medium (architect, AE; was High while it blocked US-163) | Three fixes in #40's original records are missing on main. RT fix: resolved on the Pi 5 in US-163 (`05-rt-direct.conf`, AC13 PASS at `132997f9`); Pi 4 verification outstanding (US-170 AC6). `period-num` 5: US-164; `node.always-process`: rejected for now. |
 | F-357 | High (QE) | A skipped `test-and-build` counts as CI green: every green run since 2026-04-20 was docs-only, so main has had no real T1 since. Either a skip satisfies branch protection or the job is not required (worker-2 to state). |
 | F-334 | Medium | local-demo still disables WP policy.standard; diverges from production (D-065), F-318 untestable locally. |
 | F-331 | Low | 16k-tap dirac on ch 5-8 ~doubles convolver load; BM-2 rerun at 8ch first (architect). |
@@ -458,7 +492,7 @@ connected).
 | F-344 | High (QE, AE) | Config tab gain Apply (`POST /api/v1/config/gain`, `config_routes.py:176-215`) writes Mult via pw-cli with no gate check, so the channel is live while the indicator reads CLOSED. Fix in US-159 (T12). |
 | F-343 | Low | PR #45 non-blocking follow-ups. AC2 (§1 hedge), AC3 (2-way scope) and AC7 present in #45 `d605b5c1` and later (`76b61347`); AC1 (Rule 8 step 1 vs REST close) partly, no shell-on-Pi fallback yet (TW, AD). |
 | F-342 | Medium (AE; High once a 3-way profile is used at a gig/rehearsal or with an IEM) | GM does not enforce D-054 `mode_constraints` on set_mode; Live on a 3-way profile puts the HP feed on IEM ch 7-8 (AD; architect confirmed: GM must refuse). |
-| F-341 | Medium | safety.md pre-flight `nc -q1` commands unverified on NixOS (no netcat in `nix/`; `-q` is Debian-only). AC3 on the Pi 5 after US-163 T52 (QE). AE to rate. |
+| F-341 | Medium (AE) | safety.md pre-flight `nc -q1` commands unverified on NixOS (no netcat in `nix/`; `-q` is Debian-only). AC3: the exact safety.md replacement command verified on the Pi 5; out of US-163. Amps-on precondition 2; no signal-gen measurement on the Pi 5 until it passes. |
 | F-340 | Low | PR #44 non-blocking docs follow-ups (architect 1-3, UX, AD L1-L5); later docs pass (TW). |
 | F-338 | High | Web UI CLOSE GATE disabled while the gate reads CLOSED; interim rules 5-7 not performable from the UI (AE confirmed High). Standalone fix ahead of US-159. |
 | F-339 | High | GM CloseGate returns Ok when the convolver is missing and nothing was zeroed (AE; architect confirmed in code). Likelier trigger: gain param name mismatch (AE). Fix: US-159 G11/T10. |
@@ -471,7 +505,7 @@ connected).
 | F-297 | Medium | `split-monoliths.py` would overwrite newer tracking files. Do not run. |
 | F-272 | Medium | RESOLVED (PRs #27, #34). VERIFIED pending CI log. |
 | F-290 | Low | Test assertion bug, xfail still present (architect priority 1). |
-| F-037 | **Critical** (security + AE) | Web UI no auth (auth off in production image) — US-110. **Gig blocker** on any shared network: remote unauthenticated driver damage via F-314/F-320/F-322. Interim rule 7, O-17. |
+| F-037 | **Critical** (security + AE) | Web UI no auth (auth off in production image) — US-110. **Gig blocker** on any shared network: remote unauthenticated driver damage via F-314/F-320/F-322. Interim rule 7, O-17. Pi 5: 8080 open on the LAN by owner decision, accepted only while nothing is connected (amps-on precondition 6). |
 | F-222 | High | Zombie process accumulation in container dev environment (PID 1 = sleep infinity) |
 | F-244 | High | All entity DELETE buttons in config tab lack confirmation dialogs. Cross-cutting UX (US-089/US-093). |
 | F-245 | High | Measurement error UI shows raw Python/NumPy exception. Overlaps F-235. |
@@ -520,7 +554,7 @@ connected).
 
 | Dependency | Status |
 |------------|--------|
-| Pi hardware | New target (owner, 2026-10-24): Pi 5 at `ela@192.168.178.88`, Raspbian until the NixOS bootstrap, USBStreamer and ADA8200 attached. Old Pi 4B production (`192.168.178.185`) and test (`192.168.178.35`) Pis unreachable (owner). |
+| Pi hardware | New target (owner, 2026-10-24): Pi 5, NixOS since 2026-10-24 (US-163), pinned at `ela@192.168.178.89` (was `.88` under Raspbian; identity host key + MAC, D-069), USBStreamer and ADA8200 attached, passive cooling only. Old Pi 4B production (`192.168.178.185`) and test (`192.168.178.35`) Pis unreachable (owner). |
 | GitHub CLI auth | **Broken.** `gh` returns HTTP 401 for github.com. Owner must re-authenticate. |
 | Core software | PW 1.6.2 on main, Mixxx 2.5.0, Reaper 7.64 |
 | Hercules USB-MIDI | Enumeration confirmed, full test pending |
@@ -741,8 +775,9 @@ through D-065). Most significant recent decisions:
   log in the same PR, a separate commit (CM). T3 is a local aarch64
   sd-card build, not a release dispatch; without a builder it is NOT
   RUN, a merge blocker (O-26). QE's Gate 1 run waits on it.
-- Pi checks after the US-163 bootstrap: F-341 AC3 and US-159 T47 on
-  the Pi 5 after T52 (QE); F-348 AC7 is US-163 AC14 (AE); F-346 AC7
+- Pi checks after the US-163 bootstrap: F-341 AC3 and US-159 T47 are
+  out of US-163 (PO, FINAL (b), 2026-10-25), both on the AMPS-ON
+  PRECONDITION LIST (Pi 5); F-348 AC7 is US-163 AC14 (AE); F-346 AC7
   dropped (AE). Still to re-scope by their owners: F-318, F-316,
   F-319; F-321 and F-328 to AE (architect's view: drop F-321's
   historic part, as US-159 G8/G8b fix the code path, and add a
