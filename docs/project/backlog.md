@@ -593,6 +593,20 @@ Next free: F-374, US-173, D-070, T66.
       re-enumeration PASSED on safety (nothing raised); recovery
       finding F-373. Step (b), the owner's physical replug, is
       cleared.
+      AE RULING (2026-10-25, to the CM; PO confirmed): step (b) is
+      DEFERRED to F-373 and is not a US-163 AC; AC17 (AC16b) is
+      satisfied by step (a). The hw volume and the PW volumes were
+      already at maximum, so a replug can't raise them, and WP
+      re-disabled the card. Re-open trigger (AE; PO addition): if the
+      USBStreamer hw volume is ever set below 0 dB (e.g. by US-159),
+      OR the WP rule / link management for the USBStreamer changes
+      (disable rule, autoconnect, GraphManager re-adoption), the
+      physical replug is a required safety test again.
+    - B3 v3 (PM, 2026-10-25): US-163 AC16b amended (text above);
+      F-373 status, AC2 (re-test with a physical replug and the
+      step-(b) read set), AC3 (AMPS-ON item 8), AC4 (re-open
+      trigger). 26 files; MANIFEST.txt sha 7002b0a7...; v2 kept as
+      MANIFEST-v2-superseded.txt. Other 24 files unchanged from v2.
     - AD APPROVE is comment 6398339160 (CM). AD M2 precise: the
       f0fbefd1 -> final diffstat is docs-only AND the
       mugge-pi5-deploy nix-diff shows only configurationRevision,
@@ -1102,9 +1116,10 @@ Next free: F-374, US-173, D-070, T66.
   6. F-037/AC20: the open 8080 web UI is accepted only while nothing
      is connected.
   7. F-361 link-audit fix (P1 below: "before any amps-on use").
-  8. usbstreamer-volume-replug (AC17-B) PASS (AE). A FAIL makes G16
-     High and an amps-on blocker (US-159); node or links not
-     returning after the replug is a recovery finding on this list.
+  8. F-373 fixed and re-tested with a physical replug (AE ruling,
+     PO, 2026-10-25; replaces "usbstreamer-volume-replug (AC17-B)
+     PASS", which is deferred to F-373). A volume rise after the
+     replug makes G16 High and an amps-on blocker (US-159).
   9. The AC20 open blockers for amps-on / gig use: F-317, F-318,
      F-352, F-354, F-355 (F-358 resolved on the Pi 5; Pi 4 US-170).
   10. The 60-min flight-case thermal soak (GIG-READINESS entry, P1)
@@ -1284,7 +1299,11 @@ Next free: F-374, US-173, D-070, T66.
   D-063 gate (gains 0, then a deliberate ramp), or no self-recovery
   and an operator-initiated restart only. Not a US-163 blocker (AC17
   step (a) PASSED). Step (b) shows whether a power-cycled device
-  behaves the same way. Record: B3 v2.
+  behaves the same way. Record: B3 v2. Step (b) is DEFERRED here
+  (AE ruling, PO): the F-373 fix acceptance includes a physical
+  replug with the step-(b) read set (USB mixer controls, PW Props,
+  the 16 gains, the links, before and after). Re-open trigger as in
+  the AC17 Session B entry. AMPS-ON items 8 and 13.
 - **F-372** (SecSpec, MEDIUM; amps-on/gig blocker class next to
   F-037): the S-001 fix is weak. filter_routes.py:545 tests
   abspath(output_dir).startswith(abspath(DEFAULT_OUTPUT_DIR)), a
