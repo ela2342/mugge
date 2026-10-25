@@ -477,6 +477,24 @@ Next free: F-371, US-173, D-069, T66.
     runtime unverified, US-170). NEXT: the PR opens (worker-1 is
     finalising the body; PM status list us163-ac-status-v1.md, sha256
     d291a9ed...) -> AC17.
+    HEAD MOVES AFTER f0fbefd1 (joint Architect + QE ruling, sent by
+    the Architect at QE's request; via CM, 2026-10-25): condition (d)
+    stands, as option (A).
+    - Evidence is pinned to f0fbefd1 / 2wf21ydg; AC17 runs on
+      2wf21ydg.
+    - The PR body carries (1) `git diff --stat f0fbefd1..head`
+      showing docs/ only; (2) a nix-diff of the mugge-pi5-deploy
+      toplevel f0fbefd1 vs head showing only configurationRevision;
+      plus an identical Pi 4 `mugge` drvPath.
+    - Any non-docs commit: redeploy the head, re-run T51 identity,
+      check #10 (gains/gate) and the >= 2-complete-gens snapshot,
+      plus the ACs it touches; AC1a if Pi 4 inputs change.
+    - AC17 part (SETTLED, single wording): QE's (d) stands as
+      written: any non-docs change re-runs AC18b AND AC17, plus the
+      T51 / check #10 / >= 2-gens snapshot, plus AC1a if Pi 4 inputs
+      change. Docs-only: no redeploy; the two PR proofs above. A
+      narrower AC17 clause (only boot, kernel, firmware, power or
+      thermal paths) was proposed and withdrawn (Architect).
     1. PASS (QE + SecSpec; CM-OBS-.89-T53, T53b, T53c): T53-on-deploy,
        ONE read-only OBSERVE on the running deploy. NO external port
        scan (owner directive, see the test-process rule below); the
