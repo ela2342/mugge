@@ -189,6 +189,9 @@ record of the bootstrap, with raw output, is the lab note
 `docs/operations/safety.md`, "Pi 5 Platform Status", before connecting
 anything to any Pi output.
 
+**Decision record:** D-069 (Pi 5 platform baseline: board split, direct
+firmware boot, deploy verb, target identity).
+
 ### 8.1 Target identity
 
 | Property | Value |
@@ -302,12 +305,19 @@ same way. This procedure was tested in US-163 T54 and T54b.
 
 1. Power the Pi off and mount the SD card's FAT partition on another
    machine.
-2. Read `gens/MAP.txt` and list `gens/`. Pick a generation that is marked
-   `present` and whose directory contains `.complete`.
+2. Read `gens/MAP.txt` and list `gens/`. Note the id in the current
+   `os_prefix=` line of `config.txt`: that generation is the one that
+   fails. Pick the newest other generation (highest number in `MAP.txt`)
+   that is marked `present` and whose directory contains `.complete`.
 3. Edit the `os_prefix=` line in `config.txt` to `os_prefix=gens/<id>/` for
-   that generation. If `config.txt` is missing or truncated, restore it
-   with that line (any recent copy of a working `config.txt` is a good
-   base).
+   that generation. If `config.txt` is missing or truncated, write a new
+   one. On the Mac, at the commit of a working generation, run
+   `nix eval --raw .#nixosConfigurations.<config>.config.system.build.pi5ConfigTxt`,
+   where `<config>` is the configuration that built that generation
+   (normally `mugge-pi5-deploy`). `mugge-pi5-bootstrap` gives the same text
+   without the `dtoverlay=vc4-kms-v3d-pi5,noaudio` line, and that line only
+   affects the display. This prints the exact text the bootloader hook
+   writes; replace `@ID@` in its `os_prefix=` line with the chosen id.
 4. Put the card back and power on.
 
 The current recovery line for the deployed generations is recorded in the

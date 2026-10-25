@@ -356,8 +356,10 @@ US-059 (GraphManager Core + Production Filter-Chain) is in IMPLEMENT phase.
 GraphManager manages PipeWire link topology and mode transitions. Two reconciler
 bugs block automated routing — manual `pw-link` used for GM-12.
 
-**Pi is on PREEMPT_RT kernel (`6.12.62+rpt-rpi-v8-rt`) with hardware V3D GL.**
-No V3D blacklist, no pixman, no llvmpipe. CamillaDSP service stopped (D-040).
+**The Pi 5 (since 2026-10-24) is on a PREEMPT_RT 6.12.62 kernel, headless.**
+D-022 (hardware V3D GL) is NOT re-confirmed on the Pi 5: there is no
+`/dev/dri` (F-367; US-172). The Pi 4B ran `6.12.62+rpt-rpi-v8-rt` with
+hardware V3D GL (historical). CamillaDSP service stopped (D-040).
 
 See `docs/project/status.md` for full current state. Decisions in `docs/project/decisions.md`.
 
@@ -458,11 +460,16 @@ pre-flight checklists, and PREEMPT_RT as a safety requirement (D-013).
   reboot, `systemctl --user restart pipewire`, or any action that causes the USBStreamer
   to lose its audio stream. This applies to all team members — workers, CM, everyone.
   The owner decides when it is safe to proceed (e.g., after turning off amps).
-  **Gain attenuation:** The filter-chain convolver config uses `linear` builtin
-  Mult params for gain (0.001 = -60 dB mains, 0.000631 = -64 dB subs). Default
-  values load from `.conf` at startup; runtime `pw-cli` changes are session-only
-  and revert on PW restart (C-009 verified). The old `config.gain` approach is
-  silently ignored by PW 1.4.9+ (TK-237).
+  **Gain attenuation:** The filter-chain convolver config uses one `linear`
+  builtin per channel (8) for gain. Since D-063 all 8 gain nodes boot at
+  Mult 0.0 and Add 0.0 (the universal audio gate is closed); any other
+  value after a boot is a FAIL. Opening the gate ramps each channel to the
+  active venue profile's `gain_db` (D-009 hard cap 0 dB). The old fixed
+  defaults 0.001 (-60 dB mains) and 0.000631 (-64 dB subs) are pre-D-063;
+  they survive only in the watchdog unlatch restore table (defect F-320).
+  Runtime `pw-cli` changes are session-only and revert to the `.conf` boot
+  value (0.0) on PW restart (C-009 verified). The old `config.gain`
+  approach is silently ignored by PW 1.4.9+ (TK-237).
 
 ## Key Documents
 
