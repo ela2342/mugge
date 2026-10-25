@@ -1788,7 +1788,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   PASS, PRE-base ok, additions only, config.txt untouched, thermal
   65-67.75 °C. GC root /home/ela/.us172-libpi -> frspf350
   (libraspberrypi), REMOVED at US-172 close. tb-reboot (1 of 1) in
-  progress. H1 may pre-empt
+  progress. RESULT (CM, 2026-10-25): the Pi did NOT come back from
+  tb-reboot: down at 21:03:53Z; at 21:18Z no ping and no ARP from
+  the Mac. Likely the H1 tryboot config (vc4-kms-v3d-pi5 +
+  disable-bt overlays) hangs the boot; a US-172 finding. The owner
+  is asked, via team-lead, for a power cycle; a cold boot uses the
+  normal config (tryboot is one-shot). worker-2 is on HOLD with
+  the session kept. Once the Pi is back: CM host-key/MAC check,
+  worker-2's read-only state record, then the restore path,
+  reviewed by the QE and Architect, before tb-restore. The Pi queue
+  (US-173 Gate-2, the WP check) waits behind it. H1 may pre-empt
   the Pi
   build queue between derivations once reviewed; US-173 Gate-2
   follows H1.
