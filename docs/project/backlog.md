@@ -2533,6 +2533,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   message. Nice-to-have: Filters Generate returns 400 instead of
   500. worker-5's fence adds session.py and filter_routes.py
   (disjoint from all open branches, CM checked).
+  QE R1/R2 ACCEPTED (via CM, 2026-10-25): R1 on base b0666c02, 3 of
+  4 gate tests red with numbers; R2 mutants M1 3 red, M2 7, M3 4;
+  post-revert 1227 passed / 1 F-363 / 1 skipped. QE REQUIRED, same
+  head: the M1 second net, one assertion through
+  generate_profile_filters that the LR output differs from legacy,
+  and M1 must turn a TestCrossoverTypePassThrough test red. QE
+  non-blocking: N1 the real-profile ceiling (AE + Architect numbers,
+  above); N2 the web-ui teardown flake is F-387 (PM, already
+  allocated); N3 F-383 cites the +/-0.7 test. worker-5's interim
+  aec7b604 (Architect N1 LR4 phase <= 5 deg, UX N1 wording) is not
+  pushed; it goes into the complete head.
   #55 backlog (AD, 2026-10-25): L1 a loose-bounds regression test
   on the real, unmodified markaudio profile (sum, max|H|, phase),
   tightened with F-385/F-383. L2 default_profile.yml has no
@@ -3094,8 +3105,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Mac builds can run on the Pi. CM measured 3 GiB free
   (2026-10-25), BELOW the 4 GiB line: still no new worktrees or
   builds; backlog commits continue. Later (CM, 2026-10-25): 3.3
-  GiB; later 3.2 GiB (CM). Only worker-4's cleared US-174b nix
-  runs (abort below 3.0 GiB).
+  GiB; later 3.2 GiB, then 3.4 GiB (CM). Only worker-4's cleared
+  US-174b nix runs (abort below 3.0 GiB).
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
