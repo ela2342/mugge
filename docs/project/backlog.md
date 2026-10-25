@@ -2673,6 +2673,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   on NaN/+inf/-inf. Plus np.isfinite asserts at
   test_venue_closed_loop.py:438/:473/:492. #57 CI at e548a3d6 was
   green (that head will move).
+  #57 (b) joint line: the Architect CONFIRMED it as quoted, including
+  the isfinite asserts, and reported the AE's confirmation to them
+  (CM, 2026-10-25). The CM waits for the AE's own line before
+  instructing worker-4 (team-lead).
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -2924,6 +2928,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     before the F-385 mask. The 2345 scraped records may stay unknown."
     PRV example: mathematical 7.15 mm re-derives to (18.8 - 9.0)/2 =
     4.9 mm.
+  - AC-f (AE option (a), 2026-10-25, verbatim; from UX N1 on #58;
+    supersedes the CM's shorter "M1 addendum" proposal): "AC (UX,
+    #58): the M1 refusal (marked record, or a null field the safety
+    math needs) also fires (i) when a speaker identity or profile that
+    references such a record is saved, and (ii) when a measurement
+    session starts, before any gain calibration or stimulus. The M1
+    refusal at compute time stays as the backstop and is never
+    removed. Tests: one per entry point, plus one showing the
+    compute-time refusal still fires if the earlier checks are
+    bypassed." Why (AE): a session that can't produce valid safety
+    limits should never get as far as playing a stimulus. UX: same
+    message at every entry point. F-388.md (#58) gets it in the TW's
+    #58 v2 if the TW takes it there, else in the next defects docs PR.
 - **F-389** Pi 5 tryboot with KMS+BT overlays via overlay_prefix:
   no network, needed an owner power cycle (Architect, no QE
   objection; via CM, 2026-10-25). US-172 run 2: run 1 +
@@ -3874,6 +3891,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   and removes the status.md Open Blockers F-363 row. On merge, the
   F-388 line "No defects/F-388.md record on main yet" and the TW close
   item above are superseded.
+  #58 at 51cb3fa0 (CM, 2026-10-25): APPROVE SecSpec, UX, AD (no
+  findings; lapses on head move), Architect, TW (declared authorship).
+  QE CHANGES REQUESTED, R1: 11 marked records, not 8 (8 exemptions
+  plus 3 unsourced `unverifiable`). AE pending. The TW prepares v2;
+  then a diff-only re-check by all 7.
   #56 backlog (AD, TW, 2026-10-25): AD L1 = TW (3), P3: the CLI
   scripts/drivers/validate_drivers.py and pytest need one shared
   exemption/bounds source (the CLI flags the 8 exempted records
@@ -4310,6 +4332,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   ran in the check sandbox. QE on HOLD for H1/H2: H1 scratch run
   (branch scratch/pr54-h1-rc-check 3a95ae77, run 40241169781); H2 body
   text, the TW drafting. AD L1 + QE: F-393 (not fixed in #54).
+  #54 update (CM, 2026-10-25): AD verdict posted
+  (/tmp/pr54-ad-verdict-46343238.md), 6/7 on the PR; QE on HOLD for
+  H1/H2. CM local eval: drvPath
+  /nix/store/7zah6n80zm3xri1xhy76hz622i3q2grq-test-room-correction.drv;
+  AD M1 needs the H1 run (40241169781) to match it. TW body v2 ready
+  (182097d7), posted after H1.
   Pi build queue (Architect, 2026-10-25): F-365, then the F-374
   PR-head suite, then the wireplumber-no-bypass check; each from a
   tarball at the declared SHA with sandbox=true. WP check
