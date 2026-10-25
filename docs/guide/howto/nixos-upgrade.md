@@ -301,7 +301,9 @@ use `nixos-rebuild switch --rollback` or `switch-to-configuration switch`:
 both activate live and restart PipeWire. Return to the newer generation the
 same way. This procedure was tested in US-163 T54 and T54b.
 
-**Recovery with a card reader** (the Pi does not boot):
+**Recovery with a card reader** (the Pi does not boot). You need a machine
+with an SD card reader. If `config.txt` is missing or truncated (step 3),
+you also need the Mac with a checkout of this repository, to regenerate it.
 
 1. Power the Pi off and mount the SD card's FAT partition on another
    machine.
