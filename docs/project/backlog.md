@@ -41,8 +41,10 @@ free across main, origin and all worktrees, 2026-10-25); F-389
 (US-172 tryboot hang, Architect; PM checked free across main,
 origin and all worktrees, 2026-10-25); F-390 (P1, speaker-config
 path split, GATE before US-173/US-174c/d sessions; PO; PM checked
+free across main, origin and all worktrees, 2026-10-25); F-391
+(P1, measurement sweep ignores mandatory_hpf_hz; AE; PM checked
 free across main, origin and all worktrees, 2026-10-25).
-Next free: F-391, US-176, D-071, T66.
+Next free: F-392, US-176, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -2182,7 +2184,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - F-390 GATE (PO, 2026-10-25): no US-173 session that loads
     speaker or crossover configs (measurement, CP-5) starts before
     F-390 is met, or the AE-accepted fallback is in place. Gate
-    wording with the AE. See F-390.
+    wording with the AE. See F-390. Final gate text (AE): see
+    F-390. F-391 gates the same sessions.
+  - Gate-2 r2 (CM, 2026-10-25): gate2.py dda3bfcf, selftest
+    f72a0aba, out for diff-only re-review by AE, Architect and
+    SecSpec; the selftest is held on disk (2.3 GiB).
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -2462,8 +2468,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   read-only in the worktree) has no 2.9/3.1 tests. B6l-keep (PM,
   MANIFEST e504d5f6) is the alternative if the final AC2 SHA adds
   them. Both supersede B6k; HELD (CM) for worker-4's AC2 SHA.
+  Update (CM, 2026-10-25): e548a3d6 is PUSHED with no 2.9/3.1
+  tests and US-174.md untouched (sha256 32260961), so B6l
+  (78bac870) is the batch; B6l-keep is VOID, never applied. The CM
+  holds the B6l commit until worker-4's next SHA (an uncommitted
+  test-file follow-up is in progress) and told worker-4 the AC2
+  test conditions, including the required mutation (c) np.max ->
+  np.mean and (d) the grep.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
-  that loads speaker or crossover configs. See F-390.
+  that loads speaker or crossover configs. See F-390. F-391 gates
+  the same sessions.
   PO FINAL (via CM, 2026-10-25): the constant move is within
   the "test-only" intent; (A) stands, no split (supersedes "the PO
   may still ask for the split"). QE A1-A5 on (A) (via CM,
@@ -2698,7 +2712,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   session that measures with it. Driver-safety risk (D-031), not a
   convenience issue (PO). GATE before every US-173 session and
   every US-174c/d session that loads speaker or crossover configs
-  (measurement, CP-5); gate wording with the AE.
+  (measurement, CP-5); gate wording with the AE. Final gate text
+  (AE, 2026-10-25): "F-390 GATE: no US-173 session and no
+  US-174c/d session that loads speaker or crossover configs
+  (measurement, CP-5 generation or deploy) starts until F-390
+  AC1-AC4 are met, or the AE-accepted fallback below is in place."
   AC1: one source of truth on the Pi; the editor, the measurement
   session and CP-5 read and write the same path. AC2: each session
   logs the path and hash of the speaker config it loaded; the lab
@@ -2746,7 +2764,45 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     rebases) and replaces `_profile_dirs()`.
   CM assigns the lane; the Architect reviews design and diff before
   the PR; the AE confirms the gate and AC2 wording. Lane: the CM
-  assigns it after #55 merges (CM, 2026-10-25).
+  assigns it after #55 merges (CM, 2026-10-25). The Architect's
+  ruling text is at /tmp/f390-architect-ruling.md (CM).
+  AE additions (2026-10-25):
+  - AC2 EXTENDED: the logged hash covers the profile AND every
+    identity file it references (mandatory_hpf_hz and max_boost_db
+    live there), not the profile alone.
+  - AC4 (NEW): "A session whose profile, or any identity the
+    profile references, cannot be loaded fails at session start,
+    before gain calibration or any sweep. It is never skipped with
+    a warning." (SecSpec's #55 point: today a missing profile skips
+    the pre-check, the sweeps run, and it fails only at CP-5.)
+  - Fallback: enough only under ALL of: (a) the comparison covers
+    the profile and every referenced identity, the session-loaded
+    repo copy vs the editor's /etc/pi4audio/speakers copy,
+    byte-identical by sha256; any mismatch or a missing file on
+    either side is a STOP, no "proceed and note"; (b) it is done in
+    the CM session record after the last editor edit and before the
+    start, with no editor saves during the session, and repeated
+    before any CP-5 deploy; (c) the session log (AC2) shows the same
+    hashes; (d) the sha256 of the coeffs deployed in the convolver
+    at session start is recorded, and the previous deploy record
+    shows they were generated from configs with the same identity
+    hashes (see F-391); (e) valid only for the named US-173 and
+    US-174c/d sessions; F-390 stays P1 open, and the fallback never
+    covers a gig.
+- **F-391** Measurement sweep ignores mandatory_hpf_hz (P1; AE,
+  2026-10-25). Gates the same sessions as F-390. /measurement/start
+  accepts ChannelConfig.mandatory_hpf_hz (session.py:193), but
+  session.py never applies it; sweeps run 20 Hz-20 kHz at
+  sweep_level_dbfs (session.py:778, AE). The only D-031 protection
+  during a sweep is the combined FIR deployed in the convolver at
+  that moment; if it came from a stale identity, or is a dirac or
+  passthrough, the sats get full-level content down to 20 Hz. Fix
+  options (the Architect chooses the route; PM asked): apply the
+  identity's HPF to the sweep or start the sweep at the HPF, or
+  verify before the first sweep that the deployed coeffs carry each
+  channel's D-031 HPF. Either way the dead field is removed or
+  wired. Interim: F-390 fallback condition (d). Lane: CM (likely
+  next to F-390; both touch session.py).
 - Speaker-config reset-to-default action (Architect R4 under F-390;
   not F-390 scope).
 - Docs (TW; via CM, 2026-10-25): flake test apps run on a /nix/store
@@ -3622,7 +3678,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   store delete` runs on their own w3-gate2-selftest outputs only
   (339.1 + 92.7 + 92.2 MiB, ~524 MiB total); no GC. Deviation
   recorded and closed (CM). Later (CM): disk 2.6 GiB and falling;
-  the hold stays. Later (CM): 2.5 GiB, still falling.
+  the hold stays. Later (CM): 2.5 GiB, still falling. Later (CM):
+  2.3 GiB.
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
@@ -4008,5 +4065,12 @@ merge needs update-branch and 7 reconfirmations at the new head.
   "via pw-dump every 30 s" and audio_mute.py. Node discovery via
   pw-dump is fine; no value check may trust pw-dump for
   NaN/-Inf/subnormal.
+  More readers (via CM, 2026-10-25): (1) worker-3 side finding: GM
+  gain_integrity.rs and the web UI read gains from pw-dump, which
+  may also be STALE (a sandbox set-param did not show in pw-dump);
+  only an enum-params reader is shown live, once the set-param
+  case passes. (2) safety.md:69-71 on the US-173 branch says
+  pw-dump, not pw-cli, for gains, contradicting the AE's
+  enum-params rule; the AE is ruling and the TW fixes it.
 - #36, #40: no Rule 13 review; owner direction needed (#40 IDs clash).
 - chore/backlog (this file): no PR yet; docs-only.
