@@ -2316,7 +2316,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   on the excluded large_hall/outdoor_tent; one line, test count
   unchanged. R1 is with worker-4. After R1, worker-4 is cleared to
   run both nix run apps (the dry-run builds only the wrapper drvs):
-  df before and after, sequential, abort below 3.0 GiB free.
+  df before and after, sequential, abort below 3.0 GiB free. HELD
+  (CM, 2026-10-25): Mac disk 2.95 GiB, below the line; pytest in
+  the dev shell continues (see the Mac disk item).
   Measurement SNR check (AE, P2, AE-owned; 2026-10-25): US-174b
   shows the correction raises up to +0.67 dB in below-target
   regions at -40 dB noise re peak, clean at -60. The sweep capture
@@ -3236,7 +3238,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   builds; backlog commits continue. Later (CM, 2026-10-25): 3.3
   GiB; later 3.2, 3.4, 3.2, then 3.1 GiB (CM, near the 3.0 GiB
   abort line). Only worker-4's cleared
-  US-174b nix runs (abort below 3.0 GiB).
+  US-174b nix runs (abort below 3.0 GiB). Later (CM, 2026-10-25):
+  2.95 GiB, BELOW the 3.0 GiB abort line: worker-4's US-174b nix
+  run is HELD; pytest in the dev shell continues. Nix GC is banned
+  below 4 GiB; freeing space is the owner's call (CM reported it to
+  team-lead).
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
