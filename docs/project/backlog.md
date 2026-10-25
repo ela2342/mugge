@@ -2161,6 +2161,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     captures, to confirm the PW 1.6.2 input marker before the
     operator docs name it, and that AUX0..7 carry only
     convolver-out. Gate-2 follows US-172 H1 on the Pi.
+  - Gate-2 scripts ready (worker-3, via CM, 2026-10-25) in
+    /tmp/w3-gate2/: gate2.py 806d7ab7, selftest 7de5943a,
+    selftest.nix 90258d73; sandbox 26/26 with the policy on, 18/26
+    fail with it off. Under QE, AE, Architect and Security review.
+    Pi order: US-172 recovery -> deploy 142a3523 -> preflight
+    (OBSERVE) -> full run (CHANGE). c7dde808, a9addc52 and 142a3523
+    are already pushed.
   - Pushed (CM, 2026-10-25): story/US-173-first-dj-session =
     142a3523 (the F-380 revert of c7dde808, SecSpec fixes and
     Architect N1 in a9addc52, merge of main dfdbbbd6).
@@ -2391,7 +2398,21 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   clause; the PO may still ask for the split. Story batch B6g (PM,
   MANIFEST 072fba75, on the B6e base at bcc353ed, whole-file
   replace of US-174.md; supersedes the VOID B6f) carries AC2 and
-  the 174d real-gate line.
+  the 174d real-gate line. B6g was NOT applied; it is superseded
+  by B6h (PM, MANIFEST f78e6296, same B6e base at bcc353ed,
+  whole-file replace of US-174.md), which adds the QE's A1-A5 to
+  AC2. PO FINAL (via CM, 2026-10-25): the constant move is within
+  the "test-only" intent; (A) stands, no split (supersedes "the PO
+  may still ask for the split"). QE A1-A5 on (A) (via CM,
+  2026-10-25; the QE's C1-C3 lapse): A1 the real chain (1/6-oct
+  smoothing -> max_positive_deviation_db); A2 mutations constant
+  -> 8 and -> 3.2 plus the REQUIRED np.max -> np.mean product
+  mutation; A3 the band stated per assert (subs 30-200, sats
+  250-500, system 30-500 Hz); A4 the AC text names the constant and
+  the function, "verify_target_deviation default unchanged at 8.0"
+  and "verified by tests only, no shipped code enforces it"; A5
+  counts against 1268/76. worker-4 is implementing it. Option (B)
+  is CLOSED, not filed (AE: it duplicates US-174d).
   Backlog finding (QE, via CM, 2026-10-25; not US-174b): the
   legacy verify paths run_all_checks (verify.py:493) and
   runner.py:390 `--stage verify` have no test coverage at all. No
@@ -3359,7 +3380,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   owner; the CM has no sudo. Later (CM): 2.5 GiB; worker-3's
   22:27 CET nix build is still running and the CM lets it finish.
   It finished at 22:31:42 CET; disk recovered to 2.8 GiB, still
-  below the 3.0 line, so the hold stays (CM).
+  below the 3.0 line, so the hold stays (CM). Deviation for the
+  record (CM, 2026-10-25): during the hold worker-3 deleted their
+  own temporary nix store paths (~430 MiB); the CM asked for
+  details and set "no store delete/GC without CM clearance".
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
   never shrinks (19 -> 24 GiB, virtual 30 GiB, in one RT kernel build;
