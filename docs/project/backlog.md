@@ -2864,6 +2864,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     records, then re-check those Re values and the IDMAX10D2 3.44.
     Kept out of the F-363 PR (AE). No ID yet, like the other
     follow-ups here.
+  - Retailer T/S source (AE, P3; via worker-6, 2026-10-25): add a
+    retailer value (e.g. "retailer") to the ts_parameter_source enum
+    in validate_driver.py and TEMPLATE.yml. accuton-c173-11-191 is
+    corrected from a retailer page only, recorded today just in
+    ts_measurement_notes; the enum has only manufacturer and
+    measured-*. AE-owned; not in the F-363 PR.
   - Decimal-comma parse bug (QE, P2 until worker-6's scan is in):
     datasheet ingestion read European decimal commas wrongly;
     accuton-c173-11-191 stored Qts 34.0 / Qms 527.0 where the
@@ -3105,7 +3111,7 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Mac builds can run on the Pi. CM measured 3 GiB free
   (2026-10-25), BELOW the 4 GiB line: still no new worktrees or
   builds; backlog commits continue. Later (CM, 2026-10-25): 3.3
-  GiB; later 3.2 GiB, then 3.4 GiB (CM). Only worker-4's cleared
+  GiB; later 3.2, 3.4, then 3.2 GiB (CM). Only worker-4's cleared
   US-174b nix runs (abort below 3.0 GiB).
 - Compact or cap the Mac linux-builder qcow2
   (/var/lib/linux-builder/nixos.qcow2): it grows with VM writes and
