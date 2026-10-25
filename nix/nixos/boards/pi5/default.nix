@@ -9,7 +9,7 @@
 # nixos-hardware is not used for the Pi 5 (architect ruling): the kernel is
 # either the cached nixpkgs linux_rpi4 (bcm2711_defconfig, which boots the
 # Pi 5 with 4K pages) or our RT build of the same defconfig (kernel-rt.nix).
-{ lib, ... }:
+{ config, lib, ... }:
 
 {
   imports = [
@@ -39,10 +39,28 @@
   # so labwc exits and greetd restart-loops. Start greetd only when a DRM
   # card exists (any card*: card0 may be v3d once vc4 loads). A failed
   # condition skips the unit, it is neither failed nor restarting. Not a
-  # StartLimit: hitting it leaves the unit failed. The display follow-up
-  # story must order greetd after the DRM device, since this condition is
-  # checked only once at boot.
+  # StartLimit: hitting it leaves the unit failed. Kept until US-172 is
+  # confirmed on the Pi 5; the udev rule below starts greetd once the
+  # card appears.
   systemd.services.greetd.unitConfig.ConditionPathExistsGlob = "/dev/dri/card*";
+
+  # US-172 AC8: start greetd when the vc4 KMS card appears, at coldplug or
+  # later (module autoload), since the condition above is checked only
+  # when greetd is started. Matched on the vc4 driver, so that a v3d
+  # render-only card cannot start labwc before KMS exists. No After= or
+  # BindsTo= on a device unit: without a card that would end in a
+  # device-job timeout and a failed unit. Starting a running greetd is a
+  # no-op, so later drm uevents (HDMI hotplug) do nothing.
+  services.udev.extraRules = lib.mkIf config.services.greetd.enable ''
+    SUBSYSTEM=="drm", KERNEL=="card[0-9]*", DRIVERS=="vc4-drm", TAG+="systemd", ENV{SYSTEMD_WANTS}+="greetd.service"
+  '';
+
+  # The udev rule is greetd's only starter (Architect). graphical.target
+  # would otherwise start it twice over: through wantedBy, and through the
+  # display-manager.service alias, which systemd's graphical.target Wants.
+  # Either could start labwc on a v3d-only card before KMS exists.
+  systemd.services.greetd.wantedBy = lib.mkIf config.services.greetd.enable (lib.mkForce [ ]);
+  systemd.services.greetd.aliases = lib.mkIf config.services.greetd.enable (lib.mkForce [ ]);
 
   # ela's user manager (PipeWire and the audio stack) was started by the
   # greetd autologin. With greetd skipped, linger starts it at boot.
