@@ -17,9 +17,11 @@ local display). F-368 WITHDRAWN, never to be reused (was a
 duplicate of the existing F-358 for AC13).
 D-069 (Architect: Pi 5 platform baseline under NixOS, PROPOSED).
 US-173 (P1, supervised home-lab first DJ session); D-070
-(supervised home-lab first-session exception, PROPOSED; owner
-inputs Q1 and Q4 answered 2026-10-25, see US-173).
-Next free: F-374, US-174, D-071, T66.
+(supervised home-lab first-session exception, ACCEPTED by the owner
+2026-10-25, PO; see US-173). US-174 (P1 epic, automated room
+correction pipeline; PM checked free across main, origin and all
+local/worktree branches, 2026-10-25).
+Next free: F-374, US-175, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -1354,6 +1356,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   names an alternative (row 14)." Gate rule verbatim (AD L2): "Do
   not open it while any Pi 5 row (1-3, 5-14) of the list above is
   open." Re-check both against the pushed #51 head (CM bundle).
+  DONE: #51 MERGED (main b0666c02); the PM checked the merged
+  safety.md on main: the lead-in, the Gate rule, row 4 and row 14
+  match the texts here verbatim. Mirror source is now safety.md on
+  main b0666c02.
   1. Owner re-confirmation plus the S-012/safety.md pre-flight.
   2. F-341 AC3 PASS on the Pi 5. Until then also NO signal-gen
      measurement session on the Pi 5 (AE, PO).
@@ -1461,9 +1467,22 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   makes F-338/F-339 closed-only, both fixes join the US-173 path
   (~1 day, Architect) and the DJ estimate to the owner is
   corrected (PM asked the AE to name the variant).
+  RESOLVED: N1 = (B), the supervised interim (AE confirmed, AD's
+  text, AD confirmed in re-review); not closed-only, no estimate
+  change (back to 3-5 days, sent to team-lead). (1) AD L1 and (2)
+  AD L2 are DONE by #51 (AD: close once #51 merges; merged
+  b0666c02). (3) UX (b) "(planned in PR #45)" still waits for #45.
+  NEW one-liner for the TW (UX P3, non-blocking, #51 re-review):
+  repeat the F-338/F-339 interim as its own bullet under "Until the
+  list is closed" (stop = the amp switches incl. HP/IEM; never
+  trust the web-UI Close Gate; muted = all 16 pw-dump values 0).
+  Mirror rule: this list follows the TW change.
   PENDING ROW H (AE, 2026-10-25; PO agrees; NOT yet numbered here):
   hardware level cap. With the speakers disconnected and a
-  true-RMS multimeter on the amp outputs, the amp input knobs are
+  true-RMS multimeter on the amp outputs (superseded: the owner's
+  oscilloscope, differential, per the AE H procedure in US-173.md;
+  owner question on 2 channels + Math or a differential probe via
+  team-lead), the amp input knobs are
   set and marked so 0 dBFS reaches at most 5.3 V rms on the sats
   (CHN-50P, 7 W into 4 ohm) and at most 20 V rms (~100 W) on the
   sub (UMII18-22, home lab). Not waivable: without H the AE accepts
@@ -1693,7 +1712,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   placement (next after US-173 or alongside) is with the PO.
   Lanes (CM, 2026-10-25): branch story/US-173-first-dj-session
   from main 07a65f9e, separate PR from US-172. F-318 (WP rule):
-  worker-1 on that branch after AC19 closes; WP files fenced to
+  worker-1 on that branch after AC19 closes (superseded: worker-3,
+  spawned by team-lead, does F-318 + B5 there); WP files fenced to
   F-318 (worker-2 tells the CM first if US-172 AC7 needs WP).
   US-172 (worker-2) touches only board-guard.nix,
   boards/pi5/bootloader.nix, boards/pi5/default.nix. Pi order:
@@ -1709,7 +1729,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   F-372 -> F-352/F-354/F-355 -> F-338/F-339 -> F2 -> F-318 -> F-317)
   are ~6-9 working days and gate unsupervised or gig use, not this
   session.
-  D-070 (PROPOSED; owner inputs answered 2026-10-25: Q1 milestone
+  B5 (PM): MANIFEST 40a37a1a (US-173.md, D-070.md, the US-173 and
+  D-070 index rows, 1-line diffs vs 07a65f9e); CM verified 4/4,
+  handed to worker-3 to commit. US-173.md carries the AE H
+  procedure for the owner's oscilloscope. Fan: the owner procures
+  one; US-163 AC4 stays "no fan, N/A"; thermals re-checked once
+  the fan is fitted (US-173 AC9; PO). F-037: accepted for home-lab
+  amps-on use only, NOT for gigs (owner Q4, PO).
+  D-070 (ACCEPTED, owner 2026-10-25, PO; was PROPOSED: owner inputs
+  answered 2026-10-25: Q1 milestone
   yes, Q4 F-037 acceptable for home lab; team-lead: no longer
   pending owner on these; takes effect only with its own safety.md
   change merged under Rule 13): supervised home-lab
@@ -1732,6 +1760,54 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   F-314 never switch venue with the gate open; F-338/F-339 amp
   switch as e-stop, gains verified from pw-dump (see N1 above);
   F-349 H + fresh PW start + no NaN sources; F-322 covered by H.
+- **US-174** Automated room correction pipeline (Pi 5, home lab
+  first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
+  "As a milestone yes, but I want the room correction too.", "I
+  would think the room correction is work that could be done
+  entirely in parallel." and "We have a full room simulator to
+  test the room correction!" So it runs IN PARALLEL with US-172
+  and US-173 (supersedes the PO's "next after US-173"); US-173's
+  first session does NOT wait for it (PO). Own worker (worker-4,
+  team-lead) on story/US-174-room-correction from main b0666c02
+  (CM creates it once the first slice and file boundary are set).
+  Sub-story cut (PO proposal; Architect + PM split before
+  implementation): a) spec/theory (docs/theory: measurement
+  procedure, minimum-phase FIR generation, crossover combination,
+  16k taps, sub/mains time alignment, measurement safety limits);
+  b) offline filter generation (Python, tested against the room
+  simulator src/room-correction/mock/room_simulator.py and
+  recorded data, no Pi); c) measurement on the Pi 5 (UMIK-1 +
+  signal-gen through the gate, calibration file 7161942); d)
+  deploy + verification (load filters, re-measure, AE acceptance);
+  e) later: the one-button venue workflow (design principle 6).
+  c) and d) wait strictly for US-173's H, F-341 AC3 (no signal-gen
+  measurement session before it) and D-070 / the amps-on list.
+  Pending: the Architect and AE define the first slice and the file
+  boundary (expected src/room-correction/ only, disjoint from nix/,
+  the GraphManager code and the F-318 WP files); the PM relays it
+  to team-lead for worker-4.
+  Existing assets on main: src/room-correction/ (room_correction/,
+  runner.py, analyze_measurement.py, gain_calibration.py,
+  thermal_ceiling.py, tests/, mock/ with 3 scenarios),
+  scripts/generate-room-sim-ir.py, scripts/test/run-room-sim-e2e.sh,
+  configs/local-demo/room-sim-convolver.conf,
+  docs/architecture/room-compensation.md.
+  OLD ROOM-CORRECTION STORIES (PO): US-174 is the umbrella and
+  links them; none is closed in this batch. Linked: US-008,
+  US-010, US-012, US-013, US-047, US-048, US-049, US-050, US-061,
+  US-067, US-090, US-097, US-098, US-101 (list to be confirmed by
+  the Architect's mapping). Status of each until the mapping:
+  "linked to US-174, mapping pending"; nobody works on them. Per
+  story the Architect proposes reuse (becomes a US-174 sub-story,
+  maybe re-scoped), supersede (replaced by a new sub-story, with a
+  pointer) or done/obsolete (e.g. CamillaDSP-based, D-040); the PO
+  decides the supersede/obsolete calls; the PM records them in the
+  batch after. US-090 and US-097 (owner-rejected, session 5) STAY
+  rejected; their rejection reasons become explicit US-174
+  constraints/ACs (Architect extracts, PO checks the wording).
+  TW one-liner (PO, no hurry): CLAUDE.md says the room correction
+  pipeline is "NOT YET WRITTEN", but src/room-correction/ (incl.
+  mock/room_simulator.py) exists on main; the text is stale.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -2190,6 +2266,14 @@ merge needs update-branch and 7 reconfirmations at the new head.
   CI: changes, nixos-eval, ci-gate success; test-and-build skipped
   (docs-only); GitHub CLEAN. PR numbering (team-lead): #51 is this
   docs PR, not US-172; the US-172 PR gets the next free number.
+  Head moved to 2d22aa7ae782148f4f14a72bc1177495b712fae3 (TW: R1 +
+  AD L2 + the N1 row 14; the closed-only f7f37e87 was never pushed
+  alone); all 667b7a8f verdicts lapsed; bundle
+  /tmp/pr51-review-2d22aa7a/ (SHA256SUMS 618dc2ee). At 2d22aa7a:
+  UX APPROVED (nit (a) resolved), AD APPROVE (joint N1 text
+  confirmed; not CI or later heads), 7/7 (CM), CI green. MERGED
+  (CM, standing owner permission): main b0666c02917b4dce969fdc79
+  ad242dd799bc1e75.
 - New branches at 22370317 (CM, 2026-10-25; owner via team-lead:
   "start the next work now"; disjoint file sets):
   story/US-172-pi5-drm (worker-2: bootloader.nix reorder, greetd
