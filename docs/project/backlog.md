@@ -741,6 +741,12 @@ priority!"
   draft, worker-1, 257b272d) CI 40346339865 running; consult Q1-Q3
   with QE/AE. F-262: AE gate-xo ruling v1 (0aac380f) awaiting
   Architect release; new F-408 for its G4 follow-up (PM) (CM).
+  UPDATE (CM, QE, AE, 2026-10-26, after v262): backlog v262 pushed as
+  d0f8bc0e. PR #67 MERGED as 498fa3e5, 7/7. F-394: Q2 RELEASED and Q3
+  final, both to worker-1; Q1 awaits the AE release. #66: CI
+  40345460992 at ff985455 FAILED (12 failed, all "Filter verification
+  failed"); the Architect did not release gate ruling v1 (A1
+  required); the AE writes v2 (CM).
 
 ## Reserved IDs
 
@@ -6630,6 +6636,28 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      3.0 dB, 18 dB HPF limit and bandpass fail-closed stay; dc9e529d
      (4) amended; c8 10-run AC (f8a014c7) starts once the session is
      green with G1-G3.
+  - UPDATE (CM, 2026-10-26, after v262): CI 40345460992 at ff985455
+    FAILED: 12 failed / 941 passed / 1 skipped, all "Filter
+    verification failed" (test_capture_alignment_session x3,
+    test_measurement_integration,
+    test_measurement_pipeline_integration x4, test_measurement_session
+    x4). Excerpt
+    /tmp/cm-relay/F-262/ci-40345460992-ff985455-excerpt-v2.txt (sha256
+    3b161130, verified at PM read). PM cross-ref: the class worker-4's
+    finding b4c66788 explains.
+  - Gate ruling v1 NOT released (release record (g),
+    /tmp/cm-relay/release-record-20261026-g.txt, sha256 d7079ade,
+    verified at PM read). Architect points 96e9b156: G1, the rejection
+    of (iii)/(iv), G2(a), the mandatory_hpf_hz requirement and test,
+    G3, G4 and G5 AGREED. A1 REQUIRED: G2(b) needs a floor, because
+    for a well-decayed filter both tail windows hold only float32
+    noise, so (b) "would reject correct filters, depending on the
+    measurement or venue"; proposed: (b) applies only above a floor,
+    e.g. -100 dB re total (the AE words it), plus a new G3 control P4:
+    a filter whose last 10% is pure float32 noise must PASS G2 for at
+    least 20 seeds or dither variants. Release condition, verbatim:
+    "v2 with A1 folded in (wording yours). I release it on its sha. I
+    need no further change." The AE writes v2.
   Before the first amps-on measurement (non-blocking one-liners; no
   F-ID, no P-level given):
   - AE, verbatim: "F-262 item 7 Architect note: before the first
@@ -6906,6 +6934,30 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     file (= QE N3, see the TW docs batch). AD: the F-400 append
     conflict with #63 is trivial; diff-only re-review if the head
     moves.
+  UPDATE (CM, AE, 2026-10-26, after v262): PR #67 MERGED as 498fa3e5
+  at 15:11:04Z (origin/main head at PM read), 7/7 APPROVE. AE APPROVE
+  /tmp/cm-relay/PR67/frozen-verdicts-ae450041/AE-27290d21.md (sha256
+  27290d21, verified at PM read). F-406/F-407 records are on main. #63
+  has an expected defects-index.md conflict to resolve when it resumes
+  after US-172 (CM).
+  - AE A1 (F-407 severity input), verbatim: "the gate indicator is how
+    the engineer sees whether audio can pass." "The dangerous
+    direction is the indicator showing CLOSED while the gate is OPEN."
+    "From the audio-safety side, F-407 should rank with F-405: fix it
+    before amps-on." "AC3's root cause should state which direction(s)
+    fail." PM cross-ref: F-405 is "P2 (AE)" (v243 status line). The PM
+    does not set F-407 to P2 by inference; asked the AE to confirm.
+    F-407: no P-level given.
+  - AE A2 (F-406), verbatim: "Suggested AC4: after the rollback, the
+    active set passes the same D-009/format checks as a fresh deploy,
+    and the convolver reload is confirmed. A rollback is a deploy, so
+    the same safety gate applies." PM cross-ref: SEC (2) above (the
+    rollback writer is disabled by US-174d); the QE and Architect pick
+    the F-406 outcome.
+  - AE A3, verbatim: "My #64 point B1 ... is the same skip-masking
+    class. If the PM gives it an F-number, it belongs with
+    F-405/F-407." PM: B1 is already mapped to F-394 (v260; CM: F-394
+    covers the 7 DJ-switch skips); no new ID. AE told.
 - **F-408** Min-phase residual metric not valid for unit-circle zeros
   (AE gate-xo ruling v1
   /tmp/cm-relay/F-262/frozen/ae-gate-xo-ruling-v1-0aac380f.txt,
@@ -6920,6 +6972,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   generator's design; the residual of the CORRECTION component before
   it is combined with the crossover; an exponentially weighted
   cepstrum.
+  Architect A2 (non-blocking, for G4;
+  /tmp/cm-relay/F-262/frozen/arch-gate-xo-v1-points-96e9b156.txt,
+  sha256 96e9b156, verified at PM read): the near-constant -5.1 dB and
+  the 36-sample reference shift "looks more like a systematic
+  alignment or normalisation effect in minimum_phase_residual_db than
+  like slow cepstral convergence." Architect, verbatim: "Before
+  choosing a new metric in G4, check whether aligning the reference
+  (peak or cross-correlation lag) before the residual already restores
+  fine resolution. If it does, G4 may be a small fix."
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -8308,6 +8369,33 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   ruling); AE writes, QE releases. Q3 ensure_dj_mode function-scoped
   vs module reorder (worker-1 recommends function scope); QE writes
   alone. CI virtual local-demo only; no Pi, nothing played.
+  UPDATE (CM, QE, 2026-10-26, after v262): release record (g)
+  (d7079ade, verified at PM read). Frozen copies under
+  /tmp/cm-relay/F-394/frozen/.
+  - Q2 (AE writes; ae-Q2-mute-tap-gate e37c80fa) RELEASED by the QE
+    (/tmp/f394-qe-Q2-release-ae-e37c80fa.md, sha256 86e51a0f, verified
+    at PM read): "This release is for that exact sha." and
+    "**RELEASED.** No objection; the notes below are non-blocking and
+    need no new AE version." Relayed to worker-1 (CM).
+  - Q3 (QE sole writer;
+    /tmp/f394-qe-Q3-ensure-dj-mode-scope-257b272d.md, sha256 19429bd0,
+    verified at PM read): function scope, conditions Q3-1 to Q3-4;
+    reordering rejected. Final; relayed to worker-1 (CM).
+  - Q1 (QE writes; /tmp/f394-qe-Q1-stimulus-257b272d.md, sha256
+    0919d10d, verified at PM read): option (a), a tone mode in
+    mixxx-substitute.py, conditions Q1-1 to Q1-7; (b) rejected on test
+    adequacy and the routing.rs fence. AWAITING AE RELEASE, not
+    relayable (CM); the AE input caee35e0 is NOT a release. The AE
+    separately rules whether the "no signal-gen play" rule covers a
+    synthetic tone.
+  - One-liner (QE, non-blocking; no F-ID, no P-level given): PR #36
+    (F-270 audio_stimulus) is superseded for test_mute_e2e by F-394;
+    its failure paths are all skips, and its signal-gen premise
+    contradicts the DJ routing.
+  - One-liner (QE, non-blocking; no F-ID, no P-level given): the
+    autouse _ensure_standby in test_production.py ignores the
+    _set_mode return value (l.53/55), so a failed standby switch goes
+    unnoticed.
 - **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
   per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
   2026-10-26): on a suspended node, the gain readers in the r6b matrix
