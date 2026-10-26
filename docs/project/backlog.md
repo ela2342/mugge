@@ -452,6 +452,12 @@ priority!"
   from a darwin-rebuild that no mugge worker started; the CM PRESUMES
   it is the owner's. Not confirmed by the owner. UPDATE (CM, after
   v215): backlog v215 pushed as f0c18bf7; df 4.8 GB.
+  UPDATE (CM, 2026-10-26, after v216): backlog v216 pushed as
+  656d0af3. #63: CI run 40313123653 SUCCESS on all jobs at 9b1aa8a1;
+  SecSpec APPROVE, UX APPROVE WITH 2 MERGE CONDITIONS, QE CHANGES
+  REQUESTED (B1-B4; see US-173). Two CI findings with the QE for a
+  ruling. worker-3 has the conditions; requests OBSERVE for the
+  screenshot and merges main later.
 
 ## Reserved IDs
 
@@ -4102,6 +4108,48 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   +3806/-27, merge-base 5f3af36a). 24 commits behind main; the only
   overlap is stories-index.md, so a main merge plus a diff-only
   re-check comes later. Tally 0/7; CI run 40313123653 still running.
+  UPDATE (CM, 2026-10-26): CI run 40313123653 at 9b1aa8a1 SUCCESS on
+  all jobs (excerpt
+  /tmp/pr63-review-9b1aa8a1/ci-40313123653-excerpt.txt). Two CI
+  findings went to the QE for a ruling: jack-self-connect was a cachix
+  cache hit with no fresh output in this run; wireplumber-no-bypass is
+  a flake check not wired into ci.yml, so it did not run in CI.
+  worker-3 has the conditions; they request OBSERVE for the screenshot
+  and merge main later.
+  #63 verdicts at 9b1aa8a1:
+  - SecSpec APPROVE (comment 6415267477), INFO residuals (1)-(4), and
+    a question to the AE: home-lab-chn50p-ultimax.yml keeps dirac.wav
+    at -120 dB on spare ch 4, while markaudio-ultimax-200hz uses
+    zero.wav (D-031 M2).
+  - UX APPROVE WITH 2 MERGE CONDITIONS (comment 6415275779; pin
+    verified). C1: record UX point 4 in US-173.md and supply a Mixxx
+    startup (no-modal) screenshot plus the log grep (AE-accepted). C2:
+    write the AC9 thermal STOP procedure into the story (UX proposal
+    via CM; the AE confirms the order). Non-blocking: N1 the US-173
+    session rules and the H procedure still say pw-dump proves gains
+    0, contra safety.md F-395. N2 ramp wording vs F-315, so TW v19
+    must land in or before #63. N3 AC11(c) "no warning" conflicts with
+    deny lines logged at WARNING.
+  - QE CHANGES REQUESTED (accounting copy to PM). Blocking: B1 the
+    venue `coefficients` field is not consumed by any loader; the
+    convolver always loads combined_sub2_lp.wav for ch 4, so the
+    zero.wav mute test proves nothing at runtime; the home-lab venue
+    still says dirac on ch 4; needs an Architect/AE fact check and a
+    test of the file actually loaded. B2 the thermal-watch tests (25)
+    are not in test-all, so they never run in CI. B3
+    checks.wireplumber-no-bypass (the F-318 AC5 proof) is not in CI;
+    accepted if a published run at the final head exists before merge;
+    F-380 gates gig use. B4 the PR body is stale and incomplete.
+    Carried over: C1-C3, the P-step evidence, D-031 M2, the WAVs +
+    SHA256SUMS with a unit test. PM cross-ref: B1 bears on the
+    fe6b6974 ch4 dirac.wav -> zero.wav change above.
+  Tally: 2 approvals (SecSpec; UX conditional) + QE CHANGES REQUESTED;
+  AE, Architect, TW, AD outstanding.
+  Backlog one-liner (QE, from #63; no priority given): venue.py
+  validates the `coefficients` name but never checks that the file
+  exists or is used. Either wire venue coefficients into the deploy,
+  or drop/rename the field so configs cannot claim a mute that is not
+  applied.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
