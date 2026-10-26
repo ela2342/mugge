@@ -845,6 +845,13 @@ priority!"
   entry (E1a/E1b/E1c verbatim; E1 732847a4 VOID): pcm-worklet.js is a
   Pi playback feeder, so the mic meter is a new worklet in src/web-rc
   computing true sample peaks.
+  UPDATE (CM, PO, AE, team-lead, 2026-10-26, after v284): backlog v284
+  pushed as 8246a029. US-179: AE signal answers 6d63a2e3 recorded; S1
+  ruled by the PO (e14a0d75: required per-channel role, no default);
+  erratum E2 bca0d86b applied verbatim (governing text r8 + E1 v2 +
+  E2). F-411: worker-7 briefed for phase 1 (1e64f46b; git-archive
+  scratch copy; fixture f5ca9040). F-403: TW batch v5 5abeed4f,
+  applied after the R5 series.
 
 ## Reserved IDs
 
@@ -7413,6 +7420,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   /tmp/tw-f403-v2-e7afdb36.patch (sha1 86ab5ba2, verified at PM read),
   held until the new F-262 head (set-equality line) is released. The
   CM passes the B2 number F-411 to the TW.
+  TW BATCH v5 (CM, 2026-10-26; supersedes v2 and the "post-series TW
+  v3" in F-262; v4 e8a9341f VOID): /tmp/tw-f403-v5-4724e65d.patch
+  (sha1 5abeed4f), MANIFEST e50df0c8, commit message 2842db02 (all
+  verified at PM read). The CM applies v5 only after the R5 series.
   S4 condition AMENDED (Architect, 2026-10-26; supersedes the S4 brief
   condition above; verbatim in
   /tmp/cm-relay/F-262/findings-rulings-arch-ae.txt, sha1 6b9584ae):
@@ -7787,6 +7798,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the F-262 branch: scripts/ and src/ are on the ebd890d0 A no-carry
   list, so such a commit voids the R5 series at 4724e65d) is covered
   by phase 2.
+  BRIEFED (CM, 2026-10-26): worker-7 for phase 1. Frozen brief
+  /tmp/cm-relay/F-411/w7-F411-phase1-brief-r1.txt (sha256 1e64f46b,
+  verified at PM read). QE (a): scratch copy made by the CM with git
+  archive at /tmp/w7-F411-scratch-4724e65d (PM read: exists, not a git
+  checkout). QE (b): fixture scripts/generate-room-sim-ir.py blob
+  f5ca9040 at 4724e65d (PM read: f5ca9040). Phase 2 waits for the #66
+  merge or a fence revision.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -10688,6 +10706,131 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     runs in the worklet or on the main thread, as long as it uses the
     worklet's per-quantum true-peak values. The CM freezes a copy and
     relays it to worker-6 (PO).
+  AE SIGNAL ANSWERS (AE via CM, 2026-10-26, to worker-6's six
+  questions;
+  /tmp/cm-relay/US-179/frozen/ae-w6-signal-answers-6d63a2e3.txt,
+  sha256 6d63a2e3, verified at PM read; relayed to worker-6 with E1
+  v2). PM summary: A1 without a calibration file the fixed target is
+  -40 dBFS RMS at the mic (not -30), and the 90 dB SPL stop cannot
+  act; A2 ceiling RMS = -20 dBFS - crest_dB - 3 dB, crest measured
+  once over at least 10 s per seed, stored as a constant and
+  re-checked in CI; A3 the sweep-side mic RMS is full band (declared
+  limit to 20 kHz) in 100 ms windows, threshold +6 dB; A4 sweep RMS =
+  the confirmed level-check noise RMS, also through the 4c cap and 5d
+  clamp; A5 the AC7 onset floor is align_capture as shipped
+  (ONSET_SNR_DB 30, from #66), verbatim: "copy room_correction from
+  origin/main after #66 merges, or rebase onto it"; REC_MIN_SNR_DB 20
+  only as an extra coarse check; dead mic -80 dBFS, clip -1 dBFS; A6
+  AC8a uses verify.closed_loop_band(role), not the full band. S1
+  (story gap, for the PO): subs become unmeasurable under 100 Hz-10
+  kHz level-check noise (safe but blocking). PM cross-ref: A5 makes
+  the US-179 shared-file copy depend on the #66 merge;
+  closed_loop_band is not on origin/main (verify.py:702 at 4724e65d).
+  S1 PO RULING (PO, 2026-10-26;
+  /tmp/po-drafts/us179-S1-role-request.txt, sha256 e14a0d75, verified
+  at PM read). Verbatim: "The flow gets a per-channel role
+  declaration: "Full-range speaker" or "Subwoofer". It is part of the
+  AC3 declarations (before any sound), required, with no default (fail
+  closed: no role = no sound)." and "Scope stays MVP: no crossover
+  design in this story (multi-way crossovers remain out)." Text
+  followed as E2 (below).
+  ERRATUM E2 (PO, 2026-10-26; released by the AE, UX and the
+  Architect, per PO): /tmp/po-drafts/us179-r8-erratum-E2.md (sha256
+  bca0d86b, verified at PM read; PM frozen copy
+  /tmp/pm-backlog/US-179-r8-erratum-E2-bca0d86b.md). Governing text
+  (PO): r8 978c3e1b + E1 v2 6a78af9f + E2 bca0d86b. Scope (out) and
+  the estimate are unchanged. E2 verbatim, reflowed, without its title
+  line:
+  - Story gap S1 (AE 6d63a2e3): r8 has no per-channel role, so the
+    level-check band, the AC8a/AC8b bands and the correction reference
+    band cannot be chosen, and subs auto-STOP on the +6 dB sweep rule
+    (safe but unmeasurable). Inputs: AE 28a48972, UX 9917bceb,
+    Architect 7b23fe30 (checked on #66 @ 4724e65d). PO ruling e14a0d75
+    stands: required role, no default, no crossover. r8 + E1 v2 stay
+    governing, with E2 applied. Scope (out) unchanged; estimate
+    unchanged unless worker-6 reports otherwise.
+  - E2a (new AC3 item, placed FIRST, before 3a): "3r Role, the first
+    declaration per channel (after the output channel is chosen):
+    'What is connected to this output?' with two radios, neither
+    preselected: 'Full-range speaker — main or monitor speaker that
+    plays the whole range' / 'Subwoofer — bass only'. No role = no
+    sound on that channel ('Start level check' disabled). Changing the
+    role clears the 3b and 3c ticks and resets the limit to the role's
+    default. Order per channel: output channel -> role -> low limit
+    (3a) -> ported/closed (3c) -> capability confirmation (3b)."
+  - E2b (AC3a, replace "default 20 Hz, range 20-500 Hz, never below 20
+    Hz." with): "default and range by role: Full-range speaker default
+    80 Hz, range 20-500 Hz; Subwoofer default 20 Hz, range 20-50 Hz;
+    never below 20 Hz. A Subwoofer limit above 50 Hz is refused with:
+    'A subwoofer limit above 50 Hz is not supported here. Check the
+    setting, or choose Full-range speaker.'"
+  - E2c (AC3b, replace the example text 'e.g. "This speaker can safely
+    play down to <limit> Hz at moderate level. I have checked its spec
+    sheet or it is a subwoofer."' with): 'by role: Full-range "This
+    speaker can safely play down to <limit> Hz at moderate level. I
+    have checked its spec sheet." / Subwoofer "This subwoofer can
+    safely play down to <limit> Hz at moderate level. I have checked
+    its spec sheet."'
+  - E2d (AC5d, replace "pink, band-limited 100 Hz-10 kHz (4th-order
+    Butterworth, after the generator)," with): "pink, band-limited by
+    role (4th-order Butterworth band-pass, after the generator):
+    Full-range 100 Hz-10 kHz; Subwoofer [2 x declared limit, 200 Hz]
+    (40-200 Hz at 20 Hz). The crest factor is measured per band and
+    per seed in use; CI re-checks both bands." The rest of 5d (crest +
+    3 dB, -20 dBFS clamp, auto-STOP) and all of AC4 (-60 dBFS start,
+    +6 dB clicks, cap, stops, the +6 dB sweep rule) are unchanged. The
+    level-check step shows the band in use, e.g. "Test noise: 40–200
+    Hz (subwoofer)" / "Test noise: 100 Hz–10 kHz (full-range)".
+  - E2e (new AC6 item, role in the computation, Architect): "6d The
+    browser builds ONE speaker dict per channel, {'filter_type':
+    'highpass'} for Full-range or {'filter_type': 'lowpass'} for
+    Subwoofer, and passes that same dict to
+    correction_from_measurement and run_correction_gate. A missing
+    role is stopped in web-rc before any Python call (the shared
+    code's default to 'highpass' is never relied on). No crossover is
+    applied: the filter is correction x subsonic HPF (combine_filters
+    with a dirac as crossover_filter); the crossover step of
+    generate_profile_filters is not run. 'highpass'/'lowpass' are
+    internal keys and never shown in the UI. Role -> bands: Full-range
+    = AC8a/AC8b band 250-500 Hz, level reference 400-4000 Hz;
+    Subwoofer = AC8a/AC8b band 30-200 Hz, level reference 30-150 Hz
+    (verify.CLOSED_LOOP_BANDS_HZ / correction.REFERENCE_BANDS_HZ, from
+    #66)."
+  - E2f (AC8a only; AC9 keeps its own "over the correction band"). In
+    8a, replace "reject if the two captures differ by more than 1.0 dB
+    over the correction band." with: "reject if the two captures
+    differ by more than 1.0 dB over the channel's closed-loop band
+    (verify.closed_loop_band of the 6d dict): max absolute difference
+    of the two 1/6-octave smoothed magnitudes (AE A6)."
+  - E2g (AC9, append): "The Pi reference side calls
+    correction_from_measurement + generate_subsonic_filter +
+    combine_filters(crossover_filter=dirac,
+    margin_db=COMBINE_MARGIN_DB) directly, the same calls web-rc makes
+    (generate_profile_filters can't skip its crossover step). No
+    change to shared code."
+  - E2h (AC10 and AC11, add): "The role is shown next to the channel
+    and base_seed in the result step and the report, and is part of
+    the download filename next to 'browser-generated' (e.g. '-sub-' /
+    '-fullrange-'). The report and the result step name the band the
+    AC8c verdict was checked over (e.g. 'checked over 250-500 Hz')."
+  - E2i (AC12, add): "unit tests per role for the 3a defaults/ranges,
+    the role-change reset, the no-role block, the level-check band and
+    its crest constant, and reference_band + closed_loop_band of the
+    built dict; an AC9 test asserting no crossover was applied
+    (combined FIR = correction x subsonic within tolerance)."
+  - E2j (worker note, Architect): this corrects consult r1 9232cfac
+    Q2: web-rc mirrors generate_profile_filters steps 2-4 only, not
+    step 1 (crossover).
+  - Releases needed, each naming this file's sha: AE (E2b, E2c, E2d
+    are safety text), UX (E2a-E2c and E2h wording; E2b's refusal text
+    is adapted from UX 9917bceb section 5 to the AE's 50 Hz),
+    Architect (E2e, E2g, E2i, E2j).
+  Architect note (per PO; non-blocking, for worker-6): pin the
+  generate_subsonic_filter arguments in one place for both sides; both
+  the web-rc side and the AC9 Pi reference pass slope_db_per_oct=24.0,
+  because web-rc has no profile; already covered by "the same calls"
+  in E2g. The CM freezes a copy and relays E2 plus the note to
+  worker-6; the role placeholder can now be replaced (PO).
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
