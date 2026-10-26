@@ -702,6 +702,13 @@ priority!"
   capture alignment); CI 40343196576 running. CI 40338944793 at
   d677f253 FAILED (10 failed, 7 errors); worker-4 diagnosing. c8 (T8
   xfail removal) waits on an AE ruling, the QE releases (CM).
+  UPDATE (CM, QE, 2026-10-26, after v256): backlog v256 pushed as
+  deed1e00. F-262 c8: AE ruling f8a014c7 (option (a) with conditions),
+  awaiting the QE release; A1-A7 retracted (CM). #64: CI 40333713247
+  green on all 4 jobs, QE count profile MET (96abe4fb), worker-1
+  finishing the body, QE diff-only re-check open; new one-liner
+  (test_full_session_api flips). US-172 v6 pinned at us172.sh fc65bcad
+  (82113c3f void); re-reviews open (CM, QE).
 
 ## Reserved IDs
 
@@ -3555,6 +3562,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     need a re-pin, a new OBSERVE baseline and a re-review. The pins
     fail closed (STOP), so it is not a safety issue, but v6 could not
     run.
+  - UPDATE (CM, 2026-10-26, after v256): v6 is pinned at us172.sh
+    fc65bcad; 82113c3f is VOID. Re-reviews open: the Architect, the
+    AD, the QE and the AE. The full flow run finishes around 15:35Z
+    (CM).
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -6365,6 +6376,57 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     worker-4 with the QE's minimum content, and the TW reviews it
     under Rule 13. The PM only allocated the ID. PM asked the CM to
     confirm that call to worker-4.
+  - UPDATE (CM, 2026-10-26, after v256): A1-A7 RETRACTED by the CM
+    (the label came from the CM's own notes; no source exists;
+    0e25d355 is all there is). Supersedes the "worker-4 flags A1-A7"
+    line above. F-403.md: the CM agrees worker-4 writes it under the
+    earlier CM call, and confirms this to worker-4 with the c8 relay.
+  - c8 ruling (AE sole writer; QE releaser, NOT yet released):
+    /tmp/cm-relay/F-262/frozen/: ae-c8-xfail-ruling-f8a014c7.txt
+    (sha256 f8a014c7, verified at PM read). Option (a) with
+    conditions; option (b) (pull S2 into F-262) rejected.
+     R1: MAX_POSITIVE_DEVIATION_DB stays 3.0 dB; no test, xfail or
+     local-demo path may use a looser limit.
+     R2: REMOVE the API xfail
+     (service-integration/test_measurement.py:174) in F-262 (Left
+     only, +1.92 dB, 1.08 dB margin), only if the R5 AC passes. If any
+     run fails, the xfail goes back with the reason "F-262 c8: API
+     closed-loop fails in local-demo, see run log", and the result is
+     a finding, not a retry.
+     R3: KEEP the browser xfail (e2e/test_measurement.py:243),
+     strict=False, re-pointed to F-403 S2 with the measured values;
+     remove the old "min-phase check" text; an XPASS is reported, not
+     a reason to remove it.
+     R4: before the browser xfail goes, worker-4 reports for Sub1 and
+     mock-room Left with the S2 (played-sweep) reference: the
+     frequency of the max positive deviation, the uncorrected
+     deviation there, whether the 18 dB MAX_CUT_DB cap is reached, and
+     the onset and lag picked. AE rules: cap reached at a sim mode
+     deeper than 18 dB -> fix the local-demo room sim's mode depth
+     (test fixture), never the limit or the cap; cap not reached -> a
+     correction or alignment defect (new F-number, via PM). Owner of
+     this follow-up, verbatim: "F-403 S2 (PM/QE allocate; it is not
+     written by worker-4 per the request)." PM cross-ref: no ID
+     allocated now; a new F-ID only if the AE rules "cap not reached".
+     R5 (10-consecutive-runs AC, for R2 and later the browser test):
+     10 consecutive local-demo runs, each a fresh session, no retries
+     or single-failure reruns; every run logs the per-channel
+     closed-loop max positive deviation and band; PASS needs all 10 at
+     or below 3.0 dB AND a worst-run margin of at least 0.5 dB (max
+     deviation at most 2.5 dB); the min/max/spread log goes with the
+     PR evidence for the QE.
+     R6 (-40 dBFS SNR note): no production change; the 30 dB SNR floor
+     (27fc548d) stands; rejection is the fail-safe direction. The
+     lag/noise table's -40 dBFS row expects "rejected (SNR)" and cites
+     27fc548d: in F-262 if it is a one-row test change, otherwise a PM
+     backlog line (not yet known which).
+     QE input to the c8 ruling (QE,
+     /tmp/pr64-qe-countprofile-f715538e.md, sha256 96abe4fb, verified
+     at PM read): test_full_session_api went XPASS, XPASS, XFAIL in CI
+     runs 40314977506, 40320048783, 40333713247, all before c7
+     (e325c4ba). Removing its xfail needs a passing streak on the
+     F-262 branch head as evidence, not just the model's +1.92 dB Left
+     margin; the 10-consecutive-run AC applies to it too.
   Before the first amps-on measurement (non-blocking one-liners; no
   F-ID, no P-level given):
   - AE, verbatim: "F-262 item 7 Architect note: before the first
@@ -6687,6 +6749,23 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     gate-open or indicator-update failure, which is exactly what the
     test checks; they should fail, or xfail with an F-ID. No F-ID, no
     P-level given.
+  UPDATE (CM, QE, 2026-10-26, after v256): CI 40333713247 at f715538e
+  is green on all 4 jobs. QE count profile MET
+  (/tmp/pr64-qe-countprofile-f715538e.md, sha256 96abe4fb, verified at
+  PM read): a third profile, explained, does not block #64.
+  Service-integration 81 = 64 passed + 14 skipped + 3 xfailed + 0
+  xpassed; the 7 extra skips are "Could not switch GM to DJ mode"; one
+  XPASS became an XFAIL (test_full_session_api, non-strict F-262
+  xfail, test_measurement.py:173), not in #64's diff, so pre-existing
+  F-262 behaviour; collected count identical; other suites unchanged.
+  worker-1 is finishing the PR body. Still open: the QE's diff-only
+  Rule 13 re-check at f715538e, once the CM sends the body and bundle
+  (CM, QE).
+  - One-liner (QE, adding to ruling (a); also proposed by worker-1 via
+    CM), QE verbatim: "test_full_session_api (F-262 xfail, non-strict)
+    flips XPASS/XFAIL between CI runs on main-equivalent code; same
+    kind as F-402." XPASS in 40314977506 and 40320048783, XFAIL in
+    40333713247. No F-ID, no P-level given.
 - **F-402** Integration test turns a 500 from POST /filters/generate
   into a skip, hiding a real server error
   (test_full_user_journey.py:179-183) (QE, 2026-10-26; option (b), ID
