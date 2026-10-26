@@ -516,6 +516,16 @@ priority!"
   commit comes with the AE's US-173.md 248-251 text and
   run_venue_checks on the committed WAVs. New one-liner from worker-4:
   test-e2e.sh `set -e` makes the E2E_EXIT reporting dead code.
+  UPDATE (CM, 2026-10-26, after v226): backlog v226 pushed as
+  fa9908e3. F-262 diagnostic run 40320962929 INVALID (18 of 20 runs
+  driver_error; session not reset after an error); worker-4 fixing it
+  for a rerun. F-403: Architect + AE rulings on worker-4's findings
+  (1)-(3) and the S4 parameters (S4 condition AMENDED; S2 route =
+  file-playback RPC; pink-burst overlap is a candidate US-178 gate).
+  #63: final head 0dc2a40b, CI 40321143579 running (5db98556 run
+  cancelled), bundle /tmp/pr63-review-0dc2a40b/ out to all 7; verdicts
+  recorded so far: UX, QE. Disk dipped to 4.52 GiB (now 4.6): all nix
+  clearances withdrawn until there is more headroom (CM).
 
 ## Reserved IDs
 
@@ -4309,6 +4319,24 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   MERGEABLE; CI run 40320814684 running. A follow-up commit is coming
   with the AE's US-173.md 248-251 text and run_venue_checks on the
   committed WAVs.
+  UPDATE (CM, 2026-10-26): final head 0dc2a40b pushed (the AE's
+  US-173.md 248-251 text; run_venue_checks on the committed WAVs, all
+  FIRs pass). CI run 40321143579 running; the superseded run on
+  5db98556 was cancelled. Bundle /tmp/pr63-review-0dc2a40b/ out to all
+  7.
+  #63 verdicts at 0dc2a40b (record copies to the PM; 2 of 7 so far):
+  - UX: APPROVE, CI-conditional (run 40321143579). UX C1/C2 and N1-N3
+    from 9b1aa8a1 all closed (AC12, AC9 STOP, F-395 wording, F-315
+    wording, AC11(c)). Briefing note (UX: not a backlog item): tell
+    the DJ that a gate close ends this session.
+  - QE: APPROVED WITH CONDITIONS. C1: CI 40321143579 green, showing
+    the 12 coeff/mute tests, the 23 thermal cases, conf-fragment-names
+    and jack-self-connect (quote $out if it was a cache hit). C2: B4,
+    the stale body (the "to come" list is outdated;
+    test_committed_venue_coeffs.py has no row). C3: B3, the WP
+    no-bypass run published. C4: the P-steps. B1 and B2 met. Removing
+    test_format/test_d009 accepted (run_venue_checks covers them).
+  - Not yet relayed to the PM: AE, SecSpec, TW, Architect, AD.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -5176,6 +5204,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   without it (still after the F-262 HARD GATE). Early lift: S4 lands
   before US-178 AND the F-262 diagnostic shows a median
   correlation-peak width ≤ 2 samples.
+  Candidate addition (AE, 2026-10-26, see F-403): if the F-262
+  diagnostic's pre-roll RMS shows the pink burst still on at the sweep
+  start, that finding gates US-178 together with S4.
 - **F-262** Session filters use the raw room IR as the correction
   filter (P1, room lane; PO ruling 2026-10-26). Record
   docs/project/defects/F-262.md on main; this entry carries the
@@ -5290,6 +5321,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   _run_pipeline, not _verify_all_wavs, _run_deploy or /deploy.
   Diagnostic addendum: log the -3 dB width of the correlation peak per
   capture (median > 2 samples: the AE re-rules).
+  UPDATE (CM, 2026-10-26): diagnostic run 40320962929
+  (scratch/F-262-diag at 4134852f) is INVALID: 18 of 20 runs were
+  driver_error, because the session wasn't reset after an error.
+  worker-4 is fixing it for a rerun.
+  Correlation-width rule (AE, 2026-10-26, verbatim in
+  /tmp/cm-relay/F-262/findings-rulings-arch-ae.txt, sha1 6b9584ae):
+  the ≤ 2-sample rule is judged against the generator.rs port, because
+  that is what signal-gen actually plays; the session-array width is
+  logged for comparison. "If the two widths differ a lot, that itself
+  shows the session deconvolves against a different signal than the
+  one played, and S2 is needed for correctness." Architect: also check
+  whether the failing runs line up with the pink warm-up overlapping
+  the sweep start; if they do, route it as the "anything else, report"
+  outcome.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -5364,12 +5409,48 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   written by worker-4 with the QE's minimum content; the TW reviews it
   under Rule 13. The CM briefs worker-4 at their next event (worker-4
   is building the scratch branch).
+  S4 condition AMENDED (Architect, 2026-10-26; supersedes the S4 brief
+  condition above; verbatim in
+  /tmp/cm-relay/F-262/findings-rulings-arch-ae.txt, sha1 6b9584ae):
+  "The noise window must lie inside [end of the pink warm-up + decay
+  guard, detected onset − 10 ms]. As the schedule is today, that
+  interval may be empty. S4 therefore also fixes the schedule: a real
+  silent gap between the warm-up and the sweep, with a length the AE
+  sets. An empty or too-short window FAILs closed."
+  S4 parameters (AE, 2026-10-26, verbatim in the same file; amends the
+  AE's earlier 0.5 s):
+  - "The noise window is ≥ 1.0 s, taken before the detected onset
+    minus the Architect's 10 ms guard; shorter fails closed. This
+    amends my earlier 0.5 s, because a 0.5 s window gives too few
+    averages in the 20 Hz 1/3-octave band (about 4.6 Hz wide) for a
+    stable reading."
+  - "Per band: 1/3-octave bands from 20 Hz to 20 kHz, each channel's
+    sweep band level vs the noise band level, ≥ 30 dB in every band in
+    that channel's passband (the subs up to their crossover + 1
+    octave), or the capture FAILs. There is no automatic level
+    increase."
+  S2 route (Architect: design note, not a ruling yet; AE endorsed):
+  the file-playback RPC, so signal-gen plays exactly the array the
+  session deconvolves against. AE conditions for the brief, verbatim:
+  "the session writes the exact array it deconvolves against;
+  signal-gen's output level cap still applies to file playback;
+  playback is refused if the file's peak exceeds the session's
+  sweep_level_dbfs, or if the file isn't mono 48 k float." SecSpec
+  also has a say on the path (AE).
+  Pink-burst overlap (AE, 2026-10-26, verbatim): "A pink burst still
+  running when the sweep starts adds noise exactly where the sweep is
+  at 20-40 Hz, which corrupts the sub-bass correction." If the
+  diagnostic's pre-roll RMS shows the burst still on, it is a named
+  F-403 finding and a US-178 gate together with S4. Fix (AE): "the
+  burst ends, then ≥ 0.5 s settle, then the noise window, then the
+  sweep."
 - scripts/test-e2e.sh: worker-4 (outside F-262, via CM, 2026-10-26),
   verbatim: "scripts/test-e2e.sh runs under `set -e`. If the
   service-integration pytest fails, the script exits before the
   browser E2E runs, so the E2E_EXIT reporting below it is dead code."
   No priority given; no ID allocated. PM cross-ref: same script as the
   #64 -rs change (test-e2e.sh:133/139, see F-362).
+  CM, 2026-10-26: no F-ID unless the QE asks for one.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
