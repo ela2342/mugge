@@ -320,6 +320,12 @@ priority!"
   US-174d pushed at 1601c4dd; US-173 at 2a180966. US-172 tryboot is
   ARMED, waiting for the owner at HDMI. Mac disk: 1.7 GB free and
   falling; no nix for anyone.
+  UPDATE (CM, 2026-10-26, after v189): backlog v189 pushed as
+  8345c0de. US-173 pushed at fe6b6974 (venue ch4 dirac -> zero.wav).
+  Mac disk: 0.95 GB free (1.7 GB about 30 min earlier); the growth is
+  mostly Claude session transcripts (including non-mugge projects) and
+  macOS swap (2.0 GB in /var/vm), not nix. Escalated to team-lead. No
+  nix for anyone.
 
 ## Reserved IDs
 
@@ -2207,6 +2213,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      `pw-link -l` must show no link into a USBStreamer playback port
      that does not come from the convolver output. If either check
      fails, amps stay off."
+     UPDATE (TW US-174d draft v2,
+     /tmp/tw-us174d-draft/docs/operations/safety.md l.49, sha256
+     9a6e5f5e; Architect joint ruling Part B item 4 via the CM; the AE
+     is checking the new clause, and the TW sends any delta): resolves
+     the PENDING JACK case above. The FINAL row has no "item (5)"
+     (that was the PROPOSED numbering); the clause is the last clause
+     of (b). (b) is replaced, verbatim: "(b) no link exists into any
+     USBStreamer playback port (ch 1-8), including after a pw-play to
+     the default sink, after a JACK client with autoconnect forced on,
+     and after a JACK client calls jack_connect into a USBStreamer
+     port (self-connect-mode);" The rest is as AMENDED above: (a), the
+     (c) replacement, (d) and the last sentence. The OPEN footnote for
+     row 18 now cites "the F-318 WirePlumber hook and the JACK
+     self-connect-mode setting (both US-173)".
   NEXT safety.md TOUCH (#51 reviews, non-blocking, fail safe; TW
   drafts, AE owns the wording, this list follows per the mirror
   rule): (1) AD L1 = UX (a): the lead-in "holds" (closed and
@@ -3772,6 +3792,34 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   vs band). Finding: configs/venues/markaudio-ultimax-200hz.yml ch4 is
   still dirac.wav; fence granted to worker-3 (ch4 plus comment only),
   AE delta look.
+  JOINT ruling, merge condition (Architect, AE, via CM, 2026-10-26):
+  jack.self-connect-mode = ignore-external in
+  80-jack-no-autoconnect.conf, plus a real-PW test: an ignored connect
+  returns 0 with no link; an allow-mode positive control; a native GM
+  link still works. Residual: a third-party jack_connect stays
+  detection-only (GM link_audit plus the first-session pw-link -l).
+  Fence granted to worker-3.
+  AC11 (the AE's default-sink AC) = worker-3 verify items 13-14. Item
+  14 FINAL (Architect, AE): NO production log-level change.
+  Hook-loaded evidence: (a) WP active, NRestarts=0; (b) the deployed
+  conf says `required`, and the conf and lua shas match; (c) no WP
+  err/warn; (d) a cited WP 0.5.12 source showing required = abort; (e)
+  AE functional check: pw-play zero.wav with no target gives "no
+  target node available" and no new link (CHANGE, nothing connected,
+  amps off). The journal line is extra evidence only (answers the
+  log-level question).
+  UPDATE (CM, 2026-10-26): pushed at fe6b6974: venue
+  markaudio-ultimax-200hz ch4 dirac.wav -> zero.wav. The AE accepts
+  the delta so far; sign-off waits for the Gain-values comment, an
+  all-zero pin test and the Rust venue tests in CI.
+  First-session evidence item (AE): Mixxx and Reaper start with no
+  error dialog under self-connect-mode (screenshot plus log grep); if
+  a warning appears, one SETUP-MANUAL line. Same as the UX request
+  above.
+  F-318 operator note (CM, 2026-10-26): "ships IN US-173 (writer and
+  file being settled with the TW)". The UX recorded the condition MET
+  by existing branch text (above); the PM asked the TW to reconcile.
+  MET stands until the UX or the TW says otherwise.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -4236,6 +4284,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   margin and band kept (the Architect's fix plus 3 AE refinements);
   with worker-4. The QE reviews the test change; a fresh 7/7 at the
   new head.
+  JOINT ruling, FINAL (Architect, AE, via CM, 2026-10-26): the 380 Hz
+  / +6 dB / Q4 feature goes in sat_right; premises (a) a difference of
+  at least +4 dB, (b) inside the correction band read from the
+  constant, (c) inside 250-500 Hz; a ±1/6-oct REPORT line; margin and
+  band kept. Reviews: QE, AE delta, Architect delta.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -6642,6 +6695,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   GM-visible event yet, so a source has to be defined (Architect).
   Until (b) has a source, the notice covers (a) only, and its
   explanation must not claim to cover every blocked stream.
+  Note (PM, from the US-173 joint ruling, 2026-10-26): with
+  self-connect-mode = ignore-external, a refused jack_connect returns
+  0 and creates no link, so there is no event to surface; source (b)
+  is still to be defined (Architect).
 - **deploy.sh puts the JACK fragment in the wrong directory**
   (Architect, 2026-10-26; P3): scripts/deploy/deploy.sh:80 copies
   80-jack-no-autoconnect.conf into
