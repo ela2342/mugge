@@ -31,10 +31,17 @@ in
   # pre-D-040 (CamillaDSP device name, HP at channel offset 2) and does not
   # match GraphManager's HP ports out_4/out_5 (F-130), so it is NOT
   # installed. It is captured from Mixxx on the Pi 5 (JACK, Master ch 1-2,
-  # HP ch 5-6) before the next reboot, and replaces the repo file. Then add
-  # (C+ replaces it on every boot; z fixes the 0444 root-owned store copy):
-  #   "C+ ${mixxxHome}/soundconfig.xml - - - - ${../../configs/mixxx/soundconfig.xml}"
-  #   "z  ${mixxxHome}/soundconfig.xml 0644 ela users - -"
+  # HP ch 5-6) before the next reboot, and replaces the repo file. Then
+  # install it on every boot, owned by ela and writable. Not with tmpfiles
+  # C/C+: in systemd 258.3 (pinned nixpkgs) C+ only merges directories; an
+  # existing file is kept (copy_files passes COPY_MERGE, never COPY_REPLACE).
+  # Use a user oneshot instead, e.g.:
+  #   systemd.user.services.mixxx-soundconfig = {
+  #     wantedBy = [ "default.target" ];
+  #     serviceConfig.Type = "oneshot";
+  #     serviceConfig.ExecStart = "${pkgs.coreutils}/bin/install -m 0644 "
+  #       + "${../../configs/mixxx/soundconfig.xml} ${mixxxHome}/soundconfig.xml";
+  #   };
   # src/web-ui/tests/unit/test_mixxx_soundconfig.py guards the file
   # against GraphManager's DJ routing.
   systemd.tmpfiles.rules = [
