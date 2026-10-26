@@ -34,7 +34,7 @@ SR = 48000
 N_TAPS = 16384
 RC_DIR = Path(__file__).resolve().parents[1]
 REPO_ROOT = RC_DIR.parents[1]
-APP_DIR = REPO_ROOT / "src" / "web-ui" / "app"
+SRC_DIR = REPO_ROOT / "src"
 VENUE = REPO_ROOT / "configs" / "venues" / "markaudio-ultimax-200hz.yml"
 PROFILE = REPO_ROOT / "configs" / "speakers" / "profiles" / "2way-200hz-markaudio-ultimax.yml"
 
@@ -208,21 +208,45 @@ def test_venue_pipeline_uses_shared_function(bundle, sim):
     assert len(result.closed_loop_inputs) == len(bundle.profile["speakers"])
 
 
-# -- source scan -------------------------------------------------------------
+# -- source scan (F6, Architect ruling dfffcfbf) -------------------------------
 
-def _production_sources():
-    for root in (RC_DIR, APP_DIR):
-        for path in sorted(root.rglob("*.py")):
-            rel = path.relative_to(root).parts
-            if rel[0] in ("tests", "mock") or path.name.startswith("test_"):
-                continue
-            yield path
+# Only the shared function may build a correction.
+SHARED = ("room-correction/room_correction/correction.py", "correction_from_measurement")
+SHARED_ONLY = {"generate_correction_filter", "normalize_ir_level"}
+# The old heuristic gate, directly or through run_all_checks (verify.py:487).
+FORBIDDEN = SHARED_ONLY | {"verify_minimum_phase", "run_all_checks"}
+# Legacy CLIs: exact (file, def) -> callees. Every callee must still be
+# called there (a stale entry fails), so this list can only shrink. PM
+# backlog: retire or re-route them, then empty it.
+LEGACY_ALLOWLIST = {
+    ("room-correction/runner.py", "run_full_pipeline"):
+        {"generate_correction_filter", "run_all_checks"},
+    ("room-correction/runner.py", "run_stage_correct"): {"generate_correction_filter"},
+    ("room-correction/runner.py", "run_stage_verify"): {"verify_minimum_phase"},
+    ("room-correction/room_correction/verify.py", "run_all_checks"): {"verify_minimum_phase"},
+    ("room-correction/generate_bose_filters.py", "verify_all"): {"verify_minimum_phase"},
+}
+# Quarantine: deployed code never imports the legacy CLIs.
+QUARANTINED_MODULES = {"runner", "generate_bose_filters"}
+QUARANTINED_FROM = ("web-ui/", "room-correction/room_correction/")
 
 
-def _calls(path):
-    """(callee name, enclosing function name) for every call in *path*."""
-    tree = ast.parse(path.read_text(), filename=str(path))
-    found = []
+def _production_sources(src_dir=SRC_DIR):
+    for path in sorted(src_dir.rglob("*.py")):
+        rel = path.relative_to(src_dir).as_posix()
+        if "/tests/" in f"/{rel}" or rel.startswith("room-correction/mock/"):
+            continue
+        yield rel, path
+
+
+def _scan(rel, source):
+    """Calls and imports in one file.
+
+    Returns (uses, modules): uses is a list of (name, enclosing def, kind)
+    for every name(...), module.name(...) and ``from x import name``;
+    modules is every imported module name (each dotted part).
+    """
+    uses, modules = [], []
 
     def visit(node, func):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -230,51 +254,102 @@ def _calls(path):
         if isinstance(node, ast.Call):
             f = node.func
             name = f.attr if isinstance(f, ast.Attribute) else getattr(f, "id", None)
-            found.append((name, func))
+            uses.append((name, func, "call"))
+        elif isinstance(node, ast.ImportFrom):
+            modules.extend((node.module or "").split("."))
+            for alias in node.names:
+                uses.append((alias.name, func, "import"))
+                modules.append(alias.name)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                modules.extend(alias.name.split("."))
         for child in ast.iter_child_nodes(node):
             visit(child, func)
 
-    visit(tree, None)
-    return found
+    visit(ast.parse(source, filename=rel), None)
+    return uses, modules
 
 
-# Legacy CLIs outside the venue/session/route paths. Their status is pending
-# an AE + Architect ruling (w4-setA-impl-questions); they stay listed, by
-# function, so any new caller still fails this scan.
-LEGACY_CORRECTION_CALLERS = {
-    ("runner.py", "run_full_pipeline"),
-    ("runner.py", "run_stage_correct"),
-}
-LEGACY_MIN_PHASE_CALLERS = {
-    ("runner.py", "run_stage_verify"),
-    ("verify.py", "run_all_checks"),
-    ("generate_bose_filters.py", "verify_all"),
-}
+def _violations(sources):
+    """Scan (rel, source) pairs; return the list of F6 violations."""
+    offenders, seen = [], set()
+    for rel, source in sources:
+        uses, modules = _scan(rel, source)
+        allowed_here = set().union(*[c for (f, _), c in LEGACY_ALLOWLIST.items() if f == rel])
+        for name, func, kind in uses:
+            if name not in FORBIDDEN:
+                continue
+            if (rel, func) == SHARED and name in SHARED_ONLY:
+                continue
+            if rel == SHARED[0] and kind == "import":
+                continue
+            if kind == "call" and name in LEGACY_ALLOWLIST.get((rel, func), ()):
+                seen.add((rel, func, name))
+                continue
+            if kind == "import" and name in allowed_here:
+                continue
+            offenders.append(f"{rel}:{func} {kind}s {name}")
+        if rel.startswith(QUARANTINED_FROM):
+            for module in QUARANTINED_MODULES.intersection(modules):
+                offenders.append(f"{rel} imports quarantined {module}")
+    for (rel, func), callees in sorted(LEGACY_ALLOWLIST.items()):
+        for name in sorted(callees):
+            if (rel, func, name) not in seen:
+                offenders.append(f"stale allowlist entry: {rel}:{func} {name}")
+    return offenders
+
+
+def _sources():
+    return [(rel, path.read_text()) for rel, path in _production_sources()]
 
 
 def test_source_scan_finds_the_files():
-    names = {p.name for p in _production_sources()}
-    assert {"correction.py", "venue_pipeline.py", "session.py", "filter_routes.py"} <= names
+    names = {rel for rel, _ in _production_sources()}
+    assert {SHARED[0], "room-correction/room_correction/venue_pipeline.py",
+            "room-correction/runner.py", "web-ui/app/measurement/session.py",
+            "web-ui/app/filter_routes.py"} <= names
+    assert not any("/tests/" in f"/{rel}" or rel.startswith("room-correction/mock/")
+                   for rel in names)
 
 
-def test_correction_only_via_shared_function():
-    offenders = []
-    for path in _production_sources():
-        for name, func in _calls(path):
-            if name not in ("generate_correction_filter", "normalize_ir_level"):
-                continue
-            if (path.name, func) == ("correction.py", "correction_from_measurement"):
-                continue
-            if (path.name, func) in LEGACY_CORRECTION_CALLERS:
-                continue
-            offenders.append(f"{path.name}:{func} calls {name}")
+def test_source_scan_clean():
+    offenders = _violations(_sources())
     assert not offenders, offenders
 
 
-def test_verify_minimum_phase_is_no_gate():
-    offenders = [f"{path.name}:{func}"
-                 for path in _production_sources()
-                 for name, func in _calls(path)
-                 if name == "verify_minimum_phase"
-                 and (path.name, func) not in LEGACY_MIN_PHASE_CALLERS]
-    assert not offenders, offenders
+def _mutated(rel, old, new):
+    sources = dict(_sources())
+    assert sources[rel].count(old) == 1, (rel, old)
+    sources[rel] = sources[rel].replace(old, new)
+    return list(sources.items())
+
+
+class TestSourceScanTeeth:
+    """The Architect's F6 mutations (a)-(c), plus the shared-function rule."""
+
+    def test_min_phase_in_venue_runner_fails(self):
+        offenders = _violations(_mutated(
+            "room-correction/runner.py", "def run_venue_pipeline(args):\n",
+            "def run_venue_pipeline(args):\n    verify.verify_minimum_phase(None)\n"))
+        assert "room-correction/runner.py:run_venue_pipeline calls verify_minimum_phase" in offenders
+
+    def test_web_ui_importing_runner_fails(self):
+        rel = "web-ui/app/filter_routes.py"
+        offenders = _violations(_mutated(
+            rel, "import asyncio\n", "import asyncio\nfrom runner import run_stage_correct\n"))
+        assert f"{rel} imports quarantined runner" in offenders
+
+    def test_stale_allowlist_entry_fails(self):
+        offenders = _violations(_mutated(
+            "room-correction/runner.py",
+            "    results.append(verify.verify_minimum_phase(args.filter))\n", ""))
+        assert offenders == [
+            "stale allowlist entry: room-correction/runner.py:run_stage_verify verify_minimum_phase"]
+
+    def test_correction_outside_shared_function_fails(self):
+        rel = "web-ui/app/measurement/session.py"
+        offenders = _violations(_mutated(
+            rel, "        measured_irs = self._measured_irs(profile)\n",
+            "        measured_irs = self._measured_irs(profile)\n"
+            "        generate_correction_filter(None)\n"))
+        assert f"{rel}:_filter_gen_sync calls generate_correction_filter" in offenders
