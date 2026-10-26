@@ -656,6 +656,11 @@ priority!"
   (Architect writes one joint line, the QE releases it); worker-3
   holds the P17 part of v3. New one-liner: CI runner image (team-lead)
   (CM, QE, team-lead).
+  UPDATE (CM, 2026-10-26, after v248): backlog v248 pushed as
+  ad74c35f. #63 Pi plan v2: the Architect APPROVES WITH CONDITIONS
+  (03288857; C1-C7 carry over, new A1-A3; carry-over SETTLED). P17 and
+  the Q1 conflict are RESOLVED by the joint ruling 5e123a6b (Architect
+  wrote, QE released). worker-3 is writing plan v3 (CM).
 
 ## Reserved IDs
 
@@ -4909,6 +4914,36 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     (US-173), and US-173 stays open with AC12 and the Mixxx half of
     AC7 unchecked. Under QE v2 the split applies only if the post-D4
     display pre-check fails.
+  - Architect v2 verdict (CM, 2026-10-26; supersedes "Carry-over to v2
+    is pending" above): APPROVE WITH CONDITIONS on plan v2 dd227076
+    (frozen copy in /tmp/cm-relay/PR63/:
+    frozen-pr63-pi-plan-v2-dd227076-architect-verdict-03288857.md,
+    sha256 03288857, verified at PM read). C1-C7 carry over from
+    969edef6; carry-over SETTLED. New:
+     A1: on a head change, read the generation pins at B0 (toplevel,
+     kernel, N, config.txt sha); the CM states them before D1; a
+     kernel mismatch means STOP for the Architect's ruling.
+     A2: a normal-boot display needs a generation containing both
+     US-172 and #63.
+     A3: if the session stops between D2 and D4, the CM tells the next
+     FAT-reading session about the pending generation.
+  - RESOLVED (CM, 2026-10-26; supersedes "OPEN, P17 overlap" above;
+    closes the P17 overlap and the Q1 conflict between the Architect's
+    v1 deferral and the QE v2 Q1 change, both above): joint ruling
+    written by the Architect and released by the QE ("release
+    5e123a6b"), frozen copy in /tmp/cm-relay/PR63/:
+    frozen-pr63-arch-p17-carryover-qe-a2-5e123a6b.md (sha256 5e123a6b,
+    verified at PM read).
+     P17: the non-Mixxx part runs in session 1; only the
+     Mixxx-dependent part is deferred.
+     PRE-DISPLAY counts only on the HW path: vc4 card (not simpledrm
+     alone), v3d render node, active compositor, Mixxx reports V3D. If
+     all pass, P15-P16 run in session 1. If any fails, the Mixxx part
+     is deferred, or AC12 is recorded NOT VALID.
+     QE-only note (not joint): if only the renderer check fails, P15's
+     routing evidence still counts.
+  - The conditional US-173 item above still applies. worker-3 is
+    writing plan v3 (CM). The deploy still comes after US-172 v6.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
