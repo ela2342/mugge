@@ -170,14 +170,11 @@ class TestLocalDemoHealth:
 class TestLocalDemoMeasurementAPI:
     """Drive a full measurement session via REST API against local-demo."""
 
-    @pytest.mark.xfail(
-        reason="F-262: room-sim IRs fail filter verification (min-phase "
-               "check). Signal path works — filter quality is a room-sim "
-               "limitation, not a pipeline defect.",
-        strict=False,
-    )
     def test_full_session_api(self, local_demo_url):
-        """POST /measurement/start with 1 channel completes end-to-end."""
+        """POST /measurement/start with 1 channel completes end-to-end.
+
+        F-262 c8 (ruling f8a014c7 R2): no xfail.
+        """
         _wait_for_idle_or_abort(local_demo_url, timeout_s=30)
         _ensure_gate_open(local_demo_url)
 
@@ -211,7 +208,7 @@ class TestLocalDemoMeasurementAPI:
         """After a measurement session, API reports a terminal state.
 
         Accepts 'idle' as valid — the session may never have been started
-        if the xfailed test above was skipped.
+        if the test above was skipped.
         """
         data = _poll_session_done(local_demo_url, timeout_s=30)
         assert data["state"] in ("complete", "error", "idle"), (
