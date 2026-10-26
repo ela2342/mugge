@@ -127,7 +127,15 @@ def capture(key, recording, pre_roll, sweep, ir, sr, timing, level_dbfs):
         out["pre_roll_rms_dbfs"] = _rms_dbfs(pre)
         out["rec_tail_rms_dbfs"] = _rms_dbfs(rec[-int(0.25 * sr):])
         out["rec_peak_dbfs"] = float(20 * np.log10(np.max(np.abs(rec)) + 1e-300)) if len(rec) else None
-        out["timing"] = dict(timing or {})
+        out["timing"] = t = dict(timing or {})
+        # Architect (3): is the pink warm-up still playing when the sweep
+        # starts / during the pre-roll? Positive = overlap in ms.
+        if "t_warmup_play" in t and "warmup_duration_s" in t:
+            warm_end = t["t_warmup_play"] + t["warmup_duration_s"]
+            if "t_sweep_play_call" in t:
+                out["warmup_overlap_sweep_ms"] = (warm_end - t["t_sweep_play_call"]) * 1e3
+            if "t_capture_returned" in t:
+                out["warmup_overlap_preroll_ms"] = (warm_end - t["t_capture_returned"]) * 1e3
         _emit(out)
         # Keep the IR for the driver; it uploads only failing runs' IRs.
         from room_correction.export import export_filter

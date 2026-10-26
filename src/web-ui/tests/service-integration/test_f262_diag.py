@@ -14,6 +14,7 @@ import json
 import os
 import shutil
 import time
+import urllib.error
 import urllib.request
 
 import pytest
@@ -44,6 +45,10 @@ BODY = {
 }
 
 
+class _HTTPFail(Exception):
+    pass
+
+
 def _get(base, path, timeout=10):
     return json.loads(urllib.request.urlopen(f"{base}{path}", timeout=timeout).read())
 
@@ -52,7 +57,11 @@ def _post(base, path, body=None, timeout=30):
     req = urllib.request.Request(
         f"{base}{path}", data=json.dumps(body).encode() if body else b"",
         headers={"Content-Type": "application/json"}, method="POST")
-    return json.loads(urllib.request.urlopen(req, timeout=timeout).read())
+    try:
+        return json.loads(urllib.request.urlopen(req, timeout=timeout).read())
+    except urllib.error.HTTPError as exc:
+        # Keep the server's detail: run 40320962929 only showed "400 Bad Request".
+        raise _HTTPFail(f"POST {path} -> {exc.code}: {exc.read()[:300]!r}") from None
 
 
 def _wait_terminal(base, timeout_s):
@@ -66,7 +75,24 @@ def _wait_terminal(base, timeout_s):
     return {**data, "state": f"timeout({data.get('state')})"}
 
 
+def _wait_standby(base, timeout_s=60):
+    """Terminal session state is reported before the lifecycle has restored
+    STANDBY (GM restore on error), so /start would 409 (run 40320962929)."""
+    deadline = time.monotonic() + timeout_s
+    data = {}
+    while time.monotonic() < deadline:
+        data = _get(base, "/api/v1/measurement/status")
+        if data.get("mode") == "standby":
+            return data
+        time.sleep(0.5)
+    raise _HTTPFail(f"mode not standby after {timeout_s}s: {data.get('mode')}")
+
+
 def _open_gate(base):
+    # An errored session leaves the gate open, and GM refuses a second
+    # open_gate ("gate already open" -> 400). Close first: every run then
+    # starts from the same closed-gate state as the first one.
+    _post(base, "/api/v1/venue/gate/close")
     _post(base, "/api/v1/venue/select", {"venue": "local-demo"})
     return _post(base, "/api/v1/venue/gate/open").get("gate_open")
 
@@ -123,6 +149,7 @@ class TestF262Diag:
             row = {"run": run, "t_start": time.time()}
             try:
                 _wait_terminal(local_demo_url, 30)
+                _wait_standby(local_demo_url)
                 row["gate_open"] = _open_gate(local_demo_url)
                 row["start"] = _post(
                     local_demo_url, "/api/v1/measurement/start", BODY).get("status")
@@ -216,10 +243,24 @@ class TestF262Diag:
             [c.get("ir_peak_ms") for r in rows for c in r["captures"]])
         summary["verify_min_phase_fail_runs"] = [
             r["run"] for r in rows if any(not v["min_phase_pass"] for v in r["verify"])]
+        summary["n_runs_with_captures"] = sum(bool(r["captures"]) for r in rows)
+        # Architect (3): per-run warm-up overlap vs pass/fail.
+        summary["per_run"] = [{
+            "run": r["run"], "state": r["state"], "passed": r["passed"],
+            "error_message": r.get("error_message"),
+            "captures": [{k: c.get(k) for k in (
+                "key", "onset_siggen_port_ms", "onset_session_sweep_ms",
+                "onset_siggen_port_peak_width_3db_samples", "ir_peak_ms",
+                "ir_peak_to_cutoff_ms", "pre_roll_rms_dbfs", "rec_tail_rms_dbfs",
+                "warmup_overlap_sweep_ms", "warmup_overlap_preroll_ms", "timing")}
+                for c in r["captures"]],
+        } for r in rows]
         summary["n_diag_errors"] = sum(len(r["diag_errors"]) for r in rows)
         with open(os.path.join(OUT_DIR, "summary.json"), "w") as f:
             json.dump(summary, f, indent=2, default=float)
         print(json.dumps(summary, indent=2, default=float), flush=True)
 
-        assert any(r["captures"] for r in rows), (
-            "F-262 diag: no capture events recorded; instrumentation broken")
+        n_captured = sum(bool(r["captures"]) for r in rows)
+        assert n_captured == N_RUNS, (
+            f"F-262 diag: only {n_captured}/{N_RUNS} runs produced captures; "
+            f"states={summary['states']}; the decision rule needs all {N_RUNS}")

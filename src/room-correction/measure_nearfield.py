@@ -1074,6 +1074,7 @@ def _play_and_record_pw_capture(output_signal, output_channel, sr,
         _F262_TIMING["level_dbfs"] = level_dbfs
         _F262_TIMING["sig_type"] = sig_type
         _F262_TIMING["t_warmup_play"] = time.monotonic()
+        _F262_TIMING["warmup_duration_s"] = _CHAIN_WARMUP_S + 2.0
         signal_gen.play(
             signal="pink",
             channels=[output_channel + 1],  # 1-indexed for RPC
