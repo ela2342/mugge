@@ -50,6 +50,12 @@ USBSTREAMER = "alsa_output.usb-MiniDSP_USBStreamer-00.pro-output-0"
 GM_SRC = "jsc-gm-src"
 CLIENT = "jsc-client"
 
+# No session manager runs here, and without one an adapter node keeps
+# port config mode "none" (no ports at all; audioadapter.c in 1.6.2).
+# WirePlumber normally sets DSP mode. pipewire-jack hides ports without
+# format.dsp, so the stand-ins configure DSP ports themselves.
+DSP_PORTS = "{ mode = dsp monitor = false position = preserve }"
+
 STANDINS = {
     USBSTREAMER: {
         "media.class": "Audio/Sink",
@@ -58,11 +64,13 @@ STANDINS = {
         "priority.session": "2000",
         "audio.channels": "2",
         "audio.position": "[ FL FR ]",
+        "adapter.auto-port-config": DSP_PORTS,
     },
     GM_SRC: {
         "media.class": "Audio/Source/Virtual",
         "audio.channels": "2",
         "audio.position": "[ FL FR ]",
+        "adapter.auto-port-config": DSP_PORTS,
     },
 }
 
@@ -219,7 +227,8 @@ class Stack:
                       "node.name": name, "object.linger": "true",
                       # The JACK port prefix comes from the description.
                       "node.description": name})
-        spec = "{ " + " ".join('%s = "%s"' % (k, v) if not v.startswith("[")
+        spec = "{ " + " ".join('%s = "%s"' % (k, v)
+                               if not v.startswith(("[", "{"))
                                else "%s = %s" % (k, v)
                                for k, v in props.items()) + " }"
         r = self.tool(self.args.pw_cli, "create-node", "adapter", spec)
@@ -262,6 +271,12 @@ class Cases:
         fl = [n for n in usb if n.endswith("playback_FL")]
         fr = [n for n in usb if n.endswith("playback_FR")]
         if len(fl) != 1 or len(fr) != 1:
+            pw_ports = [(p["info"]["props"].get("node.id"),
+                         p["info"]["props"].get("port.name"),
+                         p["info"]["props"].get("format.dsp"))
+                        for p in s.objects("Port")]
+            print("PipeWire ports (node.id, port.name, format.dsp): %s"
+                  % pw_ports)
             raise CaseFailure("USBStreamer stand-in JACK ports not found: %s"
                               % usb)
         self.jack_fl, self.jack_fr = fl[0], fr[0]
