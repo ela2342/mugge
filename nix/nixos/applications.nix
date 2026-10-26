@@ -22,14 +22,21 @@ in
 {
   # User mappings live in ~/.mixxx/controllers/ (Mixxx on Linux). 'L+'
   # replaces whatever is there with a link to the store copy, so a deploy
-  # always brings the committed mapping.
+  # always brings the committed mapping. If the packaged Mixxx already
+  # ships "Hercules DJControl Mix Ultra" in share/mixxx/controllers (P-step
+  # check), drop our copy and these two links (Architect, US-173). If we
+  # keep it, the mapping must name the Mixxx version it was tested with.
   #
   # TODO (US-173 P-step): soundconfig.xml. configs/mixxx/soundconfig.xml is
   # pre-D-040 (CamillaDSP device name, HP at channel offset 2) and does not
   # match GraphManager's HP ports out_4/out_5 (F-130), so it is NOT
-  # installed. Once the file is captured from Mixxx on the Pi 5, add:
-  #   "C ${mixxxHome}/soundconfig.xml 0644 ela users - ${../../configs/mixxx/soundconfig.xml}"
-  # 'C' copies only when the file is missing, because Mixxx rewrites it.
+  # installed. It is captured from Mixxx on the Pi 5 (JACK, Master ch 1-2,
+  # HP ch 5-6) before the next reboot, and replaces the repo file. Then add
+  # (C+ replaces it on every boot; z fixes the 0444 root-owned store copy):
+  #   "C+ ${mixxxHome}/soundconfig.xml - - - - ${../../configs/mixxx/soundconfig.xml}"
+  #   "z  ${mixxxHome}/soundconfig.xml 0644 ela users - -"
+  # src/web-ui/tests/unit/test_mixxx_soundconfig.py guards the file
+  # against GraphManager's DJ routing.
   systemd.tmpfiles.rules = [
     "d ${mixxxHome} 0755 ela users - -"
     "d ${mixxxHome}/controllers 0755 ela users - -"
