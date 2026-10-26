@@ -435,6 +435,12 @@ priority!"
   e41e9416. F-399 open as PR #65 at final head 13995e15; CI run
   40317165021 in progress (code, not CI-exempt); 7 reviews requested
   via team-lead. Next: 174d, after #65 merges.
+  UPDATE (CM, 2026-10-26, after v213): backlog v213 pushed as
+  9dc9cd7f. #65 at 13995e15: UX APPROVE, AD APPROVE, QE APPROVED WITH
+  CONDITIONS (C1 CI green, C2 mutation evidence); CI run 40317165021
+  still pending. worker-4 is on a read-only F-262 diagnosis while #65
+  waits (team-lead's suggestion; PO told, may redirect); no edits, no
+  fence overlap.
 
 ## Reserved IDs
 
@@ -6541,6 +6547,43 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   /tmp/pr65-review-13995e15/ (pr65.diff sha256 d06cb3ef...). CI run
   40317165021 in progress; code, not CI-exempt. Team-lead asked for
   the 7 reviews. Tally 0/7.
+  #65 verdicts at 13995e15: UX APPROVE (comment 6415192205; holds only
+  if CI run 40317165021 goes green). AD APPROVE with L1 (verdict with
+  CM). QE APPROVED WITH CONDITIONS: C1 CI run 40317165021 green,
+  room-correction collected = 1358, the new tests PASSED by name; C2
+  evidence for the "13 mutations" claim, or the claim removed from the
+  PR body. Tally 3/7 (UX, AD, QE conditional).
+  #65 backlog notes (non-blocking, not Rule 13; no priority given):
+  - UX N1 (pre-existing, verify.print_report): "ALL CHECKS PASSED -
+    filters safe to deploy" also prints for SIMULATED sets. Suggested:
+    "ALL CHECKS PASSED - simulated set, not deployable".
+  - UX N2: the coeffs-dir guard's ValueError probably surfaces as a
+    traceback. Suggested one-liner: "Refused: simulated outputs never
+    go into <coeffs dir>; choose another --output-dir."
+  - QE 1: the test_venue_closed_loop crash walk patches global
+    os.replace/os.remove; use a vp-local seam so unrelated calls
+    cannot shift the k counter.
+  - QE 2: venue_pipeline coeffs guard is equality-only realpath;
+    consider refusing simulated output into any path under
+    DEFAULT_COEFFS_DIR. (Same point as the AD's US-174d AC below.)
+  - QE 3: US-174c/d deploy: tests for the consumer contract. Refuse on
+    SIMULATED present, delays.yml missing/unparsable, or simulated !=
+    false, and never recurse into a leftover .rc-staging-* dir. (Tests
+    for the US-174d AC recorded under F-399 above.)
+  - TW (owner: TW, docs queue, user-journeys runner examples):
+    pre-existing drift. docs/user-journeys.md section 7 (l.721-745)
+    shows delays.yml in the old CamillaDSP-era format (delays_ms /
+    delays_samples, "Apply delays in CamillaDSP"). The real schema is
+    venue / simulated / scenario / note / channels; #65 adds simulated
+    and scenario.
+  US-174d AC (AD, from #65): the simulated-set guard
+  (venue_pipeline._refuse_simulated_into_coeffs, currently realpath
+  equality) becomes a commonpath-prefix check covering
+  coeffs/sets/<id>, `current` and `committed`. It compares against
+  both deploy.DEFAULT_COEFFS_DIR (env-overridable) and
+  pw_config_generator's /etc/pi4audio/coeffs, with tests. PM cross-ref
+  only: F-372 asks for the same commonpath fix at a different site
+  (filter_routes.py).
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
