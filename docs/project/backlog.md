@@ -348,6 +348,13 @@ priority!"
   while the owner was at the HDMI screen. Rule: CM tool calls stay
   short (git, pushes, grants, relays); CI watching, builds, tests,
   investigations and cleanup go to workers, run detached.
+  UPDATE (CM, team-lead, 2026-10-26, after v192): quiet mode came back
+  while the disk fell, then LIFTED again for messages and backlog;
+  v192 pushed as 1083e373. Standing disk rules: the nix hold stays
+  while the Mac has less than 3 GB free, and nobody touches the
+  linux-builder. Below 1.5 GB, quiet mode comes back automatically and
+  the qcow2 size and df /nix are sampled. #57 is 7/7 at e731820c (see
+  US-174); its merge waits on CI and the QE's C1/C2.
 
 ## Reserved IDs
 
@@ -4338,6 +4345,22 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   at least +4 dB, (b) inside the correction band read from the
   constant, (c) inside 250-500 Hz; a ±1/6-oct REPORT line; margin and
   band kept. Reviews: QE, AE delta, Architect delta.
+  RULE 13 at e731820c (the AC7-fix head; the 599ea52a approvals do not
+  carry, strict protection; CM, 2026-10-26): 7/7. QE APPROVE,
+  diff-only, conditional (issuecomment-6414200520): C1 CI green,
+  room-correction 0 failed, count = main 5f3af36a + 26, F-394
+  skipped/xfail, no new XPASS, test_all_real_drivers_pass passes; C2
+  the PR body quotes the 4 REPORT AC7 lines plus the sentence on the
+  #55 gap, and the QE is told if the margin is under 2.0 dB. Architect
+  delta APPROVE (CI green plus the before/after numbers; 6414210309).
+  AE delta APPROVE (CI green; non-blocking absolute-premise nit;
+  6414210948). SecSpec APPROVE (6414248023). TW APPROVE (6414248474).
+  UX APPROVE (6414248908; test-only delta, no concerns in the UX
+  domain). AD APPROVE, diff-only (6414257026). Merge (CM, standing
+  consent) waits on CI 40310308638 green and the QE's C1 and C2; for
+  C2, worker-4 updates the PR body once CI is done, with the
+  before/after numbers. #61 and #62 follow; they need an
+  update-branch, re-checks and CI once main moves.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
