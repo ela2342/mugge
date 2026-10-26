@@ -649,6 +649,13 @@ priority!"
   coverage, split) are still pending on v2. The QE's plan verdict is
   on v1 da746539 (APPROVE with A1-A4). Order unchanged: US-172 v6
   first (CM, QE).
+  UPDATE (CM, 2026-10-26, after v247): backlog v247 pushed as
+  72fad62d. #63 Pi plan: the QE APPROVES v2 (c1e573fe, A1-A6,
+  supersedes 37ae18e6); the Architect APPROVES WITH CONDITIONS C1-C7
+  on v1 (969edef6), carry-over to v2 pending; P17 overlap open
+  (Architect writes one joint line, the QE releases it); worker-3
+  holds the P17 part of v3. New one-liner: CI runner image (team-lead)
+  (CM, QE, team-lead).
 
 ## Reserved IDs
 
@@ -4873,6 +4880,35 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   supersedes; the PM asked the QE whether it carries to v2. Status on
   v2: pending QE. Still pending on v2: the Architect (Q1/Q3/Q4). Order
   unchanged: US-172 v6 first, then the #63 deploy (CM).
+  UPDATE (2026-10-26; supersedes the PM cross-ref above):
+  - QE v2 verdict (QE + CM): APPROVE on plan v2 dd227076, superseding
+    v1 37ae18e6 (/tmp/pr63-qe-piplan-verdict-v2-dd227076.md, sha256
+    c1e573fe; CM frozen copy
+    /tmp/cm-relay/PR63/frozen-pr63-qe-piplan-verdict-v2-dd227076-c1e573fe.md;
+    both verified at PM read). A1-A4 stand. A5: the deploy SHA is the
+    PR head, never a local merge, with CI and evidence green and an
+    identical drvPath. A6: the re-pinned P3/P6/P9 go into a new plan
+    file the QE verifies before the grant. Q1 change: if the post-D4
+    pre-check shows /dev/dri and an active compositor, P15-P16 run in
+    session 1 and the split is dropped. The QE's C4 on #63 stays open
+    until the QE has checked the session evidence.
+  - Architect verdict (CM): APPROVE WITH CONDITIONS C1-C7 on plan v1
+    da746539 (frozen copy in /tmp/cm-relay/PR63/:
+    frozen-pr63-pi-plan-da746539-architect-verdict-969edef6.md, sha256
+    969edef6, verified at PM read): defer P15-P17 and the Mixxx half
+    of AC7; no offscreen Mixxx. Carry-over to v2 is pending (CM
+    asked). The CM notes the v2 delta is ordering and Q4 only.
+  - OPEN, P17 overlap (CM): the Architect defers P17 entirely; QE A2
+    keeps the P17 read-back and standby in session 1. The Architect
+    writes one joint line and the QE releases it. Per team-lead,
+    worker-3 holds the P17 part of plan v3 (a new file) until then.
+    The v3 delta then goes to the Architect, the QE and the AE. The
+    deploy still comes after US-172 v6.
+  - If the split goes ahead (CM, QE): P15-P16 (Mixxx on the HW-GL
+    display) become a hard pre-audio gate of the first DJ session
+    (US-173), and US-173 stays open with AC12 and the Mixxx half of
+    AC7 unchecked. Under QE v2 the split applies only if the post-D4
+    display pre-check fails.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -6268,6 +6304,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   40333713247 running.
   UPDATE (CM, 2026-10-26): CI 40333713247 still running
   (test-and-build).
+  Backlog one-liner (team-lead, 2026-10-26; no F-ID, no priority
+  given, the Architect or the QE may set it): the CM saw a warning in
+  the log of CI run 40333713247: GitHub's `ubuntu-latest` image moved
+  to Ubuntu 26 from 2026-10-19, which could cause new, unrelated CI
+  failures. Question: should our workflows pin a specific runner image
+  instead of `ubuntu-latest`? Blocks nothing now.
   QE skip rulings at f715538e (/tmp/pr64-qe-skip-rulings-f715538e.md,
   sha256 dea15e43, verified at PM read). None blocks #64.
   - One-liner (worker-1 proposal, QE): in CI, a failed GM DJ-mode
