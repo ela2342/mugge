@@ -325,28 +325,36 @@ def run_venue_pipeline(args):
     sim = venue_sim.simulate_venue_measurements(
         bundle.profile, scenario, scenario_name=str(args.scenario))
     result = venue_pipeline.generate_venue_filters(bundle, sim.measured_irs)
-    paths = venue_pipeline.write_venue_filters(result, args.output_dir)
-    delays = venue_pipeline.write_delays_yaml(
-        result, bundle, os.path.join(args.output_dir, "delays.yml"))
+    # F-399: write and verify in a staging dir; publish only a passing set.
+    with venue_pipeline.staged_outputs(
+            args.output_dir, simulated_scenario=str(args.scenario)) as stage:
+        paths = venue_pipeline.write_venue_filters(result, stage.path)
+        delays = venue_pipeline.write_delays_yaml(
+            result, bundle, os.path.join(stage.path, venue_pipeline.DELAYS_FILENAME),
+            simulated_scenario=str(args.scenario))
 
-    for venue_key, ch in delays["channels"].items():
-        print(f"  {venue_key}: delay {ch['delay_ms']:.3f} ms, level "
-              f"{ch['reference_level_db']:+.1f} dB, suggested gain delta "
-              f"{ch['recommended_gain_delta_db']:+.1f} dB (not applied)")
-    print("Known limit: single mic position, position-independent room modes "
-          "(off-position check is slice 174b-sim).")
+        for venue_key, ch in delays["channels"].items():
+            print(f"  {venue_key}: delay {ch['delay_ms']:.3f} ms, level "
+                  f"{ch['reference_level_db']:+.1f} dB, suggested gain delta "
+                  f"{ch['recommended_gain_delta_db']:+.1f} dB (not applied)")
+        print("Known limit: single mic position, position-independent room modes "
+              "(off-position check is slice 174b-sim).")
 
-    all_passed, results = verify.run_venue_checks(
-        args.output_dir, bundle.expected_files(),
-        mandatory_hpf_hz=bundle.mandatory_hpf_by_file())
-    missing = set(bundle.expected_files()) - set(paths)
-    if missing:
-        print(f"Missing outputs: {sorted(missing)}", file=sys.stderr)
-        all_passed = False
-    verify.print_report(all_passed, results)
+        all_passed, results = verify.run_venue_checks(
+            stage.path, bundle.expected_files(),
+            mandatory_hpf_hz=bundle.mandatory_hpf_by_file())
+        missing = set(bundle.expected_files()) - set(paths)
+        if missing:
+            print(f"Missing outputs: {sorted(missing)}", file=sys.stderr)
+            all_passed = False
+        verify.print_report(all_passed, results)
+        if all_passed:
+            stage.commit()
+            print(f"Published to {args.output_dir} (marked SIMULATED)")
     if not all_passed:
         failed = [r.name for r in results if not r.passed]
         print(f"VERIFY FAILED: {', '.join(failed) or 'missing outputs'}", file=sys.stderr)
+        print(f"Nothing published; {args.output_dir} left as it was.", file=sys.stderr)
     return all_passed
 
 
