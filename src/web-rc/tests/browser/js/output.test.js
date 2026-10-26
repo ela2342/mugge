@@ -143,11 +143,11 @@ export async function test_render_played_matches_chain() {
 
 // -- the worklet, offline ----------------------------------------------------
 
-async function runWorklet({ channels, channel, gain, source, frames, onFrame }) {
+async function runWorklet({ channels, channel, gain, source, frames, onFrame, beat }) {
   const ctx = new OfflineAudioContext(channels, frames, SR);
   ctx.destination.channelInterpretation = "discrete";
   await ctx.audioWorklet.addModule(WORKLET);
-  await addBeater(ctx);  // the meter heartbeat the output waits for (r2 A4)
+  await addBeater(ctx, beat);  // the meter heartbeat the output waits for (r2 A4)
   const node = new AudioWorkletNode(ctx, "webrc-output", {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [channels],
     channelInterpretation: "discrete",
@@ -198,6 +198,32 @@ export async function test_worklet_mono_to_one_channel_bit_exact() {
   for (let i = at + played.length; i < got.length; i++) eq(got[i], 0, "after end " + i);
   assert(msgs.some((m) => m.type === "ended"), "ended reported");
   eq(msgs.filter((m) => m.type === "error").length, 0);
+}
+
+/**
+ * AE a1736914: "started" names the frame the buffer's first sample is
+ * rendered at, whichever quantum the output starts in (render order makes
+ * that the beat's quantum or the next). The first beat is forced later.
+ */
+export async function test_worklet_reports_the_onset_frame() {
+  const s = new Float32Array(4 * Q).fill(0.5);
+  const onsets = [];
+  for (const from of [0, Q, 2 * Q]) {   // within LATCH.STALE_QUANTA
+    const { buf, msgs } = await runWorklet({
+      channels: 1, channel: 0, gain: 0.1, frames: 16 * Q,
+      source: { kind: "buffer", samples: s }, beat: { from },
+    });
+    const d = buf.getChannelData(0);
+    const first = d.findIndex((v) => v !== 0);
+    const started = msgs.filter((m) => m.type === "started");
+    eq(started.length, 1, "reported once");
+    eq(started[0].frame, first, "the first sample's frame, beat from " + from);
+    const { played } = renderPlayed(s, 0.1, SR);
+    for (let i = 0; i < played.length; i++) eq(d[first + i], played[i], "sample " + i);
+    assert(first === from || first === from + Q, "0 or 1 quantum late: " + first);
+    onsets.push(first);
+  }
+  assert(onsets[0] !== onsets[2], "different onsets were exercised: " + onsets);
 }
 
 export async function test_worklet_noise_matches_level_noise() {

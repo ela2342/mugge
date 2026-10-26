@@ -81,6 +81,7 @@ SWEEP_HPF_ORDER = 4           # AC4g, >= 4th order
 REPEATABILITY_MAX_DB = 1.0    # AC8a
 IR_SECONDS = 1.0              # deconvolve default
 ALIGN_MARGIN_S = 0.1          # capture kept before the scheduled sweep onset
+MAX_ONSET_S = 0.05            # |measured onset| bound; the flow refuses more
 
 BROWSER_TAG = "browser-generated"
 REPORT_TEXT = (
@@ -184,25 +185,33 @@ def check_capture(capture, pre_roll_samples):
 # -- impulse response -------------------------------------------------------
 
 def ir_from_capture(capture, sweep, pre_roll_samples, calibration_text=None,
-                    sr=SAMPLE_RATE):
+                    sr=SAMPLE_RATE, onset_samples=0):
     """Deconvolve one capture into an IR (AC7: alignment by deconvolution).
 
-    The scheduled sweep onset only crops the capture, with ALIGN_MARGIN_S
-    kept before it; the arrival is found from the IR peak. Raises
-    CaptureRejected when the capture fails check_capture or the peak sits
-    where no acoustic arrival can be.
+    onset_samples is the measured output onset for this capture: the frame
+    the played buffer's first sample was rendered at, minus the capture's
+    first frame (AE a1736914). The output may start a quantum late, so the
+    sweep sits at pre_roll_samples + onset_samples in the capture. That
+    onset only crops the capture, with ALIGN_MARGIN_S kept before it; the
+    arrival is found from the IR peak. Raises CaptureRejected when the
+    capture fails check_capture or the peak sits where no acoustic arrival
+    can be.
 
-    Returns (ir, delay_s): ir starts ALIGN_MARGIN_S before the scheduled
-    onset; delay_s is the peak position after the scheduled onset (audio
-    latency plus time of flight).
+    Returns (ir, delay_s): ir starts ALIGN_MARGIN_S before the measured
+    onset; delay_s is the peak position after it (audio latency plus time
+    of flight), the same whichever quantum the output started in.
     """
+    onset_samples = int(onset_samples)
+    if abs(onset_samples) > MAX_ONSET_S * sr:
+        raise ValueError("output onset outside the capture window")
+    pre_roll_samples = int(pre_roll_samples) + onset_samples
     capture = _f64(capture)
     report = check_capture(capture, pre_roll_samples)
     if not report["ok"]:
         raise CaptureRejected("Capture rejected: " + "; ".join(report["issues"]))
 
     margin = int(round(ALIGN_MARGIN_S * sr))
-    start = int(pre_roll_samples) - margin
+    start = pre_roll_samples - margin
     if start < 0:
         raise ValueError("pre-roll shorter than the alignment margin")
     ir = deconvolve(capture[start:], _f64(sweep), sr=sr,

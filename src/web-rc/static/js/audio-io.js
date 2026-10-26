@@ -295,7 +295,7 @@ export class AudioIO {
     } else if (msg.type === "recorded") {
       if (msg.id !== this.recording) return;
       this.recording = null;
-      this.onRecorded(msg.id, msg.samples);
+      this.onRecorded(msg.id, msg.samples, msg.startFrame);
     }
   }
 

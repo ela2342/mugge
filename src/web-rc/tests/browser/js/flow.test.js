@@ -46,6 +46,12 @@ function ackAll(f) {
 
 const types = (cmds) => cmds.map((c) => c.type).join(",");
 
+/** A capture as the page delivers it: the output onset, then the recording. */
+function rec(f, token, samples, onset = 0) {
+  eq(f.output({ type: "started", frame: 4096 + onset }).length, 0);
+  return f.recorded(token, samples, 4096);
+}
+
 /** A unit sweep stand-in: a sine with fades, RMS about -3 dBFS. */
 function unitSweep(seconds = 1) {
   const n = seconds * SR;
@@ -437,13 +443,13 @@ export async function test_measure_two_captures_then_analyze() {
     "A4: sweep RMS = level-check RMS");
 
   const cap1 = new Float32Array(10);
-  const s2 = f.recorded(s[0].token, cap1);
+  const s2 = rec(f, s[0].token, cap1);
   eq(types(s2), "record,sweep-start", "second capture, same sweep");
   assert(s2[0].token !== s[0].token);
   eq(s2[1].gain, s[1].gain);
   eq(f.recorded(s[0].token, cap1).length, 0, "old token ignored");
   const cap2 = new Float32Array(10);
-  const a = f.recorded(s2[0].token, cap2);
+  const a = rec(f, s2[0].token, cap2);
   eq(types(a), "output-stop,analyze", "the sweep output stops before the analysis");
   const r = a[1].request;
   eq(r.captures.length, 2);
@@ -478,6 +484,64 @@ export async function test_measure_needs_a_running_level_check_with_reading() {
   eq(f.measure().length, 0, "stopped");
 }
 
+/** AE a1736914: each capture's measured output onset goes to the analysis. */
+export async function test_onset_reaches_the_analysis() {
+  const f = atLevel();
+  const m = toMeasure(f);
+  eq(f.output({ type: "started", frame: 7 }).length, 0, "level-check noise");
+  eq(f.run.onsetFrame, null, "not a capture's onset");
+  const s = f.sweepReady(m[1].token, unitSweep());
+  f.output({ type: "started", frame: 1000 + 128 });
+  f.output({ type: "started", frame: 5000 });
+  const s2 = f.recorded(s[0].token, new Float32Array(1), 1000);
+  eq(types(s2), "record,sweep-start");
+  eq(f.run.onsetFrame, null, "reset for capture 2");
+  f.output({ type: "started", frame: 9999 });
+  const a = f.recorded(s2[0].token, new Float32Array(1), 9999);
+  eq(a[1].request.onsets.join(), "128,0", "one quantum late, then on time");
+  eq(a[1].request.captures.length, 2);
+}
+
+/** AE a1736914: an unknown or implausible onset fails closed (audio error). */
+export async function test_unknown_onset_is_an_audio_error() {
+  const limit = FLOW.MAX_ONSET_S * SR;
+  eq(limit, 2400, "the same bound as webrc_pipeline.MAX_ONSET_S");
+  for (const onset of [-limit, limit]) {
+    const f = atLevel();
+    const s = f.sweepReady(toMeasure(f)[1].token, unitSweep());
+    eq(types(rec(f, s[0].token, new Float32Array(1), onset)),
+      "record,sweep-start", "in bounds: " + onset);
+  }
+  const bad = [
+    ["no started", (f, t) => f.recorded(t, new Float32Array(1), 4096)],
+    ["no started, frame 0", (f, t) => f.recorded(t, new Float32Array(1), 0)],
+    ["late", (f, t) => rec(f, t, new Float32Array(1), limit + 1)],
+    ["early", (f, t) => rec(f, t, new Float32Array(1), -limit - 1)],
+    ["no start frame", (f, t) => {
+      f.output({ type: "started", frame: 4096 });
+      return f.recorded(t, new Float32Array(1));
+    }],
+    ["bad frame", (f, t) => {
+      f.output({ type: "started", frame: 4096.5 });
+      return f.recorded(t, new Float32Array(1), 4096);
+    }],
+  ];
+  for (const [why, act] of bad) {
+    const f = atLevel();
+    const s = f.sweepReady(toMeasure(f)[1].token, unitSweep());
+    eq(types(act(f, s[0].token)), "output-stop,record-cancel", why);
+    eq(f.step, STEP.LEVEL, why);
+    eq(f.notice.cause, STOP.AUDIO_ERROR, why);
+    eq(f.canStart, false, "held: " + why);
+  }
+  // Capture 2 needs its own onset.
+  const f = atLevel();
+  const s = f.sweepReady(toMeasure(f)[1].token, unitSweep());
+  const s2 = rec(f, s[0].token, new Float32Array(1));
+  eq(types(f.recorded(s2[0].token, new Float32Array(1), 4096)),
+    "output-stop,record-cancel", "no onset for capture 2");
+}
+
 /** E4: an auto-STOP during the sweep returns to the level check, discards. */
 export async function test_sweep_auto_stop_discards_captures() {
   const stops = [
@@ -491,7 +555,7 @@ export async function test_sweep_auto_stop_discards_captures() {
     const f = atLevel();
     const m = toMeasure(f); // level-check mic RMS -50
     const s = f.sweepReady(m[1].token, unitSweep());
-    const s2 = f.recorded(s[0].token, new Float32Array(10));
+    const s2 = rec(f, s[0].token, new Float32Array(10));
     eq(f.meter(0, { peakDbfs: -30, rmsDbfs: -44.1 }).length, 0, "5.9 dB rise ok");
     eq(types(act(f)), "output-stop,record-cancel", cause);
     eq(f.step, STEP.LEVEL);
@@ -541,8 +605,8 @@ export async function test_stop_while_waiting_for_sweep_or_analysis() {
   const g = atLevel();
   const gm = toMeasure(g);
   const s = g.sweepReady(gm[1].token, unitSweep());
-  const s2 = g.recorded(s[0].token, new Float32Array(1));
-  const a = g.recorded(s2[0].token, new Float32Array(1));
+  const s2 = rec(g, s[0].token, new Float32Array(1));
+  const a = rec(g, s2[0].token, new Float32Array(1));
   g.hidden();
   eq(g.step, STEP.LEVEL);
   eq(g.analysisDone(a[1].token, { fileName: "x.wav" }).length, 0);
@@ -568,8 +632,8 @@ export async function test_analysis_failure_names_the_error() {
   const f = atLevel();
   const m = toMeasure(f);
   const s = f.sweepReady(m[1].token, unitSweep());
-  const s2 = f.recorded(s[0].token, new Float32Array(1));
-  const a = f.recorded(s2[0].token, new Float32Array(1));
+  const s2 = rec(f, s[0].token, new Float32Array(1));
+  const a = rec(f, s2[0].token, new Float32Array(1));
   f.analysisFailed(a[1].token, "Capture rejected: SNR 12 dB below 20 dB.");
   eq(f.step, STEP.LEVEL);
   eq(f.notice.text, "Capture rejected: SNR 12 dB below 20 dB.");
@@ -582,8 +646,8 @@ export async function test_analyze_request_records_calibration() {
   f.meter(0, { peakDbfs: -40, rmsDbfs: -50 });
   const m = f.measure();
   const s = f.sweepReady(m[1].token, unitSweep());
-  const s2 = f.recorded(s[0].token, new Float32Array(1));
-  const r = f.recorded(s2[0].token, new Float32Array(1))[1].request;
+  const s2 = rec(f, s[0].token, new Float32Array(1));
+  const r = rec(f, s2[0].token, new Float32Array(1))[1].request;
   eq(r.calibrated, true);
   eq(r.calibrationFile, "7161942.txt");
 }
@@ -593,8 +657,8 @@ export async function test_analyze_request_records_calibration() {
 function finishedFilter(f, name) {
   const m = toMeasure(f);
   const s = f.sweepReady(m[1].token, unitSweep());
-  const s2 = f.recorded(s[0].token, new Float32Array(1));
-  const a = f.recorded(s2[0].token, new Float32Array(1));
+  const s2 = rec(f, s[0].token, new Float32Array(1));
+  const a = rec(f, s2[0].token, new Float32Array(1));
   f.analysisDone(a[1].token, { fileName: name, wavBytes: new Uint8Array(1) });
 }
 

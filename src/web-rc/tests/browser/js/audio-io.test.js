@@ -21,9 +21,10 @@ function rig() {
     close() { log.push("close"); this.state = "closed"; return Promise.resolve(); },
   };
   const outputs = {}, meterOut = [];
-  const msgs = { output: [], meter: [] };
+  const msgs = { output: [], meter: [], recorded: [] };
   const io = new AudioIO({
     onOutput: (m) => msgs.output.push(m), onMeter: (m) => msgs.meter.push(m),
+    onRecorded: (...args) => msgs.recorded.push(args),
   });
   io.ctx = ctx;
   io.meter = { port: { postMessage: (m) => meterOut.push(m) } };
@@ -182,4 +183,19 @@ export async function test_c1b_ended_sweep_retires_without_suspend() {
   await sleep(IO.ZERO_TIMEOUT_MS * 1.5);
   eq(since(log, mark), "disconnect A", "no suspend while recording");
   assert(io.recording === 7, "the recording goes on");
+}
+
+/** AE a1736914: the output onset and the capture's first frame reach the flow. */
+export async function test_onset_and_start_frame_are_passed_on() {
+  const { io, outputs, msgs, play } = rig();
+  play();
+  outputs.A.send({ type: "started", frame: 1152 });
+  eq(JSON.stringify(msgs.output), JSON.stringify([{ type: "started", frame: 1152 }]));
+  io.execute({ type: "record", token: 5, frames: 10 });
+  const samples = new Float32Array(10);
+  io._onMeterMessage({ type: "recorded", id: 5, startFrame: 1024, samples });
+  eq(msgs.recorded.length, 1);
+  eq(msgs.recorded[0][0], 5);
+  eq(msgs.recorded[0][1], samples);
+  eq(msgs.recorded[0][2], 1024, "the capture's first frame");
 }

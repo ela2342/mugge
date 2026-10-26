@@ -16,7 +16,9 @@
 // ramp is computed here, so it runs without the meter and the main thread
 // (r2 B2); nothing reverses it (B3).
 //
-// Out: { type: "clamped", frame }   the cap was reached (5d)
+// Out: { type: "started", frame }   the source's first sample is rendered at
+//        frame (AE a1736914: the onset is known per capture)
+//      { type: "clamped", frame }   the cap was reached (5d)
 //      { type: "stopped", frame, clamped, cause }   zero reached (r2 B4);
 //        cause: the meter's, "heartbeat", "superseded", or null
 //      { type: "ended", frame }      buffer source finished
@@ -33,6 +35,7 @@ class OutputProcessor extends AudioWorkletProcessor {
     this.channel = o.channel;
     this.chain = null;
     this.endedSent = false;
+    this.startedSent = false;
     this.gate = new OutputGate(stopLatch);
     try {
       const src = o.source || {};
@@ -79,8 +82,12 @@ class OutputProcessor extends AudioWorkletProcessor {
     const g = this.gate.check();
     if (g.stop) this.chain.stop();
     if (!g.play) return true;
-    const ev = this.chain.render(target);
     const frame = currentFrame;
+    if (!this.startedSent) {
+      this.startedSent = true;
+      this.port.postMessage({ type: "started", frame });
+    }
+    const ev = this.chain.render(target);
     if (ev.clampedAt >= 0) {
       this.port.postMessage({ type: "clamped", frame: frame + ev.clampedAt });
     }

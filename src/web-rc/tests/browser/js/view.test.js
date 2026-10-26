@@ -32,6 +32,12 @@ function ready({ cal = false } = {}) {
   return f;
 }
 
+/** A capture as the page delivers it: the output onset, then the recording. */
+function rec(f, token, samples, onset = 0) {
+  eq(f.output({ type: "started", frame: 4096 + onset }).length, 0);
+  return f.recorded(token, samples, 4096);
+}
+
 /** Tick every 4a item, then acknowledge (UX 64c83e3e). */
 function ackAll(f) {
   for (let i = 0; i < FLOW.ACK_ITEMS; i++) f.tickAck(i, true);
@@ -212,10 +218,10 @@ export async function test_measure_progress_and_result() {
   const s = f.sweepReady(m[1].token, sweep);
   eq(viewModel(f).measure.progress, "Capture 1 of 2: playing sweep…");
   eq(viewModel(f).stopVisible, true, "STOP during the captures (4e)");
-  const s2 = f.recorded(s[0].token, new Float32Array(1));
+  const s2 = rec(f, s[0].token, new Float32Array(1));
   eq(viewModel(f).measure.progress, "Capture 2 of 2: playing sweep… Keep " +
     "the microphone where it is.");
-  const a = f.recorded(s2[0].token, new Float32Array(1));
+  const a = rec(f, s2[0].token, new Float32Array(1));
   eq(viewModel(f).measure.progress, "Computing the filter… This can take up " +
     "to a minute the first time.");
   eq(viewModel(f).stopVisible, false, "no sound while computing");
@@ -243,7 +249,7 @@ export async function test_notice_detail_after_capture_2_stop() {
   const m = f.measure();
   const sweep = new Float32Array(SR).fill(0.1);
   const s = f.sweepReady(m[1].token, sweep);
-  f.recorded(s[0].token, new Float32Array(1));
+  rec(f, s[0].token, new Float32Array(1));
   f.userStop();
   const vm = viewModel(f);
   eq(vm.notice, "Stopped.");

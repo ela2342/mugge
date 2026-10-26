@@ -28,7 +28,8 @@ export class App {
     this.io = io || new AudioIO({
       onMeter: (m) => this.apply(this.flow.meter(this.now(), m)),
       onOutput: (m) => this.apply(this.flow.output(m)),
-      onRecorded: (id, samples) => this.apply(this.flow.recorded(id, samples)),
+      onRecorded: (id, samples, startFrame) =>
+        this.apply(this.flow.recorded(id, samples, startFrame)),
       onError: () => this.apply(this.flow.audioError()),
     });
     this.rc = rc || null;

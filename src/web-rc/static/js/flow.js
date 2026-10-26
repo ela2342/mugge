@@ -13,6 +13,7 @@
 //   { type: "meter-calibration", splOffsetDb }
 //   { type: "make-sweep", token, plan }              -> sweepReady()
 //   { type: "record", token, frames }                -> recorded()
+//                                                       (+ output "started")
 //   { type: "sweep-start", channel, samples, gain }
 //   { type: "record-cancel" }
 //   { type: "analyze", token, request }              -> analysisDone/Failed()
@@ -46,6 +47,9 @@ export const FLOW = Object.freeze({
   PRE_ROLL_S: 0.5,              // AC7 silent pre-capture before the sweep
   SWEEP_S: LIMITS.SWEEP_MAX_S,  // AC4g, at most 10 s per capture
   CAPTURES: 2,                  // AC8a, capture 1 = filter, 2 = hold-out
+  // AE a1736914: |output onset - capture start| bound, the same as
+  // webrc_pipeline.MAX_ONSET_S. More is an audio error.
+  MAX_ONSET_S: 0.05,
   ACK_ITEMS: 4,                 // 4a checkboxes (UX 64c83e3e), output last
 });
 
@@ -328,13 +332,20 @@ export class Flow {
     return [];
   }
 
-  /** An output-worklet message: clamped / error / stopped / ended. */
+  /** An output-worklet message: started / clamped / error / stopped / ended. */
   output(msg) {
     if (msg.type === "error") return this.audioError();
     if (msg.type === "stopped" && msg.cause === LATCH.HEARTBEAT) {
       return this._hold(STOP.HEARTBEAT);
     }
     if (!this.run.sounding) return [];
+    if (msg.type === "started") {
+      // AE a1736914: where this capture's played buffer really began.
+      if (this.run.capturing && this.run.onsetFrame === null) {
+        this.run.onsetFrame = msg.frame;
+      }
+      return [];
+    }
     if (msg.type === "clamped") return this.autoStop(STOP.CAP);
     // A render-thread stop (stop-latch.js) the meter report has not brought.
     if (msg.type === "stopped" && msg.cause) return this.autoStop(msg.cause);
@@ -470,9 +481,20 @@ export class Flow {
     return this._abortMeasure("rejected", message);
   }
 
-  /** A finished recording from the meter worklet. */
-  recorded(token, samples) {
+  /**
+   * A finished recording from the meter worklet; startFrame is the frame of
+   * its first sample. The output onset relative to it goes to the analysis,
+   * which removes it (AE a1736914). Unknown or out of bounds: audio error.
+   */
+  recorded(token, samples, startFrame) {
     if (!this._is(token, "record")) return [];
+    const onset = this.run.onsetFrame - startFrame;
+    if (this.run.onsetFrame === null || !Number.isInteger(startFrame) ||
+        !Number.isInteger(onset) ||
+        Math.abs(onset) > FLOW.MAX_ONSET_S * LIMITS.REQUIRED_RATE) {
+      return this.audioError();
+    }
+    this.run.onsets.push(onset);
     this.run.captures.push(samples);
     this.run.capturing = false;
     this.run.sounding = false;
@@ -489,6 +511,7 @@ export class Flow {
         gain: this.run.gain,
         preRollS: FLOW.PRE_ROLL_S,
         captures: [...this.run.captures],
+        onsets: [...this.run.onsets],    // samples, per capture
         levelDbfs: this.run.confirmed.levelDbfs,
         targetReached: this.run.confirmed.targetReached,
         calibrated: this.run.confirmed.splOffsetDb !== null,
@@ -525,6 +548,7 @@ export class Flow {
     this.run = {
       lc: null, band: null, entry: null, micRmsDbfs: null, confirmed: null,
       plan: null, played: null, gain: 0, captures: [], capturing: false,
+      onsets: [], onsetFrame: null,
       sounding: false, pending: null, result: null,
     };
   }
@@ -559,6 +583,7 @@ export class Flow {
       captureSeconds(this.run.plan.seconds)) * LIMITS.REQUIRED_RATE);
     this.run.capturing = true;
     this.run.sounding = true;
+    this.run.onsetFrame = null;
     return [
       { type: "record", token, frames },
       { type: "sweep-start", channel: this.channel, samples: this.run.played,

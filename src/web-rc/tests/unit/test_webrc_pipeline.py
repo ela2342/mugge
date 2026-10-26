@@ -73,10 +73,11 @@ def _room_ir(mode_gain_db=9.0):
 
 
 def _capture(sweep, room_ir, seed, gain_db=-20.0, noise_dbfs=-75.0,
-             latency_s=LATENCY_S):
+             latency_s=LATENCY_S, onset=0):
+    """onset: samples the output started after the scheduled pre-roll."""
     rng = np.random.default_rng(seed)
     pre = int(PRE_ROLL_S * SR)
-    lat = int(latency_s * SR)
+    lat = int(latency_s * SR) + onset
     total = pre + len(sweep) + SR
     wet = np.convolve(sweep.astype(np.float64) * 10 ** (gain_db / 20), room_ir)
     cap = np.zeros(total)
@@ -169,6 +170,27 @@ class TestAlignment:
         _, delay = wp.ir_from_capture(cap, sweep, pre)
         direct_s = np.argmax(np.abs(_room_ir())) / SR
         assert delay == pytest.approx(latency_s + direct_s, abs=2 / SR)
+
+    def test_measured_onset_is_removed(self, wp, sweep):
+        """AE a1736914: onsets of 0 and 1 quantum give the same IR and delay."""
+        room = _room_ir()
+        cap0, pre = _capture(sweep, room, seed=6, onset=0)
+        cap1, _ = _capture(sweep, room, seed=6, onset=128)
+        ir0, d0 = wp.ir_from_capture(cap0, sweep, pre, onset_samples=0)
+        ir1, d1 = wp.ir_from_capture(cap1, sweep, pre, onset_samples=128)
+        assert abs(int(np.argmax(np.abs(ir0))) - int(np.argmax(np.abs(ir1)))) <= 1
+        assert d1 == pytest.approx(d0, abs=1 / SR)
+        # Without the measured onset the quantum would land in the delay.
+        _, wrong = wp.ir_from_capture(cap1, sweep, pre)
+        assert wrong - d0 == pytest.approx(128 / SR, abs=1 / SR)
+
+    def test_onset_outside_the_window_fails_closed(self, wp, sweep):
+        cap, pre = _capture(sweep, _room_ir(), seed=6)
+        limit = int(wp.MAX_ONSET_S * SR)
+        wp.ir_from_capture(cap, sweep, pre, onset_samples=-limit)
+        for bad in (limit + 1, -limit - 1):
+            with pytest.raises(ValueError, match="onset"):
+                wp.ir_from_capture(cap, sweep, pre, onset_samples=bad)
 
 
 class TestFilter:
