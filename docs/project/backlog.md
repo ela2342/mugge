@@ -829,6 +829,12 @@ priority!"
   (eb178a19 is not the streak head; a new head with the set-equality
   line needs AE + Architect releases); TW F-403 batch v2 86ab5ba2
   supersedes v1, held until that head.
+  UPDATE (CM, AE, Architect, 2026-10-26, after v281): F-262 cd1f63e7
+  (the set-equality line) released by the AE and the Architect, record
+  (h) eb035598; TW F-403 v2 applied as docs-only commit 4724e65d;
+  origin fix/F-262-shared-correction = 4724e65d; PR CI run
+  40395927172, then the R5 series. Architect one-liner filed in P3
+  (session.py _profile_dirs ignores PI4AUDIO_SPEAKERS_DIR).
 
 ## Reserved IDs
 
@@ -7226,6 +7232,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      guarantees that the measured channel (Left) is the one checked."
      Net (CM), verbatim: "eb178a19 is NOT the streak head. A new head
      with the set-equality line needs AE + Architect releases."
+  - UPDATE (CM, AE, Architect, 2026-10-26): cd1f63e7 (the set-equality
+    line) RELEASED. Record (h)
+    /tmp/cm-relay/release-record-20261026-h-cd1f63e7.txt (sha256
+    eb035598, verified at PM read): diff eb178a19..cd1f63e7 sha256
+    1fdfafae, full c8 diff 65af5ee2..cd1f63e7 sha256 ec079943. AE,
+    verbatim: "F-262, AE: release 1fdfafae (cd1f63e7). The set form
+    meets my point and is stronger than the one-liner: it catches
+    mislabelled, extra and missing entries." Architect, verbatim:
+    "release 1fdfafae (cd1f63e7 increment; full c8 diff ec079943 also
+    released)." TW F-403 v2 (86ab5ba2, supersedes v1 371f0f13) applied
+    on top as docs-only commit 4724e65d (CM). origin
+    fix/F-262-shared-correction = 4724e65d (PM read: 4724e65d, parent
+    cd1f63e7, then eb178a19; origin/main is an ancestor, A1 OK). PR CI
+    run 40395927172 (CM); the R5 series starts after it.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -10611,6 +10631,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
 - **Other sample rates and export formats for US-179** (PO one-liner
   from US-179 r8, 2026-10-26; no P-level given), verbatim: "Other
   sample rates and export formats."
+- **Measurement session ignores PI4AUDIO_SPEAKERS_DIR** (Architect via
+  CM, 2026-10-26; non-blocking, from the F-262 cd1f63e7 release; no
+  P-level given), verbatim: "session.py _profile_dirs (:58) always
+  uses repo configs/speakers and ignores PI4AUDIO_SPEAKERS_DIR, which
+  speaker_routes._speakers_dir honours. On the Pi the UI's profile
+  list and filter generation can therefore read different profiles."
+  PM cross-ref: src/web-ui/app/measurement/session.py at 4724e65d,
+  _profile_dirs at l.54, the configs/speakers join at l.58;
+  speaker_routes.py l.41 and filter_routes.py l.41 read
+  PI4AUDIO_SPEAKERS_DIR (default /etc/pi4audio/speakers).
 - **/protection status reads the wrong marker** (F-c; worker-5, AE
   ruling via team-lead, 2026-10-26; P3, owner UX; cross-ref F-390):
   thermal_routes reads active-profile.txt from the speakers dir, but
