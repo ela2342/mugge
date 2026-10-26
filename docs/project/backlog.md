@@ -326,6 +326,13 @@ priority!"
   mostly Claude session transcripts (including non-mugge projects) and
   macOS swap (2.0 GB in /var/vm), not nix. Escalated to team-lead. No
   nix for anyone.
+  UPDATE (CM, PM, 2026-10-26, after v190): backlog v190 pushed as
+  dd197656. Mac disk: 610 MB free. The PM deleted 166 old
+  /tmp/pm-backlog versions (v1-v180) that the CM verified
+  byte-identical to committed chore/backlog blobs (PM re-checked by
+  hash-object: same 166); about 25 MB freed. Kept: v19, v44, v45, v47,
+  v108, v114, v115, v132 (not in git under that content), all build
+  scripts, and v181 onward. No nix for anyone.
 
 ## Reserved IDs
 
@@ -2127,6 +2134,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      (sandbox: proven for non-suspended nodes, Gate-2 r6b; Pi:
      boot-state zeros read on running nodes, OBSERVE-US172c-4,
      2026-10-26; non-zero set-and-read check pending)."
+     FIX (AE, via the TW, US-174d draft v3,
+     /tmp/tw-us174d-draft/docs/operations/safety.md sha256 41164bac;
+     the AE approved the draft with this edit): in the row 15 FINAL
+     text above, "on a node that is idle or running (row 14)" becomes
+     "(row 16)".
   18. PROPOSED (Architect, AD concurs, AE input, 2026-10-26; number
      proposed by the PM; the TW and the AE keep the final wording;
      mirrors safety.md on merge): "Filter-chain absent = no audio,
@@ -2227,6 +2239,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      (c) replacement, (d) and the last sentence. The OPEN footnote for
      row 18 now cites "the F-318 WirePlumber hook and the JACK
      self-connect-mode setting (both US-173)".
+     AE FINAL (TW US-174d draft v3, sha256 41164bac, AE-approved,
+     2026-10-26; SUPERSEDES the draft v2 (b) text above and the CM
+     paraphrase): in (b), "after a JACK client with autoconnect forced
+     on;" is replaced, verbatim, by "after a JACK client with
+     autoconnect forced on, and after a JACK client calls jack_connect
+     into a USBStreamer port (jack.self-connect-mode =
+     ignore-external, US-173);"
   NEXT safety.md TOUCH (#51 reviews, non-blocking, fail safe; TW
   drafts, AE owns the wording, this list follows per the mirror
   rule): (1) AD L1 = UX (a): the lead-in "holds" (closed and
@@ -3820,6 +3839,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   file being settled with the TW)". The UX recorded the condition MET
   by existing branch text (above); the PM asked the TW to reconcile.
   MET stands until the UX or the TW says otherwise.
+  RESOLVED (TW, 2026-10-26): MET stands, as recorded at 1c2d4bef; no
+  new note is written. The TW's US-173 batch adds to that text:
+  `jack_connect` in the list of forbidden hand-made links, and "The
+  Test tab is the only sanctioned way to check the speakers". It also
+  adds AC11 to US-173.md in the joint-ruling version (the default-sink
+  half plus hook-loaded evidence (a)-(e), the journal line extra
+  evidence only). The batch waits for the AE's OK, then the CM applies
+  it.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
