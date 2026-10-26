@@ -980,7 +980,8 @@ softens the attack — the opposite of what you want.
 - **Arbitrarily steep slopes.** IIR crossovers are limited to practical orders (LR4 =
   24dB/oct, LR8 = 48dB/oct). FIR can achieve 96dB/oct or steeper with clean rolloff
   and no passband ripple. Steeper slopes mean less energy leaking from the subs into
-  the wideband speakers and vice versa.
+  the wideband speakers and vice versa. (mugge's filter generator supports
+  Linkwitz-Riley targets at 24 or 48 dB/oct only, F-374.)
 
 - **One convolution instead of two processing stages.** The crossover shape is baked
   into the FIR coefficients along with the room correction. The PipeWire convolver runs

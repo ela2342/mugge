@@ -284,14 +284,17 @@ directly -- you regenerate the FIR coefficients.
    crossover:
      frequency_hz: 80    # or 200 for bandwidth-limited satellites
      slope_db_per_oct: 48
+     type: linkwitz-riley
    ```
 
 2. **Select the crossover slope.**
-   FIR crossovers can achieve much steeper slopes than IIR. Available range: 48-96 dB/oct.
-   Steeper slopes provide better band separation but require more FIR taps for accurate
-   low-frequency reproduction.
-   - 48 dB/oct: good default, efficient in taps
-   - 96 dB/oct: maximum separation, use when satellites have very limited LF capability
+   The crossover uses a Linkwitz-Riley magnitude target, realised as a
+   minimum-phase FIR (F-374), so the two legs sum flat. Two slopes are
+   supported: 24 dB/oct (LR4) and 48 dB/oct (LR8). The speaker editor
+   offers only these. Saving a profile, generating filters or starting a
+   measurement session with any other slope or type is refused.
+   - 48 dB/oct (LR8): the default, used by most shipped profiles
+   - 24 dB/oct (LR4): used by the 200 Hz markaudio/Ultimax profile
 
 3. **Verify the crossover design against speaker identity constraints.**
    Check that the crossover frequency falls within the acoustic bandwidth of both the
