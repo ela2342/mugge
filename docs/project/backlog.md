@@ -415,6 +415,11 @@ priority!"
   update-branched to 781b638a (content identical to 247478d5); its
   approvals are void and 7 re-approvals are requested via team-lead.
   Merge order next: #62, then the F-399 PR, then 174d merges main.
+  UPDATE (CM, 2026-10-26, after v208): backlog v208 pushed as
+  36ed34a7. #61 MERGED at 781b638a with 7/7; main is c318f404. #62
+  update-branched to 62b55b29 (content identical to 20903a04); its
+  approvals are void and 7 re-approvals are requested via team-lead.
+  Next: the F-399 PR, then 174d.
 
 ## Reserved IDs
 
@@ -4578,6 +4583,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   above. #61 is update-branched to 781b638a (content identical to
   247478d5), approvals void, 7 re-approvals requested via team-lead;
   #62 follows.
+  #61 re-approvals at 781b638a (record copies): QE APPROVE (pin
+  e13a5e04 verified against git diff origin/main...781b638a; content
+  identical to 247478d5; docs-only, CI-exempt, a failed job still
+  blocks). UX APPROVE (pin verified). MERGED (CM, 2026-10-26): #61 at
+  781b638a with 7/7; main is c318f404. #62 is update-branched to
+  62b55b29 (content identical to 20903a04), approvals void, 7
+  re-approvals requested via team-lead.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
