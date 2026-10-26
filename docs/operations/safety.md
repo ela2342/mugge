@@ -88,6 +88,12 @@ Until the list is closed, these rules apply on the Pi 5:
   - *If any other source appears:* amps off (or keep them off),
     headphones/IEM off and not worn, then report it. Do not delete the
     link by hand.
+- **ALSA tools (US-173):** the Pi 5 image ships alsa-utils for
+  diagnosis. **Never run aplay or speaker-test against the USBStreamer;
+  listing devices (`aplay -l`, `aplay -L`, `arecord -l`, `arecord -L`) is
+  allowed. Use amixer only to read, never to set USBStreamer controls, and
+  never run alsactl.** See Section 9, "Operator Rule: ALSA Command-Line
+  Tools".
 - **WirePlumber restart:** a WirePlumber restart, planned or after a
   crash, destroys and re-creates the USBStreamer node, so it is a
   USBStreamer interruption (Section 1) (F-396). Announce a planned restart, and
@@ -690,6 +696,29 @@ watchdog's mute path meets its <21ms deadline even under CPU contention.
 | 3 | WirePlumber node deny | Rogue PW client nodes | N/A (WP requires PW) | `53-deny-usbstreamer-alsa.conf` |
 | 4 | GraphManager watchdog | Convolver/gain node loss | N/A (GM requires PW) | `src/graph-manager/src/watchdog.rs` |
 
+### Operator Rule: ALSA Command-Line Tools (US-173)
+
+Since US-173 the Pi image installs alsa-utils (`aplay`, `arecord`,
+`amixer`, `aconnect`, `alsactl`) for gig-day diagnosis.
+
+**Never run aplay or speaker-test against the USBStreamer; listing devices
+(`aplay -l`, `aplay -L`, `arecord -l`, `arecord -L`) is allowed. Use amixer
+only to read, never to set USBStreamer controls, and never run alsactl.**
+
+Why: audio played straight to the USBStreamer ALSA device bypasses the
+convolver, the D-063 gains and the gate, so it reaches the amplifiers
+unfiltered and unattenuated. Layer 1 blocks this only while PipeWire
+holds the playback device; while PipeWire is stopped or restarting,
+Layer 2 still lets the `ela` user open it (S-010 was the same class of
+DSP bypass, via a different ALSA device). The mixer controls are
+different: no layer blocks `ela` from changing them, even while PipeWire
+is running, because an ALSA control device can be opened alongside
+PipeWire. The USBStreamer hardware Playback Volume powers up at 0 dB, its
+maximum, and the output safety rests on the D-063 gains and the gate
+alone. Setting a USBStreamer control changes the gain staging underneath
+them. Lowering it is no safer: the next power loss resets it to 0 dB,
+which is then a silent gain increase.
+
 ### Cross-References
 
 - US-044: ALSA device lockout user story
@@ -715,6 +744,7 @@ watchdog's mute path meets its <21ms deadline even under CPU contention.
 | S-012 | No gain increase without owner confirmation | 7, 8 |
 | F-040 | Panic MUTE sets gain to 0.0 without dropping PW stream | 8 |
 | US-044 | Four-layer ALSA lockout + watchdog defense | 9 |
+| US-173 | No aplay/speaker-test playback on the USBStreamer (listing OK); amixer read-only; no alsactl | 9 |
 
 ## Safety Incident Register
 
