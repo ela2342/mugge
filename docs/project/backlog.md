@@ -636,6 +636,10 @@ priority!"
   merges. US-172: the dcec60fa gate is settled, no gate-side obstacle
   to the v6 grant. #63 deploy-first is ON (team-lead + PO), conditions
   pending. F-405: P2 (AE) (CM, AE).
+  UPDATE (CM, 2026-10-26, after v244): backlog v244 pushed as
+  4d8eca64. #63 deploy-first is OFF: US-172 v6 on rcyg67wd first, THEN
+  the #63 DEPLOY plus P-steps (team-lead ruling; Architect pin-break
+  finding). F-405: no amps-on row now (CM).
 
 ## Reserved IDs
 
@@ -3477,6 +3481,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - Pi order (CM, 2026-10-26): the #63 DEPLOY plus P-steps (QE C4)
     runs before US-172 v6 (see #63). Team-lead's conditions: v6 keeps
     priority; the Architect confirms no base change; the AE clears it.
+  - UPDATE (CM, 2026-10-26; supersedes the "Pi order" line above): Pi
+    order (team-lead ruling; supersedes "deploy-first is ON"): US-172
+    v6 runs FIRST on the current generation rcyg67wd, THEN the #63
+    DEPLOY plus P-steps (QE C4). Condition 2 (the Architect confirms
+    no v6 base change) failed. Architect reason: a #63 `nixos-rebuild
+    boot` writes a new gens/<id>/ and rewrites config.txt, which
+    breaks v6's pins (BASE_TOP, CFGSHA ff08471f, CMDSHA c28e6a4e,
+    C4SHA 337c7d5c, TB4SHA 030489f3, the FAT manifest, the tryboot
+    draft os_prefix) and its pwdump BEFORE baseline; v6 would then
+    need a re-pin, a new OBSERVE baseline and a re-review. The pins
+    fail closed (STOP), so it is not a safety issue, but v6 could not
+    run.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -4799,6 +4815,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   base change (pending); the AE clears worker-3's plan, also checking
   174d's referenced-WAVs-exist and the zero-bytes check at
   combined_sub2_lp. worker-3 is preparing the plan; the PO is told.
+  UPDATE (CM, 2026-10-26; supersedes "deploy-first is ON" above):
+  deploy-first is OFF. Pi order (team-lead ruling; supersedes
+  "deploy-first is ON"): US-172 v6 runs FIRST on the current
+  generation rcyg67wd, THEN the #63 DEPLOY plus P-steps (QE C4).
+  Condition 2 (the Architect confirms no v6 base change) failed.
+  Architect reason: a #63 `nixos-rebuild boot` writes a new gens/<id>/
+  and rewrites config.txt, which breaks v6's pins (BASE_TOP, CFGSHA
+  ff08471f, CMDSHA c28e6a4e, C4SHA 337c7d5c, TB4SHA 030489f3, the FAT
+  manifest, the tryboot draft os_prefix) and its pwdump BEFORE
+  baseline; v6 would then need a re-pin, a new OBSERVE baseline and a
+  re-review. The pins fail closed (STOP), so it is not a safety issue,
+  but v6 could not run. worker-3 is still preparing the #63 plan for
+  AE and QE review; no grant before v6 is done. #63 stays a DRAFT
+  until the QE clears C4.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -6085,6 +6115,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   report cites test_gate_closed_e2e as gate-closed evidence; until
   then, nobody cites it. PM cross-ref: not added to the amps-on list
   (that needs a matching safety.md update by the TW).
+  Amps-on row (CM, 2026-10-26): no, not now; the "PM cross-ref: not
+  added" label stands. A row needs a matching TW safety.md batch,
+  which is pre-prod safety-doc work the owner has paused (core tech
+  first). The P2 entry already carries the AE's "before any amps-on
+  session" condition. Promotion to a row is the AE's domain call,
+  raised by the AE.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
