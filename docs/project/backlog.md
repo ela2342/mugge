@@ -124,6 +124,9 @@ priority!"
   file.
   UPDATE (CM, 2026-10-26): Mac disk now 2.85 GiB and still dropping.
   No nix.
+  UPDATE (CM, 2026-10-26): Mac disk 2.84 GiB. No nix. The CM fixed the
+  evidence dir modes (observe3/4/4b were 0600 dirs, unreadable to
+  advisors).
   Steps 7-8 DONE (CM, team-lead, 2026-10-26; corrects "SUSPENDED
   before use" in US-172c): worker-2 had already run step 7 when the
   suspension came; the Architect confirmed the cleanup and the plain
@@ -2587,6 +2590,31 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Owner list item (physical, never ask for a time slot): run 3 waits
   until the owner says they are at the screen, with the HDMI monitor
   the only device connected.
+  CORRECTION (Architect amendments, via CM, 2026-10-26; to the run-3
+  ruling above): KEEP disable_splash=1 (the Architect's parse marker;
+  "no disable_splash" is withdrawn). o/ vs the base dtbo is settled
+  off-Pi as byte-identical (10aed856..., aa13a7df...), so the "o/ dtbo
+  mismatch" alternative and its PRE are dropped. Restage from the
+  off-Pi copies, with a line-for-line check against
+  fat-manifest-armed.txt and a check that gens/<id>/ still exists. The
+  only change from run 2 is cmdline-run3.txt (without quiet, plus
+  console=tty1 ignore_loglevel), at the top level of gens/<id>/ next
+  to cmdline.txt. Architect conclusion: the 31 s plain reboot shows
+  the reset path works, so the run-2 hang is specific to tryboot/H1.
+  QE run-3 evidence criteria (via CM, 2026-10-26, as adjusted):
+  - tryboot.txt differs from run 2 by EXACTLY one line (cmdline=),
+    shown as a diff against 04827191...;
+  - o/ and gens/<id>/{Image,initrd,cmdline.txt} sha256 equal to
+    fat-manifest-armed.txt; full cmdline-run3.txt content plus diff;
+  - after restore: cmdline-run3.txt absent, a RESTORED-PASS manifest,
+    and state equal to post-steps-7-8;
+  - outcome branches with pass/fail/inconclusive named up front; a
+    base-generation boot is NOT run-3 evidence;
+  - the timeline from Mac-side polls; worker-2 adds an ICMP poll plus
+    /proc/uptime at first SSH.
+  Step-8 timing precision (CM, 2026-10-26): the first ping was NOT
+  measured (SSH-only poll) and /proc/uptime at first SSH was NOT
+  captured. Not a finding.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -3278,6 +3306,49 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   be confirmed to exist in the flake's systemd; fallback is L+ to a
   writable copy or an ExecStartPre copy. The Hercules USB-MIDI note
   comes from the CLAUDE.md TODOs.
+  UPDATE (CM, 2026-10-26): head bf4bcfcb (applications.nix comments:
+  C+ plus z 0644 ela users, Hercules conditions). The drift-guard test
+  src/web-ui/tests/unit/test_mixxx_soundconfig.py (HP index from
+  speakerChannels=4, production.nix) lands in the SAME commit as the
+  captured soundconfig.xml, so the branch stays green with no xfail.
+  Architect (M3, via CM, 2026-10-26): alsa-utils goes into the Pi 5
+  systemPackages with M3 (package only, no listeners or services).
+  Before M3, P-step 4 uses /proc/asound/cards plus
+  /proc/asound/seq/clients instead of aconnect.
+  P-STEP LIST (worker-3, 2026-10-26; after US-172; frozen copy
+  /tmp/pm-backlog/us173-p-step-checklist-63cfa7f9.txt, sha1 63cfa7f9).
+  Read-only (OBSERVE):
+  - (1) mixxx --version.
+  - (2) List the packaged controllers (hercules, lodash,
+    midi-components). If the Hercules DJControl Mix Ultra mapping is
+    packaged, drop our copy and the L+ links (Architect 2a); if ours
+    is kept, it names the Mixxx version it was tested with.
+  - (3) ls -la ~/.mixxx/ and ~/.mixxx/controllers/.
+  - (4) Hercules over USB: lsusb, /proc/asound/cards, /dev/snd/midi*;
+    MIDI clients via /proc/asound/seq/clients until alsa-utils lands
+    with M3.
+  - (5) Thermal watch for the whole session; before M3 only option
+    (c), the interpreter taken from the web-ui unit's ExecStart, path
+    logged.
+  With Mixxx running (amps off, gate closed):
+  - (6) AE safety condition, BEFORE ANY AUDIO: pw-link -l logged; NO
+    direct link from any Mixxx port to a USBStreamer playback port.
+    Any such link is a FAIL: remove it, raise a P1.
+  - (7) Only convolver-out output_AUXn -> USBStreamer playback_AUXn
+    links (AC7 link audit against the GM routing table, not against
+    soundconfig).
+  - (8) Mixxx ports out_0..out_5 present.
+  - (9) Log Mixxx master and HP gain at defaults (AE); raising them
+    needs an owner OK.
+  - (10) Master stays stereo; no Mixxx mono/split options (GM does the
+    sub mono sum, AE).
+  - (11) Mixxx Preferences > Controllers: Hercules listed (logged),
+    mapping selected; test play, crossfader, a deck.
+  - (12) soundconfig capture (Architect 2c), BEFORE THE NEXT REBOOT:
+    JACK API, Master ch 1-2, HP ch 5-6; copy ~/.mixxx/soundconfig.xml
+    back and commit it, replacing the stale repo file, together with
+    test_mixxx_soundconfig.py and the C+/z rules; the commit message
+    names the D-040 drift.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
