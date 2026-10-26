@@ -643,6 +643,12 @@ priority!"
   UPDATE (CM, 2026-10-26, after v245): backlog v245 pushed as
   e53f2a94. #63 Pi plan v2 (dd227076) in review with the AE, the
   Architect and the QE. #64 CI 40333713247 still running (CM).
+  UPDATE (CM, 2026-10-26, after v246): backlog v246 pushed as
+  3263c271. #63 Pi plan v2: the AE has CLEARED it (ab73af2a,
+  conditions C1-C4 + Q2); the Architect (Q1/Q3/Q4) and the QE (C4
+  coverage, split) are still pending on v2. The QE's plan verdict is
+  on v1 da746539 (APPROVE with A1-A4). Order unchanged: US-172 v6
+  first (CM, QE).
 
 ## Reserved IDs
 
@@ -4842,6 +4848,31 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - If v6 merges to main first, #63 needs a main merge, a new head and
     a repeat of the evidence run before deploying.
   - The Mixxx steps P15-P17 are deferred if there is no display.
+  AE CLEARED plan v2 dd227076 (CM, 2026-10-26; frozen copy
+  /tmp/cm-relay/PR63/frozen-AE-deploy-clearance-v2-ab73af2a.txt,
+  sha256 ab73af2a, verified at PM read). Conditions:
+  - C1: zero bytes at combined_sub2_lp before D3.
+  - C2: every WAV the new conf references exists before the D4 reboot,
+    dirac.wav included.
+  - C3: Mixxx plays nothing.
+  - C4 (new): the clearance covers 3f28b6c7 only. If the SHA changes,
+    the re-pinned P3/P6/P9 and zero.wav hashes go to the AE before the
+    grant.
+  - Q2: set_venue is OK in-session with re-reads. The handover records
+    "venue armed; next gate open needs the owner's S-012 OK".
+  QE verdict on plan v1 da746539 (QE, 2026-10-26;
+  /tmp/pr63-qe-piplan-verdict-da746539.md, sha256 37ae18e6, verified
+  at PM read): APPROVE with amendments A1-A4; the C4 split is
+  acceptable (Q1 YES, conditional). Open conditions:
+  - US-173 stays open with AC12 and the Mixxx part of AC7 unchecked.
+  - P15-P16 become a hard pre-audio gate of the first DJ session.
+  - The PR body must state the split (the QE re-checks the body).
+  - The QE's C4 on #63 stays open until the QE has checked the
+    session-1 P-step evidence.
+  PM cross-ref: the QE verdict names v1 da746539, which v2 dd227076
+  supersedes; the PM asked the QE whether it carries to v2. Status on
+  v2: pending QE. Still pending on v2: the Architect (Q1/Q3/Q4). Order
+  unchanged: US-172 v6 first, then the #63 deploy (CM).
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
