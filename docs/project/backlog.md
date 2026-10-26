@@ -117,6 +117,27 @@ priority!"
   it.
   Mac disk (CM, 2026-10-26): 2.99 GiB free, below the 3.0 GiB line. No
   nix clearance for anyone until it recovers.
+  UPDATE (CM, team-lead, 2026-10-26): the T+00:44 SSH session item is
+  CLOSED (AE). It stays a recorded qualifier; nobody touches the
+  session and the owner is NOT asked. This supersedes "team-lead is
+  asking the owner" above and every "pending the owner's word" in this
+  file.
+  UPDATE (CM, 2026-10-26): Mac disk now 2.85 GiB and still dropping.
+  No nix.
+  Steps 7-8 DONE (CM, team-lead, 2026-10-26; corrects "SUSPENDED
+  before use" in US-172c): worker-2 had already run step 7 when the
+  suspension came; the Architect confirmed the cleanup and the plain
+  reboot (announced about 09:08Z) were fine, with the evidence copied
+  to the Mac. Step 8 outcome (CM, 2026-10-26): tb-normal issued
+  09:06:58Z, down 09:07:14Z, up 09:07:45Z (31 s); new boot aae07160,
+  base generation rcyg67wd, tryboot flag 0. RESTORED PASS, 0 findings:
+  16 gains at 0; gate closed, venue null; links 24 unchanged; FAT
+  manifest equal to PRE; tryboot.txt and o/ absent. Thermal max 66.1
+  °C. CM-CHG-.89-US172c-78 released 09:09Z. The Architect's 10-min
+  branch did NOT trigger, so plain reboots work on this kernel. LIBPI
+  root /home/ela/.us172-libpi stays until US-172 closes. Run 3
+  (tryboot with visible boot output) waits until the owner says they
+  are at the HDMI screen.
 - DJ PLAYBACK PATH (core item, PO, 2026-10-26): Mixxx on the Pi 5 ->
   GM (DJ mode, quantum 1024) -> filter-chain convolver -> gate ->
   USBStreamer, with the crossover-only FIRs from the US-155 venue
@@ -2529,6 +2550,43 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   tryboot. It is now SUSPENDED before use: tb-restore would delete
   tryboot.txt and o/, which the Architect may want for run 3. Pending
   the Architect's ruling.
+  CORRECTION (CM, team-lead, 2026-10-26): the suspension came too
+  late. worker-2 had already run step 7 (tb-restore, all VERDICT ok):
+  gens/<id>/o, tryboot.txt and us172-fat-backup.tar removed;
+  config.txt and the FAT manifest identical. The Architect OK'd step 8
+  (tb-normal, plain reboot) as announce-only, with Mac-side poll
+  timestamps. Architect rule: not back in 10 min is a finding ("needs
+  power pull"), and the diagnosis becomes "Pi 5 reboot/reset path on
+  this kernel".
+  Step 8 outcome (CM, 2026-10-26): tb-normal issued 09:06:58Z, down
+  09:07:14Z, up 09:07:45Z (31 s); new boot aae07160, base generation
+  rcyg67wd, tryboot flag 0. RESTORED PASS, 0 findings: 16 gains at 0;
+  gate closed, venue null; links 24 unchanged; FAT manifest equal to
+  PRE; tryboot.txt and o/ absent. Thermal max 66.1 °C.
+  CM-CHG-.89-US172c-78 released 09:09Z. The Architect's 10-min branch
+  did NOT trigger, so plain reboots work on this kernel. LIBPI root
+  /home/ela/.us172-libpi stays until US-172 closes.
+  Tryboot evidence off-Pi (CM, 2026-10-26), in the run dir:
+  tryboot.txt sha256 04827191..., orig-config.txt ff08471f...,
+  fat-manifest-armed.txt; CM diff observe4b/cm-config-vs-tryboot.diff
+  (89853ceb).
+  AE (via CM, 2026-10-26): GAINS-RECORD-v2 (a465a8ad) ACCEPTED. Read 1
+  (T+04:58) is the primary proof; read 2 is confirmation only. The
+  T+00:44 session stays a recorded qualifier: nobody touches it, no
+  owner question. Addenda: observe4/GAINS-RECORD.ADDENDUM.txt
+  (babd9c68), observe4b/GAINS-RECORD-v2.ADDENDUM.txt (5852758c).
+  Run-3 ruling (Architect, via CM, 2026-10-26): the FAT line order is
+  the PRIMARY cause candidate, not proven; the alternatives are a
+  firmware-stage halt and an o/ dtbo mismatch. tryboot.txt and o/ were
+  wanted kept, but steps 7-8 had already run, so run 3 re-creates them
+  via tb-pre, verified against the off-Pi copies. Diagnostic
+  visibility only: no disable_splash; cmdline-run3.txt without quiet,
+  with console=tty1 and ignore_loglevel. The owner watches HDMI and
+  photographs at about 10 s / 30 s / 90 s / 3 min; 5-min outcome
+  branches. worker-2 is preparing it for QE review.
+  Owner list item (physical, never ask for a time slot): run 3 waits
+  until the owner says they are at the screen, with the HDMI monitor
+  the only device connected.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -3215,6 +3273,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   AE condition for the first DJ session (via CM, 2026-10-26): no
   direct Mixxx->USBStreamer link (a FAIL means remove it and raise a
   P1); Mixxx master/HP gains at defaults; Master stereo.
+  Architect corrections (via CM, 2026-10-26): bash was rejected
+  because it duplicates reviewed logic (not the test count). C+ must
+  be confirmed to exist in the flake's systemd; fallback is L+ to a
+  writable copy or an ExecStartPre copy. The Hercules USB-MIDI note
+  comes from the CLAUDE.md TODOs.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
