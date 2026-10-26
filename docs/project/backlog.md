@@ -1077,6 +1077,9 @@ P2): F-413, US-183, D-072, T66.
 Next free (v297; supersedes the line above; F-413, F-414 and F-415
 confirmed free on main, all origin/* and local branches at PM read,
 filed in this version, see P3): F-416, US-183, D-072, T66.
+Next free (v301; supersedes the line above; F-416 confirmed free on
+main, all origin/* and local branches at PM read, filed in this
+version, see P3): F-417, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -10441,6 +10444,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   keeps the OLD phase, so the output is no longer minimum-phase.
   Live under F-383's mechanism (its fail-closed check would trip on
   it). Fix before or with F-383.
+  DESCRIPTION CORRECTED (F-384 ruling r2 R1, 0221e6ed, AE released;
+  see the r2 record below): the defect is "step 9 does not bound the
+  true peak", not the phase. Severity Medium (AE FP2); the P1 above is
+  unchanged (no new P-level given).
   STAFFING RULED (team-lead, 2026-10-25; supersedes the owner lines
   above and the Architect's options): F-383 and F-384 are ONE
   mission for one new worker, starting after US-174b merges
@@ -10701,6 +10708,44 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     min(+-ref) scores h and -h the same. Verbatim: "which variant to
     use is not my decision."
   - PENDING: AE + Architect ruling on the report.
+  F-384 RULING r2 (Architect single writer, AE released; CM,
+  2026-10-26; supersedes "PENDING: AE + Architect ruling" above):
+  /tmp/cm-relay/F-383/frozen/arch-F384-ruling-r2-0221e6ed.txt (sha256
+  0221e6ed, 5258 bytes, verified at PM read). AE release
+  /tmp/cm-relay/F-383/frozen/ae-F384-r2-release-d5c4b28d.txt (sha256
+  d5c4b28d, 741 bytes, verified), verbatim: "RELEASED in full (R1-R5,
+  T1-T5, sequencing)." Relayed to worker-7; no implementation go yet
+  (CM).
+  - R1, verbatim: "F-384 is real, but its defect is the PEAK, not the
+    phase." Case A (16384 taps) 2^17 peak -0.102 dB, 0.40 dB above the
+    -0.5 dB D-009 margin; case B +0.025 dB. "Severity Medium (AE
+    FP2)." The A5 fix stands: one cut-only scalar on the finished FIR,
+    sized on the B3 grid (8x). F-384's description is corrected,
+    verbatim, to "step 9 does not bound the true peak".
+  - R2: the regression test must NOT rest on the F-383 residual gate.
+    Tests on worker-7's analytic fixtures (case A, case B): T1 shape
+    (output == k x unscaled FIR, 0 < k <= 1); T2 8x grid peak <=
+    margin + 1e-9 dB; T3 2^17 peak <= -0.5 dB + 0.01 dB for A and B;
+    T3b residual <= -40 dB and tail <= -60 dB; T4 public path
+    (sat_left, sub1), k < 1; T5 no-op, k == 1 exactly. Fixed vectors
+    with pre-fix numbers in the docstring. A private helper in
+    correction.py returns the unscaled FIR; verbatim: "NO source-text
+    cutting at "# Step 9:" in tests".
+  - T5 implementer note (Architect by message, both authors agree;
+    /tmp/cm-relay/F-383/frozen/F384-r2-implementer-note-T5.txt, sha256
+    c70fccae, 541 bytes, verified), verbatim: "T5's no-op input must
+    have an unscaled 8x peak at least 0.05 dB under the margin (<=
+    -0.55 dB). The "plain dirac" example in T5 is withdrawn". The AE
+    release carries the same non-blocking note.
+  - R3: the check teeth need no change for F-383; the teeth table goes
+    into the F-383 test docstring. R4: n_taps 256/512 tail failures
+    are report-only (AE FP5), no limit change and no new test. R5: the
+    A2 helper uses min(residual vs +ref, residual vs -ref);
+    closed_loop.minimum_phase_residual_db stays UNCHANGED, its
+    polarity dependence filed as F-416 (P3).
+  - Sequencing, verbatim: "F-384 (A5 + the R2 tests) is the FIRST code
+    commit, on its own. It does not depend on the subsonic decision
+    (S2/S3)."
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
@@ -12183,6 +12228,41 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     not reached: 68 dB SPL (target 75 dB SPL)." Whole dB rounded DOWN
     (floor) while the target isn't reached. The rest of the 436f962f
     (a) text is unchanged.
+  AE P1 RULING (AC8b)
+  /tmp/cm-relay/US-179/frozen/ae-w6-P1-AC8b-b0d0c499.txt (sha256
+  b0d0c499, 2743 bytes, verified at PM read; supersedes "PENDING: AE
+  P1" above), verbatim: "P1: verify_closed_loop is the right verdict
+  function. KEEP BOTH clauses (passes_residual_gate AND corrected max
+  <= uncorrected max)". V1: the FIR is the downloaded WAV decoded to
+  float64, not correction1.fir, with only its uniform level removed
+  (normalize_ir_level(wav, band)[0], band =
+  correction.reference_band(dict)). V2: reference_level_db = capture
+  2's own level (normalize_ir_level(ir_capture2, band)[1]). Verbatim:
+  "Limit = closed_loop.MAX_POSITIVE_DEVIATION_DB (3.0 dB), unchanged."
+  Fail closed: any exception, non-finite value, or a WAV that is not
+  16384 taps at 48 kHz = FAIL with a named reason. AC12 adds t1-t4
+  (room-applying filter FAILS; -6 dB WAV and +6 dB capture 2 give the
+  same verdict; non-decodable WAV FAILS). Verbatim: "No safety limit
+  changes." P3 add-on, verbatim: "no need to name the +6 dB sweep rule
+  in the banner; "the level cap" covers the user-relevant part."
+  (closes the PM cross-ref). P4: "noted, no objection". Relayed to
+  worker-6 with P3 = NO (CM).
+  AE L1-L4 RELEASE
+  /tmp/cm-relay/US-179/frozen/ae-arch-L1-L4-release-9fbb7411.txt
+  (sha256 9fbb7411, 1415 bytes, verified at PM read; names 62d25088):
+  "RELEASED L1-L4, with three additions (stricter only)": L1 a
+  non-finite, non-increasing or unwritten counter counts as stale,
+  zeros on every output channel; L2 a re-arm restarts at gain 0 with a
+  fresh -60 dBFS level check; L3, verbatim: "hard cut to zero, NO
+  fade, for every stop cause"; L4 one more test (after a valid re-arm
+  the output follows the -60 dBFS ramp). CONFLICT (CM, 2026-10-26):
+  this conflicts with r8 4e/5d (ramp) and with worker-6's built ramp
+  at 9996916a. The Architect writes one reconciling ruling (single
+  writer); the AE releases it. US-179 L1-L4 stays PENDING
+  (reconciliation).
+  BRANCH (CM, 2026-10-26): story/US-179-web-rc pushed at 9996916a (PM
+  read: ls-remote matches), with the Arch-b stop latch, held pending
+  the reconciliation.
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
@@ -12876,6 +12956,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   P3 (Architect by message, via CM, 2026-10-26; replaces "no P-level
   given"). Not a run-5 blocker: the v8 kit already dates boots by
   /proc/uptime.
+- **F-416** (Architect + AE, F-384 ruling r2 R5, via CM, 2026-10-26;
+  P3) closed_loop.minimum_phase_residual_db, the deployed venue gate,
+  is polarity-dependent: a negated filter -h scores +6.0 dB (worker-7
+  report 92b75b51). It stays UNCHANGED for F-383/F-384 (A2); R5,
+  verbatim: "Its polarity dependence goes to the PM backlog as a P3
+  one-liner, not into F-383/F-384." Related: sub2 is inverted on
+  purpose for the isobaric pair (R5).
 
 ## Open PRs (2026-10-24, per CM)
 
