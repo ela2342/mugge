@@ -9852,6 +9852,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      "$PW_STORE/bin" ], echoes "Fetching pipewire..." and runs nix
      build --no-link nixpkgs#pipewire (l.125-128 do the same for
      WP_STORE).
+  - UPDATE (CM, 2026-10-26, after v301): the negative control run
+    40398705324 at throwaway 999abd11 went RED: three stimulus-guard
+    setup ERRORs, frozen as 77b2231a (CM; PM cross-ref: the frozen
+    file was not found under /tmp at PM read, so the sha is not
+    PM-verified; path asked of the CM). The QE is ruling on whether
+    ERROR-vs-FAIL satisfies Q1-7(2). Revert e06d6296 is pushed (PM
+    read: on origin/defect/F-394-dj-mode-e2e-fail); CI 40406988590
+    running at this version.
 - **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
   per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
   2026-10-26): on a suspended node, the gain readers in the r6b matrix
@@ -12263,6 +12271,43 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   BRANCH (CM, 2026-10-26): story/US-179-web-rc pushed at 9996916a (PM
   read: ls-remote matches), with the Arch-b stop latch, held pending
   the reconciliation.
+  L1-L4 RECONCILED (CM, 2026-10-26; supersedes the CONFLICT and "L1-L4
+  stays PENDING (reconciliation)" above). Governing: Architect latch
+  ruling r2 (single writer)
+  /tmp/cm-relay/US-179/frozen/arch-latch-reconcile-r2-9a6db097.txt
+  (sha256 9a6db097, 5087 bytes, verified at PM read), released in full
+  by the AE:
+  /tmp/cm-relay/US-179/frozen/ae-latch-r2-release-6f220842.txt (sha256
+  6f220842, 827 bytes, verified), verbatim: "RELEASED in full: A1-A5,
+  B1-B4, C1-C6 incl. C1b, D. B matches my correction 2f468919; no
+  story change." VOID: r1 85afb598 (voided by message, never relayed).
+  The AE objection to r1
+  (/tmp/cm-relay/US-179/ae-US179-latch-reconcile-r1-85afb598-review.txt,
+  sha256 370123ec, verified) is closed by r2. The AE L3 correction
+  /tmp/cm-relay/US-179/ae-US179-L3-correction-r8-ramp.txt (sha256
+  2f468919, verified) withdrew the 9fbb7411 L3 "hard cut, NO fade":
+  the r8 4e ramp governs for every cause. No story erratum (PO
+  concurs). Relayed to worker-6 (CM).
+  - A re-arm: worker-6's epoch-at-construction is ACCEPTED in place of
+    a main-thread rearm message, with A1-A5 as musts before PR review
+    (A1 a new node is the only re-arm; A2 a new node starts at gain 0
+    and -60 dBFS per 4h/4i; A3 a held cause trips the new epoch; A4
+    heartbeat gate, "NOT BUILT YET"; A5 no reliance on trip memory
+    surviving a context).
+  - B stop shape, verbatim: "r8 4e/5d govern, per AE correction
+    2f468919 (audio safety, AE final word)." Every cause uses the 4e
+    ramp to 0 in ~10 ms on every output channel; worker-6's 9996916a
+    ramp is kept, with B1-B4 (start within 2 quanta; monotonic to
+    exactly 0.0, computed in the output processor; no cancel; suspend
+    only after "zero reached").
+  - AE B4 note (non-blocking, no re-issue), verbatim: "if "zero
+    reached" does not arrive within 100 ms of the trigger (lost
+    message, processorerror), the main thread suspends the
+    AudioContext anyway and treats the node as tripped; no new node is
+    connected until the old one is disconnected."
+  - C tests C1-C6 incl. C1b, each must catch its named mutation. D,
+    verbatim: "A4/C5 (heartbeat) and B4/C1b must be done before Rule
+    13 review."
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
