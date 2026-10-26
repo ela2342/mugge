@@ -153,3 +153,45 @@ def combine_filters(correction_filter, crossover_filter, n_taps=16384, margin_db
         combined_ir *= fade
 
     return combined_ir
+
+
+# AE, F-262 S5: the venue D-009 limit every combined speaker FIR must meet.
+D009_TRIM_MARGIN_DB = -0.5
+D009_TRIM_OVERSAMPLE = 4
+
+
+def max_gain_db(fir, sr=SAMPLE_RATE, oversample=D009_TRIM_OVERSAMPLE):
+    """Peak magnitude (dB) of an FIR over 20 Hz - 20 kHz, oversampled in frequency."""
+    fir = np.asarray(fir, dtype=np.float64)
+    n_fft = dsp_utils.next_power_of_2(len(fir)) * oversample
+    mag = np.abs(np.fft.rfft(fir, n=n_fft))
+    freqs = np.fft.rfftfreq(n_fft, d=1.0 / sr)
+    band = (freqs >= 20) & (freqs <= 20000)
+    return float(dsp_utils.linear_to_db(np.max(mag[band])))
+
+
+def uniform_d009_trim(filters, margin_db=D009_TRIM_MARGIN_DB, sr=SAMPLE_RATE):
+    """
+    D-009 trim after combine (AE, F-262 S5).
+
+    If any speaker FIR peaks above margin_db, scale ALL of them by one
+    gain so the loudest peaks at margin_db. A uniform scale keeps the
+    channel balance and the minimum phase; a per-channel re-clip would
+    bend the shape. Pass speaker channels only, never dirac passthroughs.
+
+    Returns
+    -------
+    tuple of (dict, float)
+        (trimmed filters, trim in dB: 0.0 or negative).
+    """
+    if not filters:
+        return dict(filters), 0.0
+    peak_db = max(max_gain_db(fir, sr=sr) for fir in filters.values())
+    if not np.isfinite(peak_db):
+        raise ValueError("combined filter has a non-finite peak gain")
+    if peak_db <= margin_db:
+        return dict(filters), 0.0
+    trim_db = margin_db - peak_db
+    scale = dsp_utils.db_to_linear(trim_db)
+    return {k: np.asarray(fir, dtype=np.float64) * scale
+            for k, fir in filters.items()}, float(trim_db)

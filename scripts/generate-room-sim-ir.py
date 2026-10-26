@@ -106,9 +106,9 @@ def generate_room_ir_for_speaker(speaker_pos, ir_len, mode_boosts=None):
 
     # Direct path
     d = distance(speaker_pos, MIC_POS)
-    delay = int(d / SPEED_OF_SOUND * SAMPLE_RATE)
-    if delay < ir_len:
-        ir[delay] = 1.0 / max(d, 0.01)
+    direct = int(d / SPEED_OF_SOUND * SAMPLE_RATE)
+    if direct < ir_len:
+        ir[direct] = 1.0 / max(d, 0.01)
 
     # First-order reflections (6 walls)
     walls = [
@@ -137,16 +137,15 @@ def generate_room_ir_for_speaker(speaker_pos, ir_len, mode_boosts=None):
             if 0 <= delay < ir_len:
                 ir[delay] += (refl_coeff ** 2) / max(d, 0.01)
 
-    # Room modes: decaying sinusoids at axial mode frequencies.
+    # Room modes: decaying sinusoids at axial mode frequencies. They start
+    # at the direct-sound arrival: nothing reaches the mic before it (F-262).
     for idx, (freq, q, amp) in enumerate(ROOM_MODES):
         boost = 1.0
         if mode_boosts is not None and idx < len(mode_boosts):
             boost = mode_boosts[idx]
         decay_rate = math.pi * freq / q
-        for i in range(ir_len):
-            t = i / SAMPLE_RATE
-            if t < 0.01:  # skip direct sound region
-                continue
+        for i in range(direct, ir_len):
+            t = (i - direct) / SAMPLE_RATE
             mode_val = amp * boost * math.sin(2.0 * math.pi * freq * t) * math.exp(-decay_rate * t)
             ir[i] += mode_val
 

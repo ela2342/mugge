@@ -67,6 +67,43 @@ def generate_log_sweep(duration=5.0, f_start=20.0, f_end=20000.0, sr=SAMPLE_RATE
     return sweep
 
 
+def signal_gen_sweep(duration, sr=SAMPLE_RATE, level_dbfs=0.0, f_start=20.0,
+                     f_end=20000.0):
+    """
+    Port of the signal-gen sweep law (src/signal-gen/src/generator.rs).
+
+    signal-gen plays this law, not generate_log_sweep(): the phase is the
+    running sum of 2*pi*f_inst/sr with f_inst = f_start * exp(rate * n),
+    there are no fades, and the level is a peak amplitude.
+
+    Use it ONLY as the reference for the capture onset check
+    (alignment.align_capture). Until F-403 S2 lets the session deconvolve
+    against the array signal-gen actually played, the IR itself is still
+    deconvolved against generate_log_sweep().
+
+    Parameters
+    ----------
+    duration : float
+        Sweep duration in seconds.
+    sr : int
+        Sample rate in Hz.
+    level_dbfs : float
+        Peak level in dBFS.
+    f_start, f_end : float
+        Sweep frequency range in Hz.
+
+    Returns
+    -------
+    np.ndarray
+        The sweep signal, float64.
+    """
+    total = int(duration * sr)
+    rate = np.log(f_end / f_start) / total
+    f_inst = f_start * np.exp(rate * np.arange(total, dtype=np.float64))
+    phase = np.cumsum(2.0 * np.pi * f_inst / sr)
+    return np.sin(phase) * dsp_utils.db_to_linear(level_dbfs)
+
+
 def save_sweep(sweep, path, sr=SAMPLE_RATE):
     """
     Save a sweep signal to a WAV file.

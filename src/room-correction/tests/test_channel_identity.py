@@ -28,6 +28,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from room_correction import dsp_utils
 from room_correction.correction import generate_correction_filter
 from room_correction.generate_profile_filters import generate_profile_filters
+from room_correction.correction import CorrectionFilter
+
+def _as_corrections(firs):
+    """Wrap synthetic test FIRs as CorrectionFilter (F-262 type gate)."""
+    return {k: CorrectionFilter(fir=np.asarray(v), reference_level_db=0.0,
+                                ref_band_hz=(400.0, 4000.0))
+            for k, v in firs.items()}
+
 
 SR = dsp_utils.SAMPLE_RATE
 # Use shorter taps for test speed; channel identity is independent of length.
@@ -149,7 +157,7 @@ class TestDistinctCorrectionIdentity:
         return generate_profile_filters(
             profile=profile,
             identities={},
-            correction_filters=corrections,
+            correction_filters=_as_corrections(corrections),
             n_taps=TEST_TAPS,
         )
 
@@ -170,7 +178,7 @@ class TestDistinctCorrectionIdentity:
         dirac[0] = 1.0
         baseline = generate_profile_filters(
             profile=profile, identities={},
-            correction_filters={k: dirac.copy() for k in profile["speakers"]},
+            correction_filters=_as_corrections({k: dirac.copy() for k in profile["speakers"]}),
             n_taps=TEST_TAPS,
         )
 
@@ -254,7 +262,7 @@ class TestZeroContaminationMatrix:
         outputs = generate_profile_filters(
             profile=profile,
             identities={},
-            correction_filters=corrections,
+            correction_filters=_as_corrections(corrections),
             n_taps=TEST_TAPS,
         )
         return corrections, outputs
@@ -352,7 +360,7 @@ class TestDiracIsolation:
         outputs = generate_profile_filters(
             profile=profile,
             identities={},
-            correction_filters=corrections,
+            correction_filters=_as_corrections(corrections),
             n_taps=TEST_TAPS,
         )
 
@@ -360,7 +368,7 @@ class TestDiracIsolation:
         baseline_outputs = generate_profile_filters(
             profile=profile,
             identities={},
-            correction_filters={key: dirac.copy() for key in profile["speakers"]},
+            correction_filters=_as_corrections({key: dirac.copy() for key in profile["speakers"]}),
             n_taps=TEST_TAPS,
         )
 
@@ -400,11 +408,11 @@ class TestDiracIsolation:
 
         output_with_notch = generate_profile_filters(
             profile=profile, identities={},
-            correction_filters=corrections_with_notch, n_taps=TEST_TAPS,
+            correction_filters=_as_corrections(corrections_with_notch), n_taps=TEST_TAPS,
         )
         output_dirac = generate_profile_filters(
             profile=profile, identities={},
-            correction_filters=corrections_dirac, n_taps=TEST_TAPS,
+            correction_filters=_as_corrections(corrections_dirac), n_taps=TEST_TAPS,
         )
 
         # The target channel should differ from baseline
@@ -457,7 +465,7 @@ class TestThreeWayChannelIdentity:
 
         outputs = generate_profile_filters(
             profile=profile, identities={},
-            correction_filters=corrections, n_taps=TEST_TAPS,
+            correction_filters=_as_corrections(corrections), n_taps=TEST_TAPS,
         )
         return corrections, outputs, profile
 

@@ -166,16 +166,18 @@ class CleanupRequest(BaseModel):
 
 
 def _load_correction_filters(session_dir: str, speakers: dict, n_taps: int) -> dict:
-    """Load per-channel correction IRs from a measurement session directory.
+    """Load per-speaker MEASURED IRs from a measurement session directory.
 
     Looks for WAV files named ``ir_{spk_key}.wav`` in *session_dir*.
-    Missing channels get a dirac (flat) placeholder.
+    These are measurements, not corrections (F-262): _run_pipeline turns
+    them into corrections with correction_from_measurement(). Missing
+    speakers are left out and get a dirac (flat) correction.
 
     Returns a dict of {spk_key: np.ndarray}.
     """
     import soundfile as sf
 
-    corrections = {}
+    measured = {}
     for spk_key in speakers:
         # Check flat session_dir first, then impulse_responses/ subdirectory
         # (measurement session saves speaker-key IRs there via GAP-6).
@@ -187,11 +189,11 @@ def _load_correction_filters(session_dir: str, speakers: dict, n_taps: int) -> d
             data, _sr = sf.read(ir_path, dtype="float64")
             if data.ndim > 1:
                 data = data[:, 0]
-            corrections[spk_key] = data
-            log.info("Loaded correction IR for %s from %s", spk_key, ir_path)
+            measured[spk_key] = data
+            log.info("Loaded measured IR for %s from %s", spk_key, ir_path)
         else:
-            log.info("No correction IR for %s — using dirac", spk_key)
-    return corrections
+            log.info("No measured IR for %s — using dirac", spk_key)
+    return measured
 
 
 def _run_pipeline(req: FilterGenerateRequest) -> dict:
@@ -204,9 +206,15 @@ def _run_pipeline(req: FilterGenerateRequest) -> dict:
         load_profile_with_identities,
         validate_and_raise,
     )
+    from room_correction.combine import uniform_d009_trim
+    from room_correction.correction import (
+        correction_from_measurement, require_correctable,
+    )
     from room_correction.generate_profile_filters import generate_profile_filters
     from room_correction.export import export_filter
-    from room_correction.verify import verify_d009, verify_minimum_phase, verify_format
+    from room_correction.verify import (
+        gate_summary, mandatory_hpf_by_file, run_correction_gate,
+    )
     from room_correction.pw_config_generator import generate_filter_chain_conf
 
     # Load and validate profile
@@ -221,24 +229,33 @@ def _run_pipeline(req: FilterGenerateRequest) -> dict:
     sr = req.sample_rate
 
     # Build correction filters based on mode
+    target_curve = profile.get("target_curve", "flat")
+    measured_irs = {}
     correction_filters = None
     if req.mode == "crossover_plus_correction":
+        require_correctable(profile["speakers"])
         session_dir = os.path.join(DEFAULT_SESSION_DIR, req.profile)
         if not os.path.isdir(session_dir):
             raise FileNotFoundError(
                 f"Session directory not found: {session_dir}"
             )
-        from room_correction.correction import generate_correction_filter
-        raw_irs = _load_correction_filters(
+        measured_irs = _load_correction_filters(
             session_dir, profile["speakers"], n_taps,
         )
+        # F-262: the same shared function as venue_pipeline and the
+        # measurement session (normalize + MAX_CUT_DB cap).
         correction_filters = {}
-        for spk_key, ir in raw_irs.items():
-            correction_filters[spk_key] = generate_correction_filter(
-                ir, n_taps=n_taps, sr=sr,
-                target_phon=req.target_phon,
-                reference_phon=req.reference_phon,
-            )
+        for spk_key, ir in measured_irs.items():
+            try:
+                correction_filters[spk_key] = correction_from_measurement(
+                    ir, profile["speakers"][spk_key],
+                    target_curve=target_curve, n_taps=n_taps, sr=sr,
+                    target_phon=req.target_phon,
+                    reference_phon=req.reference_phon,
+                )
+            except ValueError as exc:
+                raise ValueError(
+                    f"Measurement rejected for {spk_key}: {exc}") from exc
 
     # Delegate to topology-agnostic pipeline
     output_dir = os.path.join(DEFAULT_OUTPUT_DIR, req.profile)
@@ -251,35 +268,40 @@ def _run_pipeline(req: FilterGenerateRequest) -> dict:
         n_taps=n_taps,
         sr=sr,
     )
+    # F-262 S5: one uniform D-009 trim across all speaker channels.
+    combined_filters, d009_trim_db = uniform_d009_trim(combined_filters)
 
     # Export WAV files
     os.makedirs(output_dir, exist_ok=True)
     output_paths = {}
+    filenames = {}
     for spk_key, fir in combined_filters.items():
         ts = timestamp.strftime("%Y%m%d_%H%M%S")
         filename = f"combined_{spk_key}_{ts}.wav"
         path = os.path.join(output_dir, filename)
         export_filter(fir, path, n_taps=n_taps, sr=sr)
         output_paths[spk_key] = path
+        filenames[spk_key] = filename
 
-    # Verify all generated filters
+    # F-262 S6: the shared gate (same as the measurement session and the
+    # venue pipeline).
+    all_pass, gate_results = run_correction_gate(
+        output_dir,
+        {filenames[k]: "fir" for k in combined_filters},
+        closed_loop_inputs={
+            filenames[k]: (measured_irs[k], c, profile["speakers"][k])
+            for k, c in (correction_filters or {}).items()},
+        mandatory_hpf_hz=mandatory_hpf_by_file(profile, identities, filenames),
+        expected_taps=n_taps, expected_sr=sr, target_curve=target_curve,
+        target_phon=req.target_phon, reference_phon=req.reference_phon)
     verifications = []
-    all_pass = True
-    for name, path in sorted(output_paths.items()):
-        d009 = verify_d009(path)
-        min_phase = verify_minimum_phase(path)
-        fmt = verify_format(path, expected_taps=n_taps, expected_sr=sr)
-
-        vr = VerificationResult(
-            channel=name,
-            d009_pass=d009.passed,
-            d009_peak_db=d009.details.get("max_gain_db", 0.0),
-            min_phase_pass=min_phase.passed,
-            format_pass=fmt.passed,
-        )
-        verifications.append(vr)
-        if not vr.to_dict()["all_pass"]:
-            all_pass = False
+    for name in sorted(output_paths):
+        ch_result = {"channel": name, **gate_summary(filenames[name], gate_results)}
+        correction = (correction_filters or {}).get(name)
+        if correction is not None:
+            ch_result["reference_level_db"] = round(float(correction.reference_level_db), 2)
+            ch_result["ref_band_hz"] = list(correction.ref_band_hz)
+        verifications.append(ch_result)
 
     # Extract crossover info for response
     crossover_raw = profile.get("crossover", {}).get("frequency_hz")
@@ -294,8 +316,9 @@ def _run_pipeline(req: FilterGenerateRequest) -> dict:
         "mode": req.mode,
         "output_dir": output_dir,
         "channels": {name: str(path) for name, path in sorted(output_paths.items())},
-        "verification": [v.to_dict() for v in verifications],
+        "verification": verifications,
         "all_pass": all_pass,
+        "d009_trim_db": float(d009_trim_db),
         "n_taps": n_taps,
         "sample_rate": sr,
         "crossover_freq_hz": crossover_freq_hz,

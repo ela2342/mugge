@@ -42,10 +42,12 @@ def deconvolve(recording, sweep, regularization=1e-3, sr=SAMPLE_RATE,
         give a smoother but less accurate IR. Default 1e-3 (-30dB).
     sr : int
         Sample rate.
-    ir_duration_s : float
+    ir_duration_s : float or None
         Maximum IR length in seconds. The deconvolved result is trimmed
         to this length. Default 1.0s matches the original behavior.
         Near-field measurements should use shorter values (e.g., 0.05s).
+        None keeps every causal lag up to the end of the capture
+        (len(recording) samples), so a late arrival is never cut off.
 
     Returns
     -------
@@ -69,7 +71,37 @@ def deconvolve(recording, sweep, regularization=1e-3, sr=SAMPLE_RATE,
     ir = np.fft.irfft(ir_spectrum, n=n_fft)
 
     # Trim to a reasonable length (the causal part)
-    max_length = min(n_fft, int(ir_duration_s * sr))
+    if ir_duration_s is None:
+        max_length = len(recording)
+    else:
+        max_length = min(n_fft, int(ir_duration_s * sr))
     ir = ir[:max_length]
 
     return ir
+
+
+def deconvolve_lags(recording, sweep, regularization=1e-3):
+    """
+    Deconvolve over the full linear lag range, negative lags included.
+
+    Same Wiener deconvolution as deconvolve(), but the result covers lags
+    -(len(sweep) - 1) .. len(recording) - 1. A capture that starts after
+    the sweep response started puts its arrival at a negative lag; the
+    onset check needs to see it there instead of wrapped around.
+
+    Returns
+    -------
+    (np.ndarray, int)
+        The response h, and the index of lag 0 in it (len(sweep) - 1).
+    """
+    recording = np.asarray(recording, dtype=np.float64)
+    sweep = np.asarray(sweep, dtype=np.float64)
+    n_fft = dsp_utils.next_power_of_2(len(recording) + len(sweep))
+    rec_spectrum = np.fft.rfft(recording, n=n_fft)
+    sweep_spectrum = np.fft.rfft(sweep, n=n_fft)
+    sweep_power = np.abs(sweep_spectrum) ** 2
+    eps = regularization * np.max(sweep_power)
+    h = np.fft.irfft(rec_spectrum * np.conj(sweep_spectrum) / (sweep_power + eps),
+                     n=n_fft)
+    zero = len(sweep) - 1
+    return np.concatenate([h[n_fft - zero:], h[:len(recording)]]), zero

@@ -234,6 +234,11 @@ class TestAC2Gates:
             if filename != vp.DIRAC_FILENAME:
                 assert _max_gain_db(fir) <= -0.5, f"{name} {filename}"
 
+    def test_d009_trim_never_raises_gain(self, run):
+        # AE F-262 item 4: the uniform trim is 0 or negative, by construction.
+        name, _, result = run
+        assert result.d009_trim_db <= 0.0, name
+
     def test_corrections_never_boost(self, run):
         # The intermediate correction FIR overshoots its own -0.5 dB margin by
         # up to 0.15 dB after the step-9 re-clip (F-384); the deployed files
@@ -610,7 +615,7 @@ class TestResidualPerChannel:
 
 def _sub_correction(bundle, sim):
     normalized, _ = normalize_ir_level(
-        sim.measured_irs["sub1"], vp.reference_band(bundle, "sub1"), sr=SR)
+        sim.measured_irs["sub1"], vp.reference_band(bundle.profile["speakers"]["sub1"]), sr=SR)
     return generate_correction_filter(normalized, n_taps=N_TAPS, sr=SR,
                                       max_cut_db=vp.MAX_CUT_DB)
 

@@ -31,6 +31,14 @@ from room_correction.combine import combine_filters
 from room_correction.correction import generate_correction_filter
 from room_correction.crossover import generate_crossover_filter
 from room_correction.generate_profile_filters import generate_profile_filters
+from room_correction.correction import CorrectionFilter
+
+def _as_corrections(firs):
+    """Wrap synthetic test FIRs as CorrectionFilter (F-262 type gate)."""
+    return {k: CorrectionFilter(fir=np.asarray(v), reference_level_db=0.0,
+                                ref_band_hz=(400.0, 4000.0))
+            for k, v in firs.items()}
+
 
 SR = dsp_utils.SAMPLE_RATE
 N_TAPS = 16384
@@ -324,7 +332,7 @@ class TestKickDrumTransient:
         corrections = {k: correction for k in profile["speakers"]}
         outputs = generate_profile_filters(
             profile=profile, identities={},
-            correction_filters=corrections, n_taps=N_TAPS,
+            correction_filters=_as_corrections(corrections), n_taps=N_TAPS,
         )
 
         signal, onset = _make_test_signal(kick)

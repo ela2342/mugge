@@ -8,9 +8,14 @@ the staged publish (staged_outputs / publish_venue_outputs).
 
 Per speaker channel:
 
-    IR -> normalize_ir_level (median, passband) -> generate_correction_filter
-       (cut-only, capped) -> generate_profile_filters (crossover x correction
-       x subsonic HPF, D-009 clip, min-phase) -> venue coefficient filename
+    IR -> correction_from_measurement (normalize_ir_level, median, passband
+       -> generate_correction_filter, cut-only, capped) -> generate_profile_filters
+       (crossover x correction x subsonic HPF, D-009 clip, min-phase)
+       -> uniform D-009 trim across all speaker channels (F-262 S5)
+       -> venue coefficient filename
+
+The gate is verify.run_correction_gate() (F-262 S6): run_venue_checks()
+plus a closed-loop check of each correction on its measured IR.
 
 Channels whose venue coefficients are dirac.wav (spare, HP, IEM) get an
 exact unit impulse.
@@ -52,14 +57,24 @@ import shutil
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import yaml
 
 from . import deploy, dsp_utils
 from . import time_align
-from .correction import generate_correction_filter, normalize_ir_level
+from .combine import uniform_d009_trim
+# REFERENCE_BANDS_HZ, MAX_CUT_DB and reference_band live in correction.py
+# since F-262; re-exported here for existing importers.
+from .correction import (  # noqa: F401
+    MAX_CUT_DB,
+    REFERENCE_BANDS_HZ,
+    CorrectionFilter,
+    correction_from_measurement,
+    reference_band,
+    require_correctable,
+)
 from .export import export_filter
 from .generate_profile_filters import generate_profile_filters
 
@@ -73,16 +88,6 @@ STAGING_PREFIX = ".rc-staging-"
 DEFAULT_IDENTITIES_DIR = (
     Path(__file__).resolve().parents[3] / "configs" / "speakers" / "identities"
 )
-
-# AE, 2026-10-25: level reference per driver role (median of the
-# 1/6-octave smoothed magnitude). Sats stay clear of the 200 Hz crossover
-# and the box knee; the sub band sits below the crossover.
-REFERENCE_BANDS_HZ = {
-    "highpass": (400.0, 4000.0),
-    "lowpass": (30.0, 150.0),
-}
-# AE, 2026-10-25: never cut deeper than 18 dB.
-MAX_CUT_DB = 18.0
 
 
 @dataclass(frozen=True)
@@ -140,6 +145,12 @@ class VenueFilterResult:
     delays_s: Dict[str, float]                     # speaker key -> delay compensation
     delays_samples: Dict[str, int]
     notes: List[str] = field(default_factory=list)
+    # F-262 S5: uniform trim applied to every speaker filter (0.0 or negative).
+    d009_trim_db: float = 0.0
+    # F-262 S6: filename -> (measured IR, CorrectionFilter, speaker dict),
+    # for verify.run_correction_gate().
+    closed_loop_inputs: Dict[str, Tuple[np.ndarray, CorrectionFilter, dict]] = field(
+        default_factory=dict)
 
 
 def _channel_number(venue_key: str) -> int:
@@ -228,15 +239,6 @@ def load_venue_bundle(venue_path, speaker_profile_path, identities_dir=None) -> 
     )
 
 
-def reference_band(bundle: VenueBundle, speaker_key: str):
-    """Level reference band for a speaker (by its filter_type)."""
-    filter_type = bundle.profile["speakers"][speaker_key].get("filter_type", "highpass")
-    if filter_type not in REFERENCE_BANDS_HZ:
-        raise ValueError(
-            f"no level reference band for filter_type {filter_type!r} ({speaker_key})")
-    return REFERENCE_BANDS_HZ[filter_type]
-
-
 def generate_venue_filters(
     bundle: VenueBundle,
     acoustic_irs: Dict[str, np.ndarray],
@@ -259,19 +261,22 @@ def generate_venue_filters(
     if missing or extra:
         raise ValueError(f"IRs do not match profile speakers: missing {missing}, extra {extra}")
 
+    require_correctable(speakers)
     target_curve = bundle.profile.get("target_curve", "flat")
-    corrections, levels = {}, {}
-    for spk_key in speakers:
-        normalized, levels[spk_key] = normalize_ir_level(
-            acoustic_irs[spk_key], reference_band(bundle, spk_key), sr=sr)
-        corrections[spk_key] = generate_correction_filter(
-            normalized, target_curve_name=target_curve, n_taps=n_taps, sr=sr,
-            max_cut_db=max_cut_db)
+    shaped = {
+        spk_key: correction_from_measurement(
+            acoustic_irs[spk_key], spk_cfg, target_curve=target_curve,
+            n_taps=n_taps, sr=sr, max_cut_db=max_cut_db)
+        for spk_key, spk_cfg in speakers.items()
+    }
+    corrections = {k: c.fir for k, c in shaped.items()}
+    levels = {k: c.reference_level_db for k, c in shaped.items()}
 
     combined = generate_profile_filters(
-        bundle.profile, bundle.identities, correction_filters=corrections,
+        bundle.profile, bundle.identities, correction_filters=shaped,
         n_taps=n_taps, sr=sr)
 
+    combined, trim_db = uniform_d009_trim(combined)
     filters = {bundle.speaker_files[k]: fir for k, fir in combined.items()}
     if any(c.speaker_key is None for c in bundle.channels):
         dirac = np.zeros(n_taps)
@@ -287,6 +292,11 @@ def generate_venue_filters(
         recommended_gain_delta_db={k: quietest - v for k, v in levels.items()},
         delays_s=delays_s,
         delays_samples=time_align.delays_to_samples(delays_s, sr=sr),
+        d009_trim_db=trim_db,
+        closed_loop_inputs={
+            bundle.speaker_files[k]: (np.asarray(acoustic_irs[k], dtype=np.float64),
+                                      shaped[k], speakers[k])
+            for k in speakers},
     )
 
 

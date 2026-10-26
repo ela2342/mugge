@@ -241,9 +241,9 @@ class TestLocalDemoMeasurementBrowser:
     """Drive a full measurement session through the browser UI."""
 
     @pytest.mark.xfail(
-        reason="F-262: session starts (F-285 signal-gen fix works) but ends "
-               "in ERROR — room-sim IRs fail filter verification (min-phase "
-               "check). Same root cause as API test.",
+        reason="F-403 S2: session IR uses its own sweep, not the played "
+               "one; Sub1 closed loop +4.73 dB (2 s) / +3.60 dB (5 s) vs "
+               "3.0 dB limit (F-262 c8 ruling f8a014c7 R3).",
         strict=False,
     )
     def test_full_session_browser(self, demo_page, local_demo_url):

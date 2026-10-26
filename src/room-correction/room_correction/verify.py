@@ -11,6 +11,8 @@ distortion through the PA system. The -0.5dB safety margin is not conservative â
 it is the absolute minimum for safe operation.
 """
 
+import logging
+
 import numpy as np
 import soundfile as sf
 
@@ -18,6 +20,7 @@ from . import dsp_utils
 
 
 SAMPLE_RATE = dsp_utils.SAMPLE_RATE
+log = logging.getLogger(__name__)
 
 
 class VerificationResult:
@@ -292,9 +295,11 @@ def verify_mandatory_hpf(filter_path, mandatory_hpf_hz, min_attenuation_db=18.0)
     Verify that a filter provides adequate subsonic protection.
 
     Checks that the magnitude response at half the mandatory HPF frequency
-    is at least min_attenuation_db below the passband level. This ensures
-    the subsonic protection filter is actually present and effective in the
-    combined FIR.
+    is at least min_attenuation_db below the passband peak: the maximum gain
+    over [mandatory_hpf_hz, min(20 kHz, 0.95 * Nyquist)] (AE ruling H1,
+    F-262). The peak is the channel's own passband level for HP, LP, BP and
+    fullrange channels alike. This ensures the subsonic protection filter is
+    actually present and effective in the combined FIR.
 
     Parameters
     ----------
@@ -304,7 +309,7 @@ def verify_mandatory_hpf(filter_path, mandatory_hpf_hz, min_attenuation_db=18.0)
         The mandatory highpass frequency declared in the speaker identity.
     min_attenuation_db : float
         Minimum required attenuation at (mandatory_hpf_hz / 2) relative
-        to passband. Default 18dB.
+        to the passband peak. Default 18dB.
 
     Returns
     -------
@@ -319,9 +324,10 @@ def verify_mandatory_hpf(filter_path, mandatory_hpf_hz, min_attenuation_db=18.0)
     idx_check = np.argmin(np.abs(freqs - check_freq))
     gain_at_check = gains_db[idx_check]
 
-    # Passband reference: average gain between 2x HPF and min(10x HPF, 20kHz)
-    passband_low = mandatory_hpf_hz * 2.0
-    passband_high = min(mandatory_hpf_hz * 10.0, 20000.0)
+    # Passband reference: peak gain from the HPF frequency up. A mean over a
+    # fixed window lands in the crossover stopband of LP subs and HF drivers.
+    passband_low = float(mandatory_hpf_hz)
+    passband_high = min(20000.0, 0.95 * sr / 2.0)
     passband_mask = (freqs >= passband_low) & (freqs <= passband_high)
 
     if not np.any(passband_mask):
@@ -331,13 +337,14 @@ def verify_mandatory_hpf(filter_path, mandatory_hpf_hz, min_attenuation_db=18.0)
             {},
         )
 
-    passband_level = float(np.mean(gains_db[passband_mask]))
-    attenuation = passband_level - gain_at_check
+    passband_peak = float(np.max(gains_db[passband_mask]))
+    attenuation = passband_peak - gain_at_check
 
     passed = attenuation >= min_attenuation_db
     message = (
         f"Attenuation at {check_freq:.0f}Hz: {attenuation:.1f}dB "
-        f"(passband ref: {passband_level:.1f}dB, "
+        f"(passband peak: {passband_peak:.1f}dB over "
+        f"[{passband_low:.0f}, {passband_high:.0f}] Hz, "
         f"required: >= {min_attenuation_db}dB)"
     )
 
@@ -348,7 +355,7 @@ def verify_mandatory_hpf(filter_path, mandatory_hpf_hz, min_attenuation_db=18.0)
         {
             "check_freq_hz": check_freq,
             "attenuation_db": attenuation,
-            "passband_level_db": passband_level,
+            "passband_peak_db": passband_peak,
             "gain_at_check_db": gain_at_check,
         },
     )
@@ -536,23 +543,41 @@ def print_report(all_passed, results):
 # functions below check whatever WAV set a venue config expects, with the
 # AE's 2026-10-25 gates. run_all_checks() is unchanged.
 
-MIN_PHASE_MAX_RESIDUAL_DB = -40.0
-MIN_PHASE_MAX_TAIL_DB = -60.0
+# AE gate ruling v2 (F-262, 91eca61e). The cepstral residual does not
+# converge for filters with high-order unit-circle zeros (subsonic HPF,
+# steep LP stopbands): correct 48 dB/oct filters score -5 to -37 dB. It is a
+# gross-error gate only (linear phase, time reversal, wrap-around, delay all
+# score >= +2 dB) until F-408 replaces the metric.
+MIN_PHASE_MAX_RESIDUAL_DB = -3.0
+# Tail: wrap-around / truncation, not subsonic decay (verify_mandatory_hpf).
+MIN_PHASE_MAX_TAIL_DB = -45.0
+# Below this the last 5% is float32 noise; the decay comparison is skipped.
+MIN_PHASE_TAIL_DECAY_FLOOR_DB = -100.0
 VENUE_D009_MARGIN_DB = -0.5
+
+
+def _window_energy_db(h, start, stop):
+    """Energy of h[start:stop] in dB relative to the energy of h."""
+    h = np.asarray(h, dtype=np.float64)
+    return float(10.0 * np.log10(max(np.sum(h[start:stop] ** 2) / np.sum(h ** 2), 1e-30)))
 
 
 def verify_minimum_phase_residual(filter_path,
                                   max_residual_db=MIN_PHASE_MAX_RESIDUAL_DB,
-                                  max_tail_db=MIN_PHASE_MAX_TAIL_DB):
+                                  max_tail_db=MIN_PHASE_MAX_TAIL_DB,
+                                  decay_floor_db=MIN_PHASE_TAIL_DECAY_FLOOR_DB):
     """
-    Minimum-phase gate (AE, 2026-10-25).
+    Minimum-phase gate (AE ruling v2, F-262).
 
-    Passes if the energy of (h - minphase(|H|)) is at most max_residual_db
-    relative to the energy of h, AND the energy in the last 5% of taps is
-    at most max_tail_db (causality / no wrap-around). Unlike
-    verify_minimum_phase(), this does not use "energy before the peak": a
-    correct minimum-phase lowpass can have much of its energy before its
-    peak.
+    Passes if all hold:
+    - the energy of (h - minphase(|H|)) is at most max_residual_db relative
+      to the energy of h (gross-error gate, see MIN_PHASE_MAX_RESIDUAL_DB);
+    - the energy in the last 5% of taps is at most max_tail_db;
+    - the tail is decaying: unless the last 5% is at or below
+      decay_floor_db, its energy is at most that of taps 90-95%.
+    Unlike verify_minimum_phase(), this does not use "energy before the
+    peak": a correct minimum-phase lowpass can have much of its energy
+    before its peak.
     """
     from . import closed_loop
 
@@ -562,14 +587,20 @@ def verify_minimum_phase_residual(filter_path,
             "Minimum Phase (residual)", False, "Filter is all zeros", {})
     residual_db = closed_loop.minimum_phase_residual_db(data)
     tail_db = closed_loop.tail_energy_db(data)
-    passed = residual_db <= max_residual_db and tail_db <= max_tail_db
+    n_tail = max(1, int(round(len(data) * 0.05)))
+    prev_db = _window_energy_db(data, len(data) - 2 * n_tail, len(data) - n_tail)
+    decaying = tail_db <= decay_floor_db or tail_db <= prev_db
+    passed = residual_db <= max_residual_db and tail_db <= max_tail_db and decaying
     message = (
         f"Residual vs min-phase: {residual_db:.1f}dB (limit {max_residual_db}dB), "
-        f"last 5% energy: {tail_db:.1f}dB (limit {max_tail_db}dB)"
+        f"last 5% energy: {tail_db:.1f}dB (limit {max_tail_db}dB), "
+        f"90-95%: {prev_db:.1f}dB ({'decaying' if decaying else 'RISING'}, "
+        f"floor {decay_floor_db}dB)"
     )
     return VerificationResult(
         "Minimum Phase (residual)", passed, message,
-        {"residual_db": residual_db, "tail_db": tail_db},
+        {"residual_db": residual_db, "tail_db": tail_db,
+         "tail_prev_db": prev_db, "tail_decaying": decaying},
     )
 
 
@@ -644,7 +675,190 @@ def run_venue_checks(output_dir, expected_files, mandatory_hpf_hz=None,
 
         for result in checks:
             result.name = f"{result.name} ({filename})"
+            if result.name.startswith("Minimum Phase"):
+                log.info("%s: %s", result.name, result.message)
             results.append(result)
 
     all_passed = bool(results) and all(r.passed for r in results)
     return all_passed, results
+
+
+# -- Shared correction gate (F-262 S6) --------------------------------------
+#
+# One gate for every product path (venue pipeline, web-UI filter routes,
+# measurement session): run_venue_checks() plus a closed-loop check of
+# each correction on the measured IR it was built from.
+
+# The AE's per-driver-role residual bands (US-174b, test_venue_closed_loop).
+# The sat band stays clear of a crossover up to 200 Hz and below the region
+# where the frequency-dependent window lets reflections through uncorrected.
+CLOSED_LOOP_BANDS_HZ = {"highpass": (250.0, 500.0), "lowpass": (30.0, 200.0)}
+# AE, F-262 item 1: logged per channel so an HF regression is visible, never
+# gated. On the unwindowed IR this band is dominated by reflections the
+# frequency-dependent window leaves uncorrected on purpose.
+CLOSED_LOOP_LOG_BAND_HZ = (500.0, 4000.0)
+
+
+def closed_loop_band(speaker):
+    """Closed-loop band for a profile speaker dict (by its filter_type)."""
+    filter_type = speaker.get("filter_type", "highpass")
+    if filter_type not in CLOSED_LOOP_BANDS_HZ:
+        raise ValueError(f"no closed-loop band for filter_type {filter_type!r}")
+    return CLOSED_LOOP_BANDS_HZ[filter_type]
+
+
+def verify_closed_loop(measured_ir, correction, band_hz, target_curve="flat",
+                       target_phon=None, reference_phon=80.0, sr=SAMPLE_RATE):
+    """
+    Closed-loop check on the measured IR (AE, F-262 S6).
+
+    Over band_hz, relative to the correction's reference level (1/6
+    octave): the corrected max positive deviation from the target must
+    not exceed the uncorrected one, and the corrected response must pass
+    closed_loop.passes_residual_gate. This catches a filter that applies
+    the room instead of correcting it. The same deviations over
+    CLOSED_LOOP_LOG_BAND_HZ are logged and returned, but never gate.
+
+    Parameters
+    ----------
+    measured_ir : np.ndarray
+        The IR the correction was built from.
+    correction : correction.CorrectionFilter
+    band_hz : tuple of (float, float)
+        Evaluation band, see closed_loop_band().
+    """
+    from . import closed_loop
+    from . import target_curves as tc
+
+    name = "Closed Loop"
+    ir = np.asarray(measured_ir, dtype=np.float64)
+    fir = np.asarray(correction.fir, dtype=np.float64)
+    if ir.ndim != 1 or not ir.size or not np.all(np.isfinite(ir)) \
+            or not np.all(np.isfinite(fir)):
+        return VerificationResult(name, False, "Measured IR or FIR is empty or non-finite")
+
+    level = correction.reference_level_db
+    system = closed_loop.system_response(ir, fir)
+
+    def responses(lo, hi):
+        freqs, uncorrected = closed_loop.smoothed_response_db(ir, lo, hi, sr=sr)
+        _, corrected = closed_loop.smoothed_response_db(system, lo, hi, sr=sr)
+        target = tc.get_target_curve(
+            target_curve, freqs, target_phon=target_phon, reference_phon=reference_phon)
+        return corrected - level, uncorrected - level, target
+
+    lo, hi = band_hz
+    corrected, uncorrected, target = responses(lo, hi)
+    if not all(np.all(np.isfinite(a)) for a in (corrected, uncorrected, target)):
+        return VerificationResult(name, False, "Non-finite closed-loop response")
+    dev_corrected = closed_loop.max_positive_deviation_db(corrected, target)
+    dev_uncorrected = closed_loop.max_positive_deviation_db(uncorrected, target)
+    passed = (closed_loop.passes_residual_gate(corrected, target)
+              and dev_corrected <= dev_uncorrected)
+
+    log_lo, log_hi = CLOSED_LOOP_LOG_BAND_HZ
+    log_corrected, log_uncorrected, log_target = responses(log_lo, log_hi)
+    if all(np.all(np.isfinite(a)) for a in (log_corrected, log_uncorrected, log_target)):
+        log_dev_corrected = closed_loop.max_positive_deviation_db(log_corrected, log_target)
+        log_dev_uncorrected = closed_loop.max_positive_deviation_db(log_uncorrected, log_target)
+    else:
+        log_dev_corrected = log_dev_uncorrected = float("nan")
+
+    message = (
+        f"Max over target {lo:g}-{hi:g} Hz: corrected {dev_corrected:+.2f}dB, "
+        f"uncorrected {dev_uncorrected:+.2f}dB "
+        f"(limit {closed_loop.MAX_POSITIVE_DEVIATION_DB}dB, corrected <= uncorrected); "
+        f"log only {log_lo:g}-{log_hi:g} Hz: corrected {log_dev_corrected:+.2f}dB, "
+        f"uncorrected {log_dev_uncorrected:+.2f}dB"
+    )
+    return VerificationResult(
+        name, passed, message,
+        {"corrected_max_db": dev_corrected, "uncorrected_max_db": dev_uncorrected,
+         "band_hz": (float(lo), float(hi)),
+         "log_corrected_max_db": log_dev_corrected,
+         "log_uncorrected_max_db": log_dev_uncorrected,
+         "log_band_hz": (float(log_lo), float(log_hi))},
+    )
+
+
+def run_correction_gate(output_dir, expected_files, closed_loop_inputs=None,
+                        mandatory_hpf_hz=None, expected_taps=16384,
+                        expected_sr=SAMPLE_RATE, target_curve="flat",
+                        target_phon=None, reference_phon=80.0):
+    """
+    The shared gate (F-262 S6): run_venue_checks() plus verify_closed_loop().
+
+    Parameters
+    ----------
+    closed_loop_inputs : dict, optional
+        Filename -> (measured IR, CorrectionFilter, profile speaker dict)
+        for every 'fir' file that carries a room correction. Files without one (crossover-only)
+        get the run_venue_checks() set only.
+
+    Returns
+    -------
+    tuple of (bool, list of VerificationResult)
+    """
+    closed_loop_inputs = closed_loop_inputs or {}
+    unknown = sorted(f for f in closed_loop_inputs if expected_files.get(f) != "fir")
+    if unknown:
+        raise ValueError(f"closed-loop inputs for files that are not 'fir': {unknown}")
+
+    _, results = run_venue_checks(
+        output_dir, expected_files, mandatory_hpf_hz=mandatory_hpf_hz,
+        expected_taps=expected_taps, expected_sr=expected_sr)
+    for filename, (measured_ir, correction, speaker) in sorted(closed_loop_inputs.items()):
+        result = verify_closed_loop(
+            measured_ir, correction, closed_loop_band(speaker), target_curve=target_curve,
+            target_phon=target_phon, reference_phon=reference_phon, sr=expected_sr)
+        result.name = f"{result.name} ({filename})"
+        log.info("%s: %s", result.name, result.message)
+        results.append(result)
+
+    all_passed = bool(results) and all(r.passed for r in results)
+    return all_passed, results
+
+
+def mandatory_hpf_by_file(profile, identities, filenames):
+    """Filename -> mandatory HPF (Hz), for speakers whose identity has one.
+
+    filenames maps profile speaker key -> exported filename.
+    """
+    result = {}
+    for spk_key, filename in filenames.items():
+        identity = identities.get(profile["speakers"][spk_key].get("identity", ""), {})
+        hpf = identity.get("mandatory_hpf_hz")
+        if hpf is not None:
+            result[filename] = float(hpf)
+    return result
+
+
+def gate_summary(filename, results):
+    """Per-file pass flags from run_correction_gate() results (for UI payloads)."""
+    mine = [r for r in results if r.name.endswith(f"({filename})")]
+
+    def passed(prefix, default=True):
+        found = [r.passed for r in mine if r.name.startswith(prefix)]
+        return all(found) if found else default
+
+    d009 = [r for r in mine if r.name.startswith("D-009")]
+    residual = [r for r in mine if r.name.startswith("Minimum Phase")
+                and "residual_db" in r.details]
+    closed = [r for r in mine if r.name.startswith("Closed Loop")]
+    # Architect C1 (a627ca97): the early FAIL returns carry no details.
+    cl_max = closed[0].details.get("corrected_max_db") if closed else None
+    cl_band = closed[0].details.get("band_hz") if closed else None
+    return {
+        "d009_pass": passed("D-009", default=False),
+        "d009_peak_db": float(round(d009[0].details.get("max_gain_db", 0.0), 2))
+        if d009 else None,
+        "min_phase_pass": passed("Minimum Phase", default=False),
+        "min_phase_residual_db": float(round(residual[0].details["residual_db"], 1))
+        if residual else None,
+        "format_pass": passed("Format", default=False) and passed("WAV Subtype", default=False),
+        "hpf_pass": passed("Mandatory HPF"),
+        "closed_loop_pass": passed("Closed Loop"),
+        "closed_loop_max_db": float(round(cl_max, 2)) if cl_max is not None else None,
+        "closed_loop_band_hz": list(cl_band) if cl_band is not None else None,
+        "all_pass": bool(mine) and all(r.passed for r in mine),
+    }

@@ -377,7 +377,7 @@ class TestFilterGenSync4Way:
 
 
 # ===================================================================
-# Spatial averaging wiring: _build_correction_filters() tests
+# Spatial averaging wiring: _measured_irs() tests
 # ===================================================================
 
 _SIMPLE_PROFILE = {
@@ -397,15 +397,15 @@ _SIMPLE_PROFILE = {
 }
 
 
-class TestBuildCorrectionFiltersNoIRs:
+class TestMeasuredIrsNoIRs:
     """Returns None when no impulse responses exist."""
 
     def test_returns_none(self):
         session = _make_session()
-        assert session._build_correction_filters(_SIMPLE_PROFILE) is None
+        assert session._measured_irs(_SIMPLE_PROFILE) is None
 
 
-class TestBuildCorrectionFiltersSinglePosition:
+class TestMeasuredIrsSinglePosition:
     """positions=1: returns single IR per channel (no averaging)."""
 
     def test_returns_ir_directly(self):
@@ -420,7 +420,7 @@ class TestBuildCorrectionFiltersSinglePosition:
         session._impulse_responses["ch0_pos0"] = rec0
         session._impulse_responses["ch2_pos0"] = rec2
 
-        result = session._build_correction_filters(_SIMPLE_PROFILE)
+        result = session._measured_irs(_SIMPLE_PROFILE)
         assert result is not None
         assert set(result.keys()) == {"sat_left", "sub1"}
         np.testing.assert_array_equal(result["sat_left"], rec0)
@@ -436,13 +436,13 @@ class TestBuildCorrectionFiltersSinglePosition:
         rec0 = np.random.randn(4096)
         session._impulse_responses["ch0_pos0"] = rec0
 
-        result = session._build_correction_filters(_SIMPLE_PROFILE)
+        result = session._measured_irs(_SIMPLE_PROFILE)
         assert result is not None
         assert "sat_left" in result
         np.testing.assert_array_equal(result["sat_left"], rec0)
 
 
-class TestBuildCorrectionFiltersMultiPosition:
+class TestMeasuredIrsMultiPosition:
     """positions>1: spatially averages across positions per channel."""
 
     def test_three_positions_produces_averaged_ir(self):
@@ -457,7 +457,7 @@ class TestBuildCorrectionFiltersMultiPosition:
         for i, rec in enumerate(recs):
             session._impulse_responses[f"ch0_pos{i}"] = rec
 
-        result = session._build_correction_filters(_SIMPLE_PROFILE)
+        result = session._measured_irs(_SIMPLE_PROFILE)
         assert result is not None
         assert "sat_left" in result
         averaged = result["sat_left"]
@@ -475,7 +475,7 @@ class TestBuildCorrectionFiltersMultiPosition:
         for i, rec in enumerate(recs):
             session._impulse_responses[f"ch0_pos{i}"] = rec
 
-        result = session._build_correction_filters(_SIMPLE_PROFILE)
+        result = session._measured_irs(_SIMPLE_PROFILE)
         averaged = result["sat_left"]
 
         # Averaged result should not exactly equal any single recording
@@ -495,7 +495,7 @@ class TestBuildCorrectionFiltersMultiPosition:
             session._impulse_responses[f"ch0_pos{pos}"] = np.random.randn(4096)
             session._impulse_responses[f"ch2_pos{pos}"] = np.random.randn(4096)
 
-        result = session._build_correction_filters(_SIMPLE_PROFILE)
+        result = session._measured_irs(_SIMPLE_PROFILE)
         assert result is not None
         assert set(result.keys()) == {"sat_left", "sub1"}
         assert len(result["sat_left"]) == 4096
@@ -512,7 +512,7 @@ class TestBuildCorrectionFiltersMultiPosition:
         # Only 1 recording instead of 3 — single position, returns directly
         session._impulse_responses["ch0_pos0"] = np.random.randn(4096)
 
-        result = session._build_correction_filters(_SIMPLE_PROFILE)
+        result = session._measured_irs(_SIMPLE_PROFILE)
         assert result is not None
         assert "sat_left" in result
 

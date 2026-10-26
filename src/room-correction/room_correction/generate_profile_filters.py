@@ -24,6 +24,7 @@ import numpy as np
 
 from . import dsp_utils
 from .combine import combine_filters
+from .correction import CorrectionFilter
 from .crossover import (
     LINKWITZ_RILEY,
     generate_bandpass_filter,
@@ -184,7 +185,7 @@ def _generate_channel_crossover(
 def generate_profile_filters(
     profile: dict,
     identities: dict,
-    correction_filters: Optional[Dict[str, np.ndarray]] = None,
+    correction_filters: Optional[Dict[str, CorrectionFilter]] = None,
     output_dir: Optional[str] = None,
     n_taps: int = DEFAULT_N_TAPS,
     sr: int = SAMPLE_RATE,
@@ -199,8 +200,8 @@ def generate_profile_filters(
     identities : dict
         Mapping of identity names to loaded identity dicts.
     correction_filters : dict, optional
-        Per-speaker-key room correction FIR arrays.  If None or a key is
-        missing, a dirac (flat) placeholder is used.
+        Per-speaker-key CorrectionFilter from correction_from_measurement().
+        If None or a key is missing, a dirac (flat) placeholder is used.
     output_dir : str, optional
         If provided, export WAV files to this directory.
     n_taps : int
@@ -217,6 +218,9 @@ def generate_profile_filters(
 
     Raises
     ------
+    TypeError
+        If a correction_filters value is not a CorrectionFilter (F-262: a
+        bare array, e.g. a raw measured IR, is never a correction).
     CrossoverSpecError
         If ``crossover.type`` is present but not ``'linkwitz-riley'``, or a
         slope is not 24 or 48 dB/oct (see ``validate_profile_crossover``).
@@ -237,6 +241,11 @@ def generate_profile_filters(
 
     if correction_filters is None:
         correction_filters = {}
+    for spk_key, value in correction_filters.items():
+        if not isinstance(value, CorrectionFilter):
+            raise TypeError(
+                f"correction for {spk_key!r} is {type(value).__name__}, not a "
+                f"CorrectionFilter; build it with correction_from_measurement()")
 
     # Pre-generate subsonic filters (deduplicated by frequency)
     subsonic_cache: Dict[float, np.ndarray] = {}
@@ -253,7 +262,7 @@ def generate_profile_filters(
         )
 
         # 2. Correction (or dirac placeholder)
-        correction = correction_filters.get(spk_key, dirac)
+        correction = correction_filters[spk_key].fir if spk_key in correction_filters else dirac
 
         # 3. Subsonic HPF (from identity mandatory_hpf_hz)
         id_name = spk_cfg.get("identity", "")

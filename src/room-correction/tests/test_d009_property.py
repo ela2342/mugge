@@ -24,6 +24,14 @@ from room_correction.generate_profile_filters import (
     generate_profile_filters,
     COMBINE_MARGIN_DB,
 )
+from room_correction.correction import CorrectionFilter
+
+def _as_corrections(firs):
+    """Wrap synthetic test FIRs as CorrectionFilter (F-262 type gate)."""
+    return {k: CorrectionFilter(fir=np.asarray(v), reference_level_db=0.0,
+                                ref_band_hz=(400.0, 4000.0))
+            for k, v in firs.items()}
+
 
 SR = dsp_utils.SAMPLE_RATE
 # D-009 margin with 0.01 dB tolerance for floating point
@@ -382,7 +390,7 @@ class TestPathC_GenerateProfileFilters:
             corrections[spk_key] = generate_correction_filter(ir, n_taps=TEST_TAPS)
         filters = generate_profile_filters(
             profile, identities,
-            correction_filters=corrections, n_taps=TEST_TAPS,
+            correction_filters=_as_corrections(corrections), n_taps=TEST_TAPS,
         )
         for spk_key, fir in filters.items():
             max_gain = _max_gain_db(fir)
@@ -416,7 +424,7 @@ class TestPathC_GenerateProfileFilters:
             corrections[spk_key] = generate_correction_filter(ir, n_taps=TEST_TAPS)
         filters = generate_profile_filters(
             profile, identities,
-            correction_filters=corrections, n_taps=TEST_TAPS,
+            correction_filters=_as_corrections(corrections), n_taps=TEST_TAPS,
         )
         for spk_key, fir in filters.items():
             max_gain = _max_gain_db(fir)
@@ -436,7 +444,7 @@ class TestPathC_GenerateProfileFilters:
             corrections[spk_key] = generate_correction_filter(ir, n_taps=TEST_TAPS)
         filters = generate_profile_filters(
             profile, identities,
-            correction_filters=corrections, n_taps=TEST_TAPS,
+            correction_filters=_as_corrections(corrections), n_taps=TEST_TAPS,
         )
         for spk_key, fir in filters.items():
             max_gain = _max_gain_db(fir)
@@ -455,7 +463,7 @@ class TestPathC_GenerateProfileFilters:
             corrections[spk_key] = generate_correction_filter(ir, n_taps=TEST_TAPS)
         filters = generate_profile_filters(
             profile, identities,
-            correction_filters=corrections, n_taps=TEST_TAPS,
+            correction_filters=_as_corrections(corrections), n_taps=TEST_TAPS,
         )
         for spk_key, fir in filters.items():
             max_gain = _max_gain_db(fir)
@@ -474,7 +482,7 @@ class TestPathC_GenerateProfileFilters:
             corrections[spk_key] = generate_correction_filter(ir, n_taps=TEST_TAPS)
         filters = generate_profile_filters(
             profile, identities,
-            correction_filters=corrections, n_taps=TEST_TAPS,
+            correction_filters=_as_corrections(corrections), n_taps=TEST_TAPS,
         )
         for spk_key, fir in filters.items():
             max_gain = _max_gain_db(fir)
