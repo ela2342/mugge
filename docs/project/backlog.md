@@ -355,6 +355,10 @@ priority!"
   linux-builder. Below 1.5 GB, quiet mode comes back automatically and
   the qcow2 size and df /nix are sampled. #57 is 7/7 at e731820c (see
   US-174); its merge waits on CI and the QE's C1/C2.
+  UPDATE (CM, 2026-10-26, after v193/v194): backlog v193 pushed as
+  e17d1042, v194 as eedcf9b9. US-172 run 3: the tryboot boot HUNG
+  again (see US-172). #63 (US-173, draft) CI green at 0b614d1b; Rule
+  13 0/7 (see US-173).
 
 ## Reserved IDs
 
@@ -2934,6 +2938,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   tb-pre e5533d74 and tb-diag ea3cf033 were all ok. Tryboot is ARMED,
   NOT triggered; the reboot waits for the owner to say they are at the
   HDMI screen.
+  RESULT (CM, 2026-10-26): the tryboot boot HUNG again and left no
+  journal. Power pull at about 10:59Z; the Pi recovered at 11:00:08Z.
+  tb-restore granted (Architect). The owner reports the current normal
+  boot sits at the console, with no login and no Wayland. The
+  Architect is asking the owner about a USB-serial adapter; the run-4
+  ruling waits on the owner's screen and LED observation.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -3880,6 +3890,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   enough unless the check cannot run in the sandbox; that fallback
   needs the QE and the Architect. The CM grants the ci.yml edit to
   worker-3.
+  PR #63 (CM, 2026-10-26): draft
+  https://github.com/ela2342/mugge/pull/63, branch
+  story/US-173-first-dj-session, author worker-3; head 0b614d1b, CI
+  green (run 40305727537). The QE's jack-self-connect CI condition is
+  MET. Still open: the P-step evidence (needs a CHANGE session), D-031
+  M2, the WAV generation (blocked by the nix hold) and 7/7 at the
+  final head. Rule 13 tally: 0/7 formal approvals.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -6309,6 +6326,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   sub1, shared or inverted per the profile; refuse if unspecified).
   Until it lands, US-174d disables the web-UI /deploy, /rollback,
   /snapshot and /cleanup (409), and venue deploy is the only path.
+  Interim detail (Architect, via CM, 2026-10-26): US-174d takes the
+  FALLBACK. The 409 responses carry UX text; /active and /versions
+  point to "see Venue deploy status". The channel-map rules come from
+  the Architect's (a) ruling.
   Cross-ref: the SecSpec gig-blocker "Coefficient sets: single
   validated writer" (and its US-174d write-access note); the P3
   "web-ui PW conf filter_paths point at the output dir".
@@ -6814,6 +6835,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   session.py:1131 generate the PW conf with filter_paths pointing at
   the output dir instead of coeffs/. Source: worker-4, US-174d
   read-only finding, 2026-10-26."
+- **JACK fragment sort order** (QE nit via CM, 2026-10-26; P3,
+  non-blocking; the Architect decides): the jack fragment is installed
+  as `<storehash>-80-jack-no-autoconnect.conf`, so the store hash, not
+  "80-", sets its sort order in jack.conf.d, and a later override
+  fragment could sort before it. Should it get a fixed name?
+  Cross-ref: US-173 self-connect-mode; the P3 deploy.sh JACK fragment
+  path.
 - development.md, ONE docs item (TW offers to write it; merges UX,
   QE, Arch N2, AD L2, TW F1-F3): run `nix build
   .#checks.<system>.app-source-paths` locally (test-all no longer
