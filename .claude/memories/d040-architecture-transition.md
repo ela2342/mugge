@@ -53,6 +53,11 @@ policy.linking.*), (2) JACK autoconnect disabled via
 (3) GM reconciler Phase 2 destroys non-desired links including `jack_connect()`
 bypass links. Boot ordering: pipewire -> wireplumber -> graph-manager -> apps.
 WP must activate ports before GM can create links.
+**Update (2026-10-24):** Layer (1) no longer exists in production. D-065
+removed `90-no-auto-link.conf` (it broke node activation, F-292), so only
+layers (2) and (3) remain on the Pi, and WP standard linking is active
+(see F-318). `scripts/local-demo.sh` still sets `policy.standard = disabled`,
+so local-demo no longer matches production WP policy.
 **Source:** D-043 decision text + config file review during TW documentation.
 **Tags:** d043, wireplumber, bypass, links, boot-ordering, graph-manager
 

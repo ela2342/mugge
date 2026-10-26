@@ -18,7 +18,7 @@
 # filter WAVs (protection_hp.wav / protection_lp.wav) are generated
 # and referenced here.  Full-bandwidth signal to sub drivers at unity
 # gain through 450W amplifiers risks driver damage.
-# Tracked as defect D-271.  D-063 gate provides interim protection.
+# Tracked as defect F-271.  D-063 gate provides interim protection.
 
 name: "foh-passthrough"
 description: "FOH passthrough — unity gain, Dirac coefficients, all channels"
