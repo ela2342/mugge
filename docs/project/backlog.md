@@ -4590,6 +4590,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   781b638a with 7/7; main is c318f404. #62 is update-branched to
   62b55b29 (content identical to 20903a04), approvals void, 7
   re-approvals requested via team-lead.
+  #62 re-approvals at 62b55b29 (record copies, sent to CM): UX APPROVE
+  (update-branch only, content identical to 20903a04, pin verified).
+  QE APPROVE (pin a4636d06 verified against git diff
+  origin/main...62b55b29; content identical to 20903a04; docs-only,
+  CI-exempt, a failed job still blocks). Tally 2/7 (UX, QE).
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
