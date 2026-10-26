@@ -25,9 +25,11 @@ import numpy as np
 from . import dsp_utils
 from .combine import combine_filters
 from .crossover import (
+    LINKWITZ_RILEY,
     generate_bandpass_filter,
     generate_crossover_filter,
     generate_subsonic_filter,
+    validate_crossover_spec,
 )
 from .export import export_filter
 
@@ -36,6 +38,35 @@ log = logging.getLogger(__name__)
 SAMPLE_RATE = dsp_utils.SAMPLE_RATE
 DEFAULT_N_TAPS = 16384
 COMBINE_MARGIN_DB = -0.6
+DEFAULT_SLOPE_DB_PER_OCT = 48.0
+
+
+# -- Crossover spec check ---------------------------------------------------
+
+def validate_profile_crossover(profile: dict) -> None:
+    """Raise CrossoverSpecError if the profile's crossover cannot be generated.
+
+    Shared by the generator, the speaker editor save and the measurement
+    session start (F-374).  Checks ``crossover.type`` (missing means
+    Linkwitz-Riley), the crossover slope and every bandpass driver's
+    ``high_slope_db_per_oct``.  A profile without a crossover section keeps
+    the legacy knee and passes.  A list of crossover sections is checked
+    section by section.
+    """
+    crossover_cfg = profile.get("crossover")
+    if crossover_cfg is None:
+        return
+    sections = crossover_cfg if isinstance(crossover_cfg, list) else [crossover_cfg]
+    speakers = profile.get("speakers") or {}
+    for section in sections:
+        slope = section.get("slope_db_per_oct", DEFAULT_SLOPE_DB_PER_OCT)
+        high_slopes = [
+            spk.get("high_slope_db_per_oct", slope)
+            for spk in speakers.values()
+            if isinstance(spk, dict) and spk.get("filter_type") == "bandpass"
+        ]
+        validate_crossover_spec(
+            section.get("type", LINKWITZ_RILEY), slope, *high_slopes)
 
 
 # -- Crossover frequency helpers -------------------------------------------
@@ -109,8 +140,13 @@ def _generate_channel_crossover(
     slope: float,
     n_taps: int,
     sr: int,
+    alignment: Optional[str] = None,
 ) -> np.ndarray:
-    """Generate the appropriate crossover FIR for a single speaker channel."""
+    """Generate the appropriate crossover FIR for a single speaker channel.
+
+    *alignment* is passed to the crossover generator: None for the legacy
+    knee, ``'linkwitz-riley'`` for LR4/LR8 (F-374).
+    """
     filter_type = spk_cfg.get("filter_type", "highpass")
 
     if filter_type == "bandpass":
@@ -123,6 +159,7 @@ def _generate_channel_crossover(
             high_slope_db_per_oct=high_slope,
             n_taps=n_taps,
             sr=sr,
+            alignment=alignment,
         )
 
     if filter_type == "highpass":
@@ -138,6 +175,7 @@ def _generate_channel_crossover(
         slope_db_per_oct=slope,
         n_taps=n_taps,
         sr=sr,
+        alignment=alignment,
     )
 
 
@@ -176,9 +214,25 @@ def generate_profile_filters(
     -------
     dict
         Mapping of speaker key to combined FIR (np.ndarray).
+
+    Raises
+    ------
+    CrossoverSpecError
+        If ``crossover.type`` is present but not ``'linkwitz-riley'``, or a
+        slope is not 24 or 48 dB/oct (see ``validate_profile_crossover``).
+
+    Notes
+    -----
+    ``crossover.type`` selects the alignment (F-374).  A crossover section
+    without ``type`` is Linkwitz-Riley; a profile without a crossover
+    section keeps the legacy knee.
     """
+    validate_profile_crossover(profile)
     crossover_freqs = _normalize_crossover_freqs(profile)
-    slope = profile.get("crossover", {}).get("slope_db_per_oct", 48.0)
+    crossover_cfg = profile.get("crossover")
+    slope = (crossover_cfg or {}).get(
+        "slope_db_per_oct", DEFAULT_SLOPE_DB_PER_OCT)
+    alignment = None if crossover_cfg is None else LINKWITZ_RILEY
     speakers = profile.get("speakers", {})
 
     if correction_filters is None:
@@ -195,7 +249,7 @@ def generate_profile_filters(
     for spk_key, spk_cfg in speakers.items():
         # 1. Crossover
         xo = _generate_channel_crossover(
-            spk_cfg, crossover_freqs, slope, n_taps, sr,
+            spk_cfg, crossover_freqs, slope, n_taps, sr, alignment,
         )
 
         # 2. Correction (or dirac placeholder)

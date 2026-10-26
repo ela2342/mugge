@@ -28,8 +28,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+import dataclasses
+
 import numpy as np
 import pytest
+import scipy.signal
 import soundfile as sf
 import yaml
 
@@ -136,6 +139,45 @@ def home_lab_dir(tmp_path_factory, bundle, home_lab):
     vp.write_delays_yaml(result, bundle, str(out / "delays.yml"),
                          simulated_scenario="home_lab")
     return out
+
+
+# AC7 room feature (Architect + AE ruling, 2026-10-26): a peak injected
+# identically into sat_right's true path and its measurement, so the right
+# file has something only it corrects. home_lab alone is too benign there.
+AC7_FEATURE_HZ = 380.0
+AC7_FEATURE_GAIN_DB = 6.0
+AC7_FEATURE_Q = 4.0
+# Report only: own/other levels this far either side of the feature.
+AC7_REPORT_OCTAVES = 1.0 / 6.0
+
+
+def _peaking_eq(x, f0, gain_db, q, sr=SR):
+    """RBJ cookbook peaking biquad applied to x (length preserved)."""
+    a = 10.0 ** (gain_db / 40.0)
+    w0 = 2.0 * np.pi * f0 / sr
+    alpha = np.sin(w0) / (2.0 * q)
+    b = [1.0 + alpha * a, -2.0 * np.cos(w0), 1.0 - alpha * a]
+    den = [1.0 + alpha / a, -2.0 * np.cos(w0), 1.0 - alpha / a]
+    return scipy.signal.lfilter(b, den, x)
+
+
+@pytest.fixture(scope="module")
+def ac7_home_lab(bundle, home_lab):
+    sim, _ = home_lab
+
+    def inject(paths):
+        out = dict(paths)
+        out["sat_right"] = _peaking_eq(paths["sat_right"], AC7_FEATURE_HZ,
+                                       AC7_FEATURE_GAIN_DB, AC7_FEATURE_Q)
+        return out
+    sim = dataclasses.replace(sim, true_paths=inject(sim.true_paths),
+                              measured_irs=inject(sim.measured_irs))
+    return sim, vp.generate_venue_filters(bundle, sim.measured_irs)
+
+
+def _db_at(h, f, lo, hi):
+    freqs, db = closed_loop.smoothed_response_db(h, lo, hi)
+    return float(np.interp(np.log2(f), np.log2(freqs), db))
 
 
 def _max_gain_db(fir):
@@ -659,24 +701,48 @@ class TestAC7Identity:
         assert swapped.delays_samples["sat_left"] == ref.delays_samples["sat_right"]
         assert swapped.delays_samples["sat_right"] == ref.delays_samples["sat_left"]
 
-    def test_each_file_corrects_its_own_room(self, bundle, home_lab):
+    def test_each_file_corrects_its_own_room(self, bundle, ac7_home_lab, capsys):
         # Wiring check from physics, not from the mapping code: the right
-        # sat's room has a +5 dB peak in its band, so its own file must
-        # beat the left file there. (The left room is too benign to tell
-        # the two files apart, so only the right side is asserted.)
-        sim, ref = home_lab
+        # sat's room gets an injected +6 dB, Q 4 peak at 380 Hz (in both the
+        # true path and the measurement), so its own file must beat the
+        # left file there. (The left room is too benign to tell the two
+        # files apart, so only the right side is asserted.)
+        sim, ref = ac7_home_lab
         lo, hi = RESIDUAL_BANDS_HZ["highpass"]
         path = sim.true_paths["sat_right"]
         level = ref.reference_levels_db["sat_right"]
+        own_fir = ref.filters["combined_right_hp.wav"]
+        other_fir = ref.filters["combined_left_hp.wav"]
 
-        def resp(filename):
+        # Premises: fail loudly if the fixture stops discriminating.
+        f0 = AC7_FEATURE_HZ
+        assert lo <= f0 <= hi, (f0, lo, hi)                                   # (c)
+        uncorrected_right = _db_at(path, f0, lo, hi) - level
+        uncorrected_left = (_db_at(sim.true_paths["sat_left"], f0, lo, hi)
+                            - ref.reference_levels_db["sat_left"])
+        assert uncorrected_right - uncorrected_left >= 4.0, (
+            uncorrected_right, uncorrected_left)                              # (a)
+        own_at_f0 = _db_at(closed_loop.system_response(path, own_fir), f0, lo, hi) - level
+        assert own_at_f0 <= uncorrected_right - 3.0, (own_at_f0, uncorrected_right)  # (b)
+
+        def resp(fir):
             return closed_loop.smoothed_response_db(
-                closed_loop.system_response(path, ref.filters[filename]), lo, hi)[1]
+                closed_loop.system_response(path, fir), lo, hi)[1]
 
-        own_resp, other_resp = resp("combined_right_hp.wav"), resp("combined_left_hp.wav")
+        own_resp, other_resp = resp(own_fir), resp(other_fir)
         target = np.full_like(own_resp, level)
         own = closed_loop.max_positive_deviation_db(own_resp, target)
         other = closed_loop.max_positive_deviation_db(other_resp, target)
+
+        with capsys.disabled():
+            for f in (f0 * 2 ** -AC7_REPORT_OCTAVES, f0, f0 * 2 ** AC7_REPORT_OCTAVES):
+                o = _db_at(closed_loop.system_response(path, own_fir), f, lo, hi) - level
+                x = _db_at(closed_loop.system_response(path, other_fir), f, lo, hi) - level
+                print(f"\n  REPORT AC7 sat_right @ {f:.1f} Hz: own {o:+.2f} dB, "
+                      f"other {x:+.2f} dB (re level)", end="")
+            print(f"\n  REPORT AC7 max+ deviation: own {own:+.4f} dB, "
+                  f"other {other:+.4f} dB", end="")
+
         assert np.isfinite(own) and np.isfinite(other), (own, other)
         assert closed_loop.passes_residual_gate(own_resp, target), f"{own:+.2f} dB"
         assert own < other - 1.0, (own, other)
