@@ -57,7 +57,7 @@ from room_correction.excursion_estimator import (
     compute_xmax_safe_level_dbfs,
 )
 
-from app.speaker_routes import _deep_validate_profile, _read_yaml_F362_MUTATION
+from app.speaker_routes import _deep_validate_profile, _read_yaml
 
 
 # ── Helpers ──────────────────────────────────────────────────────
