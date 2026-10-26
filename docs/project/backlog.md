@@ -603,6 +603,9 @@ priority!"
   1d19e534. US-172: QE C2 MET by dcec60fa, C1 still open; QE v6 gate
   sim flows G1-G11 relayed to worker-2; tb-greetd addendum file from
   the Architect pending (CM).
+  UPDATE (CM, 2026-10-26, after v238): backlog v238 pushed as
+  d0507d0c. US-172: the Architect's tb-greetd addendum is pinned
+  (762f9035); the "Pending" line is resolved (CM).
 
 ## Reserved IDs
 
@@ -3407,6 +3410,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - Pending (CM, 2026-10-26): the Architect pins the tb-greetd
     [MOD-gains]/[MOD-gate] ruling as a one-line addendum file with its
     sha (CM request).
+  - PINNED (CM, 2026-10-26; resolves "Pending" above): the Architect's
+    tb-greetd addendum /tmp/us172-r4-tbgreetd-mod-addendum.md, sha256
+    762f9035 (verified at PM read on both copies; CM copy
+    /tmp/cm-relay/US-172/tbgreetd-mod-addendum-762f9035.md). It adds
+    to dcec60fa and does not replace it: tb-greetd needs its own CM go
+    plus [MOD-gains] ok and [MOD-gate] ok, with no STOP/ABORT/FAIL;
+    otherwise blocked, no release path. Relayed to worker-2 and the
+    QE.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
