@@ -251,19 +251,38 @@ def api_post(base_url):
 # ---------------------------------------------------------------------------
 
 def _rpc_call(host: str, port: int, cmd: dict, timeout: float = 5.0) -> dict:
-    """Send a JSON RPC command over TCP and return the parsed response."""
+    """Send a JSON RPC command over TCP and return the parsed response.
+
+    The GM socket also carries push events (``{"type": "event", ...}``
+    lines, e.g. link_created during a mode switch) interleaved with the
+    reply. Event lines are skipped; the first non-event line whose ``cmd``
+    matches (or has no ``cmd``) is the response (F-394 AC ii). Returns {}
+    on connection errors, bad JSON or no response before the deadline.
+    """
+    deadline = time.monotonic() + timeout
     try:
-        s = socket.create_connection((host, port), timeout=timeout)
-        s.settimeout(timeout)
-        s.sendall((json.dumps(cmd) + "\n").encode())
-        data = b""
-        while b"\n" not in data:
-            chunk = s.recv(4096)
-            if not chunk:
-                break
-            data += chunk
-        s.close()
-        return json.loads(data.decode().strip())
+        with socket.create_connection((host, port), timeout=timeout) as s:
+            s.sendall((json.dumps(cmd) + "\n").encode())
+            buf = b""
+            while True:
+                while b"\n" in buf:
+                    line, buf = buf.split(b"\n", 1)
+                    if not line.strip():
+                        continue
+                    msg = json.loads(line.decode())
+                    if msg.get("type") == "event":
+                        continue
+                    if msg.get("cmd", cmd.get("cmd")) != cmd.get("cmd"):
+                        continue
+                    return msg
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return {}
+                s.settimeout(remaining)
+                chunk = s.recv(4096)
+                if not chunk:
+                    return {}
+                buf += chunk
     except (OSError, json.JSONDecodeError, ValueError):
         return {}
 

@@ -85,6 +85,18 @@ log "Using manifest: $LOCAL_DEMO_MANIFEST"
 
 # Source PW env (includes LOCAL_DEMO_MANIFEST) so pw-cli calls + manifest work
 eval "$("$BASH_BIN" "$LOCAL_DEMO" env)"
+# `local-demo.sh env` derives XDG_RUNTIME_DIR / XDG_CONFIG_HOME from its own
+# PID, not from the PID of the `start` process, so the pw-* CLI tools in the
+# tests looked for a socket that doesn't exist ("Host is down", F-394).
+# Take both paths from the manifest the running stack wrote.
+XDG_RUNTIME_DIR=$("$PYTHON" -c "import json; print(json.load(open('$LOCAL_DEMO_MANIFEST'))['pw_runtime_dir'])")
+XDG_CONFIG_HOME=$("$PYTHON" -c "import json; print(json.load(open('$LOCAL_DEMO_MANIFEST'))['xdg_config_dir'])")
+export XDG_RUNTIME_DIR XDG_CONFIG_HOME
+if [ ! -S "$XDG_RUNTIME_DIR/pipewire-0" ]; then
+    log_err "PipeWire socket not found at $XDG_RUNTIME_DIR/pipewire-0"
+    exit 2
+fi
+log "PipeWire socket: $XDG_RUNTIME_DIR/pipewire-0"
 
 # Read all ports from the manifest and export for conftest.py.
 # _read_manifest_port uses LOCAL_DEMO_MANIFEST (set by eval above).
