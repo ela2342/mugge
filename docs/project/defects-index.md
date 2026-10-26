@@ -357,3 +357,4 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-395](defects/F-395.md) | P1 (audio-engineer) | open. gate2.py fix in r7 sandbox, not merged; past gains PASS records marked NOT VERIFIABLE | Gains readback is blind on a suspended filter-chain node, so the gains check gives a false PASS |
 | [F-396](defects/F-396.md) | P1 (audio-engineer); safety item (r7) | open. Config in place; Pi verification, config test guard and the WirePlumber-restart case (r7) open | Production must never suspend the filter-chain or the USBStreamer node |
 | [F-397](defects/F-397.md) | P1 (architect) | open | Gain readback consumers show 0 on suspended or never-run nodes |
+| [F-400](defects/F-400.md) | medium (Architect, 2026-10-26) | fixed on story/US-173 (`ff4d6c7e`), needs Pi evidence (P-step 15) | PipeWire conf.d fragments deployed under store-hash names |

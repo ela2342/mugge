@@ -1944,7 +1944,9 @@ desktop app plays nothing.
 To make sound, use a path that GraphManager links:
 
 - the web UI Test tab (signal-gen) for test signals. It is the only
-  sanctioned way to check the speakers;
+  sanctioned way to check the speakers (amps stay off until the AMPS-ON
+  list holds; until then the test signal proves the digital path only,
+  not the speakers);
 - Mixxx in DJ mode or Reaper in Live mode (select the mode first),
   started with `pw-jack`. GraphManager creates their links when they
   appear in the graph.
@@ -1967,6 +1969,21 @@ only allowed source is `pi4audio-convolver-out`; a hand-made link into the
 USBStreamer bypasses the crossover, the D-063 gains and the gate and can
 send full-scale audio to the amplifiers or the in-ear monitors. `pw-link -l`
 (listing only) is safe. See the F-318 rule in `docs/operations/safety.md`.
+
+### Changing the sound hardware in Mixxx or Reaper does not silence the output
+
+This is expected. Every JACK app runs with `jack.self-connect-mode =
+ignore-external` (`configs/pipewire/80-jack-no-autoconnect.conf`, F-318,
+US-173), so an app cannot connect its own ports to another app's or
+device's ports. The call does nothing and still reports success.
+GraphManager makes the links when the app appears in the graph.
+
+On PipeWire 1.6.2 the same holds when an app removes a link. Changing
+the sound hardware or the outputs in Mixxx's or Reaper's preferences
+does not silence the output: audio keeps flowing through the GraphManager
+links, or resumes as soon as GraphManager re-links the app.
+Do not use an app's audio settings to silence the output: use the app's
+own volume or master fader, and in an emergency the amp power switches.
 
 ### Xruns / Audio Glitches
 
