@@ -169,8 +169,7 @@ export function viewModel(flow, extras = {}) {
         ? levelNoiseBandLabel(decl.role, decl.limitHz) : "",
       micLevel: micLevelText(rms, flow.splOffsetDb),
       cap: run.band ? capText(level, topStepDbfs(run.band)) : "",
-      canStart: !flow.sounding && flow.ack && flow.setupProblems().length === 0 &&
-        (flow.step === STEP.LEVEL || flow.step === STEP.RESULT),
+      canStart: flow.canStart,
       canStepUp: flow.canStepUp(),
       canMeasure: flow.step === STEP.LEVEL && !!lc && lc.running && rms !== null,
       targetText: lc && lc.running && rms !== null && !lc.targetReached

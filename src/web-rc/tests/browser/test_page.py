@@ -96,3 +96,28 @@ def test_open_devices_then_declarations_gate_continue(fake_page, page_url):
     expect(page.locator("#confirm")).to_be_disabled()
     expect(page.locator("#step-setup")).to_be_visible()
     assert errors == []
+
+
+def test_hidden_holds_start_until_visible_again(fake_page, page_url):
+    """Latch r2 A3: hiding the page holds Start; showing it releases it."""
+    page, errors = fake_page
+    page.goto(page_url)
+    page.wait_for_function("window.__webrcApp !== undefined")
+    held = "[...window.__webrcApp.flow.held]"
+    page.evaluate("""() => {
+        window.__hidden = false;
+        Object.defineProperty(document, "hidden",
+            { configurable: true, get: () => window.__hidden });
+    }""")
+    page.evaluate("""() => { window.__hidden = true;
+        document.dispatchEvent(new Event("visibilitychange")); }""")
+    assert page.evaluate(held) == ["hidden"]
+    page.evaluate("""() => { window.__hidden = false;
+        document.dispatchEvent(new Event("visibilitychange")); }""")
+    assert page.evaluate(held) == []
+    # pagehide holds; a pageshow of a visible page (bfcache) releases.
+    page.evaluate("window.dispatchEvent(new Event('pagehide'))")
+    assert page.evaluate(held) == ["hidden"]
+    page.evaluate("window.dispatchEvent(new Event('pageshow'))")
+    assert page.evaluate(held) == []
+    assert errors == []

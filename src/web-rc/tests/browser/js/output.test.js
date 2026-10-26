@@ -9,6 +9,7 @@ import { crestEntry, levelCeilingDbfs, unitGain } from "../../../static/js/crest
 import { crestSeed } from "../../../static/js/crest-plan.js";
 import { LevelNoise } from "../../../static/js/dsp.js";
 import { LIMITS, ROLE, levelNoiseBand } from "../../../static/js/safety.js";
+import { addBeater } from "./beater.js";
 
 const SR = 48000;
 const Q = 128;
@@ -146,6 +147,7 @@ async function runWorklet({ channels, channel, gain, source, frames, onFrame }) 
   const ctx = new OfflineAudioContext(channels, frames, SR);
   ctx.destination.channelInterpretation = "discrete";
   await ctx.audioWorklet.addModule(WORKLET);
+  await addBeater(ctx);  // the meter heartbeat the output waits for (r2 A4)
   const node = new AudioWorkletNode(ctx, "webrc-output", {
     numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [channels],
     channelInterpretation: "discrete",
@@ -166,6 +168,18 @@ async function runWorklet({ channels, channel, gain, source, frames, onFrame }) 
   return { buf, msgs };
 }
 
+/**
+ * The quantum the output starts in: it plays nothing until its first fresh
+ * meter heartbeat (latch r2 A4), which comes in its first or second quantum.
+ */
+function onsetOf(d) {
+  const first = d.findIndex((v) => v !== 0);
+  const at = Math.floor(first / Q) * Q;
+  assert(first >= 0 && at <= Q, "starts within 2 quanta: " + first);
+  for (let i = 0; i < at; i++) eq(d[i], 0, "zero before the first beat " + i);
+  return at;
+}
+
 export async function test_worklet_mono_to_one_channel_bit_exact() {
   const s = new Float32Array(SR / 4);
   for (let i = 0; i < s.length; i++) s[i] = 0.5 * Math.sin(2 * Math.PI * 440 * i / SR);
@@ -179,8 +193,9 @@ export async function test_worklet_mono_to_one_channel_bit_exact() {
   }
   const got = buf.getChannelData(2);
   const { played } = renderPlayed(s, 0.1, SR);
-  for (let i = 0; i < played.length; i++) eq(got[i], played[i], "sample " + i);
-  for (let i = played.length; i < got.length; i++) eq(got[i], 0, "after end " + i);
+  const at = onsetOf(got);
+  for (let i = 0; i < played.length; i++) eq(got[at + i], played[i], "sample " + i);
+  for (let i = at + played.length; i < got.length; i++) eq(got[i], 0, "after end " + i);
   assert(msgs.some((m) => m.type === "ended"), "ended reported");
   eq(msgs.filter((m) => m.type === "error").length, 0);
 }
@@ -197,7 +212,8 @@ export async function test_worklet_noise_matches_level_noise() {
   const out = new Float32Array(4096);
   for (let i = 0; i < 4096; i += Q) ref.render(out.subarray(i, i + Q));
   const got = buf.getChannelData(1);
-  for (let i = 0; i < 4096; i++) eq(got[i], out[i], "sample " + i);
+  const at = onsetOf(got);
+  for (let i = 0; at + i < 4096; i++) eq(got[at + i], out[i], "sample " + i);
   assert(buf.getChannelData(0).every((v) => v === 0), "other channel zero");
 }
 
@@ -208,13 +224,14 @@ export async function test_worklet_clamp_reports_and_stops() {
     channels: 1, channel: 0, gain: 0.1, frames: SR / 4,
     source: { kind: "buffer", samples: s },
   });
+  const d = buf.getChannelData(0);
+  const at = onsetOf(d);
   const c = msgs.find((m) => m.type === "clamped");
   assert(c, "clamped reported");
-  eq(c.frame, 5000);
+  eq(c.frame, at + 5000);
   const st = msgs.find((m) => m.type === "stopped");
   assert(st && st.clamped === true, "stopped after the clamp");
-  const d = buf.getChannelData(0);
-  for (let i = 5000 + RAMP; i < d.length; i++) eq(d[i], 0, "silent " + i);
+  for (let i = at + 5000 + RAMP; i < d.length; i++) eq(d[i], 0, "silent " + i);
 }
 
 export async function test_worklet_stop_message_ramps_down() {

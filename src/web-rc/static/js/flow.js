@@ -27,6 +27,7 @@
 import { bandCeilingDbfs, crestEntry, topStepDbfs, unitGain } from "./crest.js";
 import { crestSeed, MAX_CHANNELS } from "./crest-plan.js";
 import { CAP_LINEAR } from "./output-core.js";
+import { LATCH } from "./stop-latch.js";
 import {
   LIMITS, LevelCheck, STOP, captureSeconds, checkDeclaration, checkDspFlags,
   checkSampleRates, dbToLinear, emptyDeclaration, levelNoiseBand,
@@ -85,6 +86,7 @@ export class Flow {
     this.cal = null;             // { fileName, parsed } (calibration.js)
     this.calBoundMicId = null;
     this.filters = new Map();    // channel -> finished, AC6c-passed result
+    this.held = new Set();       // main-thread stop causes still held (r2 A3)
     this._resetRun();
     this._token = 0;
   }
@@ -112,6 +114,17 @@ export class Flow {
 
   get sounding() {
     return this.run.sounding;
+  }
+
+  /**
+   * Can a level check start? Not while a main-thread stop cause is held
+   * (latch r2 A3): the page hidden, or an audio error until the devices
+   * are opened again. A device change is held by the reset 4a ack.
+   */
+  get canStart() {
+    return !this.run.sounding && this.ack && this.held.size === 0 &&
+      this.setupProblems().length === 0 &&
+      (this.step === STEP.LEVEL || this.step === STEP.RESULT);
   }
 
   /** Everything that keeps the setup step from going on (AC2, AC3). */
@@ -158,6 +171,7 @@ export class Flow {
    */
   setAudio(audio) {
     this.audio = audio ? { ...audio } : null;
+    if (audio) this.held.delete(STOP.AUDIO_ERROR);  // opened again
     return [];
   }
 
@@ -223,8 +237,7 @@ export class Flow {
   // -- level check (AC4b, 4d, 4h, 4i) -------------------------------------
 
   startLevel(nowMs) {
-    if (this.step !== STEP.LEVEL && this.step !== STEP.RESULT) return [];
-    if (!this.ack || this.setupProblems().length || this.run.sounding) return [];
+    if (!this.canStart) return [];
     const band = levelNoiseBand(this.decl.role, this.decl.limitHz);
     const entry = crestEntry(band, this.channel);
     const top = topStepDbfs(band);
@@ -298,9 +311,14 @@ export class Flow {
 
   /** An output-worklet message: clamped / error / stopped / ended. */
   output(msg) {
+    if (msg.type === "error") return this.audioError();
+    if (msg.type === "stopped" && msg.cause === LATCH.HEARTBEAT) {
+      return this.audioError();
+    }
     if (!this.run.sounding) return [];
     if (msg.type === "clamped") return this.autoStop(STOP.CAP);
-    if (msg.type === "error") return this.autoStop(STOP.AUDIO_ERROR);
+    // A render-thread stop (stop-latch.js) the meter report has not brought.
+    if (msg.type === "stopped" && msg.cause) return this.autoStop(msg.cause);
     return [];
   }
 
@@ -311,10 +329,19 @@ export class Flow {
 
   /** visibilitychange/pagehide (4d). */
   hidden() {
+    this.held.add(STOP.HIDDEN);
     return this.autoStop(STOP.HIDDEN);
   }
 
+  /** The page is visible again: Start may be pressed again. */
+  visible() {
+    this.held.delete(STOP.HIDDEN);
+    return [];
+  }
+
+  /** Held until the devices are opened again (setAudio, deviceChange). */
   audioError() {
+    this.held.add(STOP.AUDIO_ERROR);
     return this.autoStop(STOP.AUDIO_ERROR);
   }
 
@@ -329,7 +356,10 @@ export class Flow {
   deviceChange(audio) {
     const cmds = this._halt();
     this._resetRun();
-    if (audio) this.audio = { ...audio };
+    if (audio) {
+      this.audio = { ...audio };
+      this.held.delete(STOP.AUDIO_ERROR);
+    }
     this.ack = false;                   // D1
     this.channel = null;                // D2
     this.decl = emptyDeclaration();     // D2

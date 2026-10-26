@@ -13,8 +13,19 @@
 // The context runs only while something plays or records; otherwise it is
 // suspended (4e). Both worklet modules load from the same base URL, so they
 // share stop-latch.js in the context's one AudioWorkletGlobalScope.
+//
+// Stop order (latch r2 B4, AE 6f220842): a stopping output node ramps to 0
+// on the render thread and reports "stopped" (zero reached). Only then is it
+// disconnected and the context suspended, and only then is a new output
+// node built and connected: an old ramp-down never overlaps a new ramp-in.
+// If "stopped" does not come within ZERO_TIMEOUT_MS, the context is
+// suspended anyway and the node is treated as stopped.
 
 import { checkDspFlags } from "./safety.js";
+
+export const IO = Object.freeze({
+  ZERO_TIMEOUT_MS: 100,   // AE 6f220842: "zero reached" deadline
+});
 
 const METER_URL = new URL("./meter-worklet.js", import.meta.url);
 const OUTPUT_URL = new URL("./output-worklet.js", import.meta.url);
@@ -59,9 +70,12 @@ export class AudioIO {
     this.stream = null;
     this.track = null;
     this.meter = null;
-    this.out = null;
+    this.out = null;              // the output node that may sound
+    this.retiring = new Set();    // nodes stopping, until zero is reached
     this.recording = null;
     this.sinkId = "";
+    this._playSeq = 0;
+    this._waiting = 0;
   }
 
   get isOpen() {
@@ -112,6 +126,10 @@ export class AudioIO {
   }
 
   async close() {
+    // Closing cuts the output: first let every ramp reach 0 (r2 B4).
+    this._playSeq += 1;
+    if (this.out) this._retire(this.out, true);
+    await this._retired();
     this.out = null;
     this.recording = null;
     if (this.stream) for (const t of this.stream.getTracks()) t.stop();
@@ -154,7 +172,8 @@ export class AudioIO {
         if (this.out) this.out.port.postMessage({ type: "gain", gain: cmd.gain });
         break;
       case "output-stop":
-        if (this.out) this.out.port.postMessage({ type: "stop" });
+        this._playSeq += 1;       // a play still waiting is cancelled
+        if (this.out) this._retire(this.out, true);
         else this._idle();
         break;
       case "meter-calibration":
@@ -177,28 +196,91 @@ export class AudioIO {
 
   // -- internals ----------------------------------------------------------
 
+  /** Start an output once every older output has reached 0 (r2 B4). */
   _play(channel, source, gain) {
-    if (this.out) this.out.port.postMessage({ type: "stop" });
-    const node = new AudioWorkletNode(this.ctx, "webrc-output", {
+    const seq = ++this._playSeq;
+    if (this.out) {
+      this._retire(this.out, true);
+      this.out = null;            // its late messages are stale
+    }
+    const ctx = this.ctx;
+    const go = () => {
+      if (seq !== this._playSeq || this.ctx !== ctx) {
+        this._idle();
+        return;
+      }
+      const node = this._newOutput({ channel, gain, source });
+      node.port.onmessage = (e) => this._onOutputMessage(node, e.data);
+      node.connect(ctx.destination);
+      this.out = node;
+      this._run();
+    };
+    if (!this.retiring.size) {
+      go();
+      return;
+    }
+    this._waiting += 1;           // no suspend between the two nodes
+    this._retired().then(() => {
+      this._waiting -= 1;
+      go();
+    });
+  }
+
+  _newOutput(processorOptions) {
+    return new AudioWorkletNode(this.ctx, "webrc-output", {
       numberOfInputs: 0, numberOfOutputs: 1,
       outputChannelCount: [this.ctx.destination.channelCount],
       channelInterpretation: "discrete",
-      processorOptions: { channel, gain, source },
+      processorOptions,
     });
-    node.port.onmessage = (e) => this._onOutputMessage(node, e.data);
-    node.connect(this.ctx.destination);
-    this.out = node;
-    this._run();
+  }
+
+  /** Resolves once no node is retiring. */
+  async _retired() {
+    while (this.retiring.size) {
+      await Promise.all([...this.retiring].map((n) => n.retired));
+    }
+  }
+
+  /**
+   * Stop `node`: it ramps to 0 and reports "stopped". stopTrigger: a stop
+   * (not just a finished sweep), so a missing report suspends the context.
+   * A second call is a no-op (r2 B3).
+   */
+  _retire(node, stopTrigger) {
+    if (node.retired) return;
+    let done;
+    node.retired = new Promise((r) => { done = r; });
+    this.retiring.add(node);
+    const ctx = this.ctx;
+    const finish = () => {
+      if (!this.retiring.has(node)) return;
+      clearTimeout(timer);
+      node.disconnect();
+      this.retiring.delete(node);
+      if (this.out === node) this.out = null;
+      done();
+      this._idle();
+    };
+    node.finish = finish;
+    const timer = setTimeout(async () => {
+      if (stopTrigger && this.ctx === ctx) await ctx.suspend().catch(() => {});
+      finish();
+    }, IO.ZERO_TIMEOUT_MS);
+    node.port.postMessage({ type: "stop" });
   }
 
   _onOutputMessage(node, msg) {
     const current = node === this.out;
-    if (msg.type === "stopped" || msg.type === "error") {
-      node.disconnect();
-      if (node === this.out) {
-        this.out = null;
-        this._idle();
-      }
+    if (msg.type === "stopped") {
+      // Zero reached: a stop from the render thread retires the node too.
+      if (!node.retired) this._retire(node, true);
+      node.finish();
+    } else if (msg.type === "error") {
+      this._retire(node, true);
+    } else if (msg.type === "ended" && current) {
+      // The sweep has played: its output is silent from here on.
+      this._retire(node, false);
     }
     // A replaced output's messages are stale, except an error.
     if (current || msg.type === "error") this.onOutput(msg);
@@ -206,6 +288,9 @@ export class AudioIO {
 
   _onMeterMessage(msg) {
     if (msg.type === "meter") {
+      // The render thread is stopping the output (stop-latch.js): start
+      // the zero-reached deadline now, not when the flow reacts.
+      if (msg.cause && this.out) this._retire(this.out, true);
       this.onMeter(msg);
     } else if (msg.type === "recorded") {
       if (msg.id !== this.recording) return;
@@ -222,7 +307,11 @@ export class AudioIO {
 
   /** Suspend once nothing plays or records (4e). */
   _idle() {
-    if (!this.out && this.recording === null && this.ctx.state === "running") {
+    if (!this.ctx || this.out || this.retiring.size || this._waiting ||
+        this.recording !== null) {
+      return;
+    }
+    if (this.ctx.state === "running") {
       this.ctx.suspend().catch(() => {});
     }
   }

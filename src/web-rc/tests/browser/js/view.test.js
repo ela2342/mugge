@@ -100,6 +100,12 @@ export async function test_level_uncalibrated_banner_and_dbfs() {
   vm = viewModel(f);
   eq(vm.stopVisible, true);
   eq(vm.level.canStart, false, "one level check at a time");
+  f.hidden();
+  eq(viewModel(f).level.canStart, false, "held while hidden (latch r2 A3)");
+  f.visible();
+  eq(viewModel(f).level.canStart, true);
+  f.startLevel(0);
+  vm = viewModel(f);
   eq(vm.level.canStepUp, true);
   eq(vm.level.canMeasure, false, "no reading yet");
   const top = topStepDbfs(levelNoiseBand(ROLE.SUBWOOFER, 40));

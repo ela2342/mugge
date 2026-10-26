@@ -6,6 +6,7 @@ import { parseCalibration } from "../../../static/js/calibration.js";
 import { crestEntry, topStepDbfs, unitGain } from "../../../static/js/crest.js";
 import { crestSeed } from "../../../static/js/crest-plan.js";
 import { CAP_LINEAR } from "../../../static/js/output-core.js";
+import { LATCH } from "../../../static/js/stop-latch.js";
 import {
   LIMITS, ROLE, STOP, changeRole, levelNoiseBand, stopMessage,
 } from "../../../static/js/safety.js";
@@ -193,6 +194,23 @@ export async function test_calibrated_target_and_meter_message() {
   eq(f.canStepUp(), false);
 }
 
+/**
+ * Release a held main-thread cause (latch r2 A3): Start is refused until
+ * the page is visible again / the devices are opened again.
+ */
+function release(f, cause) {
+  if (cause === STOP.HIDDEN) {
+    eq(f.canStart, false, "held: hidden");
+    eq(f.startLevel(40000).length, 0, "no Start while hidden");
+    f.visible();
+  } else if (cause === STOP.AUDIO_ERROR) {
+    eq(f.canStart, false, "held: audio error");
+    eq(f.startLevel(40000).length, 0, "no Start after an audio error");
+    f.setAudio(AUDIO);
+  }
+  eq(f.canStart, true, "released: " + cause);
+}
+
 /** 4d/4i/E4: each auto-STOP names its cause; a restart is fresh at -60. */
 export async function test_level_auto_stops() {
   const cases = [
@@ -222,10 +240,73 @@ export async function test_level_auto_stops() {
     eq(f.notice.text, stopMessage(cause, { calibrated: false }));
     eq(f.sounding, false);
     eq(f.stepUp(25).length, 0, "no + after a stop");
+    release(f, cause);
     const again = f.startLevel(40000);
     close(again[0].gain, unitGain(crestEntry(levelNoiseBand(ROLE.SUBWOOFER, 40),
       2), -60), 1e-15, "fresh start at -60 after " + cause);
   }
+}
+
+/** Latch r2 A3: a render-thread stop the meter report has not brought. */
+export async function test_render_thread_stop_reaches_the_flow() {
+  const f = atLevel();
+  f.startLevel(0);
+  eq(types(f.output({ type: "stopped", cause: STOP.MIC_CLIP })), "output-stop");
+  eq(f.notice.cause, STOP.MIC_CLIP);
+  eq(f.canStart, true, "a meter cause is not held here: the meter re-trips");
+  eq(f.output({ type: "stopped", cause: STOP.MIC_CLIP }).length, 0, "once");
+  eq(f.output({ type: "stopped", cause: null }).length, 0, "a plain zero-reached");
+}
+
+/** A4: a heartbeat stop is an audio error, held until the devices reopen. */
+export async function test_heartbeat_stop_is_a_held_audio_error() {
+  const f = atLevel();
+  f.startLevel(0);
+  eq(types(f.output({ type: "stopped", cause: LATCH.HEARTBEAT })), "output-stop");
+  eq(f.notice.cause, STOP.AUDIO_ERROR);
+  release(f, STOP.AUDIO_ERROR);
+  // Not sounding: still held.
+  f.output({ type: "stopped", cause: LATCH.HEARTBEAT });
+  eq(f.canStart, false, "held while idle too");
+  f.setAudio(AUDIO);
+  eq(f.canStart, true);
+}
+
+/** A3: hidden holds while idle; a device change keeps it, frees an error. */
+export async function test_held_causes_and_device_change() {
+  const f = atLevel();
+  f.hidden();
+  eq(f.canStart, false, "hidden while idle");
+  f.audioError();
+  f.deviceChange({ ...AUDIO });
+  f.setChannel(2);
+  f.setDeclaration(sub40());
+  f.confirmSetup();
+  f.acknowledge();
+  eq(f.held.has(STOP.AUDIO_ERROR), false, "the devices were opened again");
+  eq(f.canStart, false, "still hidden");
+  eq(f.startLevel(0).length, 0);
+  f.visible();
+  eq(f.canStart, true);
+  f.audioError();
+  f.deviceChange(null);
+  eq(f.held.has(STOP.AUDIO_ERROR), true, "no device: still held");
+}
+
+/** C6: after a stop, no sweep without a new level check with its own reading. */
+export async function test_c6_sweep_needs_a_new_passed_level_check() {
+  const f = atLevel();
+  f.startLevel(0);
+  f.meter(0, { peakDbfs: -40, rmsDbfs: -50 });
+  f.output({ type: "stopped", cause: STOP.MIC_CLIP });
+  eq(f.measure().length, 0, "stopped: no sweep");
+  f.startLevel(1000);
+  eq(f.measure().length, 0, "the old reading does not count");
+  f.meter(1000, { peakDbfs: -0.5, rmsDbfs: -20 });
+  eq(f.measure().length, 0, "the new check did not pass");
+  f.startLevel(2000);
+  f.meter(2000, { peakDbfs: -40, rmsDbfs: -50 });
+  eq(types(f.measure()), "output-stop,make-sweep", "a new passed check");
 }
 
 export async function test_mic_clip_text_follows_calibration() {
@@ -359,6 +440,7 @@ export async function test_sweep_auto_stop_discards_captures() {
     eq(f.recorded(s2[0].token, new Float32Array(10)).length, 0,
       "late capture discarded: " + cause);
     eq(f.measure().length, 0, "needs a fresh level check");
+    release(f, cause);
     eq(types(f.startLevel(0)), "noise-start");
   }
 }

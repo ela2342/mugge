@@ -231,9 +231,12 @@ export class App {
       if (e.key === "Escape") this.apply(this.flow.userStop());
     });
     this.doc.addEventListener("visibilitychange", () => {
-      if (this.doc.hidden) this.apply(this.flow.hidden());
+      this.apply(this.doc.hidden ? this.flow.hidden() : this.flow.visible());
     });
     window.addEventListener("pagehide", () => this.apply(this.flow.hidden()));
+    window.addEventListener("pageshow", () => {
+      if (!this.doc.hidden) this.apply(this.flow.visible());
+    });
     window.addEventListener("beforeunload", (e) => {
       if (this.flow.hasUnsavedWork()) {
         e.preventDefault();
