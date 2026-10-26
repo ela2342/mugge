@@ -936,6 +936,12 @@ priority!"
   P-level given; the tty1 fallback and the watchdog comment merge into
   existing items (no new ID). Run-2 report v2 1fe62b96 in review
   (Architect, QE).
+  UPDATE (CM, 2026-10-26, after v297): backlog v297 pushed as
+  cfff23cd. US-172 run-2 report v2 1fe62b96: Architect APPROVE once W1
+  is applied (4e3bc0c5), QE APPROVE (4271f63b). Architect N2 and QE
+  note 5 (rt-tuning.nix:24 watchdog claim) fold into O-24 / F-317 /
+  F-325, no new ID. Architect: F-413, F-414 and F-415 are P3; no kit
+  change for run 5.
 
 ## Reserved IDs
 
@@ -3461,6 +3467,39 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   /tmp/cm-relay/US-172/frozen/w2-run2-report-v2-1fe62b96.txt (sha256
   1fe62b96, verified at PM read) is in review with the Architect and
   the QE. Verdicts: not yet relayed to the PM at this version.
+  VERDICTS (via CM, 2026-10-26; supersede "not yet relayed" above;
+  both crossed v297): Architect VERDICT r1,
+  /tmp/cm-relay/US-172/frozen/arch-run2-report-v2-verdict-r1-4e3bc0c5.txt
+  (sha256 4e3bc0c5, 2955 bytes, verified at PM read), verbatim:
+  "VERDICT: APPROVE once W1 is applied. W1 is a wording fix and needs
+  no new review round: the QE or I check the diff." W1 (REQUIRED,
+  section 4): the line-order cause candidate is replaced by the
+  Architect r4 1816176e text (verbatim in the file), because "a closed
+  report must not carry a cause candidate its own author has
+  replaced." Per the CM, W1 goes to worker-2 after run-5 step a. N1
+  (non-blocking): add the run-2 "no panic= token (kernel default
+  panic=0)" fact line only if worker-2 can confirm it from the run-2
+  cmdline/pins; "Do not infer it."
+  N2 (Architect, verbatim): "rt-tuning.nix sets
+  kernel.sched_rt_runtime_us=-1 (RT throttle off) and justifies it
+  with a watchdog backstop that is not armed. So a runaway SCHED_FIFO
+  task can wedge the Pi with no automatic recovery. For gigs: either
+  arm RuntimeWatchdogSec (systemd) on the BCM2835 watchdog or correct
+  the comment; fold it into the existing O-24 / F-317 / F-325 rather
+  than opening a new item. Per the owner's priority this is prod
+  backlog, not a US-172 blocker." PM: no new ID; folded into O-24 /
+  F-317 / F-325 and AD L3, with worker-2 one-liner item 4 above.
+  QE verdict,
+  /tmp/cm-relay/US-172/frozen/qe-run2-report-v2-verdict-4271f63b.md
+  (sha256 4271f63b, 3302 bytes, verified at PM read; the QE copy
+  /tmp/us172-qe-run2-report-v2-verdict-1fe62b96.md has the same sha),
+  verbatim: "VERDICT: APPROVE. No blocking points; the 5 notes below
+  are non-blocking." Notes 1-4 (LIBPI root wording, gain counts, mark
+  the NIC/ARP line "(inference)", N1 now covered by the v8 sim only)
+  are to be folded in "if a v3 happens; no re-issue just for these".
+  Note 5 (rt-tuning.nix:24 watchdog claim) asks for a PM item number;
+  PM answer (relayed to the QE by the CM): already tracked as O-24 /
+  F-317 / F-325 and AD L3, no new F-number.
   Gains-read label (AE, verbatim, via CM, 2026-10-26): "first gains
   read after cold boot (boot ≈08:44:31Z per /proc/uptime, rsts=0x1000;
   read at <timestamp>, T+<mm:ss>; preceded only by read-only
@@ -12659,6 +12698,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   "old boot id not in journal" (rec-2 INCONCLUSIVE, 2b empty). Fix
   (worker-2): match whole lines (grep -qx). A fix means a new sha and
   re-review (CM, earlier one-liner). Source: 49ab9ebb item 1.
+  P3 (Architect by message, via CM, 2026-10-26; replaces "no P-level
+  given"). Not a run-5 blocker: the v8 kit already matches boot ids by
+  whole line (awk).
 - **F-414** (worker-2 via CM, 2026-10-26; no P-level given, listed
   under P3 until ruled; was US-172c one-liner (b)) us172-recovery.sh
   step 4: `ls /sys/fs/pstore` needs sudo (Permission denied as ela),
@@ -12670,12 +12712,23 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   so that read will likely show Permission denied as ela. Not a run-5
   safety item (OBSERVE data only); sent to the CM for worker-2 and the
   Architect.
+  P3 (Architect by message, via CM, 2026-10-26; replaces "no P-level
+  given"). Architect ruling, verbatim: "US-172 v8: I agree on both
+  items. (1) No kit change for run 5: the pstore data that matters
+  comes from return-obs (us172.sh:442 uses sudo -n, I checked), and
+  the tb-post pstore line is data only. (2) F-413, F-414 and F-415 are
+  all P3, as filed. None of them blocks run 5: the v8 kit already
+  matches boot ids by whole line (awk) and dates boots by
+  /proc/uptime."
 - **F-415** (worker-2 via CM, 2026-10-26; no P-level given, listed
   under P3 until ruled) Boot timelines on the Pi 5 (no RTC): tooling
   and reports must date boots by /proc/uptime or the first NTP sync,
   never by journal wall-clock or `uptime` "up HH:MM" (the run-2 "came
   back in ~40 s" misreading). Source: 49ab9ebb item 5. Related: the
   Architect's RULED note under US-172 ("a no-RTC timestamp artifact").
+  P3 (Architect by message, via CM, 2026-10-26; replaces "no P-level
+  given"). Not a run-5 blocker: the v8 kit already dates boots by
+  /proc/uptime.
 
 ## Open PRs (2026-10-24, per CM)
 
