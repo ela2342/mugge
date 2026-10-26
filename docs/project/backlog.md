@@ -387,6 +387,11 @@ priority!"
   20f92e4d. US-178 allocated (measurement flow deploys via 174d sets;
   PO: P1, after US-174d, above US-177). 174d: `_deploy_sync` DISABLED
   (see US-174). F-401 WITHDRAWN as a duplicate of F-362 (PM).
+  UPDATE (CM, 2026-10-26, after v202): backlog v202 pushed as
+  d3279dc7. F-362 sweep (QE (a)+(b)) assigned to worker-1 on
+  defect/F-362-skip-guards from origin/main 5f3af36a. US-178 vs
+  US-174e: PO option (A), US-178 = flow/plumbing, 174e = venue
+  workflow UI on top.
 
 ## Reserved IDs
 
@@ -4036,6 +4041,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   signal-gen through the gate, calibration file 7161942); d)
   deploy + verification (load filters, re-measure, AE acceptance);
   e) later: the one-button venue workflow (design principle 6).
+  US-174e depends on US-178 (PO, 2026-10-26). Overlap resolved per PO
+  2026-10-26: US-178 = flow/plumbing, 174e = venue workflow UI on top.
+  174e scope otherwise unchanged (the full one-button venue workflow:
+  UI flow, UX N2, US-090/097 constraints); priority unchanged (after
+  174d/US-178).
   c) and d) wait strictly for US-173's H, F-341 AC3 (no signal-gen
   measurement session before it) and D-070 / the amps-on list.
   Pending: the Architect and AE define the first slice and the file
@@ -4775,6 +4785,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   disabled, the session ends at "Filters ready, not deployed", and
   post-deploy verification is skipped and marked; the PO accepts this
   as a known deviation of 174d until US-178 (see US-174 RULING).
+  Overlap resolved per PO 2026-10-26: US-178 = flow/plumbing, 174e =
+  venue workflow UI on top. Scope (PO option (A)): the pipeline/flow
+  only; a measurement run chains measure -> deploy (via the 174d safe
+  path) -> post-deploy verify again, inside the existing wizard step.
+  No new venue UI, no UX N2 work, no US-090/097 constraints. If the
+  Architect says 174e was meant to include the deploy-from-session
+  step, this split still applies; no PO round needed.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -4821,6 +4838,27 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   imports, and add -rs to the nix pytest test apps so skip reasons
   show in CI. Optional (QE): a lint check against new unlisted
   module-level skips.
+  QE (2026-10-26): F-362.md on origin/main has ACs 1-4 (the "ACs 1-5"
+  above does not match it). New AC5, QE verbatim: "5. Every pytest
+  invocation in the nix test apps reports skip reasons (`-rs`). In the
+  CI log, every remaining skip is named with its reason, and the
+  web-ui unit step shows no unnamed module-level skip."
+  Status (QE, 2026-10-26): 174d removes the test_filter_routes guard
+  and its stale `_PROFILES_DIR` import, so 174d covers AC1. AC2 is
+  covered once its CI log shows a non-zero TestDeployPathTraversal /
+  D-009 count. ACs 3-5 (the other 4 guards, the mutation check and
+  -rs) belong to the small separate F-362 PR. The QE's 174d no-re-skip
+  condition applies: failures are fixed or the test is deleted with a
+  reason, never re-skipped or xfailed; the unit step shows 0 skipped,
+  or every remaining skip is named. The four other guarded modules
+  (test_speaker_routes, test_speaker_lifecycle_integration,
+  test_activate_integration, test_protection_integration) run; CI's
+  "937 passed, 1 skipped" is the whole filter_routes module.
+  UPDATE (CM, 2026-10-26): the F-362 PR (QE (a) plain imports for the
+  4 guards, (b) -rs) is assigned to worker-1 on
+  defect/F-362-skip-guards, from origin/main 5f3af36a. (c), a check
+  that fails on any module-level skip without an allowlist entry,
+  stays an optional backlog-sized item.
 - **F-373** (AE; availability HIGH, safety-relevant; amps-on item
   13; linked US-159 G16): the USBStreamer sink does not recover after
   USB re-enumeration. AC17-B step (a), CM-CHG-.89-5: authorized 0->1
@@ -7037,6 +7075,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   is a radio open to anyone in range. SecSpec will check at the US-172
   PR review that the post-deploy check confirms disable-bt-pi5
   actually applied.
+  Cross-ref (PM dedup, 2026-10-26): duplicate of the earlier P3
+  one-liner "Bluetooth stays active on the Pi 5" (SecSpec, PO), which
+  is the original.
 - **PW main-thread latency under DJ load** (Architect, from the AE,
   2026-10-26; not a gate, no priority given; cross-ref F-358): measure
   GM link-change and gate-param latency under full DJ load on the Pi
@@ -7120,9 +7161,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   accidental. Only 05-rt-direct.conf (F-358) is copied under its
   plain name. Option (A) in the F-358 review. Owner: Architect.
   (worker-1, Architect)
+  SUPERSEDED (PM dedup, 2026-10-26): the same issue is now F-400 (all
+  four conf.d fragments; fixed on #63, see US-173).
 - Bluetooth stays active on the Pi 5 (disable-bt-pi5 not applied; BT
   on serial@7d50c000). No hardware.bluetooth, no bluetoothd. LOW,
   home lab, no owner question now; fix with US-172. (SecSpec, PO)
+  Cross-ref (PM dedup, 2026-10-26): the later P3 item "Bluetooth
+  enabled on the Pi 5" (v197-v199) is the same issue; this item is the
+  original. The later item's additions (AE pre-prod point, SecSpec
+  pre-gig check) stand.
 - ela's PAM loginLimits (nix/nixos/audio/pipewire.nix:83-86; Pi 4 and
   Pi 5) set rtprio 95 and memlock unlimited: every ela process (SSH
   sessions, Mixxx) may go to FIFO 95, above PipeWire's 88, and lock
