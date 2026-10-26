@@ -160,14 +160,19 @@ D009_TRIM_MARGIN_DB = -0.5
 D009_TRIM_OVERSAMPLE = 4
 
 
-def max_gain_db(fir, sr=SAMPLE_RATE, oversample=D009_TRIM_OVERSAMPLE):
-    """Peak magnitude (dB) of an FIR over 20 Hz - 20 kHz, oversampled in frequency."""
+def max_gain_db(fir, sr=SAMPLE_RATE, oversample=D009_TRIM_OVERSAMPLE, *,
+                band=(20.0, 20000.0)):
+    """
+    Peak magnitude (dB) of an FIR over `band` (Hz, inclusive), oversampled
+    in frequency. band=None reads every bin from 0 Hz to Nyquist.
+    """
     fir = np.asarray(fir, dtype=np.float64)
     n_fft = dsp_utils.next_power_of_2(len(fir)) * oversample
     mag = np.abs(np.fft.rfft(fir, n=n_fft))
-    freqs = np.fft.rfftfreq(n_fft, d=1.0 / sr)
-    band = (freqs >= 20) & (freqs <= 20000)
-    return float(dsp_utils.linear_to_db(np.max(mag[band])))
+    if band is not None:
+        freqs = np.fft.rfftfreq(n_fft, d=1.0 / sr)
+        mag = mag[(freqs >= band[0]) & (freqs <= band[1])]
+    return float(dsp_utils.linear_to_db(np.max(mag)))
 
 
 def uniform_d009_trim(filters, margin_db=D009_TRIM_MARGIN_DB, sr=SAMPLE_RATE):

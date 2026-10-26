@@ -76,6 +76,11 @@ MAX_RAISE_DB = 0.05
 MAX_OVER_CUT_DB = 1.0
 MAX_FAR_FIELD_DB = 0.1
 FAR_OCTAVES = 1.0 / 3.0
+# F-384 q3 (AE 51ad3771, Architect 1d3626b1, AE release ddfbc1ba): the step 9
+# scalar is a uniform cut, not a shape error. Over-cut and far-field are judged
+# with it removed; the scalar itself is bounded here. A larger cut means
+# step 8 left a big inter-bin overshoot: a new defect, back to the AE.
+MAX_D009_SCALAR_CUT_DB = 0.25
 # The D-009 margin the correction stage applies everywhere. combine has no
 # logged margin scalar yet; when F-383 adds one, read m from there (AE),
 # then re-run and report the over-cut to the AE before widening anything.
@@ -240,13 +245,12 @@ class TestAC2Gates:
         assert result.d009_trim_db <= 0.0, name
 
     def test_corrections_never_boost(self, run):
-        # The intermediate correction FIR overshoots its own -0.5 dB margin by
-        # up to 0.15 dB after the step-9 re-clip (F-384); the deployed files
-        # are held to D-009 above. Here: no boost at all.
-        # TODO(F-384): tighten to <= -0.5 dB once F-384 lands.
+        # F-384: step 9 is one cut-only scalar sized on the 8x grid (full
+        # band), so the correction FIR holds its own -0.5 dB margin too
+        # (1e-9 dB: float rounding of a FIR sitting exactly at the margin).
         name, _, result = run
         for spk, corr in result.corrections.items():
-            assert _max_gain_db(corr) <= 0.0, f"{name} {spk}"
+            assert _max_gain_db(corr) <= -0.5 + 1e-9, f"{name} {spk}"
 
     def test_minimum_phase_every_speaker_filter(self, run):
         name, _, result = run
@@ -427,11 +431,12 @@ def _corrected_and_uncorrected(bundle, sim, result, spk, extend=1.0):
     return freqs, cor - level, unc - level
 
 
-def _below_target(bundle, sim, result, spk):
+def _below_target(bundle, sim, result, spk, scalar_db=0.0):
+    """Below-target report; scalar_db is removed from the corrected response first."""
     lo, hi = RESIDUAL_BANDS_HZ[bundle.profile["speakers"][spk]["filter_type"]]
     freqs, cor, unc = _corrected_and_uncorrected(bundle, sim, result, spk, extend=EXT)
     return closed_loop.below_target_report(
-        freqs, cor, unc, np.zeros_like(unc), CORRECTION_MARGIN_DB,
+        freqs, cor - scalar_db, unc, np.zeros_like(unc), CORRECTION_MARGIN_DB,
         band=(lo, hi), far_octaves=FAR_OCTAVES)
 
 
@@ -450,20 +455,34 @@ class TestResidualPerChannel:
     def test_below_target(self, bundle, run, capsys):
         # AE ruling: never raised; over-cut near peaks bounded; far from
         # peaks only the margin. Worst values go to the test output.
+        # F-384 q3: "raised" on the FIR that ships; over-cut and far-field
+        # with the step 9 scalar removed (shape, not level).
         name, sim, result = run
-        reports = {spk: _below_target(bundle, sim, result, spk) for spk in result.corrections}
+        reports = {spk: (_below_target(bundle, sim, result, spk),
+                         _below_target(bundle, sim, result, spk,
+                                       scalar_db=result.d009_scalar_db[spk]))
+                   for spk in result.corrections}
         with capsys.disabled():
-            for spk, r in sorted(reports.items()):
+            for spk, (r, shape) in sorted(reports.items()):
                 print(f"\n  below-target {name} {spk}: raised {r['raised']:+.2f} dB, "
-                      f"over-cut {r['over_cut']:.2f} dB, far-field {r['far_field']:.2f} dB "
+                      f"over-cut {shape['over_cut']:.2f} dB, far-field {shape['far_field']:.2f} dB "
+                      f"re scalar {result.d009_scalar_db[spk]:+.3f} dB "
                       f"({r['n_far']}/{r['n_below']} bins far)", end="")
-        for spk, r in reports.items():
+        for spk, (r, shape) in reports.items():
             if r["n_below"] == 0:
                 continue
             assert r["raised"] <= MAX_RAISE_DB, f"{name} {spk}: {r}"
-            assert r["over_cut"] <= MAX_OVER_CUT_DB, f"{name} {spk}: {r}"
-            if r["n_far"]:
-                assert r["far_field"] <= MAX_FAR_FIELD_DB, f"{name} {spk}: {r}"
+            assert shape["over_cut"] <= MAX_OVER_CUT_DB, f"{name} {spk}: {shape}"
+            if shape["n_far"]:
+                assert shape["far_field"] <= MAX_FAR_FIELD_DB, f"{name} {spk}: {shape}"
+
+    def test_d009_scalar_is_a_small_cut(self, run):
+        # F-384 q3 D2b: the step 9 scalar never boosts and cuts at most 0.25 dB.
+        name, _, result = run
+        assert set(result.d009_scalar_db) == set(result.corrections), name
+        for spk, scalar_db in result.d009_scalar_db.items():
+            assert isinstance(scalar_db, float), f"{name} {spk}: {scalar_db!r}"
+            assert -MAX_D009_SCALAR_CUT_DB <= scalar_db <= 0.0, f"{name} {spk}: {scalar_db}"
 
     def test_far_field_guard_is_not_vacuous(self, bundle, home_lab):
         sim, result = home_lab

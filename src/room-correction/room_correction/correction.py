@@ -12,6 +12,8 @@ The algorithm:
 4. Compute the inverse: target / measured
 5. Enforce D-009: clip all gains to -0.5dB maximum
 6. Convert to minimum-phase FIR
+7. Scale the finished FIR by one cut-only gain so its true peak stays at or
+   below the margin (F-384)
 
 The cut-only constraint means we only attenuate room peaks and apply
 subtractive target shaping. Room nulls are left uncorrected — boosting
@@ -26,16 +28,20 @@ generate_correction_filter().
 """
 
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 
+from . import combine
 from . import dsp_utils
 from . import target_curves as tc
 
 
 SAMPLE_RATE = dsp_utils.SAMPLE_RATE
 D009_MARGIN_DB = -0.5
+# F-383/F-384 B3: the D-009 scalar measures the peak on an 8x grid (2^17
+# points at 16384 taps), full band. 4x under-reads the inter-bin peak by up to 0.045 dB.
+D009_SCALAR_OVERSAMPLE = 8
 
 # AE, 2026-10-25: level reference per driver role (median of the
 # 1/6-octave smoothed magnitude). Sats stay clear of the 200 Hz crossover
@@ -59,6 +65,8 @@ class CorrectionFilter:
     fir: np.ndarray
     reference_level_db: float          # measured level before normalization
     ref_band_hz: Tuple[float, float]   # band the level was taken over
+    # F-384 q4: D-009 scalar step 9 applied (dB, <= 0); None = not known.
+    d009_scalar_db: Optional[float] = None
 
 
 # AE, F-262 item 3: no residual or level reference band is defined for
@@ -92,6 +100,8 @@ def generate_correction_filter(
     target_phon=None,
     reference_phon=80.0,
     max_cut_db=None,
+    *,
+    return_scalar_db=False,
 ):
     """
     Generate a room correction filter from a measured impulse response.
@@ -120,12 +130,35 @@ def generate_correction_filter(
         unchanged behaviour). The cut is only meaningful relative to the
         target if the IR level has been normalized first, see
         normalize_ir_level().
+    return_scalar_db : bool
+        If True, also return the D-009 scalar step 9 applied (F-384 q3).
 
     Returns
     -------
-    np.ndarray
-        Correction filter (minimum-phase FIR, n_taps long).
+    np.ndarray or tuple of (np.ndarray, float)
+        Correction filter (minimum-phase FIR, n_taps long). With
+        return_scalar_db, (filter, scalar in dB): <= 0, exactly 0.0 when
+        the FIR was already at or below margin_db.
     """
+    correction_filter = _unscaled_correction_filter(
+        ir, target_curve_name=target_curve_name, n_taps=n_taps, sr=sr,
+        margin_db=margin_db, target_phon=target_phon,
+        reference_phon=reference_phon, max_cut_db=max_cut_db)
+    fir, scalar_db = _d009_scale(correction_filter, margin_db, sr=sr)
+    return (fir, scalar_db) if return_scalar_db else fir
+
+
+def _unscaled_correction_filter(
+    ir,
+    target_curve_name='flat',
+    n_taps=16384,
+    sr=SAMPLE_RATE,
+    margin_db=D009_MARGIN_DB,
+    target_phon=None,
+    reference_phon=80.0,
+    max_cut_db=None,
+):
+    """Steps 1-8 of generate_correction_filter(): the FIR before the D-009 scalar."""
     ir = np.asarray(ir, dtype=np.float64)
 
     # Step 1: Apply frequency-dependent windowing to the IR
@@ -189,21 +222,28 @@ def generate_correction_filter(
     fade = dsp_utils.fade_window(n_taps, 0, fade_out_len)
     correction_filter *= fade
 
-    # Step 9: Post-output D-009 re-clip. Cepstral synthesis and
-    # truncation+windowing can push magnitude above the clipped design.
-    # Re-clip the final FIR's rfft magnitude while preserving phase.
-    margin_linear = dsp_utils.db_to_linear(margin_db)
-    out_spectrum = np.fft.rfft(correction_filter)
-    out_mag = np.abs(out_spectrum)
-    exceed = out_mag > margin_linear
-    if np.any(exceed):
-        out_phase = np.angle(out_spectrum)
-        out_mag[exceed] = margin_linear
-        correction_filter = np.fft.irfft(
-            out_mag * np.exp(1j * out_phase), n=len(correction_filter),
-        )
-
     return correction_filter
+
+
+def _d009_scale(fir, margin_db, sr=SAMPLE_RATE):
+    """
+    Step 9: one cut-only D-009 gain on the finished FIR (F-384).
+
+    Cepstral synthesis and truncation+fade can push the magnitude above the
+    clipped design, also between FFT bins. A single scalar keeps the shape,
+    and so the minimum phase, exactly; it never boosts (D-009 is a ceiling).
+    The peak is read over the full band, 0 Hz to Nyquist: a sub-20 Hz
+    overshoot plays too (F-384 q2). An FIR already at or below margin_db is
+    returned unchanged. Returns (fir, scalar in dB).
+    """
+    peak_db = combine.max_gain_db(
+        fir, sr=sr, oversample=D009_SCALAR_OVERSAMPLE, band=None)
+    if not np.isfinite(peak_db):
+        raise ValueError("correction filter has a non-finite peak gain")
+    if peak_db <= margin_db:
+        return fir, 0.0
+    scalar_db = float(margin_db - peak_db)
+    return fir * dsp_utils.db_to_linear(scalar_db), scalar_db
 
 
 def normalize_ir_level(ir, ref_band_hz, sr=SAMPLE_RATE, target_db=0.0,
@@ -306,8 +346,9 @@ def correction_from_measurement(
 
     band = reference_band(speaker)
     normalized, level_db = normalize_ir_level(ir, band, sr=sr)
-    fir = generate_correction_filter(
+    fir, scalar_db = generate_correction_filter(
         normalized, target_curve_name=target_curve, n_taps=n_taps, sr=sr,
         target_phon=target_phon, reference_phon=reference_phon,
-        max_cut_db=max_cut_db)
-    return CorrectionFilter(fir=fir, reference_level_db=level_db, ref_band_hz=band)
+        max_cut_db=max_cut_db, return_scalar_db=True)
+    return CorrectionFilter(fir=fir, reference_level_db=level_db, ref_band_hz=band,
+                            d009_scalar_db=scalar_db)

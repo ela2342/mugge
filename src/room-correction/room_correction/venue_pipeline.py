@@ -147,6 +147,8 @@ class VenueFilterResult:
     notes: List[str] = field(default_factory=list)
     # F-262 S5: uniform trim applied to every speaker filter (0.0 or negative).
     d009_trim_db: float = 0.0
+    # F-384 q4: speaker key -> D-009 scalar step 9 applied to its correction.
+    d009_scalar_db: Dict[str, float] = field(default_factory=dict)
     # F-262 S6: filename -> (measured IR, CorrectionFilter, speaker dict),
     # for verify.run_correction_gate().
     closed_loop_inputs: Dict[str, Tuple[np.ndarray, CorrectionFilter, dict]] = field(
@@ -293,6 +295,7 @@ def generate_venue_filters(
         delays_s=delays_s,
         delays_samples=time_align.delays_to_samples(delays_s, sr=sr),
         d009_trim_db=trim_db,
+        d009_scalar_db={k: c.d009_scalar_db for k, c in shaped.items()},
         closed_loop_inputs={
             bundle.speaker_files[k]: (np.asarray(acoustic_irs[k], dtype=np.float64),
                                       shaped[k], speakers[k])
