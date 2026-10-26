@@ -17,10 +17,11 @@
 # Gain values:
 #   Mains (-60 dB): production default from C-005 (thermal safety).
 #   Sub (-64 dB): production default from C-005.
-#   Spare (-120 dB): belt-and-suspenders mute per Architect guidance.
-#     The D-063 audio gate (Mult=0.0) is the primary mute mechanism,
-#     but -120 dB gain ensures the spare channel stays silent even if
-#     the gate is accidentally opened.
+#   Spare (-120 dB): zero.wav (all-zero FIR) IS the mute: the channel
+#     outputs silence whatever the gain or gate state. -120 dB is a
+#     second layer (belt-and-suspenders, per Architect guidance), together
+#     with the D-063 audio gate (Mult=0.0). A dirac.wav is NOT a mute; it
+#     passes audio through.
 #   HP/IEM (0 dB): unity gain, dirac passthrough.
 
 name: "markaudio-ultimax-200hz"
