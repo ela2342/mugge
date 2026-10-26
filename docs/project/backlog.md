@@ -881,6 +881,12 @@ priority!"
   worker-6 (1318b25c), PO K3 ruling e720d78c (no erratum; AC2c
   governs, DSP flags not OFF or missing BLOCK measuring), and the AE's
   K4 follow-up one-liner.
+  UPDATE (CM, AE, 2026-10-26, after v289): backlog v289 pushed as
+  cd6ce65f. US-179: the AE rules K4 does NOT go on the amps-on
+  precondition list (ae0c3e70); it stays a scoped US-179 follow-up,
+  checked in the go-check of the first amps-on US-179 web measurement
+  run relying on calibrated SPL. The AE has no objection to the PO's
+  K3 ruling e720d78c.
 
 ## Reserved IDs
 
@@ -11389,6 +11395,32 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   safe. PM cross-ref: not added to the AMPS-ON PRECONDITION LIST (that
   list mirrors safety.md); asked of the AE via the CM whether it
   should be.
+  K4 AMPS-ON ANSWER (AE, CM relay, 2026-10-26; closes the PM cross-ref
+  above):
+  /tmp/cm-relay/US-179/frozen/ae-K4-amps-on-answer-ae0c3e70.txt
+  (sha256 ae0c3e70, 960 bytes, verified at PM read). Verbatim,
+  reflowed, without its title line ("... does K4 (1318b25c) go on the
+  amps-on precondition list? NO."):
+  - Reasons:
+     - The SPL stops are a backstop. The primary amps-on protections
+     for a US-179 run are the -60 dBFS start, the +6 dB steps, the -20
+     dBFS clamp with auto-STOP, the 30 s auto-STOP, the ramps and the
+     digital-zero channels. None of these depend on SPL calibration.
+     - A K1 offset error most likely over-reads, which is the safe
+     direction.
+     - Under the owner's 2026-10-26 priority, safety.md work is
+     paused. A new list row would need a TW batch.
+  - Instead: keep it as a US-179 follow-up with a scope line. "Blocks
+    the first amps-on US-179 web measurement run that relies on
+    calibrated SPL; it does not block other amps-on work." Before that
+    run, the AE checks it in the run's go-check. Revisit for safety.md
+    when the pre-prod safety-doc work resumes.
+  - K3: the PO's e720d78c (AC2c, block with no fallback) is stricter
+    than my K3. NO OBJECTION; it governs.
+  Team-lead constraint (CM, 2026-10-26; given before the AE answered),
+  verbatim: "Either way, the K4 check still has to happen before the
+  first amps-on run." With the AE's NO: no amps-on row, no TW work; K4
+  stays this scoped US-179 follow-up.
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
