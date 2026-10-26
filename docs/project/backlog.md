@@ -736,6 +736,11 @@ priority!"
   as draft; 7 Rule 13 verdicts requested; CI-exempt. TW has
   F-406/F-407 in their queue. #66: CI 40345460992 at ff985455 still
   running; needs a main-merge before merge (CM).
+  UPDATE (CM, 2026-10-26, after v261): backlog v261 pushed as
+  216ee4d2. #67: 6/7 APPROVE at ae450041 (AE pending). PR #68 (F-394
+  draft, worker-1, 257b272d) CI 40346339865 running; consult Q1-Q3
+  with QE/AE. F-262: AE gate-xo ruling v1 (0aac380f) awaiting
+  Architect release; new F-408 for its G4 follow-up (PM) (CM).
 
 ## Reserved IDs
 
@@ -836,6 +841,11 @@ local branches, and worktrees): F-406 (QE: test_filter_deploy_e2e.py:315
 skips on a missing v1 after deploy; rollback untested) and F-407 (QE:
 test_venue_gate_e2e.py:165/:180 skip on gate-indicator timeout). Next
 free (supersedes the line above): F-408, US-179, D-071, T66.
+Allocated 2026-10-26 (PM, checked free across main, all origin/* and
+local branches, and worktrees): F-408 (AE gate-xo ruling v1 0aac380f
+G4: replace the cepstral min-phase residual with a metric valid for
+unit-circle zeros; ruling not yet released by the Architect). Next
+free (supersedes the line above): F-409, US-179, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -6599,6 +6609,27 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     still running. #66 is behind main (#64 merged), so it needs a
     main-merge before merge; that voids any approvals given before it
     (CM).
+  - UPDATE (CM, AE, 2026-10-26, after v261): AE gate-xo ruling v1
+    (/tmp/cm-relay/F-262/frozen/ae-gate-xo-ruling-v1-0aac380f.txt,
+    sha256 0aac380f, verified at PM read). Single writer AE; releaser
+    Architect; AE released, Architect NOT yet released, so not final.
+    Summary (PM, not a substitute for the file): AE finds the cepstral
+    reconstruction does not converge for high-order unit-circle zeros,
+    so the -40 dB residual threshold rejects true min-phase 48 dB/oct
+    filters; "That is a false positive in the gate, not a filter
+    defect." and "This is fidelity (pre-ringing), not safety."
+    Directions (iii) and (iv) rejected.
+     G1 MIN_PHASE_MAX_RESIDUAL_DB becomes -3.0 dB (gross-error gate;
+     residual still logged and shown). G2 tail rule: last 5% <= -45 dB
+     re total AND decaying vs taps 90-95%; REQUIRED: session and
+     filter_routes pass mandatory_hpf_hz to run_venue_checks; required
+     test for an identity with mandatory_hpf_hz and an export without
+     the HPF. G3 required controls P1-P3 PASS, N1-N5 FAIL (P3 = all 11
+     profiles parametrized; worker-4 sends the P3 table). G4 = F-408
+     (follow-up, not blocking F-262). G5: D-009 -0.5 dB, closed loop
+     3.0 dB, 18 dB HPF limit and bandpass fail-closed stay; dc9e529d
+     (4) amended; c8 10-run AC (f8a014c7) starts once the session is
+     green with G1-G3.
   Before the first amps-on measurement (non-blocking one-liners; no
   F-ID, no P-level given):
   - AE, verbatim: "F-262 item 7 Architect note: before the first
@@ -6813,6 +6844,82 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   UPDATE (CM, 2026-10-26, after v260): F-406 and F-407 records are PR
   #67 (docs-only, draft, head ae450041); 7 Rule 13 verdicts requested;
   CI-exempt.
+  UPDATE (CM, 2026-10-26, after v261): #67 6/7 APPROVE at ae450041,
+  all matched on GitHub (CM): UX, ARCH, TW, SEC, AD, QE; none
+  blocking; QE CONFIRMED the ACs as written; AE pending. Frozen
+  verdicts /tmp/cm-relay/PR67/frozen-verdicts-ae450041/, each sha256
+  verified at PM read: UX 1599efa3, ARCH b4a3b032, TW 627afa08, SEC
+  a113860a, AD fb1c0a6c, QE 74723586. TW declares authorship of both
+  records (QE cross-checks the facts). None of the approvals rates
+  severity (UX, SEC, AD, TW).
+  Non-blocking points from the #67 verdicts, verbatim (no F-ID, no
+  P-level given except where quoted):
+  - F-407 close POST swallowed (one row; ARCH N1, SEC (1), AD L1, QE
+    N1). ARCH N1: "F-407 does not mention that the gate-CLOSE API call
+    in the same test is wrapped in `except Exception: pass` (between
+    :180 and the CLOSED wait). A failed close is swallowed silently,
+    and the local-demo gate may then stay open for later tests in the
+    session. Suggest extending AC2 to the close call: it fails on an
+    API error. Test-only, no production impact." SEC (1), rated "LOW"
+    (SEC): "The gate is the D-063 output interlock, so a failing close
+    must be a FAIL. Suggest AC2 covers both the open (:165) and the
+    close API step." QE N1: "AC1 already covers it, because the CLOSED
+    wait then times out and becomes a FAIL. The fix PR should still
+    make the close POST fail on an error, in the same way as AC2. No
+    record change is needed now."
+  - AD L2 (F-407, state leak): "if the test skips (or, after AC1,
+    fails) after the gate opened, nothing closes it. There is no
+    teardown, and the close error is swallowed. Later E2E modules on
+    the same local-demo stack then run with the gate OPEN, so a
+    gate-starts-closed (D-063) check that runs later would test leaked
+    state. It is local-demo only and has no prod path. Suggested AC: a
+    finalizer or fixture that closes the gate and asserts CLOSED."
+  - UX N1 (F-407), AC addition for the QE to consider: "the dangerous
+    direction is the indicator showing CLOSED while the gate is OPEN
+    (stale state after a lost WebSocket event or connection). Besides
+    the OPEN/CLOSED timeouts, the fix should make a lost or stale gate
+    state visible, e.g. the indicator switches to "UNKNOWN /
+    reconnecting" when the WebSocket drops, and never keeps showing
+    the last state as current."
+  - UX N2 (F-407), severity input: "approving this record does not
+    rate it ... I would rate F-407 at least as high as F-406." PM:
+    recorded as input; F-406 and F-407 still have no P-level.
+  - AD M1 (F-406 AC3, vacuous pass): "If `/filters/active` returns
+    `{}`, the loop runs zero times and the test PASSES with no
+    rollback evidence. ... Suggested AC amendment: the active set
+    after v1, after v2 and after rollback must be non-empty and cover
+    every deployed channel. QE to confirm." PM cross-ref: QE CONFIRMED
+    the ACs as written (CM); whether M1 is taken up is the QE's call.
+  - QE N2 (F-406): "That assert compares `/api/v1/filters/active`
+    (l.276/307), not the versions listing. In CI, `/filters/active`
+    changed between v1 and v2 while `/filters/versions` showed no
+    `active` entry. That points AC1 at a contract mismatch between the
+    two endpoints. This is a hint for the fix author; no record change
+    is needed."
+  - SEC (2), "INFO" (F-406 vs US-174d): "Resolving F-406 must not
+    re-enable the rollback writer just to make the test pass.
+    Acceptable outcomes: assert the 409 while the writer is disabled,
+    or move the rollback evidence to the venue pipeline. The QE and
+    Architect pick which one."
+  - AD nits: F-407 line cites (open-step skip is :166, CLOSED skip
+    :199); Related lines cite F-402 and F-405, which have no record
+    file (= QE N3, see the TW docs batch). AD: the F-400 append
+    conflict with #63 is trivial; diff-only re-review if the head
+    moves.
+- **F-408** Min-phase residual metric not valid for unit-circle zeros
+  (AE gate-xo ruling v1
+  /tmp/cm-relay/F-262/frozen/ae-gate-xo-ruling-v1-0aac380f.txt,
+  sha256 0aac380f, verified at PM read; AE released, Architect NOT yet
+  released; ID allocated by the PM at the AE's request; no P-level
+  given). G4, verbatim: "Follow-up, not blocking F-262. PM gets a new
+  F-number; AE owns it with the Architect, and it lands before the
+  first amps-on room correction." Goal (AE): replace the cepstral
+  residual with a metric valid for unit-circle zeros, so that
+  pre-ringing introduced by correction is detected at fine level
+  again. Candidates (AE): passband excess group delay vs the
+  generator's design; the residual of the CORRECTION component before
+  it is combined with the crossover; an exponentially weighted
+  cepstrum.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -6951,6 +7058,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     queue.
   - One-liner (TW docs batch, via CM; "low priority" (CM); no P-level
     given): defect records for F-402, F-405, F-398 and F-399.
+     TW (direct, 2026-10-26): LOW priority, after US-172 and the DJ
+     path, timing for the PO to pick; each of the four has an ID but
+     no defects/*.md file and no index row on main. QE N3 (#67,
+     74723586): F-402 and F-405 "exist only as backlog IDs. F-405 is
+     the `test_gate_closed_e2e.py:137` D-063 masking I asked an F-ID
+     for, so the PM should schedule its record." PM: no P-level given
+     by either; scheduling is the PO's pick.
   UPDATE (CM, QE, 2026-10-26, after v256): CI 40333713247 at f715538e
   is green on all 4 jobs. QE count profile MET
   (/tmp/pr64-qe-countprofile-f715538e.md, sha256 96abe4fb, verified at
@@ -8182,6 +8296,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     part of #59).
     UPDATE (CM, 2026-10-26): #59 merged (main f01e6647); this
     follow-up is now due (TW).
+  UPDATE (CM, 2026-10-26, after v261): F-394 is PR #68 (draft,
+  worker-1, head 257b272d); CI 40346339865 running. Fence r2 adds
+  scripts/test-e2e.sh. worker-1 consult Q1-Q3
+  (/tmp/cm-relay/F-394/frozen/w1-257b272d-consult-Q1-Q3.txt, sha256
+  7f4cae29, verified at PM read): Q1 stimulus in the CI local-demo
+  (worker-1 recommends (a), a --tone option in mixxx-substitute.py);
+  QE writes, AE releases or objects. Q2 whether the mute tests assert
+  on level-bridge-hw-out, and whether opening the gate in the virtual
+  CI stack is acceptable (worker-1 will not do it without an explicit
+  ruling); AE writes, QE releases. Q3 ensure_dj_mode function-scoped
+  vs module reorder (worker-1 recommends function scope); QE writes
+  alone. CI virtual local-demo only; no Pi, nothing played.
 - **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
   per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
   2026-10-26): on a suspended node, the gain readers in the r6b matrix
