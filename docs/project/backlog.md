@@ -667,6 +667,11 @@ priority!"
   F-262 set A: six worker-4 impl findings (e3900cbf); the AE's F1-F5
   ruling a8386f4b awaits the Architect's release; F6 is with the
   Architect; nothing has gone to worker-4 yet (CM).
+  UPDATE (CM, 2026-10-26, after v250): backlog v250 pushed as
+  91706431. F-262 set A: F1-F5 (a8386f4b) and F6 (dfffcfbf) are both
+  released and relayed to worker-4; new F6 follow-up one-liner (legacy
+  CLI). #63 [ARCH-CHECK] C7 SETTLED (2aeff13a); worker-3 folds it into
+  plan v4 (CM).
 
 ## Reserved IDs
 
@@ -4958,6 +4963,21 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     PRE-DISPLAY gate).
   - OPEN [ARCH-CHECK] (Architect, via CM): does C7 pass when GM's
     F-249 standby sets force-quantum to 256 instead of clearing it?
+  - SETTLED (Architect, via CM, 2026-10-26; supersedes the OPEN
+    [ARCH-CHECK] above): frozen copy in /tmp/cm-relay/PR63/:
+    frozen-pr63-arch-check-c7-f249-2aeff13a.md (sha256 2aeff13a,
+    verified at PM read). The Architect accepts worker-3's reading of
+    C7: since F-249, GM is the single quantum authority, with
+    force-quantum 256 as its standby value. C7 PASS requires all of:
+     the effective driver quantum is 256, read from the USBStreamer
+     driver row in `pw-top -b -n 2`, not from settings alone;
+     clock.force-quantum is 256 or equals the A2 baseline;
+     clock.force-quantum is never 1024.
+     Otherwise FAIL: retry `set_mode standby` once and re-read; if it
+     still fails, STOP and report to the Architect via the CM. No
+     manual pw-metadata write, ever. An A2 baseline of 0 followed by
+     256 at P17a is a PASS, logged as an observation. worker-3 folds
+     this into plan v4 (CM).
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -6065,6 +6085,36 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      release.
      F6: with the Architect.
      Nothing has gone to worker-4 yet (CM).
+  - UPDATE (CM, 2026-10-26, after v250; supersedes "awaiting the
+    Architect's release", "F6: with the Architect" and "Nothing has
+    gone to worker-4 yet" above): both rulings are released and
+    relayed to worker-4.
+     F1-F5 (a8386f4b): the AE wrote it, the Architect released it (per
+     CM relay; the frozen file's Architect release line is blank, and
+     no separate frozen release file was found at PM read). F3 drops
+     (iv) as a gate for room captures; it supersedes the "fail closed
+     if it can't be computed" clause of b64aad93 s3 / 9833ce7c item 1,
+     for room captures only. F2 adds an S2 AC to F-403 (see F-403).
+     F6 (dfffcfbf): the Architect wrote it, the AE released it; frozen
+     as /tmp/cm-relay/F-262/frozen/:
+     F6-source-scan-architect-dfffcfbf.txt (sha256 dfffcfbf, verified
+     at PM read). worker-4's source-scan proposal is ACCEPTED with
+     tightening: AST scan of src/ (minus tests/ and the
+     room-correction mock/); generate_correction_filter,
+     verify_minimum_phase and verify.run_all_checks forbidden outside
+     an exact (file, def) allowlist that can only shrink; runner and
+     generate_bose_filters quarantined from src/web-ui/ and the
+     room_correction package; mutations (a)-(c) for the QE next to M7.
+  - F-262 follow-up (Architect, in F6 dfffcfbf; "one-liner; low
+    priority; not a US-178 or US-174e gate"; no ID allocated),
+    verbatim (list bullets flattened to "; "): "F-262 follow-up:
+    retire, or re-route onto correction_from_measurement plus the
+    shared gate: the legacy runner.py run_full_pipeline /
+    run_stage_correct / run_stage_verify; verify.run_all_checks;
+    generate_bose_filters.py. Then empty the F-262 source-scan
+    allowlist. Fix the deploy.py:8/:99 run_all_checks wording with or
+    after 174d." AE (via CM): a manual human run of the legacy CLI is
+    the only remaining path, and this line covers it.
   Before the first amps-on measurement (non-blocking one-liners; no
   F-ID, no P-level given):
   - AE, verbatim: "F-262 item 7 Architect note: before the first
@@ -6184,6 +6234,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   F-403 finding and a US-178 gate together with S4. Fix (AE): "the
   burst ends, then ≥ 0.5 s settle, then the noise window, then the
   sweep."
+  S2 AC (AE, F-262 F2 ruling a8386f4b, 2026-10-26), verbatim: "When S2
+  lands (session ref = played law), the 30 dB floor is reinstated on
+  the session-ref h as well. The PM records this as an S2 AC."
 - scripts/test-e2e.sh: worker-4 (outside F-262, via CM, 2026-10-26),
   verbatim: "scripts/test-e2e.sh runs under `set -e`. If the
   service-integration pytest fails, the script exits before the
