@@ -55,6 +55,9 @@ CLIENT = "jsc-client"
 # WirePlumber normally sets DSP mode. pipewire-jack hides ports without
 # format.dsp, so the stand-ins configure DSP ports themselves.
 DSP_PORTS = "{ mode = dsp monitor = false position = preserve }"
+# The GM stand-in is a null sink too, so its only output ports are the
+# monitor ports; GraphManager-style links start from those.
+DSP_PORTS_MONITOR = "{ mode = dsp monitor = true position = preserve }"
 
 STANDINS = {
     USBSTREAMER: {
@@ -70,7 +73,7 @@ STANDINS = {
         "media.class": "Audio/Source/Virtual",
         "audio.channels": "2",
         "audio.position": "[ FL FR ]",
-        "adapter.auto-port-config": DSP_PORTS,
+        "adapter.auto-port-config": DSP_PORTS_MONITOR,
     },
 }
 
@@ -207,6 +210,28 @@ class Stack:
                 return p["id"]
         return None
 
+    def print_ports(self):
+        print("PipeWire ports (node.id, direction, port.name, "
+              "audio.channel, format.dsp):", flush=True)
+        for p in self.objects("Port"):
+            info = p.get("info", {})
+            props = info.get("props", {})
+            print("  %s %s %s %s %s" % (
+                props.get("node.id"), info.get("direction"),
+                props.get("port.name"), props.get("audio.channel"),
+                props.get("format.dsp")), flush=True)
+
+    def out_port_id(self, node_name, channel):
+        nid = self.node_id(node_name)
+        for p in self.objects("Port"):
+            info = p.get("info", {})
+            props = info.get("props", {})
+            if (props.get("node.id") == nid
+                    and info.get("direction") == "output"
+                    and props.get("audio.channel") == channel):
+                return p["id"]
+        return None
+
     def link(self, out_port, in_port):
         for l in self.objects("Link"):
             info = l.get("info", {})
@@ -271,12 +296,7 @@ class Cases:
         fl = [n for n in usb if n.endswith("playback_FL")]
         fr = [n for n in usb if n.endswith("playback_FR")]
         if len(fl) != 1 or len(fr) != 1:
-            pw_ports = [(p["info"]["props"].get("node.id"),
-                         p["info"]["props"].get("port.name"),
-                         p["info"]["props"].get("format.dsp"))
-                        for p in s.objects("Port")]
-            print("PipeWire ports (node.id, port.name, format.dsp): %s"
-                  % pw_ports)
+            s.print_ports()
             raise CaseFailure("USBStreamer stand-in JACK ports not found: %s"
                               % usb)
         self.jack_fl, self.jack_fr = fl[0], fr[0]
@@ -286,9 +306,13 @@ class Cases:
                          lambda: s.port_id(CLIENT, "in_0"))
         self.p_fl = s.port_id(USBSTREAMER, "playback_FL")
         self.p_fr = s.port_id(USBSTREAMER, "playback_FR")
-        self.p_gm = s.port_id(GM_SRC, "capture_FL") \
-            or s.port_id(GM_SRC, "monitor_FL")
+        try:
+            self.p_gm = poll("GM stand-in FL output port",
+                             lambda: s.out_port_id(GM_SRC, "FL"))
+        except CaseFailure:
+            self.p_gm = None
         if None in (self.p_fl, self.p_fr, self.p_gm):
+            s.print_ports()
             raise CaseFailure("stand-in ports missing: fl %s fr %s gm %s"
                               % (self.p_fl, self.p_fr, self.p_gm))
 
