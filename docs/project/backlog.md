@@ -1083,6 +1083,9 @@ version, see P3): F-417, US-183, D-072, T66.
 Next free (v303; supersedes the line above; F-417 confirmed free on
 main, all origin/* and local branches at PM read, filed in this
 version, see P3): F-418, US-183, D-072, T66.
+Next free (v304; supersedes the line above; F-418 confirmed free on
+main, all origin/* and local branches at PM read, filed in this
+version, see P3): F-419, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -10782,6 +10785,59 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - Sequencing, verbatim: "F-384 (A5 + the R2 tests) is the FIRST code
     commit, on its own. It does not depend on the subsonic decision
     (S2/S3)."
+  F-383 PHASE 0b (CM, 2026-10-26; all files in
+  /tmp/cm-relay/F-383/frozen/, shas verified at PM read):
+  - worker-7 report r1 w7-F383-phase0b-r1-76103385.md (sha256
+    76103385, 23024 bytes): subsonic diagnosis (c281701b M1-M7) + A r3
+    A4 prototype; verbatim: "Numbers only. No decision, no S2/S3
+    reading, no fix proposal."
+  - AE Part 1 reading ae-F383-phase0b-part1-reading-c54b6b14.txt
+    (sha256 c54b6b14, 4504 bytes), RELEASED by the AE (own text). R1a
+    24 dB/oct (80/24, 40/24, 25/24): verbatim "ARTEFACT, no fix
+    needed" (the 16x reference is not converged). R1b 48 dB/oct
+    (40/48): verbatim "REAL DEFECT under S2. -39.1 dB at 16x, 64x and
+    256x"; the legacy 1e-10 floor is the cause; verbatim "Audio
+    severity of R1b: LOW." R2: production uses 48 dB/oct, so verbatim
+    "the subsonic fix must land BEFORE or in the same commit as the
+    A1b generator check". R3: build (ii) (floor 1e-20 at the 4n design
+    grid) verbatim "is REJECTED as the fix; it fails S3". R4: S3 for
+    the fix made precise (<= -60 dB at 64x, both slopes 24 and 48,
+    cover 80/48 and 25/48). R5: the A1b test value is ACCEPTED (record
+    -39.1 dB, tolerance 0.3 dB). R6: COMBINE_MARGIN_DB -0.6 vs D009
+    -0.5, no audio-safety objection; the Architect reconciles.
+  - AE note ae-F383-part1-R0-withdrawn-e6e73487.txt (sha256 e6e73487,
+    251 bytes), verbatim: "R0 withdrawn; the record is A r3 89c3bb1b +
+    B r1 349b585f; r4/r2 equivalent, cite either; nothing re-run.
+    R1-R6 stand as written." (The withdrawn R0 had named A r4 + B r2
+    as the record and A r3 VOID; the F-383 RECORD above stands.)
+  - Architect Part 2 reading r1
+    arch-F383-phase0b-reading-r1-69f5bdda.txt (sha256 69f5bdda, 7870
+    bytes): NOT RELEASED. AE review
+    ae-review-arch-reading-r1-dbdd1216.txt (sha256 dbdd1216, 3217
+    bytes), verbatim: "VERDICT: NOT RELEASED as a whole. Two
+    objections (OBJ-1, OBJ-2). Everything else is released as
+    written." OBJ-1: R0 and the header name A r4 + B r2 as the record;
+    change to team-lead's wording. OBJ-2: R6d is build (ii), which the
+    AE R3 rejects; name a candidate that can meet R4 (e.g. a 1e-20
+    floor with a design FFT >= 64 x n, truncated to n) and measure it
+    in R6b next to build (i). Released as written: R1, R2a-c, R3, R4,
+    R5, R6a, R6c, R7, and R6b with slope 24 added. R2d (AE call):
+    ACCEPT the ~1.5 dB electrical sum dip at 100-400 Hz for F-383
+    (one-liner filed as F-418). Architect r2 PENDING.
+  F-384 IMPLEMENTATION (CM, 2026-10-26): worker-7 implements under
+  fence 80317b5a (PM cross-ref: the fence file was not found under
+  /private/tmp at PM read, sha not PM-verified) on branch
+  fix/F-384-step9-peak-scalar from #66 head 4724e65d (PM read: not on
+  origin yet). Scope question q1
+  /tmp/cm-relay/F-383/frozen/w7-F384-q1-T3b-helper-b875f5dd.txt
+  (sha256 b875f5dd, verified): T3b needs the A2 helper, which the
+  brief fences out of this commit; options (a) ship T1-T5 without T3b,
+  T3b in the A2 commit; (b) a private test-local residual/tail
+  function, replaced by the helper in the A2 commit; (c) something
+  else. worker-7, verbatim: "I will not pick (a) or (b) myself." With
+  the Architect (writer). Note for the record: D009_SCALAR_OVERSAMPLE
+  = 8 is defined in correction.py (combine.py fenced out; no import
+  cycle).
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
@@ -12336,6 +12392,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - C tests C1-C6 incl. C1b, each must catch its named mutation. D,
     verbatim: "A4/C5 (heartbeat) and B4/C1b must be done before Rule
     13 review."
+  UX WORDING FOR 4a / 3c / 4b (CM, 2026-10-26):
+  /tmp/cm-relay/US-179/frozen/ux-w6-ack-port-cap-64c83e3e.md (sha256
+  64c83e3e, verified at PM read), released by the AE
+  /tmp/cm-relay/US-179/frozen/ae-ux-w6-texts-release-17e5fef8.txt
+  (sha256 17e5fef8, verified), verbatim: "RELEASE 64c83e3e. No
+  objections." Relayed to worker-6. Content: the 4a acknowledgement as
+  one checkbox per item (headphones/IEM, not Bluetooth, downstream
+  gain low, output device; button enabled only when all are ticked; E5
+  D1 clears every tick); the 3c confirmation with the filled-in limit
+  and tuning, cleared when either changes; the 4b cap as two lines,
+  "Safety limit: the output never goes above -20 dBFS peak." AE: the
+  line is display only; the constant stays in code. Branch
+  story/US-179-web-rc at f204e497 (PM read: ls-remote matches).
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
@@ -13045,6 +13114,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   unless the mains use dirac.wav (QE 8251397b). Fix (QE): the
   local-demo stack references a filter set that is missing on the CI
   runner; "Either ship it or stop referencing it."
+- **F-418** (AE, F-383 phase 0b review dbdd1216 line 34-36, via CM,
+  2026-10-26; no P-level given, listed under P3 until ruled),
+  verbatim: "markaudio profile: 80 Hz sat subsonic only 1.3 oct below
+  the 200 Hz xo; ~1.5 dB electrical sum dip 100-400 Hz post-F-383.
+  Check in the first measured US-174 run (acoustic sum after time
+  alignment); if it persists, either the sat delay study (0.4/0.8/1.2
+  ms) or a lower sat subsonic within the CHN-50P excursion limit
+  (AE)." Related: F-385 (D-031 subsonic vs crossover phase), US-174.
 
 ## Open PRs (2026-10-24, per CM)
 
