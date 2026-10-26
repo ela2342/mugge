@@ -448,6 +448,10 @@ priority!"
   running. Mac disk 6.7 -> 4.9 GB free: the owner's own darwin-rebuild
   of the Mac system config, not team work (team-lead informed); the
   nix hold stands.
+  CORRECTION (team-lead, 2026-10-26): the 6.7 -> 4.9 GB drop comes
+  from a darwin-rebuild that no mugge worker started; the CM PRESUMES
+  it is the owner's. Not confirmed by the owner. UPDATE (CM, after
+  v215): backlog v215 pushed as f0c18bf7; df 4.8 GB.
 
 ## Reserved IDs
 
@@ -6603,6 +6607,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   40317165021 going green. QE C2 is with worker-4: back the mutation
   claim with a list or drop it from the body; a body edit, so the head
   stays 13995e15.
+  TW #65 notes (verbatim source /tmp/tw-verdict-pr65-13995e15.md,
+  comment 6415226482; non-blocking):
+  - N1: the module docstring says "Consumers (US-174c/d deploy) treat
+    a set as NOT deployable if SIMULATED is present, or delays.yml is
+    missing, unparsable, or lacks `simulated: false`." Present tense,
+    but no consumer on main does it yet; the check lands with US-174d.
+    Suggested: "Consumers must treat ... (US-174d deploy)", or leave
+    it, since it becomes true when 174d merges.
+  - N2: one docstring line in the "Output staging" paragraph runs past
+    100 characters (the one ending "So "delays.yml present" means the
+    set next"). Re-wrap it.
+  - N3: pre-existing docs/user-journeys.md section 7 delays.yml drift;
+    same item as the TW backlog note above (TW docs queue).
   SecSpec INFO (operator docs): publishing deletes stale
   combined_*.wav files in the chosen --output-dir. Intended, and
   stated in the module docstring.
