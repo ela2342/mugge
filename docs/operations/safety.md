@@ -64,11 +64,80 @@ Until the list is closed, these rules apply on the Pi 5:
   on, check that all gains read 0, the gate is closed, and the amp knobs
   are back at their staged positions; then re-open the gate through the
   normal ramp.
+- **F-318 rule (no auto-routing, no hand-made links):**
+  - *Expected message.* WirePlumber never links a playback stream to any
+    output. `pw-play` and `paplay` get "no target node available" and
+    exit; a browser plays nothing. This is expected, not a fault. To
+    confirm, run `journalctl --user -u wireplumber | grep F-318` and look
+    for `F-318: denied auto-link of stream`.
+  - *How to make sound.* Use the web UI Test tab (signal-gen), Mixxx in
+    DJ mode or Reaper in Live mode. GraphManager makes their links.
+  - *Never create or remove links by hand.* Not with `pw-link <out> <in>`,
+    not with `pw-link -d`, not with a patchbay (qpwgraph, Helvum).
+    GraphManager owns every link. On all 8 USBStreamer playback ports
+    (`playback_AUX0..7`: speakers AND headphones/IEM, D-063) the only
+    allowed source is `pi4audio-convolver-out`. Any other link into the
+    USBStreamer bypasses the crossover, the D-063 gains and the gate.
+    Full-scale audio then goes straight to the amplifiers or the in-ear
+    monitors, with no protection against speaker damage or hearing
+    damage.
+  - *Required check before amps on.* After starting Mixxx, Reaper or any
+    other audio app, and before amps on, run `pw-link -l` (listing only,
+    safe). Under every USBStreamer `playback_AUX` port, the only source
+    listed must be `pi4audio-convolver-out`.
+  - *If any other source appears:* amps off (or keep them off),
+    headphones/IEM off and not worn, then report it. Do not delete the
+    link by hand.
+- **WirePlumber restart:** a WirePlumber restart, planned or after a
+  crash, destroys and re-creates the USBStreamer node, so it is a
+  USBStreamer interruption (Section 1) (F-396). Announce a planned restart, and
+  the amps rule applies exactly as for a PipeWire restart. The gain nodes
+  live in PipeWire, not in WirePlumber, so they keep their values through
+  a WirePlumber restart. Without GraphManager acting, audio would resume
+  at the old gains as soon as the USBStreamer is re-linked. The required
+  behaviour (US-175) is: when GraphManager re-links after the restart, the
+  D-063 gate comes back closed and all 8 gain nodes read 0 (GraphManager
+  may keep the venue gains as pending values for the next ramp), audio
+  never resumes by itself, and re-opening the gate is an explicit operator
+  action through the D-063 ramp. **This is NOT yet verified. Do not rely
+  on it.** After every WirePlumber restart, the amps stay off. Before
+  switching them on again, restart PipeWire or cold power-cycle the Pi.
+  Either one interrupts the USBStreamer: announce it; amps off, including
+  the headphone/IEM amps, and headphones/IEMs not worn.
+  Afterwards the gains are back at their boot values; verify them as in
+  "Gains at boot" below, and check that the D-063 gate is closed. Reading
+  the gains live after a WirePlumber restart does not count as proof yet
+  (live readback proven in the sandbox only for nodes that are idle or
+  running, Gate-2 r6b; Pi check pending). This interim rule applies
+  until US-175 is verified AND the live gains readback is proven on the
+  Pi (Gate-2 r6b sandbox result plus the AE's Pi check, F-395). The AE
+  then lifts it. Also do the `pw-link -l` check from the F-318 rule. An open gate or
+  a failed `pw-link -l` check after a WirePlumber restart is a defect
+  against US-175: report it. An unplanned restart shows in
+  `journalctl --user -u wireplumber`; treat it the same way.
 - **F-341 rule:** do not rely on pre-flight checks #3 and #6 as written on
   the Pi 5; treat their result as unverified.
-- **Gains at boot:** all 8 linear gain nodes boot with Mult and Add exactly
-  0 (16 values). Check from `pw-dump` JSON, not from `pw-cli`'s six-decimal
-  output. Any other value after a boot is a FAIL: stop and report.
+- **Gains at boot:** all 8 linear gains boot with Mult and Add 0 (16
+  values). Read the gain VALUES with `pw-cli enum-params <id> Props`,
+  where <id> is the pi4audio-convolver node id taken from pw-dump. PASS
+  only if every gain_*:Mult and gain_*:Add of the 8 named gains prints
+  exactly `0.000000`. `nan`, `inf`, `-0.000000`, any other value, a
+  missing gain or an extra gain_* name is a FAIL. The reading counts
+  only if the filter-chain node and its output node are idle or running
+  immediately before and after the reading (states logged with it). A
+  suspended node reads 0 whatever the real gain is, so that result is
+  NOT VERIFIABLE, never a pass. pw-dump is for
+  structure only: exactly one pi4audio-convolver node, one
+  pi4audio-convolver-out node and the 8 named gains. Never pass a gain on
+  its pw-dump value: pw-dump prints NaN, -Inf and subnormal values as 0,
+  and, like enum-params, it shows 0 on a suspended node whatever the
+  real gain is (F-395, Gate-2 r6b). A script may additionally
+  check the pw-dump values as an extra FAIL condition (any non-zero or -0
+  value fails), never as a pass. Known limit of both readers: a magnitude
+  below 5e-7 (below -126 dB) prints as 0.000000. The AE accepts this: a
+  gain that small is inaudible, below the noise floor of the chain. On a
+  FAIL, amps stay off; report. (Matches safety.md Section 5 check 10,
+  PR #45.)
 - **Gate:** the GraphManager gate boots closed. Do not open it while any
   Pi 5 row (1-3, 5-14) of the list above is open.
 - **Outputs:** the WirePlumber allowlist disables every ALSA card except the
@@ -100,6 +169,8 @@ damage speakers and risk hearing.
 
 - Rebooting the Pi
 - `systemctl --user restart pipewire.service`
+- `systemctl --user restart wireplumber.service` (it destroys and
+  re-creates the USBStreamer node)
 - Any action that causes PipeWire to drop the USBStreamer playback stream
 - USB bus resets affecting the USBStreamer
 
@@ -329,6 +400,9 @@ constraints discovered during system testing, updated for D-040 architecture
 | 7 | Signal-gen ports visible in PipeWire graph | `pw-cli ls Node \| grep signal-gen` | Signal-gen not registered as PW node. In managed mode, GraphManager creates links -- if ports are missing, no audio can flow. |
 | 8 | ADA8200 capture adapter stopped (if not needed) | `pw-cli ls \| grep ada8200` | F-015: USB bandwidth contention between capture and playback streams on USBStreamer |
 | 9 | Owner confirmed amp level safe | Verbal/written confirmation | Transient/excursion damage risk |
+| 11 | Routing: the USBStreamer is fed only from the convolver (F-318) | `pw-link -l` (listing only): under every USBStreamer `playback_AUX0..7` port, the only source listed is `pi4audio-convolver-out` | A bypass link sends full-scale audio to the amplifiers or IEM with no crossover, gains or gate. Amps off (or keep off), headphones/IEM off and not worn, report it; do not delete the link by hand. See the F-318 rule (Pi 5 rules). |
+
+Check 10 (gains read 0) is added by PR #45.
 
 **Note:** The old check #9 (ALSA Loopback buffer adequate, F-028) has been
 removed. D-040 eliminates the ALSA Loopback from the signal path -- PipeWire
@@ -347,6 +421,7 @@ native graph handles all audio routing. F-028 cannot recur.
 | 7 | D-040. S-010 structural resolution. `src/signal-gen/src/main.rs` (PW stream registration) |
 | 8 | F-015: `docs/lab-notes/F-015-playback-stalls.md` |
 | 9 | CLAUDE.md "Safety Rules", Section 1 of this document |
+| 11 | F-318; `src/graph-manager/src/link_audit.rs` (only `pi4audio-convolver-out` may feed USBStreamer ports, D-063) |
 
 ---
 
