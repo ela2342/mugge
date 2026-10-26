@@ -406,6 +406,10 @@ priority!"
   HELD locally at 5ffb319c. #57 CI green (40310308638); merge waits on
   QE C1/C2. #64: AC4 MET. Mac disk 2.1 -> 6.8 GB free, cause unknown
   (CM asked team-lead); the disk hold stays until settled.
+  UPDATE (CM, 2026-10-26, after v206): backlog v206 pushed as
+  b448d0ee. 174d HELD at b496250b. #57: QE C1 MET, only C2 (PR body)
+  open. Disk: team-lead does not know the cause either and has asked
+  the owner (non-blocking); the disk hold stays.
 
 ## Reserved IDs
 
@@ -4549,6 +4553,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   UPDATE (CM, 2026-10-26): #57 CI is green (run 40310308638) and the
   PR body is set (AC7 margin 4.36 dB). The merge waits on the QE's
   C1/C2 confirmation.
+  QE (accounting copy, 2026-10-26), at e731820c, run 40310308638
+  green: AC7 MET (own +2.36 dB, other +6.71 dB, margin 4.36 dB; needs
+  at least 2.0). The CM held the merge on a room-correction
+  collected-count mismatch (base 1245, #57 1340, +95; the QE had
+  expected +26). QE correction: the +26 (1314) was wrong; the real
+  delta is +95, all from the new test_venue_closed_loop.py, every
+  other file's count unchanged. C1 MET. Only C2 (PR body) is open; the
+  QE's approval at e731820c becomes final once the CM confirms the
+  body.
+  F-262 evidence (QE via CM, backlog, does not block #57): in run
+  40310308638 (e731820c into 5f3af36a) test_full_session_api XPASSED
+  (CI log /tmp/cm-ci-40310308638.log, around l.7659). It is
+  xfail(strict=False) on origin/main; further evidence that F-262 is
+  non-deterministic.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -4814,6 +4832,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the read-only orphans list_versioned_files/_get_active_filenames. QE
   requirement: the two-branch E2E (no xfail), with a line in F-262.md.
   UX narrowed the c-safe rule to deploy, verify and status only.
+  UPDATE (CM, 2026-10-26): 174d is now HELD at b496250b. Per the
+  Architect it also removes the read-only orphans
+  list_versioned_files, _get_active_filenames, _VERSIONED_RE and
+  _PW_FILENAME_RE; deletions only.
   US-174c (measurement on the Pi, web-ui measurement/session.py)
   starts only after F-390/F-391 and builds on them, because it is the
   same file (L-046). Its Pi run is also gated by US-173 H, F-341 AC3,
