@@ -30,7 +30,12 @@ import os
 import re
 import shutil
 
-from .export import CHANNEL_FILENAMES, TIMESTAMP_FORMAT, versioned_filename
+import soundfile as sf
+import yaml
+
+from .export import (
+    CHANNEL_FILENAMES, DEFAULT_TAPS, SAMPLE_RATE, TIMESTAMP_FORMAT, versioned_filename,
+)
 
 
 # Default PipeWire filter-chain coefficients directory on the Pi (D-040).
@@ -38,6 +43,10 @@ from .export import CHANNEL_FILENAMES, TIMESTAMP_FORMAT, versioned_filename
 DEFAULT_COEFFS_DIR = os.environ.get(
     "PI4AUDIO_COEFFS_DIR", "/etc/pi4audio/coeffs"
 )
+
+# The production coeffs root on the Pi. A simulated set is never deployed
+# here, whatever the override (Architect, US-174d Q3).
+PRODUCTION_COEFFS_DIR = "/etc/pi4audio/coeffs"
 
 # Default PipeWire config drop-in directory.
 # Overridable via PI4AUDIO_PW_CONF_DIR env var (used by local-demo).
@@ -125,6 +134,111 @@ def deploy_filters(
         deployed.append(dst)
 
     return deployed
+
+
+class DeployRefused(RuntimeError):
+    """A set failed check_deployable_set; ``issues`` lists every reason."""
+
+    def __init__(self, issues):
+        self.issues = list(issues)
+        super().__init__("DEPLOYMENT REFUSED: " + "; ".join(self.issues))
+
+
+def _is_production_root(coeffs_root):
+    real = os.path.realpath(coeffs_root)
+    return real in {os.path.realpath(PRODUCTION_COEFFS_DIR),
+                    os.path.realpath(DEFAULT_COEFFS_DIR)}
+
+
+def _simulated_issues(set_dir):
+    # The venue runner's contract (venue_pipeline module doc, F-399): a set
+    # is real only with no SIMULATED marker and a delays.yml that parses to
+    # a mapping with ``simulated: false``.
+    from .venue_pipeline import DELAYS_FILENAME, SIMULATED_FILENAME
+
+    issues = []
+    if os.path.lexists(os.path.join(set_dir, SIMULATED_FILENAME)):
+        issues.append(f"{SIMULATED_FILENAME} marker present")
+    delays = os.path.join(set_dir, DELAYS_FILENAME)
+    if os.path.islink(delays) or not os.path.isfile(delays):
+        issues.append(f"{DELAYS_FILENAME} missing or not a regular file")
+        return issues
+    try:
+        with open(delays) as f:
+            data = yaml.safe_load(f)
+    except (OSError, yaml.YAMLError, UnicodeDecodeError) as exc:
+        issues.append(f"{DELAYS_FILENAME} unparsable: {exc}")
+        return issues
+    if not isinstance(data, dict) or "simulated" not in data:
+        issues.append(f"{DELAYS_FILENAME} has no 'simulated' field")
+    elif data["simulated"] is not False:
+        issues.append(f"{DELAYS_FILENAME} says simulated: {data['simulated']!r}")
+    return issues
+
+
+def _wav_header_issues(path, name, max_taps):
+    try:
+        info = sf.info(path)
+    except Exception as exc:  # any unreadable header fails closed
+        return [f"{name}: unreadable WAV header ({exc})"]
+    issues = []
+    if info.channels != 1:
+        issues.append(f"{name}: {info.channels} channels, expected mono")
+    if info.samplerate != SAMPLE_RATE:
+        issues.append(f"{name}: {info.samplerate} Hz, expected {SAMPLE_RATE}")
+    if info.subtype != "FLOAT":
+        issues.append(f"{name}: subtype {info.subtype}, expected FLOAT")
+    if not 0 < info.frames <= max_taps:
+        issues.append(f"{name}: {info.frames} taps, expected 1..{max_taps}")
+    return issues
+
+
+def check_deployable_set(set_dir, expected_names, coeffs_root, *,
+                         allow_simulated=False, max_taps=DEFAULT_TAPS):
+    """
+    Return every reason ``set_dir`` must not be deployed to ``coeffs_root``.
+
+    An empty list means deployable. Pure: reads only, never raises on a bad
+    set. Checks (US-174d AC, Architect Q3):
+
+    - SIMULATED marker, or a delays.yml that is missing, unparsable or not
+      ``simulated: false``. ``allow_simulated`` overrides this, except into
+      the production coeffs root (compared by realpath).
+    - Each expected name is a plain deployable basename and a top-level
+      regular file in ``set_dir`` (no symlinks, nothing below it).
+    - Each WAV header: mono, 48 kHz, FLOAT, 1..max_taps frames.
+    """
+    from .venue_pipeline import is_deployable_name
+
+    if os.path.islink(set_dir) or not os.path.isdir(set_dir):
+        return [f"set dir {set_dir} is not a plain directory"]
+
+    issues = []
+    simulated = _simulated_issues(set_dir)
+    if simulated and not allow_simulated:
+        issues.extend(simulated)
+    elif simulated and _is_production_root(coeffs_root):
+        issues.extend(simulated)
+        issues.append(f"simulated set into the production coeffs root {coeffs_root}"
+                      " (allow_simulated does not apply)")
+
+    try:
+        names = sorted(expected_names, key=str)
+    except TypeError:
+        names = []
+    if not names:
+        issues.append("no expected files")
+    for name in names:
+        if (not isinstance(name, str) or os.path.basename(name) != name
+                or not is_deployable_name(name)):
+            issues.append(f"{name!r}: not a deployable file name")
+            continue
+        path = os.path.join(set_dir, name)
+        if os.path.islink(path) or not os.path.isfile(path):
+            issues.append(f"{name}: missing or not a regular file")
+            continue
+        issues.extend(_wav_header_issues(path, name, max_taps))
+    return issues
 
 
 def deploy_pw_config(
