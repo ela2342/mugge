@@ -483,6 +483,12 @@ priority!"
   before 174d; HARD GATE on US-178 (see F-262, US-178). #63:
   worker-3's single nix-shell.drv env build cleared; AC5 wording, TW
   Q1 and Q4 staged for the next commit.
+  UPDATE (CM, 2026-10-26, after v222): backlog v222 pushed as
+  658e8d92; df 4.7 GB. #65: only C1 open (C2 met when C1 is). #64: QE
+  APPROVED (final). F-262: Architect accepts AE S1-S8; sequencing set
+  (F-262 from main first, 174d frozen); diagnostic route pending the
+  AE. #63 conflicts with main, so no CI since 9b1aa8a1 until the main
+  merge. F-400 severity medium (Architect).
 
 ## Reserved IDs
 
@@ -4253,6 +4259,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   jack-self-connect drv hash, so CI rebuilds it and the QE gets fresh
   log output. Q2: "(b) not started (US-175)" is still correct. Q3:
   F-400 severity is with the Architect.
+  RULING (Architect, 2026-10-26, relayed to the TW): F-400 severity is
+  medium, not P1. The fragments set disjoint sections, so the risk is
+  latent only (a same-name override, future number-order dependence);
+  guarded by checks.conf-fragment-names; not safety.
+  UPDATE (CM, 2026-10-26): worker-3's first develop ran the generator
+  only (exit 0, no build or fetch, df 4.7 -> 4.7). A second develop
+  for the coeff/mute tests is cleared with the same guards. #63 has
+  had no CI since 9b1aa8a1 because the PR CONFLICTS with main; this
+  clears with the main merge.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -5135,6 +5150,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   xfail removed, plus repeated-run evidence. If the 1 s pw_capture
   wait is a separate cause, it gets its own defect ID (not allocated
   yet).
+  UPDATE (CM, 2026-10-26): the AE corrected the line ref to
+  session.py:975. The Architect accepts AE S1-S8; S5's trim becomes
+  one shared post-combine function. T4 order (QE; Architect + AE):
+  average, then correct. Sequencing: F-262 from main first; 174d
+  frozen, then merging main. The Architect has no objection on the
+  CONDITION that the fix does not touch session._deploy_sync,
+  /measurement/deploy or deploy.py. Diagnostic route (Architect
+  proposal, PENDING the AE's concurrence): a CI scratch branch from
+  289f1a72, N=20 local-demo runs, artifacts uploaded, nothing on the
+  Mac.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -5212,6 +5237,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   team-lead).
   QE (via CM, 2026-10-26): AC4 MET (the mutation run failed as
   intended).
+  QE APPROVED (final, 2026-10-26) at 0d9e52e7: CI 40314977506 SUCCESS;
+  counts 177/17/22/30 all PASSED; the only unit -rs skip is
+  test_filter_routes.py:35, the named AC5 one. CI excerpt
+  /tmp/pr64-ci-40314977506/; worker-1 and the QE compare it against
+  the expected counts (CM).
+  QE backlog one-liner (ID PENDING: PM asked the QE whether to reopen
+  F-156 or allocate F-402): test_full_user_journey.py:181 skips 3
+  browser tests on any 500 from POST /filters/generate with the reason
+  "pre-existing numpy bool serialization bug in filter_routes", a skip
+  hiding a real server error. PM grep: F-156 (defects/F-156.md on
+  main) is exactly that symptom and is marked RESOLVED (task #159).
+  Cross-ref F-362 AC5 (the filter_routes import skip) and F-262
+  (session filter-gen).
 - **F-373** (AE; availability HIGH, safety-relevant; amps-on item
   13; linked US-159 G16): the USBStreamer sink does not recover after
   USB re-enumeration. AC17-B step (a), CM-CHG-.89-5: authorized 0->1
@@ -6796,6 +6834,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   40317165021 going green. QE C2 is with worker-4: back the mutation
   claim with a list or drop it from the body; a body edit, so the head
   stays 13995e15.
+  QE (accounting + CM, 2026-10-26): #65 C2 ACCEPTED, option (a)/(i).
+  The mutation evidence is real and the needle-asserted mutations are
+  applied; body draft 3 (589ff437) applied. CI 40317165021 is the
+  unmutated baseline (sources byte-identical), so C2 is MET when C1 is
+  MET. Only C1 is open.
   TW #65 notes (verbatim source /tmp/tw-verdict-pr65-13995e15.md,
   comment 6415226482; non-blocking):
   - N1: the module docstring says "Consumers (US-174c/d deploy) treat
