@@ -709,6 +709,13 @@ priority!"
   finishing the body, QE diff-only re-check open; new one-liner
   (test_full_session_api flips). US-172 v6 pinned at us172.sh fc65bcad
   (82113c3f void); re-reviews open (CM, QE).
+  UPDATE (CM, QE, UX, 2026-10-26, after v257): backlog v257 pushed as
+  37a7622c. F-262 c8 ruling f8a014c7 RELEASED by the QE and relayed to
+  worker-4. PR #66 CI 40343196576 at e325c4ba FAILED; worker-4
+  diagnosing. #64: body a2bfb9af live, bundle out to all 7; UX APPROVE
+  (3a8e85ff). US-172: fc65bcad SUPERSEDED; a v7 re-pin is required (QE
+  Q1/Q2 REQUIRED). Team-lead rule: no re-pin for non-blocking points
+  (CM, QE, UX).
 
 ## Reserved IDs
 
@@ -3566,6 +3573,47 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     fc65bcad; 82113c3f is VOID. Re-reviews open: the Architect, the
     AD, the QE and the AE. The full flow run finishes around 15:35Z
     (CM).
+  - UPDATE (CM, QE, 2026-10-26, after v257): fc65bcad is SUPERSEDED. A
+    v7 re-pin is required, superseding "ONE v6 pin, not a v7" above,
+    because the QE marks Q1 and Q2 REQUIRED (QE review points on
+    fc65bcad, /tmp/us172-qe-v6-points-fc65bcad.md, sha256 61db85d1,
+    verified at PM read; not the final verdict). C1 is MET on
+    fc65bcad.
+     Q1 (REQUIRED): in r4gate's NOT VERIFIABLE branch, a reread file
+     that exists but is not ok falls through to the
+     US172_GAINS_AE_RELEASE test, so a reread gains FAIL (dcec60fa
+     case 1) or gate STOP (case 3) is ACCEPTED when a release is set.
+     Fix: refuse on any ^(VERDICT \[[^]]*\] )?(STOP|ABORT|FAIL) line
+     regardless of the release. New flows G4b, G4c (REFUSED) and G4d
+     (ACCEPTED, release sha printed).
+     Q2 (REQUIRED): tb-modprobe can print "outcome (iii)" after a
+     MOD-gains FAIL (its regex matches STOP only). Not a gate hole
+     (tb-greetd still refuses), but wrong evidence on an audio-safety
+     read. Fix: (iii) also requires no ^((VERDICT|RESULT) \[[^]]*\]
+     )?(STOP|ABORT|FAIL) line, otherwise the FINDING branch. New flow
+     G12.
+     v7 also takes the Architect's P3 rc-path-3 flows and AE point 3
+     (a FINDING line in tb-greetd) (CM).
+     QE O1 (optional-prefix regex: any bare "FAIL ..." line in the MOD
+     reads, e.g. "FAIL no HDMI device/node in PipeWire", blocks
+     tb-greetd; literal 762f9035 conformance, fails closed; making
+     them informational is a ruling change) is with the Architect
+     (CM).
+     QE final verdict needs the re-pinned kit and the flow output sha:
+     G1-G11, G1b, G4b/c/d and G12, each with script sha, input shas,
+     exit status and stub call counts, plus C1 on the new pin.
+     Grant conditions on file (CM): Architect P1, no tb-greetd go
+     while there is a tb-modprobe FINDING unless the Architect clears
+     it in a file; Architect P2, "labwc up" is not proof of hardware
+     GL.
+  - Priority rule (team-lead, via CM): no re-pin for non-blocking
+    points. Points nobody marks BLOCKING go to the backlog as
+    one-liners.
+  - One-liner (QE N1, non-blocking, on fc65bcad): tb-greetd's pre-gate
+    refusals (no CM go, no outcome (iii), wrong boot, greetd active)
+    are not written to us172-gate-refusals-<T>.txt; tb-modprobe's
+    pre-checks behave the same way. "Optional" (QE). No F-ID, no
+    P-level given.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -6427,6 +6475,27 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      (e325c4ba). Removing its xfail needs a passing streak on the
      F-262 branch head as evidence, not just the model's +1.92 dB Left
      margin; the 10-consecutive-run AC applies to it too.
+  - UPDATE (CM, QE, 2026-10-26, after v257): c8 ruling f8a014c7
+    RELEASED by the QE (supersedes "NOT yet released" above) and
+    relayed to worker-4. Release lines verbatim in
+    /tmp/cm-relay/release-record-20261026-e.txt (sha256 36444390,
+    verified at PM read). QE evidence rule for R5, verbatim: "it must
+    be run at the F-262 head that removes the xfail, which the AE
+    confirmed. If a later head touches the measurement or closed-loop
+    path, the streak must be re-run there; a docs-only change carries
+    it over." The R5 log needs min, max and spread per channel.
+     QE (same record): "F-403 still needs writing. The PM allocates
+     it." PM cross-ref: F-403 is already allocated (see F-403); per
+     the CM call recorded under F-403, confirmed by the CM after v256,
+     worker-4 writes docs/project/defects/F-403.md inside the F-262
+     PR.
+  - CI 40343196576 at PR #66 head e325c4ba FAILED (CM): 12 failed /
+    932 passed / 1 skipped / 7 errors. The same f262-parity.yml
+    FileNotFoundError and the same session filter-verification
+    failures, plus 3 new failures in test_capture_alignment_session.py
+    (lag cases 71497 / 24000 / -223). Excerpt
+    /tmp/cm-relay/F-262/ci-40343196576-e325c4ba-excerpt.txt (sha256
+    885f52e8, verified at PM read). worker-4 is diagnosing.
   Before the first amps-on measurement (non-blocking one-liners; no
   F-ID, no P-level given):
   - AE, verbatim: "F-262 item 7 Architect note: before the first
@@ -6766,6 +6835,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     flips XPASS/XFAIL between CI runs on main-equivalent code; same
     kind as F-402." XPASS in 40314977506 and 40320048783, XFAIL in
     40333713247. No F-ID, no P-level given.
+  UPDATE (CM, UX, 2026-10-26, after v257): the PR body a2bfb9af is
+  live, and the review bundle /tmp/pr64-review-f715538e/ is out to all
+  7 reviewers (CM).
+  - UX: APPROVE at f715538e, pin verified
+    (/tmp/pr64-ux-verdict-f715538e.md, sha256 3a8e85ff, verified at PM
+    read). UX endorses two existing one-liners: the venue-gate
+    indicator timeout skipped instead of failed
+    (test_venue_gate_e2e.py:165/:180), and the gate-closed-at-load
+    test masking an open gate as a skip (F-405). Nothing new.
+  - CM note: the QE's count-profile file 96abe4fb has a diff-scope
+    slip. It says all 7 files are under tests/unit; the diff is 4 test
+    files + flake.nix + test-e2e.sh + F-362.md. The QE decides on any
+    correction.
 - **F-402** Integration test turns a 500 from POST /filters/generate
   into a skip, hiding a real server error
   (test_full_user_journey.py:179-183) (QE, 2026-10-26; option (b), ID
