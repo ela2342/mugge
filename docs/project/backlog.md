@@ -170,6 +170,13 @@ priority!"
   sandbox follow-ups. (6) US-159 hardening: F-373, AC18b/T49, F-341
   AC3, G16/T65. (7) Post-US-172c cold cycle with a state-logged gains
   read, before the first amps-on session.
+  UPDATE (AE, 2026-10-26): (7) is CLOSED. OBSERVE-US172c-4 PASS, boot
+  60f384a1 (fresh boot after power loss or hard reset), T+04:58: both
+  nodes running before and after the read, the 8 Mult values all
+  0.000000 via pw-cli, node counts 1 and 1 (record ffc000b5...f08d).
+  Qualifier: an unattributed SSH session at T+00:44, pending the
+  owner's word. Scope: PW start state only; GM restart, profile
+  activation and unlatch are not covered.
 - AE core items (2026-10-26): #55 and #57 wait only on CI; the HF
   bound; the CHN-50P mask after F-388; the SNR threshold; the 174c/d/e
   reviews; the US-172c/172/173 reviews (US-173 AC2/AC3a); a thermal
@@ -2454,6 +2461,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   VOID captures kept separate. After the second power pull the boot
   reference becomes about 08:57:40Z (boot 60f384a1, owner power pull);
   the read runs under OBSERVE-US172c-4.
+  Label AMENDED (AE, via CM, 2026-10-26): "cold boot, but an
+  unattributed SSH session at T+44 s". The journal can't clear the
+  T+44 s session; only the owner's statement can. Any pw/wp/sudo line
+  from that session makes the read "not clean". The owner was asked
+  via team-lead what the session ran; nothing waits on the answer.
+  RESULT (AE, 2026-10-26): OBSERVE-US172c-4 PASS, boot 60f384a1 (fresh
+  boot after power loss or hard reset), T+04:58: both nodes running
+  before and after the read, the 8 Mult values all 0.000000 via
+  pw-cli, node counts 1 and 1 (record ffc000b5...f08d). Qualifier: an
+  unattributed SSH session at T+00:44, pending the owner's word.
+  Scope: PW start state only; GM restart, profile activation and
+  unlatch are not covered.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -3114,6 +3133,21 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   UPDATE (CM, 2026-10-26): branch head 2fd7b252: M1 done, GM unit test
   dj_signal_path_is_exactly_mixxx_convolver_usbstreamer, 292/292
   green. worker-3 is on M4/M5.
+  UPDATE (CM, 2026-10-26): M4 pushed, head deb48561:
+  pi5_thermal_watch.py (D-069 rule, 23 tests). OPEN: the Pi 5 has no
+  python3; the Architect is ruling (writePython3Bin / bash / the
+  web-ui interpreter).
+  M5 findings (worker-3, via CM, 2026-10-26): (i) NixOS installs
+  neither the Hercules mapping (configs/mixxx/controllers) nor
+  soundconfig.xml; deploy.sh is the old pre-NixOS .185 path. (ii) The
+  repo soundconfig.xml is stale: "CamillaDSP 8ch Input", HP on ch 2;
+  GM (F-130) expects HP on out_4/out_5, so HP would be silent (less
+  audio, not a safety issue). (iii) Unverified whether the mapping's
+  lodash/midi-components libs exist in the installed Mixxx. Proposed
+  fix: tmpfiles in applications.nix, plus soundconfig captured on the
+  Pi. worker-3 is cleared to DRAFT applications.nix (no build); the
+  Architect and AE review. worker-3's Pi check list goes on the P-step
+  list after US-172.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -4899,6 +4933,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   carries the same rule (#45 entry). H2 closes (AD) when F-318 batch
   v19 merges with items 1, 3-5 as worded, the planned Row 14 text and
   item 16. The AD's #60 verdict rested only on H1 and is now APPROVE.
+  UPDATE (AE, 2026-10-26; AC (c)): the cold-boot gains read is done
+  (pre-prod one-liner 7 CLOSED). OBSERVE-US172c-4 PASS, boot 60f384a1
+  (fresh boot after power loss or hard reset), T+04:58: both nodes
+  running before and after the read, the 8 Mult values all 0.000000
+  via pw-cli, node counts 1 and 1 (record ffc000b5...f08d). Qualifier:
+  an unattributed SSH session at T+00:44, pending the owner's word.
+  Scope: PW start state only; GM restart, profile activation and
+  unlatch are not covered. It supersedes the "NOT VERIFIABLE" caveat
+  on the earlier gains-0 readbacks (cold cycles, AC14, AC17-B, AC19)
+  for the PW start state only.
 - **F-396** Production must never suspend the filter-chain or the
   USBStreamer node (P1 unless the Architect rules otherwise; AE,
   2026-10-26, from the r6b ruling draft section 4): a suspend of the
