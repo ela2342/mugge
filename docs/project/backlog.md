@@ -3196,6 +3196,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - L4 (with venue config validation): build_channel_map accepts
     channel numbers outside 1..8; add a range check (same
     input-validation class as F-398; see UX N1).
+  UPDATE (CM, 2026-10-26): #59 merged (main f01e6647); the CM is
+  running update-branch on #57 now, so the 7/7 at 05d306bc lapses; the
+  new head, the 7 diff-only re-checks and CI (F-363 passing) follow.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -4153,6 +4156,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   test_timestamps_monotonic PASSED; no other red; no new XPASS (the
   known F-262 test_full_session_api XPASS excepted); collected count
   unchanged.
+  UPDATE (CM, 2026-10-26): #59 MERGED at a5547275 (7/7 as above); main
+  f01e6647. CI 40247129046 passed. F-394 is quarantined on main
+  (strict xfail). Next: the TW's F-394 Status/index follow-up on main;
+  #55 update-branch (its approvals lapse), the QE's diff-only
+  re-check, new CI.
   AD L3 suggested text (via CM; TW/AE tidy): "designed so the two legs
   sum flat; the shipped LR4 profile is verified within ±1 dB, LR8
   after room correction is not yet verified (F-383)" (markaudio LR4
@@ -4297,6 +4305,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     UPDATE (CM, QE, 2026-10-26): #60 merged first, so this follow-up
     is a separate main docs change by the TW after #59 merges (not
     part of #59).
+    UPDATE (CM, 2026-10-26): #59 merged (main f01e6647); this
+    follow-up is now due (TW).
 - **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
   per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
   2026-10-26): on a suspended node, the gain readers in the r6b matrix
@@ -5782,6 +5792,17 @@ merge needs update-branch and 7 reconfirmations at the new head.
   onto it (the TW resolves the conflict once, there). No hold. Revival
   = update from main, the TW's safety.md conflict resolution, a full
   Rule 13 round at the new head.
+  UPDATE (CM, 2026-10-26): the AE OK'd the check-10 wording at
+  8cba3522 (diff byte-identical to the AE's 17a79d37 text, no
+  corrections; not a Rule 13 verdict), so #45 meets "check 10 carries
+  the F-395 rule". The CM passed the PO ruling to the TW. A dry-run
+  merge of main a3270b5e into 8cba3522 conflicts in 3 files:
+  .claude/memories/_index.md, CLAUDE.md (2 hunks) and safety.md; the
+  TW prepares the resolved files (/tmp/pr45-merge-prep-8cba3522). #59
+  has merged (main f01e6647), so the CM now makes the merge commit and
+  publishes the Rule 13 bundle. CLAUDE.md is the owner's file: the
+  standing merge consent covers PR changes to it (team-lead ruling,
+  #50); the post-merge report names the change.
 - #45 dangling citations (TW, 2026-10-25): AC14, F-320, F-338,
   F-339 and F-347 cite "pre-flight #10 (PR #45)". #45
   (docs/safety-d063-gate,
