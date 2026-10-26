@@ -890,6 +890,19 @@ priority!"
   UPDATE (team-lead, 2026-10-26, after v290): backlog v290 pushed as
   f68220c1. US-179: team-lead's "either way" K4 line is superseded by
   the AE's narrower scope in ae0c3e70.
+  UPDATE (CM, team-lead, AE, UX, 2026-10-26, after v291): backlog v291
+  pushed as ab87b63a. PROCESS: every CM relay of a ruling to a worker
+  asks for a one-line ack naming the sha(s); no ack by the worker's
+  next report means one re-send plus a note to team-lead. US-179:
+  worker-6 head 129c031c pushed; AE flags 2/4 ruling 794b1eeb; UX
+  wording 5eb9829c (section 2 relayed; section 1 pending a PO erratum
+  decision and an AE safety question).
+  PROCESS RULE (team-lead, via CM, 2026-10-26; CM wording): every
+  ruling the CM relays to a worker asks for a one-line ack naming the
+  sha(s) received. If no ack arrives by the worker's next report, the
+  CM re-sends once and tells team-lead. Trigger (CM): worker-6 missed
+  the E3/E4 r2, base ruling, 1318b25c and K3 relays; the CM re-sent
+  them all.
 
 ## Reserved IDs
 
@@ -11430,6 +11443,77 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   wording in ae0c3e70 governs. K4 blocks only the first amps-on US-179
   web measurement run that relies on calibrated SPL; other amps-on
   work is not blocked."
+  WORKER-6 HEAD (CM, 2026-10-26): 129c031c pushed on
+  story/US-179-web-rc (PM read: ls-remote matches): E2, the crest
+  table, the E3/E4 r2 meter. Re-sent relays (CM): E3/E4 r2, the base
+  ruling, 1318b25c and K3 (see the PROCESS RULE at the top).
+  AE FLAGS 2/4 RULING (AE, CM relay, 2026-10-26):
+  /tmp/cm-relay/US-179/frozen/ae-w6-flags-2-4-794b1eeb.txt (sha256
+  794b1eeb, 917 bytes, verified at PM read). Verbatim, reflowed,
+  without its title line:
+  - Flag 2, a whole-Hz low limit: ACCEPTED.
+     - A 1 Hz granularity is ample for driver limits (20-500 Hz
+     full-range, 20-50 Hz sub).
+     - The UI must REFUSE a non-integer value, never round it.
+     Rounding down would lower the protection corner. UX words the
+     text.
+     - Test: 40.5 is refused, and 40 is accepted.
+  - Flag 4, the HP4 + LP4 cascade for the level-check noise band: NO
+    OBJECTION, on one condition.
+     - The crest table must be generated with the IDENTICAL cascade as
+     the runtime noise: the same order, the same corner frequencies
+     and the same coefficient design. A crest computed through a
+     different filter would give a wrong RMS ceiling.
+     - If the table was generated with a different bandpass design,
+     regenerate it.
+     - Test: for one band and seed, the JS runtime crest equals the
+     table value to within 0.05 dB.
+  - No safety limit changes.
+  UX WORDING ANSWER (UX, CM relay, 2026-10-26):
+  /tmp/cm-relay/US-179/frozen/ux-w6-wording-5eb9829c.md (sha256
+  5eb9829c, 2020 bytes, verified at PM read). Status (CM): section 2
+  relayed to worker-6; section 1 (new device/rate stop texts) PENDING
+  a PO erratum decision and the AE safety question (does a device
+  change clear the 4a ack and AC3?). Verbatim, reflowed, without its
+  title line:
+  - From: ux-specialist, 2026-10-26. Basis: r8 + E1 v2 + E2 + E3 + E4
+    r2 (f692681c). Wording only. The PO turns these into story text if
+    needed.
+  - ## 1. Device change and rate change (AC2b return to setup)
+  - No: "Restart when ready." is wrong for these two. The user lands
+    back in setup, not in the level check, and has to check something
+    first. Use two specific texts instead of the "other cause"
+    template:
+     - Rate change: 'Stopped: the audio device now runs at <rate> Hz.
+     mugge filters need 48 kHz. Set the device back to 48 kHz in your
+     system's audio settings, then reload this page.' (Same ending as
+     the 2a refusal. The 2a red state then shows as usual.)
+     - Device change (connected, removed or switched): 'Stopped: the
+     audio devices changed. Check that the right output and microphone
+     are selected, then start the level check again.'
+  - The message shows at the top of the setup step, above the 2a rate
+    line.
+  - After either, a level check is a fresh -60 dBFS start (4i).
+  - Question for the AE (safety, not a UX ruling): after a device
+    change, should the 4a safety acknowledgement and the AC3 channel
+    declarations be cleared and re-confirmed? The new output could be
+    headphones or a different speaker. UX recommends YES for the
+    declarations and the ack.
+  - If the AE agrees, append to the device-change text: 'Confirm the
+    safety check and the speaker settings again.'
+  - ## 2. Whole-Hz low limit
+  - The wording is fine with one small change (subject to the AE
+    ruling on the restriction itself):
+  - 'Enter the low limit as a whole number of Hz between X and Y (e.g.
+    40).'
+     - X and Y come from the role (E2b): Full-range 20 and 500,
+     Subwoofer 20 and 50.
+     - A Subwoofer value above 50 shows the E2b refusal text instead
+     ('A subwoofer limit above 50 Hz is not supported here. …'), not
+     this one.
+     - Show the message inline at the field. Never round silently
+     (40.5 must not become 40 or 41 without the user entering it). No
+     sound until the value is valid.
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
