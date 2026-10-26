@@ -672,6 +672,12 @@ priority!"
   released and relayed to worker-4; new F6 follow-up one-liner (legacy
   CLI). #63 [ARCH-CHECK] C7 SETTLED (2aeff13a); worker-3 folds it into
   plan v4 (CM).
+  UPDATE (CM, QE, 2026-10-26, after v251): backlog v251 pushed as
+  3822cc1e. #63 Pi plan v5 ed039bfb (v4 plus C7 2aeff13a) supersedes
+  v4 3d3bfff7; the AE released v5 (ab73af2a carries over); the QE
+  approved v4 (b0623656); the Architect and the QE are pending on v5.
+  F-262 releases now cited from the CM release record aca30fe1 (CM,
+  QE).
 
 ## Reserved IDs
 
@@ -4978,6 +4984,32 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      manual pw-metadata write, ever. An A2 baseline of 0 followed by
      256 at P17a is a PASS, logged as an observation. worker-3 folds
      this into plan v4 (CM).
+  - UPDATE (CM, 2026-10-26, after v251): plan v4
+    /tmp/cm-relay/PR63/pi-plan-3f28b6c7-v4-3d3bfff7.txt (sha256
+    3d3bfff7) is superseded by v5
+    /tmp/cm-relay/PR63/pi-plan-3f28b6c7-v5-ed039bfb.txt (sha256
+    ed039bfb; both verified at PM read), which is v4 plus C7 2aeff13a
+    verbatim. v3 df8e1614 was never reviewed (CM).
+     QE on v4 (QE accounting copy;
+     /tmp/pr63-qe-piplan-verdict-v4-3d3bfff7.md, sha256 b0623656,
+     verified at PM read): APPROVE, superseding c1e573fe. No blockers.
+     Non-blocking clarifications N1-N3 for worker-3: N1 P16 vs the
+     AC12 text, N2 P16 artefacts, N3 the P15 expected link list. The
+     QE's C4 on #63 stays open until the QE has checked the session-1
+     evidence.
+     AE on v5, verbatim (CM release record (b),
+     /tmp/cm-relay/release-record-20261026-b.txt, sha256 71db4f71,
+     verified at PM read): "matches, release ed039bfb. The AE
+     clearance ab73af2a carries over to PR #63 plan v5 (ed039bfb,
+     verified). I read the v4→v5 diff (510b404a): only the header, the
+     JR-3 wording and C7 changed. AE-C1..C4 and AE-Q2 are unchanged
+     from v4. C3 still binds on path D (5e). C7 makes no gain or gate
+     change, and no pw-metadata writes are permitted. My release of v4
+     3d3bfff7 is superseded."
+     CM, on the AE release: being left in DJ mode on a thermal STOP is
+     acceptable, because the gate is closed and the Mults are 0.
+     Still pending on v5: the Architect and the QE (CM). PM cross-ref:
+     the QE's APPROVE above is on v4, not v5.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -6095,6 +6127,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      (iv) as a gate for room captures; it supersedes the "fail closed
      if it can't be computed" clause of b64aad93 s3 / 9833ce7c item 1,
      for room captures only. F2 adds an S2 AC to F-403 (see F-403).
+     Release proof (CM, 2026-10-26; supersedes the "per CM relay ...
+     no separate frozen release file" note above): the CM release
+     record /tmp/cm-relay/release-record-20261026.txt (sha256
+     aca30fe1, verified at PM read) holds the release lines verbatim.
+     Released files are never edited; these releases were given by
+     message (CM). Architect on a8386f4b: "F-262: release a8386f4b
+     (the AE's F1-F5 ruling, sha256
+     a8386f4b02807a4aa1744f29848eab2d04769b412accd09606f98ac6eb0abf84,
+     read and sha-verified at read time). F3 supersedes my 9833ce7c
+     item 1, for room captures only, and I agree with that. No
+     objections." AE on dfffcfbf: "release dfffcfbf". The same record
+     holds the QE's "release 5e123a6b" for the #63 P17/Q1 joint
+     ruling.
      F6 (dfffcfbf): the Architect wrote it, the AE released it; frozen
      as /tmp/cm-relay/F-262/frozen/:
      F6-source-scan-architect-dfffcfbf.txt (sha256 dfffcfbf, verified
