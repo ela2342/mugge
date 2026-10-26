@@ -7,6 +7,11 @@ differs per run, so hashes cover the committed bytes). Convolver ch 4
 (sub 2) gets combined_sub2_lp.wav, a byte copy of the canonical
 configs/coeffs/zero.wav (test_venue_spare_channel_mute.py).
 
+The committed files pass the same file gate as a generated set: every
+venue that uses this set goes through run_venue_checks (AE + Architect,
+2026-10-26), speaker FIRs as 'fir' and dirac.wav as 'dirac'. zero.wav has
+no kind there; test_venue_spare_channel_mute.py checks it.
+
 D-031 thresholds are the AE's ruling for M2. check_d031_floor and
 check_no_boost are local until the shared US-174d versions exist; keep
 them in step with those (TODO 174d: import the shared functions).
@@ -22,11 +27,16 @@ import pytest
 import soundfile as sf
 import yaml
 
-from room_correction.verify import verify_d009, verify_format
+from room_correction.verify import run_venue_checks
 
 REPO = pathlib.Path(__file__).resolve().parents[4]
 COEFF_DIR = REPO / "configs/coeffs/markaudio-ultimax-200hz"
-ZERO = REPO / "configs/coeffs/zero.wav"
+COEFFS = REPO / "configs/coeffs"
+ZERO = COEFFS / "zero.wav"
+VENUES = REPO / "configs/venues"
+# Venues whose speaker channels load this set.
+SET_VENUES = ("markaudio-ultimax-200hz", "home-lab-chn50p-ultimax")
+DIRAC = "dirac.wav"
 PROFILE = REPO / "configs/speakers/profiles/2way-200hz-markaudio-ultimax.yml"
 IDENTITIES = REPO / "configs/speakers/identities"
 GENERATOR = REPO / "scripts/generate-crossover-coeffs.py"
@@ -125,6 +135,18 @@ def is_d031_exception(identity, text):
             and "D-031 EXCEPTION" in text)
 
 
+def venue_coefficients(venue):
+    with open(VENUES / (venue + ".yml")) as f:
+        channels = yaml.safe_load(f)["channels"]
+    return {c["coefficients"] for c in channels.values()}
+
+
+def assert_venue_gate(output_dir, expected_files, mandatory_hpf_hz=None):
+    passed, results = run_venue_checks(
+        str(output_dir), expected_files, mandatory_hpf_hz=mandatory_hpf_hz)
+    assert passed, [r for r in results if not r.passed] or results
+
+
 def read_sums():
     sums = {}
     for line in (COEFF_DIR / "SHA256SUMS").read_text().splitlines():
@@ -156,18 +178,21 @@ def test_zero_wav_is_canonical():
     assert data[44:] == bytes(4 * TAPS)
 
 
-
-@pytest.mark.parametrize("name", sorted(CHANNELS))
-def test_format(name):
-    result = verify_format(str(COEFF_DIR / name), TAPS, RATE)
-    assert result.passed, result
-    assert result.details["subtype"] == "FLOAT", result
-
-
-@pytest.mark.parametrize("name", sorted(CHANNELS))
-def test_d009_no_bin_above_margin(name):
-    result = verify_d009(str(COEFF_DIR / name))
-    assert result.passed, result
+@pytest.mark.parametrize("venue", SET_VENUES)
+def test_venue_files_pass_the_venue_gate(venue):
+    """Format, float32, D-009 at -0.5 dB, minimum-phase residual and the
+    D-031 mandatory HPF (from the speaker identity) for the FIRs; format,
+    float32 and an exact unit impulse for dirac.wav. No overrides."""
+    names = venue_coefficients(venue)
+    firs = names & set(CHANNELS)
+    assert firs == set(CHANNELS), venue
+    assert names - firs <= {DIRAC, ZERO.name}, venue
+    hpf = {name: float(CHANNELS[name][1]["mandatory_hpf_hz"])
+           for name in firs
+           if CHANNELS[name][1].get("mandatory_hpf_hz") is not None}
+    assert_venue_gate(COEFF_DIR, dict.fromkeys(firs, "fir"), hpf)
+    if DIRAC in names:
+        assert_venue_gate(COEFFS, {DIRAC: "dirac"})
 
 
 @pytest.mark.parametrize("name", sorted(CHANNELS))

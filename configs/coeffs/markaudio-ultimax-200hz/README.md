@@ -59,7 +59,12 @@ deployed files are checked against these hashes.
 and the zero.wav layout, then runs these on the three WAVs (FFT of 65536
 points; "relative" means relative to max |H| over [200 Hz, 16 kHz]):
 
-- format, and D-009 (no bin above -0.5 dB), via `room_correction.verify`;
+- the venue file gate `room_correction.verify.run_venue_checks`, the same
+  gate a generated set passes, for both venues that use this set: format,
+  float32, D-009 (no bin above -0.5 dB), the minimum-phase residual and
+  the identity's mandatory HPF for the FIRs, an exact unit impulse for
+  `../dirac.wav` (`zero.wav` is checked in
+  `test_venue_spare_channel_mute.py`);
 - D-031 floor for channels with a numeric `mandatory_hpf_hz` f_h (the
   CHN-50P mains, 80 Hz): relative |H| <= -6 dB on [10 Hz, f_h] and
   <= -18 dB on [10 Hz, f_h/2];

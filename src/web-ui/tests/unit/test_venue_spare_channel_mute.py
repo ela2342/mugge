@@ -7,6 +7,10 @@ metadata only. So two things must hold: the venue names zero.wav, and the
 venue WAV set ships combined_sub2_lp.wav as the canonical all-zero bytes.
 A dirac.wav here would pass audio through; -120 dB and the D-063 gate are
 only the second layer.
+
+zero.wav has no kind in run_venue_checks (AE + Architect, 2026-10-26),
+so this file checks it: format and float32 subtype from
+room_correction.verify, plus the canonical all-zero bytes.
 """
 
 import hashlib
@@ -15,6 +19,8 @@ import struct
 
 import pytest
 import yaml
+
+from room_correction.verify import verify_format, verify_wav_subtype
 
 REPO = pathlib.Path(__file__).resolve().parents[4]
 VENUES = REPO / "configs/venues"
@@ -29,6 +35,9 @@ ZERO_SHA256 = (
 
 
 def assert_all_zero_wav(path):
+    for result in (verify_format(str(path), TAPS),
+                   verify_wav_subtype(str(path))):
+        assert result.passed, result
     data = path.read_bytes()
     assert hashlib.sha256(data).hexdigest() == ZERO_SHA256, path
     assert data[36:40] == b"data"
