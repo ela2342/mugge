@@ -640,6 +640,9 @@ priority!"
   4d8eca64. #63 deploy-first is OFF: US-172 v6 on rcyg67wd first, THEN
   the #63 DEPLOY plus P-steps (team-lead ruling; Architect pin-break
   finding). F-405: no amps-on row now (CM).
+  UPDATE (CM, 2026-10-26, after v245): backlog v245 pushed as
+  e53f2a94. #63 Pi plan v2 (dd227076) in review with the AE, the
+  Architect and the QE. #64 CI 40333713247 still running (CM).
 
 ## Reserved IDs
 
@@ -4829,6 +4832,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   but v6 could not run. worker-3 is still preparing the #63 plan for
   AE and QE review; no grant before v6 is done. #63 stays a DRAFT
   until the QE clears C4.
+  UPDATE (CM, 2026-10-26): the #63 Pi plan v2 is
+  /tmp/cm-relay/PR63/pi-plan-3f28b6c7-v2-dd227076.txt (sha256
+  dd227076, verified at PM read). It supersedes v1 da746539. In
+  review: the AE (clearance, Q2), the Architect (Q1, Q3, Q4) and the
+  QE (C4 coverage, split).
+  - One DEPLOY session of about 1.5-2 h, with one announced plain
+    reboot, after US-172 v6.
+  - If v6 merges to main first, #63 needs a main merge, a new head and
+    a repeat of the evidence run before deploying.
+  - The Mixxx steps P15-P17 are deferred if there is no display.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -6222,6 +6235,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the re-checks follow.
   UPDATE (CM, 2026-10-26): head f715538e (merges main 29f5c61f); CI
   40333713247 running.
+  UPDATE (CM, 2026-10-26): CI 40333713247 still running
+  (test-and-build).
   QE skip rulings at f715538e (/tmp/pr64-qe-skip-rulings-f715538e.md,
   sha256 dea15e43, verified at PM read). None blocks #64.
   - One-liner (worker-1 proposal, QE): in CI, a failed GM DJ-mode
