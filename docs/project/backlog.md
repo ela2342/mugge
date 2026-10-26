@@ -731,6 +731,11 @@ priority!"
   gate rejects crossover-only filters for 10 of 11 real profiles; AE
   ruling, Architect release; c8 10-run AC waits on it. worker-1 on
   F-394 (PO pick).
+  UPDATE (CM, 2026-10-26, after v260): backlog v260 pushed as
+  6ddfea68. PR #67 (docs-only F-406/F-407 records, head ae450041) open
+  as draft; 7 Rule 13 verdicts requested; CI-exempt. TW has
+  F-406/F-407 in their queue. #66: CI 40345460992 at ff985455 still
+  running; needs a main-merge before merge (CM).
 
 ## Reserved IDs
 
@@ -6590,6 +6595,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      change. The AE writes the ruling, the Architect releases it (CM).
      worker-4 changes no gate, threshold or all_pass test until then.
      c8 is held: its 10-run AC needs a green session.
+  - UPDATE (CM, 2026-10-26, after v260): CI 40345460992 at ff985455
+    still running. #66 is behind main (#64 merged), so it needs a
+    main-merge before merge; that voids any approvals given before it
+    (CM).
   Before the first amps-on measurement (non-blocking one-liners; no
   F-ID, no P-level given):
   - AE, verbatim: "F-262 item 7 Architect note: before the first
@@ -6801,6 +6810,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   reflecting gate changes is what the test checks, so a timeout should
   be a FAIL, or an xfail with an F-ID." UX (3a8e85ff) supports it: the
   gate indicator is the operator's main safety cue.
+  UPDATE (CM, 2026-10-26, after v260): F-406 and F-407 records are PR
+  #67 (docs-only, draft, head ae450041); 7 Rule 13 verdicts requested;
+  CI-exempt.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -6937,6 +6949,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     test_venue_gate_e2e.py:165/:180 -> new F-407. No P-level given for
     F-406 or F-407. TW item 3: their defect records go to the TW docs
     queue.
+  - One-liner (TW docs batch, via CM; "low priority" (CM); no P-level
+    given): defect records for F-402, F-405, F-398 and F-399.
   UPDATE (CM, QE, 2026-10-26, after v256): CI 40333713247 at f715538e
   is green on all 4 jobs. QE count profile MET
   (/tmp/pr64-qe-countprofile-f715538e.md, sha256 96abe4fb, verified at
