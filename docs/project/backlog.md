@@ -65,6 +65,11 @@ priority!"
   owner's OK, nothing connected), the AE/SecSpec veto, Rule 13, and
   the AMPS-ON PRECONDITION LIST (frozen at its current content; new
   rows only for a real hazard) once amps get connected.
+  NEW OWNER STANDING STATEMENT (2026-10-26, verbatim via team-lead and
+  the CM): "\"nothing is connected\" is standing until further notice,
+  no need to keep getting my confirmation for now." The team no longer
+  asks the owner to re-confirm "nothing connected"; re-confirmation is
+  due only when something gets connected (amps-on row 1).
 - Lane status (CM, 2026-10-26): A: worker-2 holds CHG-US172c-1 (steps
   1-6), granted after the owner's cold power cycle (verbatim: "Power
   cycled, with about 10 seconds off.", ~08:43; no LED report needed);
@@ -75,6 +80,20 @@ priority!"
   #55 merges (team-lead to confirm worker-5 is alive). The TW's F-394
   docs batch (/tmp/tw-f394-batch) is held until #55 and #57 merge, to
   save reviewer time. Nothing needs the owner right now.
+  UPDATE (CM, team-lead, 2026-10-26): the cold cycle is CONFIRMED
+  (OBSERVE-US172c-2, worker-2): /proc/uptime 615 s at 08:54:46Z, boot
+  about 08:44:31Z, as the owner said (verbatim: "I power cycled the
+  Pi. Physically unplogged power supply. Saw it boot."). The earlier
+  "not cold-cycled" reading ("up 11:45") was wrong: the Pi 5 has no
+  RTC battery and boots at the last saved wall-clock time until NTP
+  corrects it (~44 s), so /proc/uptime is the reference. Host key and
+  MAC match the pinned values. Now: OBSERVE-US172c-3 (AE gains read +
+  Architect D items) granted to worker-2; the gains read waits for the
+  AE ruling on whether the two read-only SSH sessions since boot keep
+  the cold-boot precondition intact; CHANGE for steps 7-8 comes next.
+  worker-5 is alive (team-lead): F-390/F-391 go to worker-5 when #55
+  merges. worker-4 is fence-cleared for F-399 (runner.py:313-350).
+  worker-3's US-173 core plan is approved (see US-173).
 - DJ PLAYBACK PATH (core item, PO, 2026-10-26): Mixxx on the Pi 5 ->
   GM (DJ mode, quantum 1024) -> filter-chain convolver -> gate ->
   USBStreamer, with the crossover-only FIRs from the US-155 venue
@@ -116,6 +135,25 @@ priority!"
     list (ask once, together with amps-on).
   - Plan B note only (struck by the PO; not an option): llvmpipe on
     HDMI or headless labwc + wayvnc; neither meets the goal.
+  - UPDATE (PO, Architect, 2026-10-26; replaces the "two reconciler
+    bugs" point above): the two CLAUDE.md reconciler bugs are STALE
+    (GM-12 Finding 10): (2) the reconciler feedback loop was fixed in
+    8ef778e3 (2026-03-16, re-entrancy guard plus duplicate-link
+    guard); (1) the startup enumeration miss was most likely the
+    node-resolution bug fixed in 5fbd5f75 (GM-13/GM-14,
+    find_node_port, 2026-03-17; Architect inference, neither commit
+    message names it). The reconciler is idempotent and converges as
+    ports appear; GM ran as the link manager on the Pi 4 (US-140,
+    ce0d85da, 2026-04). The real risk: GM DJ mode has never run on the
+    Pi 5 (node/port names, WP auto-links per D-065/F-318, quantum
+    1024), covered by the new US-173 link-dump AC.
+  - F-396 (PO, 2026-10-26): reproduced in r8 (a WP restart re-suspends
+    the filter-chain). Under row 16's minimal form: after a WP
+    restart, a PW restart per row 15, then the re-read. If F-396 makes
+    the readback never verifiable in practice, it comes back to the PO
+    as a core candidate.
+  - Owner estimate (PO to team-lead, 2026-10-26): 2-5 working days,
+    worst case 1-1.5 weeks.
 - AE pre-prod one-liners (2026-10-26): (1) #45 re-review on revival.
   (2) F-318 v19 check. (3) F-395/F-396 T65 replug logging, F-396 AC4
   on the Pi. (4) F-397/US-176 canary design, incl. the safety.md l.630
@@ -1874,6 +1912,31 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      safety.md v19 wording, the T65 logging, F-396 AC4, the
      F-397/US-176 validator and the canary. PM relayed it to the QE
      (for the CM).
+     ADDITION (AE, 2026-10-26, on the QE's question; step (a0) before
+     (a)), verbatim: "(a0) From the same `pw-dump` used for the
+     states, confirm exactly one node named `pi4audio-convolver` and
+     exactly one named `pi4audio-convolver-out`, and on
+     `pi4audio-convolver` exactly 8 `gain_*:Mult` params named
+     `gain_left_hp`, `gain_right_hp`, `gain_sub1_lp`, `gain_sub2_lp`,
+     `gain_hp_l`, `gain_hp_r`, `gain_iem_l`, `gain_iem_r`; any other
+     count or name is a FAIL and the amps (including HP/IEM amps) stay
+     off (F-348). `pw-dump` is used for structure and states only,
+     never for the gain values."
+     Evidence format (QE, AE agrees; matches the US-172c read ruling):
+     timestamped before/after state lines with the node ids;
+     -0.000000, nan or inf counts as FAIL; one labelled block per
+     repeat under (d). Relayed to the CM by the QE.
+     ADDITION (AE, 2026-10-26; same session plan): no WirePlumber
+     restart with amps on. r8 (sandbox,
+     /tmp/w3-gate2/selftest-r8-result/) reproduced F-396: pw-mon shows
+     the USBStreamer going to suspended on a WP restart, which is the
+     standing "USBStreamer loses its stream" case. In the session plan
+     a WP restart is a transient action: amps off first (HP/IEM
+     included), then the restart, then the (a)-(c) re-read before the
+     amps go back on. Not a new rule, no doc batch; the explicit
+     safety.md wording stays pre-prod with F-396 AC4 (Pi
+     confirmation). PO: row 16 minimal form is an amps-on row for the
+     first D-070 session as is.
   NEXT safety.md TOUCH (#51 reviews, non-blocking, fail safe; TW
   drafts, AE owns the wording, this list follows per the mirror
   rule): (1) AD L1 = UX (a): the lead-in "holds" (closed and
@@ -2305,6 +2368,62 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   version. Architect estimate and risks: see the DJ PLAYBACK PATH item
   at the top. Status: US-172c recovery under CHG-US172c-1 (worker-2),
   the owner's cold power cycle done (~08:43).
+  AC2 (Architect, verbatim, 2026-10-26; replaces the "requested from
+  the Architect" note above; frozen copy
+  /tmp/pm-backlog/us172-ac2-architect.txt):
+  - [ ] AC2: D-022 re-confirmed on the Pi 5 by a stability run, not by
+        "Mixxx visible" (architect, PO). Setup: after a cold boot of
+        the deployed branch generation, on the PREEMPT_RT kernel
+        (`uname -v` shows PREEMPT_RT) with PipeWire at SCHED_FIFO 88,
+        start Mixxx under labwc/greetd on HDMI via `pw-jack mixxx`.
+        Run 30 minutes continuously at quantum 1024 with two decks
+        playing, waveforms shown, and audio running through the
+        filter-chain convolver to the USBStreamer. Under the current
+        "nothing connected" owner statement the gate may stay closed,
+        because the graph processes either way. PASS needs all of the
+        following:
+    (1) The GL renderer is V3D, recorded from the Mixxx log or
+    `eglinfo`/`glxinfo`; any llvmpipe/softpipe is FAIL.
+    `/dev/dri/card*` and `renderD*` are present, and vc4 and v3d are
+    loaded.
+    (2) For the whole run there is no v3d/vc4/drm error, GPU reset,
+    hung-job, or lockup message in `journalctl -k`; no hard hang; SSH
+    stays responsive (polled at least every 60 s).
+    (3) Zero xruns: the USBStreamer and convolver ERR counters in
+    `pw-top` do not increase from minute 1 to the end, and there are
+    no `XRun` lines in the PipeWire journal for that window.
+    (4) Mixxx, labwc and greetd do not restart: NRestarts is 0 for
+    each, the Mixxx PID is unchanged, and both failed lists are empty
+    at the end.
+    (5) Thermal and frequency per the D-069 rule: samples every 10 s.
+    If any cooling_device cur_state is non-zero, the rpi_volt alarm is
+    set, or cpuinfo_cur_freq < max, the run is INVALID and must be
+    repeated, not counted as a pass. At ≥80 °C, STOP (INVALID).
+    Recorded but not pass criteria: Mixxx CPU %, system idle %, PW
+    daemon CPU %, peak temperature. If a 30-minute run passes on
+    llvmpipe instead, it counts toward plan B only, never toward AC2.
+  Why 30 minutes (Architect): it matches the Pi 4 T3d length. The Pi 4
+  V3D/RT deadlock (F-012/F-017) showed up within minutes under load,
+  so 30 minutes of real GL load catches that class. The 11-hour soak
+  is not part of this AC; it belongs to a later gig-readiness check.
+  Status UPDATE (CM, worker-2, 2026-10-26; corrects "the owner's cold
+  power cycle done" above only in its basis): the cold cycle is
+  CONFIRMED by /proc/uptime (boot ~08:44:31Z; see the lane status at
+  the top). Firmware reset status 0x1000, no power, SD or USB faults;
+  the Architect is decoding 0x1000 on the Pi 5. No DRM devices, greetd
+  skipped, no compositor: that is the US-172 problem itself and
+  explains the owner's "no Wayland at all".
+  FINDING (worker-2, 2026-10-26; candidate defect, ID once the
+  Architect rules): after the tryboot reboot on 2026-10-25 (clean
+  shutdown 21:03:34Z), the Pi never booted until the owner's power
+  cycle; boot -1's shutdown armed a 10-min hardware watchdog that did
+  NOT fire overnight. The Architect's ruling on why is pending.
+  Related: the CLAUDE.md watchdog-reliability TODO and AD L3
+  (rt-tuning.nix:24 vs options.nix O-24).
+  US-172c one-liners (CM, worker-2, 2026-10-26): (a) us172-recovery.sh
+  rec-2 old_present match is broken (it matches the id with a space on
+  each side, but the list is one id per line); a fix means a new sha
+  and re-review. (b) The step 4 pstore read needs sudo.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -2911,6 +3030,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       STOPPED here: PRE-PROD (P2, PO re-plan); the e74a6e93 edit, P-a
       and the F-396 Pi observation are not started. worker-3 moved to
       US-173 core prep.
+    - worker-3 state line (via CM, 2026-10-26), verbatim: "Gate-2
+      (F-318 a) PARKED as pre-prod (PO re-plan, 2026-10-26). r8 PASS:
+      selftest 18/18 in policy and control, matrix exit 0; F-396
+      reproduced (WP restart re-suspends fc/fc-out, cleanup NV = STOP
+      exit 3 as designed). r8 code: gate2.py 71d3bd75,
+      gate2_selftest.py 96a4ac4d, gain_matrix.py 238b3841. Results
+      /tmp/w3-gate2/selftest-r8-result (SUMS 16065f52, 540 files);
+      store 03qgvdfj and r7 fmfn3rp0 kept. Open: e74a6e93 gaps 1-3
+      (branch selection on before+after, explicit control FAIL set,
+      idle-branch log), not cleared."
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -2930,6 +3059,22 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     checks.aarch64-linux.wireplumber-no-bypass plus a
     development.md line. The CM routes it to the Architect; likely
     part of F-380.
+  NEW AC (PO, 2026-10-26; combined with amps-on row 7, the manual link
+  check, not a second check; Architect wording overrides): "Before the
+  first Mixxx test, in an OBSERVE session: GM in DJ mode with quantum
+  1024 confirmed; `pw-link -l` dump compared with the GM routing
+  table. Every expected link present, no extra links (incl. WP
+  auto-links) to USBStreamer ports. Deviations are fixed and the dump
+  repeated before the gate opens. Dump in the lab note."
+  Branch (CM, 2026-10-26): story/US-173-first-dj-session = b973e3d9:
+  main f01e6647 merged (7f2d4e8c), then the F-318 v18 docs batch
+  committed. F-318 v18: LANDED, TW verification pending (one safety.md
+  hunk applied with fuzz against main's "Pi 5 row (1-3, 5-14)"
+  context).
+  worker-3 core plan APPROVED (CM, 2026-10-26): M1 GM DJ link set +
+  unit test; M4 thermal watch script; M5 Hercules mapping check; then
+  M2 venue WAVs (after F-374); then M3 sandbox rehearsal. P1-P4 need
+  the Pi and come after US-172.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -4839,6 +4984,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   blocker.
   Status (CM, 2026-10-26): lane B; worker-4 on
   fix/F-399-venue-runner-cleanup from 6f4ae3d1.
+  worker-4 is fence-cleared for runner.py:313-350 (CM, 2026-10-26).
+  US-174d AC (worker-4/Architect, verbatim, via CM): "US-174d AC: the
+  real-Pi deploy step refuses an output set that has a SIMULATED
+  marker present, or a delays.yml whose `simulated` field is absent or
+  unparsable, unless explicitly overridden. It copies only the
+  top-level expected files and never recurses into output_dir
+  (F-399)."
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
@@ -5379,6 +5531,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
 - CLAUDE.md "two reconciler bugs" (US-059, Pi 4 era) have no backlog
   record; the Architect confirms whether GM DJ mode on the Pi 5 still
   hits them (see DJ PLAYBACK PATH). Owner of the check: Architect.
+  ANSWERED (Architect, 2026-10-26): stale; see the DJ PLAYBACK PATH
+  update at the top (8ef778e3, 5fbd5f75). TW backlog, no F-number: the
+  CLAUDE.md "Current Mission" line "Two reconciler bugs block
+  automated routing — manual pw-link used for GM-12" is stale; drop it
+  or point it at 8ef778e3/5fbd5f75, and mark the GM-12 lab note's
+  Finding 10 ("Open") resolved. #45 rewrites that CLAUDE.md paragraph
+  anyway; if it merges first, check whether the line is already gone.
 ## P3
 
 - development.md, ONE docs item (TW offers to write it; merges UX,
@@ -6037,6 +6196,17 @@ merge needs update-branch and 7 reconfirmations at the new head.
   nix/nixos/rt-tuning.nix:24 "hardware watchdog provides a backstop"
   contradicts options.nix "stays disabled (O-24)". QE: see amps-on row
   13.
+  UPDATE (CM, 2026-10-26; corrects the verdict list in the PARKED
+  update above): all 7 verdicts at b7be7ea1 came in before the stop,
+  all APPROVE: QE, SecSpec, UX, Architect, AE (with an addendum), AD
+  and TW. The CM archived them UNPOSTED in
+  /tmp/pr45-verdicts-b7be7ea1/; the UX file is a condensation, so the
+  CM asks the UX for the full text again at revival. Revival needs
+  another main merge anyway; the TW's cosmetic note gets fixed then:
+  the merge commit's subject is ~1100 characters and should become the
+  body. More pre-prod one-liners: SecSpec LOW: curl -k -> --cacert
+  after F-037. AE addendum: the pw-dump vs pw-cli readback
+  contradiction is bound to v19.
 - #45 dangling citations (TW, 2026-10-25): AC14, F-320, F-338,
   F-339 and F-347 cite "pre-flight #10 (PR #45)". #45
   (docs/safety-d063-gate,
