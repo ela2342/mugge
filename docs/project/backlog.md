@@ -1089,6 +1089,9 @@ version, see P3): F-419, US-183, D-072, T66.
 Next free (v310; supersedes the line above; F-419 to F-428 confirmed
 free on main, all origin/* and local branches at PM read, filed in
 this version, see P3): F-429, US-183, D-072, T66.
+Next free (v311; supersedes the line above; F-429 confirmed free on
+main, all origin/* and local branches at PM read, filed in this
+version, see P3): F-430, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -7714,6 +7717,25 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (non-strict xfail). The QE, verbatim: "This is the F-262 API test,
   not F-394. It belongs to the F-262/#66 accounting, not to this
   gate."
+  UPDATE (CM, 2026-10-26/27): R5 run 2 40410143961 PASS, excerpt
+  /tmp/cm-relay/F-262/R5/frozen/R5-run2-40410143961-excerpt-9741ab83.txt
+  (sha256 9741ab83, verified at PM read), verbatim: "conclusion
+  success (all 4 jobs success), headSha
+  4724e65d6675aa3726f17bf21be3c94f46edfa39" and "F-262-AC ch=sat_left
+  max=1.14dB band=[250.0, 500.0] pass=True". Streak 2 of 10, worst
+  1.14 dB (CM). Run 3 40417632569 dispatched; no new dispatches after
+  the #68 merge. The CM has asked the QE whether the R5 streak at
+  4724e65d still counts now that #66 is behind main (needs
+  update-branch, which voids its approvals).
+  UPDATE (worker-1, 2026-10-26, F-394/#68 one-liner 1; duplicate of
+  the cross-ref above, no new ID), verbatim:
+  "test_measurement.py::TestLocalDemoMeasurementAPI::test_full_session_api
+  now XPASSes its non-strict F-262 xfail (since CI 40356547804,
+  probably thanks to #68's RPC/PW-env fixes). The marker belongs to
+  F-262 / PR #66." PM cross-ref: R5 run 2 (at 4724e65d) logs this test
+  as PASSED, not XPASS; at 4724e65d the test (test_measurement.py
+  l.176) carries no xfail marker, so the XPASS applies to main/#68,
+  and the F-262 branch already drops the marker.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -9880,6 +9902,7 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      "$PW_STORE/bin" ], echoes "Fetching pipewire..." and runs nix
      build --no-link nixpkgs#pipewire (l.125-128 do the same for
      WP_STORE).
+     PM note (v311): filed as F-429.
   - UPDATE (CM, 2026-10-26, after v301): the negative control run
     40398705324 at throwaway 999abd11 went RED: three stimulus-guard
     setup ERRORs, frozen as 77b2231a (CM; PM cross-ref: the frozen
@@ -10016,6 +10039,43 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     mixxx-substitute.py --tone and that local-demo env reads the paths
     from the manifest (added to the TW development.md docs-queue
     item).
+  - #68 BODY (CM, team-lead, 2026-10-26): single writer = TW
+    (team-lead ruling). v1 tw-body-v1-27059d0d.md withdrawn by the TW;
+    v2 tw-body-v2-681d0be6.md void (briefly live on the PR); worker-1
+    draft w1-body-r1-4dddb505.md void (crossed; fact input only); fact
+    input w1-body-facts-r1-60901627.txt. Live body = v3
+    tw-body-v3-d905b45f.md (CM: matches the sha with the trailing
+    newline normalized). All in /tmp/cm-relay/PR68/frozen/, sha256
+    verified at PM read. Body v3, verbatim: "**Mute is not presented
+    as verified by this PR.**"
+  - #68 TW r2 tw-verdict-r2-bb65c5e0.md (sha256 bb65c5e0, verified at
+    PM read; posted issuecomment-6429125668; replaces r1 46baae9d
+    CHANGES REQUESTED), verbatim: "**Verdict: APPROVED**, on one
+    condition: the PR body is set byte-for-byte to
+    /tmp/tw-pr68-body-3b190d6a-v3.md". AD 8208bb32 and QE cc0be56e
+    frozen as ad-verdict-8208bb32.md / qe-verdict-cc0be56e.md (sha256
+    equal to the v310 accounting copies at PM read), posted
+    issuecomment-6429052352 / -6429052678. Tally: 7 of 7 APPROVE at
+    3b190d6a.
+  - #68 MERGED (CM, 2026-10-26T23:35:08Z): main = 55d90806 (--merge
+    --match-head-commit 3b190d6a; the draft PR was marked ready first,
+    head unchanged). CI 40413648491 success; QE V-a to V-f present,
+    excerpt ci-40413648491-3b190d6a-excerpt-52c48264.txt (sha256
+    52c48264, verified at PM read), verbatim: "conclusion success;
+    headSha 3b190d6a7ea7ec46a84b2e8e6e9d8de27ab33a84; jobs
+    changes/nixos-eval/test-and-build/ci-gate all success". PM
+    cross-ref: origin/main 55d90806 has parents 498fa3e5 and 3b190d6a.
+    Merged under the owner's standing merge consent (7/7 + CI green).
+  - F-394 AC STATUS per body v3 (CM summary; PM checked the body):
+    claimed (i), (ii), (iii), (v), (viii); (vi) claimed but awaits the
+    AE and QE ruling; (iv) open: N >= 5 consecutive green CI runs at
+    one head (QE ruling 9402c6eb). Body v3, verbatim: "Until (iv) and
+    (vi) are ruled, the F-394 rule stands: no PR may cite the DJ-mode
+    E2E group as evidence for the signal path or for mute."
+  - After the #68 merge (CM): TW N1/N2 post-merge docs items now due.
+    #66 (F-262) is behind main and needs update-branch, which voids
+    its approvals; F-384 (0af057ba) and US-179 sit on 4724e65d (PM
+    cross-ref: 4724e65d is not a descendant of 55d90806).
 - **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
   per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
   2026-10-26): on a suspended node, the gain readers in the r6b matrix
@@ -11117,6 +11177,58 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     1541 passed, 1 skipped, 3 warnings" (the q3 home_lab sat_left
     far-field case). Next after commit 2: worker-7 asks the CM before
     the phase 0b r2 data run (R6d).
+  - F-384 q4 (CM, 2026-10-26): worker-7 q4
+    /tmp/cm-relay/F-383/frozen/w7-F384-q4-76b010c1.txt (sha256
+    76b010c1, verified at PM read): the S2 call site on 4724e65d is
+    correction_from_measurement, not origin/main
+    venue_pipeline.py:267. Architect answer r1
+    arch-F384-q4-answer-r1-d0bd84c0.txt (sha256 d0bd84c0), verbatim:
+    "Ruling: option (A), with one change to the default." and "S1b
+    NEW, correction.py: CorrectionFilter gets ONE last field,
+    d009_scalar_db: Optional[float] = None." S2' gives
+    VenueFilterResult a d009_scalar_db Dict field; S3 adds a not-None
+    assert; S2 of 1d3626b1 is replaced (the Architect's own
+    correction). AE release ae-F384-q4-release-b285c8c9.txt (sha256
+    b285c8c9), verbatim: "RELEASED as written (S1, S1b, S2', S3 + the
+    not-None assert)." and "The q3 set 51ad3771 + 1d3626b1 + ddfbc1ba
+    stays governing, with S2 replaced by this file." CM fence r6
+    w7-F384-impl-brief-r6-7fa27b4c.txt (sha256 7fa27b4c) = r5 76b8a79f
+    with S2 replaced by S1b + S2'. worker-7 had acked 51ad3771,
+    1d3626b1, ddfbc1ba and 76b8a79f (CM-verified).
+  - F-384 D2d' (CM, 2026-10-26): worker-7 report r1
+    w7-F384-D2dp-report-r1-d5b7b88c.txt (sha256 d5b7b88c), data
+    w7-F384-diag4-4ebab752.py / w7-F384-diag4-e74ceef6.out (shas
+    verified at PM read), verbatim: "RESULT: D2d' OVERALL PASS".
+    Findings (reported, not gated): F1, verbatim: "Factual correction
+    to 1d3626b1: on the #66 base, the native clip did NOT stay quiet
+    "on every sat". It fired on 8/12 channels"; F2, home_lab sub1
+    differs by 0.029127 dB (old clip); F3, no-clip s_db -1.110223e-16.
+    AE release ae-F384-D2dp-release-fa4ffac2.txt (sha256 fa4ffac2),
+    verbatim: "VERDICT: RELEASED, NO CHANGE. Commit 2 under fence r6
+    7fa27b4c may proceed as written." Architect: no change, F1 a fact
+    correction, F3 stays without a tolerance (CM; message only, no
+    Architect file in the relay folder at PM read). No fence r7. AE
+    non-gating note: the large_hall sub1 far-field value is nan,
+    pre-existing.
+  - F-384 COMMIT 2 PUSHED (CM, 2026-10-26/27): 0af057ba, parent
+    51657eeb, checked within fence r6, pushed by SHA;
+    fix/F-384-step9-peak-scalar =
+    0af057baed0cb8bea2f50e509d410ff92d0eb46b (PM: ls-remote and
+    rev-parse verified). PM cross-ref: diff --stat 51657eeb..0af057ba
+    touches correction.py, venue_pipeline.py, combine.py,
+    test_venue_closed_loop.py and new test_f384_correction_scalar.py
+    (5 files, +371/-39), all on the r6 list. Report
+    w7-F384-commits-report-r1-fd80a751.md (sha256 fd80a751), verbatim:
+    "`nix run .#test-room-correction`: 1551 passed, 1 skipped, 2
+    warnings, EXIT 0" and "`nix run .#test-unit` (web-ui): 953 passed,
+    1 skipped, 1 warning, EXIT 0". nan note, verbatim: "The nan value
+    is never passed to a comparison, so no assert depends on nan
+    semantics." No PR yet; it follows #66. Sits on 4724e65d, behind
+    main 55d90806.
+  - F-383 phase 0b r2 (CM, 2026-10-26/27): worker-7 cleared for the
+    R6d data run (per 3100a728 R7, AE release 7cda69e8), local only;
+    running at the CM's last report. Step 3 waits for the AE's release
+    on the numbers.
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
@@ -12752,6 +12864,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     summary; relayed to worker-6).
   - Branch story/US-179-web-rc at 67695d93 (PM read: ls-remote,
     2026-10-26).
+  - US-179 HEADS (CM, 2026-10-26/27): e8b7b95d pushed (E6 texts and
+    tests), then 55fc45b0 pushed (onset per capture; PM: parent
+    e8b7b95d, ls-remote verified). ab1bab02 (P1/analyze) committed but
+    NOT pushed: it came again without worker-6's ack and is escalated
+    to team-lead.
+  - US-179 ACK RULE (team-lead, via CM): no further push until
+    worker-6 acks 10bc34bf, 1f5a4d8c and the AE onset-clock condition
+    by sha. No more re-sends (the CM re-sent once); if the next report
+    has no ack, team-lead escalates to the owner.
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
@@ -13538,6 +13659,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   _SelectorTransport.__del__ -> base_events._wakeup "TypeError:
   'NoneType' object is not iterable" at GC." worker-7: probably a
   flaky loop-close ordering; not chased (fence).
+- **F-429** local-demo.sh resolve_nix_paths silently runs nix build
+  (worker-1, F-394/#68 one-liner 2, via CM, 2026-10-26; outside F-394
+  scope; no P-level given; ID allocated by the PM, free across main
+  and all branches at PM read; earlier recorded without an ID under
+  F-394), verbatim: "scripts/local-demo.sh resolve_nix_paths silently
+  runs `nix build --no-link nixpkgs#pipewire` / `#wireplumber` when
+  PW_STORE or WP_STORE is set but isn't a directory (l.120-127). That
+  surprises anyone who runs `local-demo.sh env` outside nix. It should
+  fail with a message instead." PM cross-ref: on main 55d90806 the
+  checks are l.121 and l.125, the nix build calls l.123 and l.127.
 
 ## Open PRs (2026-10-24, per CM)
 
