@@ -65,6 +65,10 @@ Allocated 2026-10-26 (PM, checked free across main, origin and all
 worktrees): F-398 (LOW, SecSpec, #57 review: config-supplied names
 used as path components unchecked). Next free (supersedes the line
 above): F-399, US-177, D-071, T66.
+Allocated 2026-10-26 (PM, checked free across main, origin and all
+worktrees): F-399 (AD M1, #57 review: the venue runner leaves
+deployable-named files on a gate failure). Next free (supersedes the
+line above): F-400, US-177, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -1699,6 +1703,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      Plus item 16 (below), lead-in "16 rows", rows 1-3 and 5-16, Gate
      rule "1-3, 5-16". Still waits for the merged US-173 head. The TW
      sends the PM the v19 sha1.
+     UPDATE (PO, 2026-10-26): #45 merges into safety.md first; v19
+     rebases onto it (the TW resolves the conflict there).
      Earlier note, superseded by the final text: the AE has since ruled that
      "unchanged" is a FAIL, so "gains unchanged or 0" above is
      superseded; the TW asked the AE for corrected text. Do not act
@@ -3142,6 +3148,54 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     numbers. The 'suggested gain delta (not applied)' value stays
     display-only unless there is an explicit, separately confirmed
     apply step."
+  UPDATE (CM, 2026-10-26; supersedes the 3/7 and "QE ... not yet
+  posted" above): #57 is 7/7 at 05d306bc: AE 6405226733, SecSpec
+  6405226934, UX 6405227144, QE 6405234871, TW 6405235129, Architect
+  6405235374, AD 6405246773 (/tmp/pr57-ad-verdict-05d306bc.md, sha256
+  2d712b71). All seven lapse at the update from main (after #59
+  merges); then diff-only re-checks by all 7 and green CI with F-363
+  passing. Non-blocking: QE, fill in the ARM wall-time line from the
+  first CI run (over 300 s = an F-380 one-liner to the PM); Architect,
+  np.asarray on ragged input raises inside the gate, relevant only if
+  external data reaches it (US-174d; pairs with AD L2); the TW keeps 3
+  docs follow-ups in their own backlog. AD items (none block #57):
+  - M1 = F-399 (fix before US-174c/d).
+  - L1 (with F-383/F-384): correction.max_cut_db is not validated; a
+    cap below |margin| lifts the design above -0.5 dB, and a NaN cap
+    gives a NaN filter. Raise unless the cap is finite and >=
+    |margin|.
+  - L2 (with US-174d): passes_residual_gate and deviation_within_limit
+    keep "never raises" only for numeric input; None or strings raise.
+    Catch these or narrow the docstring before the gate becomes a
+    deploy gate.
+  - L3 (US-174d): sat correction above 500 Hz is bounded only by the
+    18 dB cap, D-009 and min-phase. AE RULING (2026-10-26): YES, add
+    an HF over-cut bound; a quality gate, not a safety gate; does not
+    block #57. Why: above about 500 Hz a single-mic measurement is
+    dominated by position-dependent combing; a cut that "fixes" a peak
+    that exists only at the mic position leaves a real notch
+    everywhere else, and the residual gate can't see it (it judges
+    against the same measurement), so the bound applies to the
+    correction filter itself. Cut-only: no hardware risk, only tonal
+    harm. Sat channels only (subs are lowpassed). (a) Design: 500
+    Hz-20 kHz, the correction part (filter minus the crossover-only
+    target) cuts at most 6 dB, as a frequency-dependent max_cut: 18 dB
+    below 500 Hz (unchanged), 6 dB from 500 Hz up, smooth 1/3-octave
+    transition at 500 Hz; enforced in correction.py where max_cut_db
+    is applied today (l.106). (b) Verify: fail-closed check on the
+    generated WAV: on 1/3-octave smoothing 500 Hz-16 kHz, the filter
+    magnitude is never more than 6.0 dB below the crossover-only
+    reference at the same frequency; non-finite is a FAIL; it sits
+    alongside MEASURED_MAX_POSITIVE_DEVIATION_DB in the US-174d gate
+    set. (c) Test (US-174d): sim case with an injected narrow HF comb
+    peak (+10 dB at 3 kHz, mic position only): design caps the cut at
+    6 dB and verify passes; a hand-built filter with a 10 dB cut at 3
+    kHz must FAIL verify. 6 dB is the AE's starting value; the AE
+    re-judges it from the first real venue measurements, and any
+    change is the AE's.
+  - L4 (with venue config validation): build_channel_map accepts
+    channel numbers outside 1..8; add a range check (same
+    input-validation class as F-398; see UX N1).
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -4566,6 +4620,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   basename matching ^[A-Za-z0-9_.-]+\.wav$, identity must be a slug,
   and the resolved path must stay under its directory. Same class as
   F-372 and the #55 profile_name item. Not a #57 blocker.
+- **F-399** Venue runner leaves deployable-named files on a gate
+  failure (AD M1, #57 review at 05d306bc, 2026-10-26; fix before
+  US-174c/d): run_venue_pipeline writes deployable-named
+  combined_*.wav, dirac.wav and delays.yml to --output-dir before the
+  gates run, leaves them there when the gates fail, and puts no
+  "simulated" marker on them. The old pipeline wrote delays.yml only
+  on a pass. Fix: stage the output and promote it only on a pass; mark
+  simulated output (simulated: true plus the scenario); a test that a
+  failed run leaves no deployable file. Fits the AE's 174d rule "a
+  failure keeps the previous filters". Source
+  /tmp/pr57-ad-verdict-05d306bc.md (sha256 2d712b71). Not a #57
+  blocker.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
@@ -5706,6 +5772,16 @@ merge needs update-branch and 7 reconfirmations at the new head.
   an F-395 check-10 safety.md batch for it (AE wording; see "#45 gain
   read method" below), and #44 still depends on it. It needs an update
   from main (#60 merged) and a full Rule 13 round at its new head.
+  UPDATE (CM, PO, 2026-10-26): #45 has the TW's F-395 check-10 commit
+  8cba3522 on 76b61347 (one row, AE wording 17a79d37; the body
+  addendum notes the safety.md conflict at revival). The AE is
+  confirming the wording; once the AE OKs it, #45 meets "check 10
+  carries the F-395 rule" (#45 gain read method UPDATE below). PO
+  RULING: revive #45 right after #59 merges, in parallel with #57; #45
+  goes into safety.md ahead of F-318 v19, and the F-318 batch rebases
+  onto it (the TW resolves the conflict once, there). No hold. Revival
+  = update from main, the TW's safety.md conflict resolution, a full
+  Rule 13 round at the new head.
 - #45 dangling citations (TW, 2026-10-25): AC14, F-320, F-338,
   F-339 and F-347 cite "pre-flight #10 (PR #45)". #45
   (docs/safety-d063-gate,
