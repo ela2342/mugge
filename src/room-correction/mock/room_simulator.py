@@ -436,7 +436,8 @@ def generate_room_ir(
     return ir
 
 
-def simulate_measurement(sweep, speaker_pos, mic_pos, room_config, sr=SAMPLE_RATE):
+def simulate_measurement(sweep, speaker_pos, mic_pos, room_config, sr=SAMPLE_RATE,
+                         speaker_ir=None):
     """
     Simulate a full measurement: convolve sweep with synthetic room IR.
 
@@ -455,6 +456,11 @@ def simulate_measurement(sweep, speaker_pos, mic_pos, room_config, sr=SAMPLE_RAT
         Room configuration dictionary (from room_config.yml).
     sr : int
         Sample rate.
+    speaker_ir : np.ndarray, optional
+        Speaker transfer function (e.g. from
+        speaker_sim.generate_fir_from_identity). If given, it is convolved
+        into the acoustic path and the returned IR is speaker * room.
+        None = room only (default, unchanged behaviour).
 
     Returns
     -------
@@ -478,6 +484,9 @@ def simulate_measurement(sweep, speaker_pos, mic_pos, room_config, sr=SAMPLE_RAT
         noise_floor_dbfs=noise,
         sr=sr,
     )
+
+    if speaker_ir is not None:
+        room_ir = dsp_utils.convolve_fir(speaker_ir, room_ir)[:len(room_ir)]
 
     # Convolve sweep with room IR to simulate recording
     recording = dsp_utils.convolve_fir(sweep, room_ir)

@@ -20,6 +20,12 @@ Usage:
         --profile configs/room-correction/default_profile.yml \
         --output /tmp/correction.wav
     python runner.py --stage verify --filter /tmp/combined_left_hp.wav
+
+    # Venue pipeline against the room simulator (US-174b): writes the WAV
+    # set the venue config expects, plus delays.yml; exit 1 on any gate
+    python runner.py --mock --venue ../../configs/venues/markaudio-ultimax-200hz.yml \
+        --speaker-profile ../../configs/speakers/profiles/2way-200hz-markaudio-ultimax.yml \
+        --scenario home_lab --output-dir /tmp/venue-test/
 """
 
 import argparse
@@ -39,6 +45,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from room_correction import dsp_utils, sweep, deconvolution, correction
 from room_correction import crossover, combine, export, verify, time_align
 from room_correction import recording as rec_module
+from room_correction import venue_pipeline
 from mock import room_simulator
 
 
@@ -304,6 +311,53 @@ def run_full_pipeline(args):
     return True
 
 
+def run_venue_pipeline(args):
+    """Venue pipeline against a simulated room (US-174b). Returns True if all gates pass."""
+    from mock import venue_sim
+
+    bundle = venue_pipeline.load_venue_bundle(args.venue, args.speaker_profile)
+    scenario = venue_sim.load_scenario(args.scenario)
+    print(f"Venue: {bundle.name}  scenario: {args.scenario}")
+    for c in bundle.channels:
+        print(f"  ch {c.number} {c.venue_key}: {c.coefficients}"
+              f" <- {c.speaker_key or 'passthrough'}")
+
+    sim = venue_sim.simulate_venue_measurements(
+        bundle.profile, scenario, scenario_name=str(args.scenario))
+    result = venue_pipeline.generate_venue_filters(bundle, sim.measured_irs)
+    # F-399: write and verify in a staging dir; publish only a passing set.
+    with venue_pipeline.staged_outputs(
+            args.output_dir, simulated_scenario=str(args.scenario)) as stage:
+        paths = venue_pipeline.write_venue_filters(result, stage.path)
+        delays = venue_pipeline.write_delays_yaml(
+            result, bundle, os.path.join(stage.path, venue_pipeline.DELAYS_FILENAME),
+            simulated_scenario=str(args.scenario))
+
+        for venue_key, ch in delays["channels"].items():
+            print(f"  {venue_key}: delay {ch['delay_ms']:.3f} ms, level "
+                  f"{ch['reference_level_db']:+.1f} dB, suggested gain delta "
+                  f"{ch['recommended_gain_delta_db']:+.1f} dB (not applied)")
+        print("Known limit: single mic position, position-independent room modes "
+              "(off-position check is slice 174b-sim).")
+
+        all_passed, results = verify.run_venue_checks(
+            stage.path, bundle.expected_files(),
+            mandatory_hpf_hz=bundle.mandatory_hpf_by_file())
+        missing = set(bundle.expected_files()) - set(paths)
+        if missing:
+            print(f"Missing outputs: {sorted(missing)}", file=sys.stderr)
+            all_passed = False
+        verify.print_report(all_passed, results)
+        if all_passed:
+            stage.commit()
+            print(f"Published to {args.output_dir} (marked SIMULATED)")
+    if not all_passed:
+        failed = [r.name for r in results if not r.passed]
+        print(f"VERIFY FAILED: {', '.join(failed) or 'missing outputs'}", file=sys.stderr)
+        print(f"Nothing published; {args.output_dir} left as it was.", file=sys.stderr)
+    return all_passed
+
+
 def run_stage_sweep(args):
     """Generate a sweep signal."""
     sweep_signal = sweep.generate_log_sweep(duration=5.0, sr=SAMPLE_RATE)
@@ -436,8 +490,25 @@ def main():
         help="Path to UMIK-1 calibration file (.txt from miniDSP, e.g., /home/ela/7161942.txt)",
     )
     parser.add_argument("--test", action="store_true", help="Run end-to-end test")
+    parser.add_argument("--venue", help="Venue config YAML (venue pipeline, US-174b)")
+    parser.add_argument(
+        "--speaker-profile",
+        help="Speaker profile YAML the venue uses (venue pipeline)",
+    )
+    parser.add_argument(
+        "--scenario",
+        help="Room simulator scenario name or YAML path (venue pipeline, with --mock)",
+    )
 
     args = parser.parse_args()
+
+    if args.venue:
+        if not args.mock:
+            parser.error("--venue currently needs --mock (real measurement is US-174c)")
+        if not (args.speaker_profile and args.scenario and args.output_dir):
+            parser.error("--venue needs --speaker-profile, --scenario and --output-dir")
+        success = run_venue_pipeline(args)
+        sys.exit(0 if success else 1)
 
     if args.test:
         success = test_pipeline()

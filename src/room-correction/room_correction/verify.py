@@ -528,3 +528,123 @@ def print_report(all_passed, results):
     else:
         print("RESULT: CHECKS FAILED - DO NOT DEPLOY")
     print("=" * 60 + "\n")
+
+
+# -- Venue checks (US-174b) -------------------------------------------------
+#
+# run_all_checks() above hard-codes the four-channel 80 Hz layout. The
+# functions below check whatever WAV set a venue config expects, with the
+# AE's 2026-10-25 gates. run_all_checks() is unchanged.
+
+MIN_PHASE_MAX_RESIDUAL_DB = -40.0
+MIN_PHASE_MAX_TAIL_DB = -60.0
+VENUE_D009_MARGIN_DB = -0.5
+
+
+def verify_minimum_phase_residual(filter_path,
+                                  max_residual_db=MIN_PHASE_MAX_RESIDUAL_DB,
+                                  max_tail_db=MIN_PHASE_MAX_TAIL_DB):
+    """
+    Minimum-phase gate (AE, 2026-10-25).
+
+    Passes if the energy of (h - minphase(|H|)) is at most max_residual_db
+    relative to the energy of h, AND the energy in the last 5% of taps is
+    at most max_tail_db (causality / no wrap-around). Unlike
+    verify_minimum_phase(), this does not use "energy before the peak": a
+    correct minimum-phase lowpass can have much of its energy before its
+    peak.
+    """
+    from . import closed_loop
+
+    data, _ = load_filter(filter_path)
+    if not np.any(data):
+        return VerificationResult(
+            "Minimum Phase (residual)", False, "Filter is all zeros", {})
+    residual_db = closed_loop.minimum_phase_residual_db(data)
+    tail_db = closed_loop.tail_energy_db(data)
+    passed = residual_db <= max_residual_db and tail_db <= max_tail_db
+    message = (
+        f"Residual vs min-phase: {residual_db:.1f}dB (limit {max_residual_db}dB), "
+        f"last 5% energy: {tail_db:.1f}dB (limit {max_tail_db}dB)"
+    )
+    return VerificationResult(
+        "Minimum Phase (residual)", passed, message,
+        {"residual_db": residual_db, "tail_db": tail_db},
+    )
+
+
+def verify_wav_subtype(filter_path, expected_subtype="FLOAT"):
+    """Check the WAV sample format (float32 = soundfile subtype 'FLOAT')."""
+    info = sf.info(filter_path)
+    passed = info.subtype == expected_subtype
+    return VerificationResult(
+        "WAV Subtype", passed,
+        f"Subtype {info.subtype} (expected {expected_subtype})",
+        {"subtype": info.subtype, "channels": info.channels},
+    )
+
+
+def verify_dirac(filter_path):
+    """Check that a passthrough file is an exact unit impulse at tap 0."""
+    data, _ = load_filter(filter_path)
+    passed = len(data) > 0 and data[0] == 1.0 and not np.any(data[1:])
+    return VerificationResult(
+        "Dirac", passed,
+        "Unit impulse at tap 0" if passed else "Not a unit impulse",
+        {"first_tap": float(data[0]) if len(data) else None,
+         "rest_energy": float(np.sum(data[1:] ** 2)) if len(data) else None},
+    )
+
+
+def run_venue_checks(output_dir, expected_files, mandatory_hpf_hz=None,
+                     expected_taps=16384, expected_sr=SAMPLE_RATE):
+    """
+    Check the WAV set a venue config expects.
+
+    Parameters
+    ----------
+    output_dir : str
+        Directory holding the exported WAVs.
+    expected_files : dict
+        Filename -> kind. kind 'fir': a speaker channel's combined FIR
+        (D-009, format, float32, minimum-phase residual). kind 'dirac':
+        a passthrough file (format, float32, exact unit impulse).
+    mandatory_hpf_hz : dict, optional
+        Filename -> mandatory HPF frequency (from the speaker identity);
+        adds verify_mandatory_hpf() for those files.
+
+    Returns
+    -------
+    tuple of (bool, list of VerificationResult)
+    """
+    import os
+
+    mandatory_hpf_hz = mandatory_hpf_hz or {}
+    results = []
+    for filename, kind in sorted(expected_files.items()):
+        path = os.path.join(output_dir, filename)
+        if not os.path.exists(path):
+            results.append(VerificationResult(
+                f"File Exists ({filename})", False, f"Missing: {path}"))
+            continue
+
+        checks = [
+            verify_format(path, expected_taps=expected_taps, expected_sr=expected_sr),
+            verify_wav_subtype(path),
+        ]
+        if kind == "dirac":
+            checks.append(verify_dirac(path))
+        elif kind == "fir":
+            checks.append(verify_d009(path, margin_db=VENUE_D009_MARGIN_DB))
+            checks.append(verify_minimum_phase_residual(path))
+            if filename in mandatory_hpf_hz:
+                checks.append(verify_mandatory_hpf(path, mandatory_hpf_hz[filename]))
+        else:
+            raise ValueError(f"unknown kind {kind!r} for {filename}")
+
+        for result in checks:
+            result.name = f"{result.name} ({filename})"
+            results.append(result)
+
+    all_passed = bool(results) and all(r.passed for r in results)
+    return all_passed, results
