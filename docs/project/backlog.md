@@ -770,6 +770,10 @@ priority!"
   passes every buildable profile, with no D-031 report. US-172: the
   owner asked for status (via team-lead); v7 pins not yet in, and the
   CM has sent worker-2 one status ask.
+  UPDATE (CM, Architect, 2026-10-26, after v268): backlog v268 pushed
+  as cb7cd9f7. US-172 v7 kit (us172.sh 815d231e) Architect pre-review:
+  "NOTHING BLOCKING, NOTHING REQUIRED." Three later-kit one-liners
+  recorded under US-172.
 
 ## Reserved IDs
 
@@ -3728,6 +3732,37 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - UPDATE (CM, 2026-10-26, after v267): the owner asked for US-172
     status via team-lead. The v7 pins are not yet in; the CM has sent
     worker-2 one status ask.
+  - UPDATE (CM, Architect, 2026-10-26, after v268): v7 kit pinned
+    (us172.sh 815d231e). Architect PRE-REVIEW, not the verdict:
+    frozen-prereviews/architect-prereview-a1660f61.txt in
+    /tmp/cm-relay/US-172/v7-815d231e/ (sha256 a1660f61, verified at PM
+    read). Verbatim: "NOTHING BLOCKING, NOTHING REQUIRED." Position,
+    verbatim: "APPROVE expected on the frozen flow output, if G1-G13
+    (incl. G1b, G4b/c/d, G12, G13b/d and the rc-path-3 flows for both
+    verbs) show the classifications above."
+     Later-kit one-liners (non-blocking; no re-pin, per the team-lead
+     ruling; no P-level given):
+     (1) l.24, verbatim: "Backlog (PM): in a later kit, make (iii) and
+     "labwc up" exclude FINDING lines, so the result line itself is
+     qualified." For this run, l.23, verbatim: "CM relay rule: a
+     RESULT line in a file that also has a FINDING line is relayed
+     only together with that FINDING."
+     (2) l.31, verbatim: "Backlog (PM): exit status = classification
+     (0 = (iii) or labwc up, non-zero otherwise) in a later kit."
+     Context, l.29: "So the exit status is NOT evidence for any
+     outcome."
+     (3) N1, l.34-36, verbatim: "tb-greetd au flag: au is set only if
+     some "VERDICT [GREETD-" line exists. If the GREETD reads printed
+     no verdict at all (both remote scripts failed), au stays 0.
+     "labwc up" could then print with no audio read on record.
+     Fail-closed form for a later kit: au=1 unless both [GREETD-gains]
+     ok and [GREETD-gate] ok are present." For this run, l.37,
+     verbatim: "the CM treats a tb-greetd file without a
+     [GREETD-gains] line as not ok (report to the AE), whatever the
+     RESULT says."
+     Also in the file (PM cross-ref; not in v268): N2, l.38, verbatim:
+     "(from v6) capped() rc 2 leaves the background ssh pending.
+     Harmless."
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
