@@ -61,6 +61,10 @@ Architect; joint r6b ruling); F-397 (P1, gain readback consumers
 UI/GM show 0 on suspended nodes; Architect; joint r6b ruling); PM
 checked both free across main, origin and all worktrees, 2026-10-26.
 Next free: F-398, US-177, D-071, T66.
+Allocated 2026-10-26 (PM, checked free across main, origin and all
+worktrees): F-398 (LOW, SecSpec, #57 review: config-supplied names
+used as path components unchecked). Next free (supersedes the line
+above): F-399, US-177, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -3117,6 +3121,27 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   490ace7d). Rule 13 is OPEN at 05d306bc with all 7 (bundle
   /tmp/pr57-review-05d306bc, SUMS 3549c945). The branch is 23 behind
   main; the update from main after #59 merges stands.
+  UPDATE (CM, QE, UX, 2026-10-26): 3/7 posted at 05d306bc: AE
+  6405226733, SecSpec 6405226934, UX 6405227144, all conditional on
+  green CI at the final head after the main update, with a diff-only
+  re-check. QE APPROVE (accounting copy to the PM; full text with the
+  CM, not yet posted): covers the gate code, tests, mutation table,
+  teeth numbers and counts (1294 / 95 / 76). QE condition: the F-363
+  red is explained by the missing #56; after the update from main, a
+  QE diff-only re-check at the new head and CI T1-T3 green. QE open
+  item (non-blocking): the CI ARM wall time for the file; over 300 s
+  means an F-380 one-liner. SecSpec LOW: F-398. UX one-liners for
+  US-174e (non-blocking), verbatim:
+  - N1: "the venue_pipeline channel-map errors print the profile's
+    0-based channel next to the 1-based venue keys. Label both
+    ('profile channel 2 (= output ch 3)') before these messages reach
+    the web UI."
+  - N2: "in the 174e one-button flow, a failed gate says in plain
+    words that nothing was deployed and the previous filters stay
+    active, and names the failing channels using 1-based output
+    numbers. The 'suggested gain delta (not applied)' value stays
+    display-only unless there is an explicit, separately confirmed
+    apply step."
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -4065,6 +4090,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   outstanding. After the merge: the TW's F-394 Status and index
   follow-up on main, then #55 update-branch, QE diff-only re-check,
   new CI.
+  UPDATE (CM, 2026-10-26; supersedes "6/7 ... TW outstanding" above):
+  #59 is 7/7 at a5547275: AE 6405217419, SecSpec 6405217679, TW
+  6405217910, QE 6405218193, Architect 6405218430, UX 6405218673, AD
+  6405218958. The PR body's head line was updated (QE nit); the head
+  is unchanged. CI 40247129046 still running. Merge criteria (CM):
+  T1-T3 green; test_level_bridge_sw_has_signal XFAIL or SKIP;
+  test_timestamps_monotonic PASSED; no other red; no new XPASS (the
+  known F-262 test_full_session_api XPASS excepted); collected count
+  unchanged.
   AD L3 suggested text (via CM; TW/AE tidy): "designed so the two legs
   sum flat; the shipped LR4 profile is verified within ±1 dB, LR8
   after room correction is not yet verified (F-383)" (markaudio LR4
@@ -4523,6 +4557,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   suspended: gain unknown)". While the gate is open, that state goes
   in the U8 banner order next to GAIN NODES MISMATCH as "GAIN READBACK
   UNAVAILABLE". The UX specialist reviews the wording in the fix PR.
+- **F-398** Config-supplied names used as path components unchecked
+  (SecSpec, LOW, #57 review at 05d306bc, via CM, 2026-10-26): profile
+  `identity` -> identities_dir/{name}.yml and venue `coefficients` ->
+  os.path.join(output_dir, filename); an absolute or ../ path escapes
+  the directory. SecSpec asks for a US-174c/d AC, met before
+  coefficients are written on the Pi: coefficients must be a bare
+  basename matching ^[A-Za-z0-9_.-]+\.wav$, identity must be a slug,
+  and the resolved path must stay under its directory. Same class as
+  F-372 and the #55 profile_name item. Not a #57 blocker.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
@@ -5658,6 +5701,11 @@ merge needs update-branch and 7 reconfirmations at the new head.
   release or tag dispatch, permission-system blocks. Vetoes and
   safety rules are unchanged.
 - #43, #45, #44: need #49 on main and real green CI; #45 before #44.
+  UPDATE (CM, TW, 2026-10-26): #45 is still OPEN at 76b61347, stale
+  since 2026-10-24. #45 stays alive (PM record): the TW is preparing
+  an F-395 check-10 safety.md batch for it (AE wording; see "#45 gain
+  read method" below), and #44 still depends on it. It needs an update
+  from main (#60 merged) and a full Rule 13 round at its new head.
 - #45 dangling citations (TW, 2026-10-25): AC14, F-320, F-338,
   F-339 and F-347 cite "pre-flight #10 (PR #45)". #45
   (docs/safety-d063-gate,
