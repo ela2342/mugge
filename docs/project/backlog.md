@@ -3113,6 +3113,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   CI failure); the CM updates it from main after #59 and #60 merge,
   which moves the head: all 7 then re-check diff-only and CI re-runs.
   Rule 13 head for now 05d306bc; the final head follows the update.
+  UPDATE (CM, 2026-10-26): the PR body is set (worker-4, sha256
+  490ace7d). Rule 13 is OPEN at 05d306bc with all 7 (bundle
+  /tmp/pr57-review-05d306bc, SUMS 3549c945). The branch is 23 behind
+  main; the update from main after #59 merges stands.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -4048,6 +4052,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   CM merges under standing consent on: CI green; the sw test SKIPPED
   or XFAILED; nothing else red, no new XPASS, test count unchanged;
   test_timestamps_monotonic PASSED. CI 40245796169 still running.
+  UPDATE (CM, team-lead, 2026-10-26; supersedes the 7/7 at 011bfa5d
+  and CI 40245796169 above): #60 merged first, so update-branch moved
+  #59 to a55472750fe6d576cde3936b3f54b465dcd6f3d2 (main a3270b5e
+  merged in); against main the change is still test_audio_flow.py +1.
+  CI 40245796169 was cancelled by concurrency; the new run is
+  40247129046, still running (no result recorded; the merge conditions
+  above apply unchanged). All 7 approvals voided; diff-only re-checks
+  (bundle /tmp/pr59-review-a5547275, SUMS af6c7689): 6/7 re-approved
+  (AD, UX, QE, SecSpec, Architect, AE; comment IDs from the CM; the
+  QE's is conditional on that run meeting the merge evidence), TW
+  outstanding. After the merge: the TW's F-394 Status and index
+  follow-up on main, then #55 update-branch, QE diff-only re-check,
+  new CI.
   AD L3 suggested text (via CM; TW/AE tidy): "designed so the two legs
   sum flat; the shipped LR4 profile is verified within ±1 dB, LR8
   after room correction is not yet verified (F-383)" (markaudio LR4
@@ -4189,6 +4206,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - Status follow-up (QE, TW): if #59 merges before #60, the F-394
     Status line and its index row change to "quarantined (PR #59,
     strict xfail)".
+    UPDATE (CM, QE, 2026-10-26): #60 merged first, so this follow-up
+    is a separate main docs change by the TW after #59 merges (not
+    part of #59).
 - **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
   per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
   2026-10-26): on a suspended node, the gain readers in the r6b matrix
@@ -4389,6 +4409,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   when #40 lands (it also touches US-163.md) the four added lines must
   survive. Whichever of #59 and #60 merges second is updated against
   main, which voids its approvals and needs fresh re-checks.
+  UPDATE (CM, 2026-10-26; supersedes "SecSpec 6405090180 from
+  39dd0dea, counted by the CM" and "AE pending" above): #60 MERGED at
+  bc923cc7, main a3270b5e07ea338b9372e6793ebde31d98ea622f, 7/7 at
+  bc923cc7: SecSpec 6405152735 (diff-only re-approval; 6405090180 not
+  counted), Architect 6405155445, AD 6405155653, QE 6405158563, TW
+  6405158800, UX 6405161429, AE 6405180306. #60 merged before #59, so
+  #59 is the one updated against main (see F-394).
   QE (2026-10-26; the AE agrees): safety.md amps-on row 13 (US-159
   G16, "Tested (AE)") is NOT on the AC (c) list, which stays at 13. It
   states a requirement (added in 28dcba6e without evidence; no G16
