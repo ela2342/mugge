@@ -10906,6 +10906,79 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   F-383 PHASE 0b R6d CORRECTION (CM, 2026-10-26): the CM sent worker-7
   a one-line correction: the phase 0b r2 data run is R6d; R6b is the
   F1 fix; nothing else changed. (Closes the PM cross-ref above.)
+  AE F-383 FINAL SET note ae-F383-final-set-d763a791.txt (frozen;
+  sha256 d763a791, verified at PM read): names the same set as the
+  v305 FINAL SET; verbatim "I will not switch sets again."
+  F-384 q2 (worker-7, via CM, 2026-10-26; files in
+  /tmp/cm-relay/F-383/frozen/, shas verified at PM read):
+  w7-F384-q2-T3-vs-B3-band-518957e9.txt (sha256 518957e9, 2749 bytes):
+  B3 band (20 Hz-20 kHz) vs T3 conflict on case A; true peak at 9.52
+  Hz, scaled -0.3954 dB, verbatim "T3 FAILS (limit -0.49)". Options
+  (a) full-band scalar, (b) T3 in band, (c) other; verbatim "Options,
+  without a recommendation from me (not my decision)".
+  - Architect q2 answer r1 arch-F384-q2-answer-r1-7c6c86c3.txt (sha256
+    7c6c86c3, 3149 bytes), verbatim: "Ruling: option (a). The step 9
+    scalar measures the peak over the FULL band (DC..Nyquist,
+    inclusive) on the 8x grid. T3 stays as ruled." Q1:
+    combine.max_gain_db gets ONE keyword-only band parameter, default
+    (20.0, 20000.0) Hz, band=None = full band; default bit-identical
+    for every caller; no combine.py caller changes in F-384. Q2 step
+    9: s = min(0, margin - combine.max_gain_db(fir,
+    oversample=D009_SCALAR_OVERSAMPLE, band=None)). Q3 T2 amended to
+    the full band. Option (b) rejected.
+  - AE release ae-F384-q2-release-a2946e74.txt (sha256 a2946e74, 951
+    bytes), verbatim: "RELEASED, Q1-Q5. Option (a) is the audio-safe
+    choice".
+  - Fence r4 w7-F384-impl-brief-r4-e016eb0b.txt (sha256 e016eb0b, 2293
+    bytes): supersedes r3 e9da4dc5 only in the commit 2 file list and
+    T2; commit 2 adds ONE combine.py change (the band kwarg, per
+    7c6c86c3 Q1). Relayed to worker-7.
+  F-384 q3 (worker-7, via CM, 2026-10-26):
+  w7-F384-q3-w7-F384-q3-far-field-limit-8584bdaa.txt (sha256 8584bdaa,
+  3053 bytes), with diag3 w7-F384-q3-diag3-80493b70.out and suite
+  w7-F384-q3-suite-rc-ca7b5652.out (shas verified): with the A5
+  scalar, verbatim "home_lab sat_left far_field 0.150 dB >
+  MAX_FAR_FIELD_DB 0.1"; suite 1508 passed, 1 skipped, 1 failed.
+  Verbatim: "I am not touching the test or its limits."
+  - GOVERNING q3 SET (AE ddfbc1ba, verbatim): "Governing q3 set: AE
+    51ad3771 (with D2d replaced by D2d') + Architect 1d3626b1 + this
+    release."
+  - AE answer r1 ae-F384-q3-answer-r1-51ad3771.txt (sha256 51ad3771,
+    3881 bytes), verbatim: "D1 Ruling: option (b), with a separate,
+    explicit bound on the scalar. MAX_FAR_FIELD_DB stays at 0.1 and
+    the over-cut limit stays at 1.0." D2a: far-field and over-cut re
+    the applied scalar (corrected_db - s_db). D2b: NEW bound -0.25 dB
+    <= s_db <= 0 dB (MAX_D009_SCALAR_CUT_DB = 0.25, AE). D2c: "raised"
+    (0.05) and test_corrections_never_boost stay on the FINAL FIR. D3:
+    the 1e-9 dB is float rounding only, verbatim "It is not a
+    tolerance on the limit." D2d replaced (below).
+  - Architect release with one objection r1
+    arch-F384-q3-release-objection-r1-1d3626b1.txt (sha256 1d3626b1,
+    3631 bytes): verbatim "RELEASED as written: D0, D1 (option (b);
+    limits 0.1 / 1.0 unchanged), D2a, D2b (MAX_D009_SCALAR_CUT_DB
+    0.25), D2c, D3, D4." Objection to D2d: base step 9 is a
+    native-grid magnitude clip, not a scalar, so "old" is post-clip on
+    home_lab sub1 / outdoor_tent sub1. D2d' (pre-commit report, per
+    channel, fence r4 code, band=None): s_db; whether the old clip
+    fired; shape values re s_db and of the unscaled FIR. Pass: re-s_db
+    == unscaled to <= 1e-6 dB; s_db within D2b; where the clip did NOT
+    fire, unscaled == diag3 "old" to <= 0.005 dB; where it fired,
+    reported, not gated. S1 correction.py return_scalar_db=False
+    kwarg; S2 venue_pipeline.py passes it,
+    VenueFilterResult.d009_scalar_db; S3 the test reads
+    result.d009_scalar_db[spk].
+  - AE release ae-F384-q3-release-arch-ddfbc1ba.txt (sha256 ddfbc1ba,
+    1242 bytes), verbatim: "RELEASED in full: the D2d objection, D2d'
+    and S1-S3."
+  - Fence r5 w7-F384-impl-brief-r5-76b8a79f.txt (sha256 76b8a79f, 2860
+    bytes): supersedes r4 e016eb0b only in commit 2's file list and
+    adds the q3 work (S1 correction.py, S2 venue_pipeline.py, S3
+    test_venue_closed_loop.py D2a-c only). The commit message names
+    51ad3771 / 1d3626b1 / ddfbc1ba. D2d' report as file + sha256
+    BEFORE committing. Still fenced OUT: crossover.py, closed_loop.py,
+    verify.py, the subsonic fix, A1b, any other combine.py change,
+    gate changes. Relayed to worker-7; the Architect verified r5 (CM
+    message, no file).
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
