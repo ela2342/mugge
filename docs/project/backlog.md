@@ -610,6 +610,12 @@ priority!"
   5b3832ac. US-172: QE verified addendum 762f9035; G10 refined into
   G10a/b/c; worker-2 v6 in progress (not pinned); one consolidated
   FINAL v6 scope sent to worker-2, one v6 pin, no v7 (CM).
+  UPDATE (CM, 2026-10-26, after v240): backlog v240 pushed as
+  6cc5c759. #63 CI 40323763997 GREEN at 3f28b6c7, 7 re-checks
+  requested. #64 CI 40320048783 GREEN at 15bd74eb, worker-1 merging
+  main 29f5c61f. F-262 diag 40322886856 SUCCESS, v2 verdict CONFIRMED
+  / jitter; validity with the AE and Architect; fix branch held.
+  US-172: worker-2's v6 in progress (CM).
 
 ## Reserved IDs
 
@@ -4712,6 +4718,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the bundle.
   Backlog one-liner (Architect, non-blocking; no F-ID, no P-level
   given): pin the mugge.cachix signing key in CI.
+  UPDATE (CM, 2026-10-26): CI 40323763997 GREEN at 3f28b6c7. The 7
+  re-checks are requested.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -5763,6 +5771,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   above): the diagnostic is now aedf4a82, run 40322886856. It adds the
   normalized correlation peak and the 1.5× width trigger (AE ruling
   2). The CM cancelled the 293cf822 run 40322683521.
+  UPDATE (CM, 2026-10-26): diagnostic run 40322886856 SUCCESS;
+  decision rule v2 verdict CONFIRMED / jitter. Validity is with the AE
+  and the Architect; the fix branch is held.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -6020,6 +6031,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   expected unchanged; the approval at 0d9e52e7 is superseded once the
   head moves. The QE's condition text names
   test_full_user_journey.py:181 as F-402 (see F-402).
+  UPDATE (CM, 2026-10-26): CI 40320048783 GREEN at 15bd74eb. worker-1
+  is merging main 29f5c61f. PM cross-ref: the merge moves the head, so
+  the re-checks follow.
 - **F-402** Integration test turns a 500 from POST /filters/generate
   into a skip, hiding a real server error
   (test_full_user_journey.py:179-183) (QE, 2026-10-26; option (b), ID
