@@ -367,6 +367,9 @@ priority!"
   UPDATE (CM, 2026-10-26, after v196): backlog v196 pushed as
   238ae9d4. US-172: the Architect's RUN-4 v2 supersedes R4-0-first;
   worker-2 builds the kit off-Pi (see US-172).
+  UPDATE (CM, 2026-10-26, after v197): backlog v197 pushed as
+  f5ee0097. US-172: run-4 fallback corrected to R4-1b (see US-172).
+  #63: F-400 pushed at ff4d6c7e, CI pending.
 
 ## Reserved IDs
 
@@ -2987,6 +2990,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   boards/pi5/bootloader.nix, a build-time length assertion and a
   post-deploy check that the overlays applied. worker-2 is building
   the kit off-Pi.
+  CORRECTION (CM, 2026-10-26; corrects outcome (i) above and the
+  "tryboot hung" reading of the runs): run 1's tryboot WORKED (flag 1,
+  long path, no overlays); only the o/ runs hung. R4-0 is DROPPED; the
+  fallback is R4-1b (o/ without the vc4-kms line). bt_applied=0 is
+  confirmed on all base boots.
+  AE (via CM, 2026-10-26): the live modprobe step is accepted with 3
+  conditions: (1) an outputs-off line in the go message; (2) no HDMI
+  audio after vc4; (3) the F-395 gains-0 check after any hang.
+  QE C4 amendment (via CM, 2026-10-26): bcmrf = the brcmfmac HT Avail
+  timeout; posted on #52 (6414529491). The QE's five run-4 kit
+  pre-review points went to worker-2.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -3949,6 +3963,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   static nix check that every conf.d file matches
   `^[0-9]{2}-[a-z0-9-]+\.conf$`; a P-step that lists the deployed
   names on the Pi.
+  UPDATE (CM, 2026-10-26): F-400 pushed on #63 at ff4d6c7e (parent
+  0b614d1b), CI pending. P-step checklist item 15 added (checklist
+  sha1 1c677f9e). Rule 13 tally still 0/7.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -6902,15 +6919,22 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Merged (QE via CM, 2026-10-26), same issue, verbatim: "Provide a
   tty1 getty fallback when greetd's /dev/dri condition is unmet (UX
   and recovery)".
+  Merged (Architect via CM, 2026-10-26; a US-172 fix design point),
+  same issue: if greetd's /dev/dri condition fails, tty1 falls back to
+  a getty.
 - **Pi 5 WiFi firmware missing** (CM, 2026-10-26; P3, cosmetic unless
   WiFi is wanted): brcmfmac43455 firmware and regulatory.db are not
   installed, which gives an "HT Avail" timeout at boot.
   Architect (2026-10-26): unrelated noise, low priority. CM note: the
   photo shows the HT Avail timeout line, which is what "bcmrf" was.
+  QE (via CM, 2026-10-26): no action unless WiFi is wanted.
 - **Bluetooth enabled on the Pi 5** (Architect, 2026-10-26; no
   priority given; SecSpec informed): disable-bt-pi5 was never applied,
   for the same reason as the US-172 overlays. It is fixed together
   with the overlay fix.
+  Merged (AE via CM, 2026-10-26; pre-prod): apply disable-bt-pi5 or
+  turn off WirePlumber's bluez monitor, so that no BT audio sink can
+  ever appear.
 - development.md, ONE docs item (TW offers to write it; merges UX,
   QE, Arch N2, AD L2, TW F1-F3): run `nix build
   .#checks.<system>.app-source-paths` locally (test-all no longer
