@@ -577,6 +577,10 @@
               cd ${repoSrc}/scripts/drivers
               ${testPython}/bin/python -m pytest tests/ -v --tb=short
               echo ""
+              echo "=== stability tests (pi5_thermal_watch, US-173 AC9) ==="
+              cd ${repoSrc}/scripts/stability
+              ${testPython}/bin/python -m pytest tests/ -v --tb=short
+              echo ""
               echo "=== audio-common tests ==="
               cd ${repoSrc}/src
               HOME="''${HOME:-/tmp}" CARGO_TARGET_DIR="''${HOME:-/tmp}/.cargo-target/pi4audio-ws" PATH="${pkgs.cargo}/bin:${pkgs.rustc}/bin:${pkgs.stdenv.cc}/bin:$PATH" ${cargoTestNonEmpty} cargo test --locked -p audio-common 2>&1
@@ -635,6 +639,10 @@
               echo ""
               echo "=== drivers tests ==="
               cd ${repoSrc}/scripts/drivers
+              ${testPython}/bin/python -m pytest tests/ -v --tb=short
+              echo ""
+              echo "=== stability tests (pi5_thermal_watch, US-173 AC9) ==="
+              cd ${repoSrc}/scripts/stability
               ${testPython}/bin/python -m pytest tests/ -v --tb=short
               echo ""
               echo "=== audio-common tests ==="

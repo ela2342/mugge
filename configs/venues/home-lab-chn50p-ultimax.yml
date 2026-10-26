@@ -15,7 +15,12 @@
 #     content), so the sub output stays <= about -14.6 dBFS (<= 3.5 W).
 #     Roughly balanced with the mains before room gain; adjust by ear only
 #     downwards, or upwards with a fresh S-012 confirmation.
-#   Spare ch 4 (-120 dB): nothing connected, muted.
+#   Spare ch 4 (-120 dB): nothing connected. zero.wav (all-zero FIR) is
+#     the mute for any finite input; -120 dB and the D-063 gate are the
+#     second layer. NaN input is not covered (F-349); H bounds it.
+#     `coefficients:` is metadata: the convolver always loads
+#     /etc/pi4audio/coeffs/combined_sub2_lp.wav, which the venue WAV set
+#     (configs/coeffs/markaudio-ultimax-200hz/) ships as a copy of zero.wav.
 #   HP/IEM (-120 dB): no headphones or IEM in this session, muted. This
 #     venue must not be used with HP/IEM connected.
 
@@ -38,7 +43,7 @@ channels:
   4_sub2_lp:
     gain_db: -120
     delay_ms: 0
-    coefficients: "dirac.wav"
+    coefficients: "zero.wav"
   5_eng_l:
     gain_db: -120
     delay_ms: 0
