@@ -723,6 +723,14 @@ priority!"
   fail-closed stays; grant conditions r1 G-1 to G-6 on file
   (6c6308f5); worker-2 pinning v7. F-262: PR #66 head 4396e03c, CI
   40344885535 queued; #66 behind main (CM).
+  UPDATE (CM, 2026-10-26, after v259): backlog v259 pushed as
+  f382d6f5. US-172 O1 ruling file now on record (release record (f),
+  57ee3eb8; corrects v259). #64 non-accepted skips mapped to F-IDs;
+  new F-406 and F-407 (PM). F-262: PR #66 head ff985455, CI
+  40345460992 running; worker-4 finding b4c66788: the shared min-phase
+  gate rejects crossover-only filters for 10 of 11 real profiles; AE
+  ruling, Architect release; c8 10-run AC waits on it. worker-1 on
+  F-394 (PO pick).
 
 ## Reserved IDs
 
@@ -818,6 +826,11 @@ Allocated 2026-10-26 (PM, checked free across main, all origin/* and
 local branches, and worktrees): F-405 (QE: test_gate_closed_e2e.py:137
 bare except turns a gate-open result into SKIPPED). Next free
 (supersedes the line above): F-406, US-179, D-071, T66.
+Allocated 2026-10-26 (PM, checked free across main, all origin/* and
+local branches, and worktrees): F-406 (QE: test_filter_deploy_e2e.py:315
+skips on a missing v1 after deploy; rollback untested) and F-407 (QE:
+test_venue_gate_e2e.py:165/:180 skip on gate-indicator timeout). Next
+free (supersedes the line above): F-408, US-179, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -3651,6 +3664,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      tryboot or modprobe go; recovery = power pull; unbootable
      generation = SD card fix on the Mac). Any change goes in a new
      file.
+     CORRECTION (CM, 2026-10-26, after v259; supersedes "by message,
+     per CM relay; no ruling file" above): the Architect's two O1
+     messages are recorded verbatim in
+     /tmp/cm-relay/release-record-20261026-f.txt (sha256 57ee3eb8,
+     verified at PM read). Message 2 gives the 3 layers: (1)
+     tb-modprobe runs only after H1 PROVEN, so
+     dtoverlay=vc4-kms-v3d-pi5,noaudio is applied and vc4 registers no
+     HDMI audio; (2) tb-post reads [R4-hdmi-dmas] before any modprobe;
+     (3) WirePlumber 54-disable-other-alsa-cards.conf. Architect,
+     verbatim: "No joint ruling is needed. Please pass the dmas
+     pre-check in (2) on as a CM go condition for tb-modprobe." That
+     condition is G-3.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -6536,6 +6561,35 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - UPDATE (CM, 2026-10-26, after v258): new PR #66 head 4396e03c (AE
     items 1, 3, 4 of dc9e529d) pushed; CI 40344885535 queued. #66 is
     now behind main because #64 merged (ff091e5f).
+  - UPDATE (CM, 2026-10-26, after v259): head ff985455 fixes the 7
+    f262-parity.yml errors (the session's generate_filter_chain_conf
+    read the profile from disk by name; the test now mocks it, as
+    test_measurement_session does). CI 40345460992 running;
+    40344885535 at 4396e03c superseded.
+  - Cause 2 (worker-4 finding,
+    /tmp/cm-relay/F-262/frozen/w4-gate-xo-finding-b4c66788.txt, sha256
+    b4c66788, verified at PM read): the shared gate
+    (verify_minimum_phase_residual: residual <= -40 dB, last-5% tail
+    <= -60 dB) rejects CROSSOVER-ONLY filters for every 48 dB/oct
+    profile, before any correction. 10 of 11 real profiles fail; only
+    the 24 dB/oct 2way-200hz-markaudio-ultimax (used by the venue sims
+    and the parity test) passes. All 11 CI failures (8 session "Filter
+    verification failed", 3 test_capture_alignment_session) come from
+    this.
+     Two failure modes (worker-4): (a) tail, a 48 dB/oct sub LP plus
+     subsonic HPF not decayed within 16384 taps (-54 to -58 dB); (b)
+     residual -13 to -37 dB even with a good tail. Hypothesis, not
+     proved (worker-4): the residual is partly a float32 artifact
+     (test profile sat_left r-71.6 in float64, -41.9 after the cast).
+     Even the passing profile has little float32 margin (venue sub1
+     -46.6). Before F-262, session and filter_routes used
+     verify_minimum_phase, which these filters pass.
+     Open for the ruling (worker-4): (i) the metric, (ii) thresholds
+     or the tail rule for subs with subsonic HPFs, (iii) a different
+     check for crossover-only / non-venue paths, (iv) a generation
+     change. The AE writes the ruling, the Architect releases it (CM).
+     worker-4 changes no gate, threshold or all_pass test until then.
+     c8 is held: its 10-run AC needs a green session.
   Before the first amps-on measurement (non-blocking one-liners; no
   F-ID, no P-level given):
   - AE, verbatim: "F-262 item 7 Architect note: before the first
@@ -6734,6 +6788,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   first). The P2 entry already carries the AE's "before any amps-on
   session" condition. Promotion to a row is the AE's domain call,
   raised by the AE.
+- **F-406** test_filter_deploy_e2e.py:315 skips with "No v1 timestamp
+  found in versions listing" (QE, 2026-10-26, #64 body a2bfb9af: NOT
+  accepted; ID allocated by the PM; no P-level given). QE, verbatim:
+  "v1 was just generated and deployed, so a missing active v1 in
+  `/api/v1/filters/versions` is a product, contract or test-key
+  defect, and it leaves rollback untested." Same kind as F-402.
+- **F-407** test_venue_gate_e2e.py:180 ("Gate indicator did not update
+  to OPEN") and :165 (`except Exception: skip(...)`) skip instead of
+  failing (QE, 2026-10-26, #64 body a2bfb9af: NOT accepted; ID
+  allocated by the PM; no P-level given). QE, verbatim: "The browser
+  reflecting gate changes is what the test checks, so a timeout should
+  be a FAIL, or an xfail with an F-ID." UX (3a8e85ff) supports it: the
+  gate indicator is the operator's main safety cue.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -6858,6 +6925,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     gate-open or indicator-update failure, which is exactly what the
     test checks; they should fail, or xfail with an F-ID. No F-ID, no
     P-level given.
+  - UPDATE (PM, 2026-10-26, after v259): the #64 body's NOT-accepted
+    skips (/tmp/pr64-review-f715538e/pr64-body-a2bfb9af.md, sha1
+    a2bfb9af, verified at PM read) mapped to F-IDs. CM: the ID call is
+    the PM's; no new ID where an existing row covers a skip.
+    test_full_user_journey.py:181 -> F-402 (:331/:348/:369/:401/:434
+    depend on it); the 7 "Could not switch GM to DJ mode" skips ->
+    F-394 (CM; this covers the "Same kind as F-402. No F-ID" one-liner
+    above and AE B1); test_gate_closed_e2e.py:137 -> F-405;
+    test_filter_deploy_e2e.py:315 -> new F-406;
+    test_venue_gate_e2e.py:165/:180 -> new F-407. No P-level given for
+    F-406 or F-407. TW item 3: their defect records go to the TW docs
+    queue.
   UPDATE (CM, QE, 2026-10-26, after v256): CI 40333713247 at f715538e
   is green on all 4 jobs. QE count profile MET
   (/tmp/pr64-qe-countprofile-f715538e.md, sha256 96abe4fb, verified at
