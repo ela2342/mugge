@@ -4,7 +4,39 @@
 # Both run under PipeWire's JACK bridge via pw-jack.
 { config, lib, pkgs, ... }:
 
+let
+  mixxxHome = "${config.users.users.ela.home}/.mixxx";
+
+  # US-173 AC8: Hercules DJControl MIX Ultra mapping (TK-065). Mixxx lists
+  # mappings by the <name> inside the XML, not by file name. Store names may
+  # not contain spaces, so builtins.path copies the XML under a name without
+  # them, and the tmpfiles paths need no escaping. The mapping also loads
+  # lodash.mixxx.js and midi-components-0.0.js, which Mixxx finds in its
+  # own share/mixxx/controllers.
+  herculesXml = builtins.path {
+    path = ../../configs/mixxx/controllers + "/Hercules DJControl MIX Ultra.midi.xml";
+    name = "Hercules-DJControl-MIX-Ultra.midi.xml";
+  };
+  herculesJs = ../../configs/mixxx/controllers/Hercules-DJControl-MIX-Ultra-scripts.js;
+in
 {
+  # User mappings live in ~/.mixxx/controllers/ (Mixxx on Linux). 'L+'
+  # replaces whatever is there with a link to the store copy, so a deploy
+  # always brings the committed mapping.
+  #
+  # TODO (US-173 P-step): soundconfig.xml. configs/mixxx/soundconfig.xml is
+  # pre-D-040 (CamillaDSP device name, HP at channel offset 2) and does not
+  # match GraphManager's HP ports out_4/out_5 (F-130), so it is NOT
+  # installed. Once the file is captured from Mixxx on the Pi 5, add:
+  #   "C ${mixxxHome}/soundconfig.xml 0644 ela users - ${../../configs/mixxx/soundconfig.xml}"
+  # 'C' copies only when the file is missing, because Mixxx rewrites it.
+  systemd.tmpfiles.rules = [
+    "d ${mixxxHome} 0755 ela users - -"
+    "d ${mixxxHome}/controllers 0755 ela users - -"
+    "L+ ${mixxxHome}/controllers/Hercules-DJControl-MIX-Ultra.midi.xml - - - - ${herculesXml}"
+    "L+ ${mixxxHome}/controllers/Hercules-DJControl-MIX-Ultra-scripts.js - - - - ${herculesJs}"
+  ];
+
   environment.systemPackages = with pkgs; [
     # ── Mixxx — DJ/PA mode ─────────────────────────────────────
     # Runs via: pw-jack mixxx
