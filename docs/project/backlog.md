@@ -875,6 +875,12 @@ priority!"
   935b4ee2 + AE diagnosis job c281701b; worker-7 runs phase 0b after
   the current F-384 step. US-179: E3 8f508af1 and E4 r2 f692681c
   relayed to worker-6 with the three notes.
+  UPDATE (CM, AE, PO, 2026-10-26, after v288): backlog v288 pushed as
+  8a46dd02. F-383: the CM's answers on the releases behind the record
+  (message releases, no new files). US-179: AE answers K1-K5 to
+  worker-6 (1318b25c), PO K3 ruling e720d78c (no erratum; AC2c
+  governs, DSP flags not OFF or missing BLOCK measuring), and the AE's
+  K4 follow-up one-liner.
 
 ## Reserved IDs
 
@@ -10241,6 +10247,30 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   worker-7 (CM, 2026-10-26): holds this set for phase 0b (A4 prototype
   validation + diagnosis job c281701b) and switches after the current
   F-384 forced-input step; priority order otherwise unchanged.
+  RELEASES BEHIND THE RECORD (CM, 2026-10-26; answers the PM's
+  questions (i)-(iv); all are MESSAGE releases relayed by the CM, no
+  new files). CM: the final record line above supersedes every earlier
+  version.
+  - (i) B r2 3ac658cd: AE release by message, verbatim: "B r2
+    3ac658cdb62493f14eff43eb0472e203ca604cc3946816dc49f3cf1609cc5523:
+    AE RELEASE, on the B1-B3 terms as written." AE later, verbatim:
+    "My releases of r4/B r2 and of r3/B r1 both stand." f8ad626d is
+    moot as a split text; B r2 is not governing in any case (CM).
+  - (ii) A r3 89c3bb1b is GOVERNING; the A r4 header's "VOID" label
+    was overtaken. Architect, verbatim: "My earlier 'r3 void' no
+    longer applies" (accepted the record).
+  - (iii) c281701b's "Part A r2's A4" means A4 of the governing A r3
+    89c3bb1b; the Architect confirmed A4 is identical in A r2, r3 and
+    r4, so the job content does not depend on the label (CM).
+  - (iv) A r4 10ae380a: AE release by message, verbatim: "AE RELEASE
+    of A r4
+    10ae380a5cbdf001fcec4c57136939986c2a68f0142ba7afb5e2198bb2d44b81
+    (verified at read, diffed against r2 and r3; OBJ-1 is fixed)."
+    Architect, verbatim: "Architect RE-RELEASE of A r4 10ae380a… and B
+    r2 3ac658cd." Still not governing (CM).
+  - A r3 / B r1: AE release of A r3 by message, verbatim: "AE RELEASE
+    of A r3 89c3bb1b… OBJ-1 is fixed"; B r1 released in the AE review
+    file c37634c5.
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
@@ -11266,6 +11296,99 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   /tmp/cm-relay/US-179/frozen/us179-r8-erratum-E4-r2-FINAL-f692681c.md
   (sha256 8f508af1 / f692681c, verified at PM read) to worker-6 with
   the three notes above. Base stays on main.
+  AE ANSWERS K1-K5 TO WORKER-6 (AE, CM relay, 2026-10-26):
+  /tmp/cm-relay/US-179/frozen/ae-w6-cal-mapping-crest-1318b25c.txt
+  (sha256 1318b25c, 3073 bytes, verified at PM read). Relayed to
+  worker-6; copy to the PO as a possible K3 erratum. Verbatim,
+  reflowed, without its title line:
+  - Governing text: r8 978c3e1b + E1 v2 6a78af9f + E2 bca0d86b + E3
+    8f508af1 + E4 r2 f692681c.
+  - K1 Mapping. SPL_dB = dBFS + 120.0 - SensFactor_dB, with SensFactor
+    taken from the header ("Sens Factor =X.XXXdB", the same regex as
+    test_tool/routes.py _parse_umik1_sensitivity).
+     - It applies to RMS (the 90 dB stop and the 75 dB target) and to
+     the true peak (the 105 dB backstop) alike.
+     - For the house UMIK-1 (7161942, -1.378) this gives 121.378,
+     which matches the project constant 121.4
+     (configs/hardware/mic-umik1-7161942.yml).
+     - Status: consistent with the project constant, but not yet
+     cross-checked against a reference (REW or a 94 dB calibrator).
+     Safety direction: if the true offset is lower, the meter
+     over-reads and the stops fire EARLY (safe, but lower SNR). Use
+     exactly this formula; do not "correct" it downward without an AE
+     ruling.
+     - Clamp: if the parsed SensFactor is outside -6..+6 dB, treat the
+     file as uncalibrated, with the visible warning and the A1 rules.
+     - No parsable Sens Factor: uncalibrated, as you proposed. Agreed.
+  - K2 The frequency-response part of the file is not used by the
+    meter. The meter is broadband RMS and peak. The curve is for the
+    Python correction only. Agreed.
+  - K3 Capture path, a REQUIRED safety condition for "calibrated":
+     - getUserMedia with echoCancellation:false,
+     noiseSuppression:false, autoGainControl:false.
+     - After the stream opens, read track.getSettings(). If any of the
+     three is true or missing, the session counts as UNCALIBRATED (A1
+     rules, visible warning), whether or not a file is loaded.
+     - Browser AGC would silently lower the level and defeat the SPL
+     stops. That is the same failure as E4's input-gain case.
+     - Test: mock getSettings() with autoGainControl:true, and assert
+     uncalibrated mode even with a valid file.
+  - K4 UI text with a calibration loaded: "SPL readings assume the
+    microphone's input gain is unchanged since its calibration (for a
+    UMIK-1: the default input level). Don't change it during this
+    session." This is consistent with E4 r2. The exact OS input-level
+    setting for the UMIK-1 is not ruled here. Backlog one-liner (via
+    the CM to the PM): "US-179 follow-up: cross-check the web meter
+    SPL against REW or a calibrator with the UMIK-1 before the first
+    amps-on run; define the OS input-level setting."
+  - K5 Top step: make it UNIFORM per band. The RMS ceiling for a
+    role/band = -20 - max(crest over all seeds of that band's table)
+     - 3. The level-check steps (-60, +6) stop at the highest step at
+     or below that ceiling.
+     - Compute it from your crest table per band; do not assume both
+     bands get the same value.
+     - This is never above the per-seed ceiling, so it is still safe,
+     and it is predictable: same band, same top step on every channel.
+     - If -42 is too low to reach 75 dB SPL in a venue, the level
+     check reports "target not reached at maximum test level" as it
+     already does. It does not get a new step.
+  - No safety limit changes.
+  PO K3 RULING (PO, CM relay, 2026-10-26; supersedes K3's "counts as
+  UNCALIBRATED" above; relayed to worker-6 as a correction to the CM's
+  1318b25c summary):
+  /tmp/cm-relay/US-179/frozen/po-K3-ruling-e720d78c.txt (sha256
+  e720d78c, 1319 bytes, verified at PM read). Verbatim, reflowed,
+  without its title line:
+  - Governing text: r8 978c3e1b + E1 v2 6a78af9f + E2 bca0d86b + E3
+    8f508af1 + E4 r2 f692681c.
+  - r8 AC2c already covers K3, and is stricter: "echoCancellation,
+    noiseSuppression and autoGainControl must read back OFF; otherwise
+    measuring is blocked with a named reason." A flag that reads true,
+    or is missing from getSettings(), does not read back OFF, so
+    measuring is BLOCKED (no sound at all), calibrated or not.
+     - K3's "counts as uncalibrated" is weaker than AC2c and does not
+     replace it. AC2c governs. There is no uncalibrated fallback for
+     DSP flags that are on or missing.
+     - K3's getUserMedia constraints (all three false) are how AC2c is
+     met; no text change needed.
+     - K3's test is an AC2c test, already in AC12 ("blocked DSP
+     flags"): mock getSettings() with autoGainControl:true, and with
+     autoGainControl missing; assert measuring is blocked with the
+     named reason, also with a valid calibration file loaded.
+     - If a target browser can't report these flags at all, that is a
+     finding for the PM backlog, not a relaxation of AC2c.
+  - K1, K2, K4, K5: worker guidance within the story text; no PO
+    action. K4's backlog one-liner goes CM -> PM as the AE asked.
+  - AE: object with a file if you need the uncalibrated fallback
+    instead of the block.
+  FOLLOW-UP (AE K4, via CM; no P-level given), verbatim: "US-179
+  follow-up: cross-check the web meter SPL against REW or a calibrator
+  with the UMIK-1 before the first amps-on run; define the OS
+  input-level setting." Context (CM): the K1 mapping SPL = dBFS + 120
+  - SensFactor is not yet reference-checked; its error direction is
+  safe. PM cross-ref: not added to the AMPS-ON PRECONDITION LIST (that
+  list mirrors safety.md); asked of the AE via the CM whether it
+  should be.
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
