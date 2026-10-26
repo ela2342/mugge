@@ -1,0 +1,14 @@
+[package]
+name = "web-rc-golden"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Writes the US-179 AC5c noise goldens from signal-gen's generator.rs, compiled unchanged"
+
+# Standalone: not a member of the src/ workspace. The versions below must
+# match what src/Cargo.lock resolves for signal-gen.
+[workspace]
+
+[dependencies]
+rand_xoshiro = "=0.7.0"
+rand_core = "=0.9.5"
