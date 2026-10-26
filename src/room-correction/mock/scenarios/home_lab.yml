@@ -1,0 +1,45 @@
+# Home lab scenario: SYNTHETIC, generic 5x4x2.6m living room.
+#
+# NOT the owner's real room. The dimensions and positions are invented
+# placeholders (US-174b) until the owner supplies the real home-lab
+# dimensions and speaker/listening positions (US-174 owner list item 2).
+# Replace this file's values then; keep the file name.
+#
+# Domestic room: plaster walls, wooden floor with a rug, plasterboard
+# ceiling, some furniture. Small and fairly live at low frequencies, so
+# the axial modes are strong. Speakers and mic are deliberately NOT
+# symmetric, so left and right see different rooms (channel identity).
+# Frequency-dependent absorption uses octave-band coefficients at
+# [63, 125, 250, 500, 1k, 2k, 4k, 8k] Hz.
+
+room:
+  dimensions: [5.0, 4.0, 2.6]       # L x W x H meters (20 m^2 floor -> 3rd-order reflections)
+  wall_absorption:
+    x0: [0.08, 0.08, 0.06, 0.05, 0.05, 0.05, 0.05, 0.05]  # plaster wall behind the speakers
+    x1: [0.10, 0.12, 0.15, 0.20, 0.25, 0.30, 0.30, 0.30]  # back wall with shelves
+    y0: [0.08, 0.08, 0.06, 0.05, 0.05, 0.05, 0.05, 0.05]  # plaster side wall
+    y1: [0.15, 0.12, 0.10, 0.08, 0.08, 0.08, 0.08, 0.08]  # side wall with window
+    z0: [0.05, 0.08, 0.15, 0.30, 0.45, 0.55, 0.60, 0.60]  # wooden floor with rug
+    z1: [0.20, 0.15, 0.10, 0.08, 0.06, 0.05, 0.05, 0.05]  # plasterboard ceiling
+  temperature: 21.0
+
+speakers:
+  main_left:
+    position: [0.5, 1.0, 1.1]
+  main_right:
+    position: [0.6, 3.1, 1.1]
+  sub1:
+    position: [0.3, 0.4, 0.3]       # corner placement
+  sub2:
+    position: [0.3, 3.6, 0.3]       # unused by the one-sub venue; keeps the four standard keys
+
+microphone:
+  position: [2.9, 1.8, 1.1]         # listening seat, off the room's centre line
+
+# Explicit room modes from the dimensions (c = 343.9 m/s at 21 C).
+room_modes:
+  - { frequency: 34.4, q: 7.0, gain: 10.0 }   # 1st axial (length: c/(2*5.0))
+  - { frequency: 43.0, q: 7.0, gain: 8.0 }    # 1st axial (width: c/(2*4.0))
+  - { frequency: 66.1, q: 8.0, gain: 7.0 }    # 1st axial (height: c/(2*2.6))
+  - { frequency: 68.8, q: 8.0, gain: 9.0 }    # 2nd axial (length)
+  - { frequency: 86.0, q: 9.0, gain: 6.0 }    # 2nd axial (width)
