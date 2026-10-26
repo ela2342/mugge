@@ -48,6 +48,7 @@ cleanup() {
     CLEANUP_DONE=true
     log "Tearing down local-demo stack..."
     "$BASH_BIN" "$LOCAL_DEMO" stop 2>/dev/null || true
+    rm -f "${START_LOG:-}"
     log "Cleanup complete."
 }
 
@@ -56,6 +57,9 @@ trap cleanup EXIT INT TERM
 # ---- 1. Start local-demo stack ----
 
 START_LOG=$(mktemp /tmp/test-e2e-start-XXXXXX.log)
+# Test runs always get the known tone stimulus, never the owner's mp3, so
+# every run (CI or dev) measures the same signal (F-394 Q1-1).
+export LOCAL_DEMO_MIXXX_SOURCE=tone
 log "Starting local-demo stack (PI_AUDIO_MOCK=0)..."
 "$BASH_BIN" "$LOCAL_DEMO" start >"$START_LOG" 2>&1 || {
     log_err "local-demo start failed"
@@ -71,7 +75,8 @@ cat "$START_LOG"
 # different process (different $$) and would compute a wrong manifest path.
 export LOCAL_DEMO_MANIFEST
 LOCAL_DEMO_MANIFEST=$(sed -n 's/.*Manifest written to //p' "$START_LOG")
-rm -f "$START_LOG"
+# START_LOG is kept until cleanup: the stack's services (GM, bridges) keep
+# writing their logs to it while the tests run (F-394 diagnostics).
 if [ -z "$LOCAL_DEMO_MANIFEST" ] || [ ! -f "$LOCAL_DEMO_MANIFEST" ]; then
     log_err "Could not find manifest from start output"
     exit 2
@@ -80,6 +85,13 @@ log "Using manifest: $LOCAL_DEMO_MANIFEST"
 
 # Source PW env (includes LOCAL_DEMO_MANIFEST) so pw-cli calls + manifest work
 eval "$("$BASH_BIN" "$LOCAL_DEMO" env)"
+# The pw-* CLI tools in the tests need the running stack's socket; a wrong
+# XDG_RUNTIME_DIR only shows up as "Host is down" skips/errors (F-394).
+if [ ! -S "$XDG_RUNTIME_DIR/pipewire-0" ]; then
+    log_err "PipeWire socket not found at $XDG_RUNTIME_DIR/pipewire-0"
+    exit 2
+fi
+log "PipeWire socket: $XDG_RUNTIME_DIR/pipewire-0"
 
 # Read all ports from the manifest and export for conftest.py.
 # _read_manifest_port uses LOCAL_DEMO_MANIFEST (set by eval above).
@@ -130,14 +142,21 @@ sleep 2
 
 log "Running service-integration tests..."
 cd "$REPO_DIR/src/web-ui"
-"$E2E_PYTHON" -m pytest tests/service-integration/ -v -rs --tb=short "$@"
-SI_EXIT=$?
+SI_LOG_START=$(wc -c <"$START_LOG")
+SI_EXIT=0
+"$E2E_PYTHON" -m pytest tests/service-integration/ -v -rs --tb=short "$@" || SI_EXIT=$?
+
+# F-394: show what the stack logged during the service-integration run
+# (GM mode switches, reconciliation, missing endpoints).
+log "Stack log during service-integration tests:"
+tail -c +"$((SI_LOG_START + 1))" "$START_LOG" | sed 's/^/[stack] /'
+log "End of stack log."
 
 # ---- 4. Run browser E2E tests ----
 
 log "Running browser E2E tests..."
-"$E2E_PYTHON" -m pytest tests/e2e/ -v -rs --tb=short "$@"
-E2E_EXIT=$?
+E2E_EXIT=0
+"$E2E_PYTHON" -m pytest tests/e2e/ -v -rs --tb=short "$@" || E2E_EXIT=$?
 
 # Report both results — fail if either failed.
 if [ $SI_EXIT -ne 0 ]; then

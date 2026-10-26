@@ -15,6 +15,8 @@ import json
 
 import pytest
 
+from fixtures.backend import tone_on_sw_tap  # noqa: F401
+
 
 pytestmark = pytest.mark.service_integration
 
@@ -95,20 +97,13 @@ class TestLevelBridge:
     convolver to the level bridges.
     """
 
-    @pytest.mark.xfail(strict=True, reason="F-394: level-bridge-sw silent in DJ mode; never passed in CI (0 pass / 3 fail / 8 skip)")
-    def test_level_bridge_sw_has_signal(self, ensure_dj_mode, read_levels,
-                                        level_sw_port):
-        """level-bridge-sw reports non-zero peak levels."""
-        lines = read_levels(level_sw_port, count=1)
-        assert len(lines) >= 1, (
-            f"No data from level-bridge-sw on port {level_sw_port}")
-        data = lines[0]
-        peak = data.get("peak", [])
-        assert len(peak) > 0, f"No peak data in level-bridge response: {data}"
-        has_signal = any(p > -100.0 for p in peak)
-        assert has_signal, (
-            f"level-bridge-sw: all channels at silence (peak: {peak})"
-        )
+    def test_level_bridge_sw_has_signal(self, tone_on_sw_tap):
+        """level-bridge-sw shows the --tone stimulus on ch 1-2, silence on 3-8.
+
+        F-394: tone_on_sw_tap asserts the tone level within its window and
+        FAILs (never skips) if the stimulus is missing.
+        """
+        assert len(tone_on_sw_tap) == 2
 
     def test_level_bridge_hw_out_responds(self, ensure_dj_mode, read_levels,
                                            level_hw_out_port):
