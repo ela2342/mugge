@@ -279,9 +279,16 @@ class TestF262Diag:
                 s2["outcome"] = "REFUTED"
             else:
                 s2["outcome"] = "OTHER: report to AE + Architect"
-            s2["peak_width_ae_rerule"] = bool(
-                s2["peak_width_3db_samples_median"] is not None
-                and s2["peak_width_3db_samples_median"] > 2.0)
+            s2["norm_peak"] = _spread(
+                [c.get(f"onset_{ref}_norm_peak") for r in rows for c in r["captures"]])
+        # AE ruling (2): trigger if the median width > 1.5 x the generator.rs
+        # port's own autocorrelation width (~3.31 -> 4.97 samples).
+        port = summary["siggen_port"]
+        ref_w = port["ref_autocorr_width_3db_samples_median"]
+        med_w = port["peak_width_3db_samples_median"]
+        port["peak_width_trigger_samples"] = 1.5 * ref_w if ref_w else None
+        port["peak_width_ae_rerule"] = bool(
+            med_w is not None and ref_w and med_w > 1.5 * ref_w)
         summary["ir_peak_ms"] = _spread(
             [c.get("ir_peak_ms") for r in rows for c in r["captures"]])
         summary["verify_min_phase_fail_runs"] = [
@@ -297,6 +304,7 @@ class TestF262Diag:
                 "key", "onset_siggen_port_ms", "onset_session_sweep_ms",
                 "onset_siggen_port_peak_width_3db_samples", "ir_peak_ms",
                 "onset_session_sweep_peak_width_3db_samples",
+                "onset_siggen_port_norm_peak", "onset_session_sweep_norm_peak",
                 "ir_peak_to_cutoff_ms", "ir_peak_to_window_end_ms",
                 "pre_roll_rms_dbfs", "rec_tail_rms_dbfs",
                 "warmup_overlap_sweep_ms", "warmup_overlap_preroll_ms",

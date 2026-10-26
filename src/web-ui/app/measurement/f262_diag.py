@@ -72,6 +72,15 @@ def _xcorr_onset(rec, ref, sr):
     return i - (len(ref) - 1), float(uniq_db), _width_3db(xc, i)
 
 
+def _norm_peak(rec, ref, lag):
+    """Normalized correlation peak (0-1) of ref against the rec segment at lag."""
+    lo = max(0, lag)
+    seg = rec[lo:lag + len(ref)]
+    r = ref[lo - lag:lo - lag + len(seg)]
+    den = np.linalg.norm(seg) * np.linalg.norm(ref)
+    return float(abs(np.dot(seg, r)) / den) if den > 0 else None
+
+
 def _width_3db(xc, i):
     half = xc[i] / np.sqrt(2.0)
     lo = i
@@ -112,6 +121,7 @@ def capture(key, recording, pre_roll, sweep, ir, sr, timing, level_dbfs):
             out[f"onset_{name}_ms"] = lag / sr * 1e3
             out[f"onset_{name}_uniqueness_db"] = uniq
             out[f"onset_{name}_peak_width_3db_samples"] = width
+            out[f"onset_{name}_norm_peak"] = _norm_peak(full, ref, lag_full)
             # Ideal width for this reference (its own autocorrelation): a log
             # sweep's peak is ~3.3 samples wide even with a perfect law match.
             out[f"onset_{name}_ref_autocorr_width_3db_samples"] = _xcorr_onset(ref, ref, sr)[2]
