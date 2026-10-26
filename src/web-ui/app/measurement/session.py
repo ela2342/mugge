@@ -84,6 +84,11 @@ _HARD_LIMIT_SPL_DB: Optional[float] = (
     float(os.environ["PI4AUDIO_HARD_LIMIT_SPL_DB"])
     if "PI4AUDIO_HARD_LIMIT_SPL_DB" in os.environ else None)
 
+# Recording continues this long after the sweep. The direct sound lands
+# ~1.15-1.26 s into a signal-gen capture (F-262/F-403), and the onset-anchored
+# IR window needs 500 ms after it on top of the sweep (AE ruling F4).
+_SWEEP_POST_ROLL_S = 2.0
+
 
 # ---------------------------------------------------------------------------
 # State machine
@@ -738,8 +743,10 @@ class MeasurementSession:
 
         _ensure_rc_path()
         import measure_nearfield as mn
-        from room_correction.sweep import generate_log_sweep
+        from room_correction.sweep import generate_log_sweep, signal_gen_sweep
         from room_correction import dsp_utils
+        from room_correction.alignment import align_capture
+        from room_correction.export import export_filter
 
         # US-067 Track A: In signal-gen mode, pass SignalGenClient
         # directly to play_and_record for separated play + pw-record
@@ -788,6 +795,7 @@ class MeasurementSession:
                     mn.play_and_record, sweep, ch.index,
                     self._config.output_device, self._config.input_device,
                     sr=self._config.sample_rate,
+                    post_roll_s=_SWEEP_POST_ROLL_S,
                     signal_gen=_siggen_client,
                     capture_target=_cap_target)
                 # M-1: Recording integrity checks (skip in mock mode).
@@ -818,18 +826,30 @@ class MeasurementSession:
                 key = f"ch{ch.index}_pos{pos}"
                 self._recordings[key] = recording
 
-                # GAP-1 fix: deconvolve recording to extract impulse response.
-                # Uses the same Wiener deconvolution as runner.py stage 2.
+                # F-262 S3: deconvolve to the end of the capture and cut the
+                # IR window at the onset measured in the capture itself,
+                # never at the capture start. A capture that can't be
+                # aligned fails the session closed. On the signal-gen path
+                # the onset is checked against the law signal-gen plays
+                # (F-403 S2 will deconvolve against the played array).
                 await self._broadcast({
                     "type": "deconvolution_start",
                     "channel": ch.index, "channel_name": ch.name,
                     "position": pos + 1,
                 })
-                _ensure_rc_path()
-                from room_correction.deconvolution import deconvolve
-                ir = await asyncio.to_thread(
-                    deconvolve, recording, sweep,
-                    sr=self._config.sample_rate)
+                played = None
+                if _siggen_client is not None:
+                    played = signal_gen_sweep(
+                        self._config.sweep_duration_s,
+                        sr=self._config.sample_rate,
+                        level_dbfs=self._config.sweep_level_dbfs)
+                try:
+                    aligned = await asyncio.to_thread(
+                        align_capture, recording, sweep, played=played,
+                        sr=self._config.sample_rate)
+                except RuntimeError as exc:
+                    raise RuntimeError(f"{ch.name} ({key}): {exc}") from exc
+                ir = aligned.ir
                 self._impulse_responses[key] = ir
                 await self._broadcast({
                     "type": "deconvolution_done",
@@ -837,17 +857,8 @@ class MeasurementSession:
                     "position": pos + 1,
                     "ir_samples": len(ir),
                 })
-
-                # Save IR as WAV for inspection / offline analysis.
-                ir_dir = os.path.join(self._config.output_dir, "impulse_responses")
-                os.makedirs(ir_dir, exist_ok=True)
-                ir_path = os.path.join(ir_dir, f"ir_{key}.wav")
-                from room_correction.export import export_filter
-                await asyncio.to_thread(
-                    export_filter, ir, ir_path,
-                    n_taps=len(ir), sr=self._config.sample_rate)
-                log.info("Deconvolved IR for %s: %d samples, saved %s",
-                         key, len(ir), ir_path)
+                log.info("Aligned IR for %s: %d samples, %s",
+                         key, len(ir), aligned.log)
 
                 peak_dbfs = float(
                     20 * np.log10(max(np.max(np.abs(recording)), 1e-10)))
@@ -856,6 +867,7 @@ class MeasurementSession:
                     "recording_samples": len(recording),
                     "peak_dbfs": peak_dbfs,
                     "calibration_applied": cal_applied,
+                    "alignment": aligned.log,
                 }
                 await self._broadcast({
                     "type": "sweep_done", "channel": ch.index,
@@ -879,6 +891,18 @@ class MeasurementSession:
         if self._is_mock and self._sd_override is not None:
             mn._sd_override = None
         log.info("Sweep phase complete: %d sweeps", count)
+
+        # Save the IRs as WAV for inspection / offline analysis, and for
+        # filter_routes. Only once every capture is aligned: a session that
+        # fails closed writes no WAV.
+        ir_dir = os.path.join(self._config.output_dir, "impulse_responses")
+        os.makedirs(ir_dir, exist_ok=True)
+        for key, ir in self._impulse_responses.items():
+            ir_path = os.path.join(ir_dir, f"ir_{key}.wav")
+            await asyncio.to_thread(
+                export_filter, ir, ir_path,
+                n_taps=len(ir), sr=self._config.sample_rate)
+            log.info("Saved IR %s", ir_path)
 
         # GAP-1 fix: compute time alignment delays from deconvolved IRs.
         # Uses one representative IR per channel (position 0) — same approach
