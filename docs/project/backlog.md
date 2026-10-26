@@ -756,6 +756,11 @@ priority!"
   b593238e. F-394 Q1 RELEASED by the AE (a532179b) and relayed; Q1-Q3
   all with worker-1; fence r3. F-408: AE addendum 165ae71a names it as
   gate v2's G4 follow-up (CM).
+  UPDATE (CM, 2026-10-26, after v265): backlog v265 pushed as
+  b50b9ed6. F-394 head e050fe90 and fence r4; F-262 head 7011419d with
+  the P3 table and finding H1 (AE ruling pending). New: F-409 (UI does
+  not show the min-phase residual) and F-410 (unmute restores gains
+  behind a closed gate).
 
 ## Reserved IDs
 
@@ -861,6 +866,11 @@ local branches, and worktrees): F-408 (AE gate-xo ruling v1 0aac380f
 G4: replace the cepstral min-phase residual with a metric valid for
 unit-circle zeros; ruling not yet released by the Architect). Next
 free (supersedes the line above): F-409, US-179, D-071, T66.
+Allocated 2026-10-26 (PM, checked free across main, all origin/* and
+local branches, and worktrees): F-409 (worker-4: G1 residual not shown
+in the UI) and F-410 (worker-1: unmute restores the venue gains while
+the gate is closed). Next free (supersedes the line above): F-411,
+US-179, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -6697,6 +6707,25 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     land before the linear IR, inside the O3(ii) pre-onset SNR window.
     The AE either confirms they stay >= 30 dB down at measurement
     level or excludes that region. Irrelevant in the sim.
+  - UPDATE (CM, 2026-10-26, after v265): head 7011419d pushed (G1-G3
+    of ruling v2 91eca61e); CI 40348528240 running. P3 table and
+    finding H1: /tmp/cm-relay/F-262/frozen/w4-g3-p3-h1-07e5efbd.txt
+    (sha256 07e5efbd, verified at PM read). Every buildable channel
+    passes G1+G2. Not buildable: 2way-80hz-ported (identity
+    sub-ported-15 missing, F-239) and workshop-xrk10f-fullrange
+    ("filter_type 'fullrange' unknown"). Worker-4, verbatim: "N4 (bug
+    A, home_lab): residual PASSES on all 3 files (-86.3/-67.1/-27.2),
+    so G1 alone does NOT catch it; the closed loop fails all 3".
+  - H1 (worker-4, verbatim): "verify_mandatory_hpf false-fails lowpass
+    channels." Its passband reference is the mean gain over 2x..10x
+    mandatory_hpf_hz, which for subs is mostly LP stopband (e.g.
+    2way-80hz-sealed sub 16.7 dB, s218 sub -2.6, horn-sub -7.6: FAIL
+    against the 18 dB threshold). Worker-4: in CI,
+    test_measurement_session FilterGenSync 4Way "will still fail at
+    7011419d". Candidate fix, not implemented: "reference = max gain
+    over the window (or over the channel's own passband), threshold 18
+    dB unchanged." Ruling: the AE writes it, the Architect releases it
+    (CM). PENDING.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -7037,6 +7066,30 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   predates release record (h) (eb2b06d3), where the Architect released
   91eca61e, verbatim: "F-408 going into the backlog record instead of
   a v3 is fine." No Architect objection file seen at PM read.
+- **F-409** Min-phase residual not shown in the UI (worker-4; F-262
+  follow-up; no P-level given; no owner given)
+  AE ruling 91eca61e G1 (l.38), verbatim: "The residual value is still
+  logged per channel and shown in the UI details." At #66 head
+  7011419d the payload carries "min_phase_residual_db" (verify.py:848,
+  gate_summary; passed on in filter_routes.py:299 and
+  session.py:1204). src/web-ui/static/js/filter-gen.js and
+  rc-wizard.js do not display it (PM checked: no "residual" in either
+  at 7011419d). Both files are outside the #66 fence.
+- **F-410** Unmute restores the venue gains behind a closed gate
+  (worker-1, outside F-394; severity: AE asked, pending; no P-level
+  given)
+  Source:
+  /tmp/cm-relay/F-394/frozen/w1-e050fe90-finding-unmute-gate.txt
+  (sha256 14c4d6dd, verified at PM read; transcribed verbatim by the
+  CM). Worker-1, verbatim: "So mute → gate close → unmute puts the
+  venue gains back on while the GM reports gate_open=false. That is a
+  gain increase behind a closed gate." AudioMuteManager.unmute()
+  (src/web-ui/app/audio_mute.py l.102-132) writes back _pre_mute_gains
+  without a gate check (PM read at e050fe90, confirmed). Found by
+  reading the code; nothing was run or played. Worker-1's test
+  teardown avoids it by unmuting before closing the gate. Worker-1
+  suggests a backlog one-liner under the owner's current priority,
+  "unless the AE says otherwise".
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -8475,6 +8528,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     autouse _ensure_standby in test_production.py ignores the
     _set_mode return value (l.53/55), so a failed standby switch goes
     unnoticed.
+  - UPDATE (CM, 2026-10-26, after v265): head e050fe90 pushed, on
+    d3d7479c (PM-verified on origin). Per CM: d3d7479c = Q3 plus C1-C3
+    groundwork; e050fe90 = Q1 tone, Q2 C4 mute sequence, Q1-6 xfails
+    removed. CI 40348754608 running; the earlier run 40346339865 was
+    cancelled by the concurrency group before E2E.
+     Fence r4 (/tmp/cm-relay/F-394-fence-r4.txt, sha256 841f6715,
+     verified at PM read; supersedes r3 1f8c0ca2): adds
+     src/web-ui/tests/service-integration/test_audio_flow.py and the
+     new unit tests test_mixxx_substitute_tone.py and
+     test_virtual_gate_guard.py. No overlap with #63, #66 (7011419d),
+     #52, #45, #44, #43, #42, #40 or #36 (CM).
+     Side finding F-410 (unmute behind a closed gate) is filed
+     separately; it is outside F-394.
 - **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
   per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
   2026-10-26): on a suspended node, the gain readers in the r6b matrix
