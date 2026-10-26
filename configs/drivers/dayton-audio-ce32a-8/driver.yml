@@ -21,7 +21,7 @@ metadata:
   datasheet_file: data/285-101-dayton-audio-ce32a-8-specifications.pdf
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: vas_liters 0.0 -> 0.015 per https://www.parts-express.com/pedocs/specs/285-101-dayton-audio-ce32a-8-specifications.pdf (Last Revised 5/4/2023), retrieved 2026-10-25.'
   notes: 'Scraped from parts-express.com. Part number: 285-101.'
   quantity_owned: null
   serial_numbers: []
@@ -34,7 +34,7 @@ thiele_small:
   qts: 0.87
   qes: 1.25
   qms: 2.84
-  vas_liters: 0.0
+  vas_liters: 0.015
   cms_m_per_n: 0.00069
   xmax_mm: 0.7
   xmech_mm: null

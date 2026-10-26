@@ -21,7 +21,7 @@ metadata:
   datasheet_file: data/292-7804--visaton-g20sc8-spec-sheet.pdf
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: Qms 0.36 is below the plausibility bound (0.5) and is allowlisted. Manufacturer web page https://www.visaton.de/en/products/drivers/dome-tweeters/g-20-sc-8-ohm (Visaton sells it as G 20 SC 8 Ohm), retrieved 2026-10-25: fs 1890 Hz, Rdc 4.8 Ohm, Qms 0.36, Qes 1.34, Qts 0.28, Mms 0.15 g.'
   notes: 'Scraped from parts-express.com. Part number: 292-7804.'
   quantity_owned: null
   serial_numbers: []

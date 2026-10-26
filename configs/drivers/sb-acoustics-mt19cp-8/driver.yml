@@ -21,7 +21,7 @@ metadata:
   datasheet_file: I-MT19CP-8-data-sheet.pdf
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: qms 654.0 -> 6.54 (comma decimal misread) per https://doc.soundimports.nl/pdf/brands/SB%20Acoustics/MT19CP-8/I-MT19CP-8-data-sheet.pdf (SB Acoustics sheet, REV. 0, 05.07.2023), retrieved 2026-10-25: Qms 6.54, Qes 0.33, Qts 0.31.'
   notes: Scraped from soundimports.eu.
   quantity_owned: null
   serial_numbers: []
@@ -33,7 +33,7 @@ thiele_small:
   z_nom_ohm: null
   qts: 0.31
   qes: 0.33
-  qms: 654.0
+  qms: 6.54
   vas_liters: 37.1
   cms_m_per_n: 0.00113
   xmax_mm: 7.2

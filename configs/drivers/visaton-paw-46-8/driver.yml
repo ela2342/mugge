@@ -21,7 +21,7 @@ metadata:
   datasheet_file: PAW-46-8-datasheet.pdf
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: qms 897.0 -> 8.97 (comma decimal misread) per https://www.visaton.de/en/products/drivers/woofers/paw-46-8-ohm (manufacturer web page, no PDF T/S table), retrieved 2026-10-25: Qms 8.97, Qes 0.38, Qts 0.36. No Wayback snapshot could be checked (archive.org returned 429 on 2026-10-25).'
   notes: Scraped from soundimports.eu.
   quantity_owned: null
   serial_numbers: []
@@ -33,7 +33,7 @@ thiele_small:
   z_nom_ohm: 8
   qts: 0.36
   qes: 0.38
-  qms: 897.0
+  qms: 8.97
   vas_liters: 325.0
   cms_m_per_n: 0.00016
   xmax_mm: 4.9

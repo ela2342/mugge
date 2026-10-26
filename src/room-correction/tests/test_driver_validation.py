@@ -592,43 +592,280 @@ class TestEdgeCases:
         assert result.valid, f"Expected valid: {result.errors}"
 
 
-class TestRealDriverRecords:
-    """Validate real driver records from the project's configs/drivers/ directory.
+def _qts_error(qts, expected, deviation):
+    """The exact Qts error string _check_qts_consistency produces."""
+    return (
+        f"thiele_small: Qts consistency check failed. Qts={qts}, "
+        f"expected (Qes*Qms)/(Qes+Qms)={expected}, deviation={deviation} (>10%)"
+    )
 
-    These tests ensure that existing scraped driver data passes validation.
-    They skip if the configs/drivers directory is not available.
+
+# Records exempt from the Qts consistency check only (F-363). Each record
+# keeps its stored values and carries metadata.ts_consistency equal to the
+# entry's mark:
+#   datasheet-inconsistent  the manufacturer datasheet itself prints an
+#                           inconsistent Qts/Qes/Qms triple; the record
+#                           stores it exactly and the quote cites it.
+#   unverifiable            the source is unavailable; the triple is our
+#                           own record's values and there is no quote.
+# The record's error list must equal exactly [error], and its (qts, qes,
+# qms) must equal the triple. Any change to the record, the mark or the
+# validator makes test_exemptions_are_current fail, so an entry cannot
+# outlive what it documents. All sources were retrieved 2026-10-25.
+TS_CONSISTENCY_EXEMPTIONS = {
+    "coast-buyouts-eas12d531a2": {
+        "mark": "unverifiable",
+        "triple": (1.717, 2.259, 4.156),  # our record's values, unquoted
+        "error": _qts_error(1.717, "1.4635", "17.3%"),
+        "quote": None,
+    },
+    "earthquake-dbxi-12d": {
+        "mark": "datasheet-inconsistent",
+        "triple": (0.5, 0.45, 4.7),
+        "error": _qts_error(0.5, "0.4107", "21.7%"),
+        "quote": "https://www.earthquakesound.com/cdn/shop/files/DBXI-12D-Manual.pdf"
+                 " (DBXi manual, no revision printed): Qes 0.45, Qms 4.70, Qts .5."
+                 " Qts > Qes is physically impossible.",
+    },
+    "earthquake-dbxi-15d": {
+        "mark": "datasheet-inconsistent",
+        "triple": (0.45, 1.14, 5.99),
+        "error": _qts_error(0.45, "0.9577", "53.0%"),
+        "quote": "https://www.earthquakesound.com/cdn/shop/files/DBXI-12D-Manual.pdf"
+                 " (DBXi manual, no revision printed), DBXI-15D:"
+                 " Qes 1.14, Qms 5.99, Qts .45.",
+    },
+    "goldwood-gw-206-8": {
+        "mark": "datasheet-inconsistent",
+        "triple": (0.752, 0.752, 3.386),
+        "error": _qts_error(0.752, "0.6153", "22.2%"),
+        "quote": "https://www.parts-express.com/pedocs/more-info/"
+                 "290-305-goldwood-gw-2068-more-info.pdf (no revision printed):"
+                 " Qms 3.386, Qes 0.752, Qts 0.752. Qts = Qes is impossible.",
+    },
+    "image-dynamics-id12d4-v4": {
+        "mark": "datasheet-inconsistent",
+        "triple": (0.787, 0.698, 5.582),
+        "error": _qts_error(0.787, "0.6204", "26.8%"),
+        "quote": "https://www.loudspeakerdatabase.com/ImageDynamics/ID12D4_V4/"
+                 "ImageDynamics_ID12D4_V4.pdf (ID Series V4 manual, (c) 2023),"
+                 " ID12D4 column: Qms 5.582, Qes 0.698, Qts 0.787. Qes is"
+                 " identical to the ID12D2 column.",
+    },
+    "image-dynamics-idmax10d2-v4": {
+        "mark": "datasheet-inconsistent",
+        "triple": (0.609, 1.346, 4.548),
+        "error": _qts_error(0.609, "1.0386", "41.4%"),
+        "quote": "https://imagedynamicsusa.net/media/uploads_file/2024/07/01/"
+                 "a6682eec06d8c04.66893277.pdf (IDMAX V4 manual), IDMAX10D2"
+                 " column: Qms 4.548, Qes 1.346, Qts 0.609.",
+    },
+    "monacor-sph-30x-4sw": {
+        "mark": "datasheet-inconsistent",
+        "triple": (0.42, 0.39, 9.35),
+        "error": _qts_error(0.42, "0.3744", "12.2%"),
+        "quote": "https://doc.soundimports.nl/pdf/brands/Monacor/SPH-30X4SW/"
+                 "pdf_monacor_SPH-30X4SW_1.pdf (Monacor sheet, no revision"
+                 " printed): Qms 9.35, Qes 0.39, Qts 0.42. Qts > Qes is"
+                 " impossible.",
+    },
+    "prv-audio-10mr2000-ndy": {
+        "mark": "datasheet-inconsistent",
+        "triple": (0.21, 0.21, 1.54),
+        "error": _qts_error(0.21, "0.1848", "13.6%"),
+        "quote": "https://doc.soundimports.nl/pdf/brands/PRV%20Audio/"
+                 "10MR2000-NDY/10MR2000-NDY-Datasheet.pdf (Rev 01/20):"
+                 " Qts 0.21, Qes 0.21, Qms 1.54. Qts = Qes is impossible.",
+    },
+}
+
+
+# Plausibility bounds on the Q values, as (lower, upper), inclusive (F-363).
+# AE-set: widening or removing a bound needs an Audio Engineer review.
+# Scraped comma decimals ("6,54" read as 654) can produce a record that
+# passes the Qts consistency check, because Qts ~ Qes when Qms is huge;
+# a 100x error downward is just as wrong. A real record outside these
+# bounds needs an entry in TS_PLAUSIBILITY_ALLOWLIST, never a wider bound.
+# Independently of the bounds, every Q must be > 0 (no allowlist).
+TS_PLAUSIBILITY_BOUNDS = {
+    "qts": (0.1, 5.0),
+    "qes": (0.1, 10.0),
+    "qms": (0.5, 50.0),
+}
+
+# Records with a real Q value outside its bounds, as
+# {record_id: {"field": name, "value": stored value, "quote": source}}.
+# quote None means the value could not be sourced; such a record must
+# carry ts_consistency: unverifiable, which keeps it out of the safety math.
+TS_PLAUSIBILITY_ALLOWLIST = {
+    "factory-buyouts-42-41716g-001": {
+        "field": "qes",
+        "value": 22.17,
+        "quote": None,
+    },
+    "tang-band-w1-2361s": {
+        "field": "qms",
+        "value": 0.35,
+        "quote": None,
+    },
+    "visaton-g-50-ffl": {
+        "field": "qms",
+        "value": 0.48,
+        "quote": None,
+    },
+    "visaton-gs-20-sc": {
+        "field": "qms",
+        "value": 0.36,
+        "quote": "visaton.de G 20 SC 8 Ohm: Mechanical Q factor Qms 0.36, "
+        "Electrical Q factor Qes 1.34, Total Q factor Qts 0.28",
+    },
+}
+
+
+class TestRealDriverRecords:
+    """Validate every real driver record in the project's configs/drivers/.
+
+    Every record is validated, in sorted order, and every failure is
+    reported. The only tolerated failures are the documented Qts
+    exemptions in TS_CONSISTENCY_EXEMPTIONS. These tests skip if the
+    configs/drivers directory is not available.
     """
 
     PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-    DRIVERS_DIR = PROJECT_ROOT / "configs" / "drivers"
+    CONFIGS_DIR = PROJECT_ROOT / "configs"
+    DRIVERS_DIR = CONFIGS_DIR / "drivers"
 
-    @pytest.fixture
-    def drivers_available(self):
+    # Record count at F-363 (2026-10-25). Guards against the scan silently
+    # shrinking. Lower it only together with a deliberate record removal.
+    MIN_RECORDS = 2345
+
+    @pytest.fixture(scope="class")
+    def results(self):
         if not self.DRIVERS_DIR.exists():
             pytest.skip("configs/drivers/ not found")
-        drivers = [
-            d for d in self.DRIVERS_DIR.iterdir()
-            if d.is_dir() and (d / "driver.yml").exists()
-        ]
-        if not drivers:
+        results = validate_all_drivers(self.DRIVERS_DIR, check_files=False)
+        if not results:
             pytest.skip("No driver records found")
-        return drivers
+        return {Path(r.driver_path).parent.name: r for r in results}
 
-    def test_sample_real_drivers_pass(self, drivers_available):
-        """Validate up to 20 real driver records as a smoke test."""
-        sample = drivers_available[:20]
+    def _marked_records(self, results):
+        """Map each record with any metadata.ts_consistency to its mark."""
+        marked = {}
+        for record_id, result in results.items():
+            with open(result.driver_path) as f:
+                data = yaml.safe_load(f)
+            metadata = data.get("metadata") or {}
+            if metadata.get("ts_consistency") is not None:
+                marked[record_id] = metadata["ts_consistency"]
+        return marked
+
+    def test_all_real_drivers_pass(self, results):
+        """Every record passes, except the exact documented exemptions."""
+        expected_count = len(list(self.DRIVERS_DIR.glob("*/driver.yml")))
+        assert len(results) == expected_count
+        assert len(results) >= self.MIN_RECORDS
+        print(f"validated {len(results)} driver records")
+
         failures = []
-        for driver_dir in sample:
-            result = validate_driver(
-                driver_dir / "driver.yml", check_files=False
-            )
-            if not result.valid:
-                failures.append(str(result))
+        for record_id, result in sorted(results.items()):
+            if result.valid:
+                continue
+            exemption = TS_CONSISTENCY_EXEMPTIONS.get(record_id)
+            if exemption is not None and result.errors == [exemption["error"]]:
+                continue
+            failures.append(str(result))
 
         assert not failures, (
-            f"{len(failures)}/{len(sample)} drivers failed:\n"
+            f"{len(failures)}/{len(results)} drivers failed:\n"
             + "\n".join(failures)
         )
+
+    def test_exemptions_match_marks(self, results):
+        """The marked records and the exemption entries agree, mark for mark."""
+        marked = self._marked_records(results)
+        exempt = {
+            record_id: exemption["mark"]
+            for record_id, exemption in TS_CONSISTENCY_EXEMPTIONS.items()
+        }
+        unsourced = {
+            record_id: "unverifiable"
+            for record_id, allowed in TS_PLAUSIBILITY_ALLOWLIST.items()
+            if allowed["quote"] is None
+        }
+        assert not exempt.keys() & unsourced.keys()
+        assert marked == {**exempt, **unsourced}
+        for record_id, exemption in TS_CONSISTENCY_EXEMPTIONS.items():
+            if exemption["mark"] == "datasheet-inconsistent":
+                assert exemption["quote"], f"{record_id}: quote required"
+            else:
+                assert exemption["mark"] == "unverifiable", record_id
+                assert exemption["quote"] is None, record_id
+
+    @pytest.mark.parametrize(
+        "record_id", sorted(TS_CONSISTENCY_EXEMPTIONS)
+    )
+    def test_exemptions_are_current(self, results, record_id):
+        """Each exemption still matches its record's triple and error exactly."""
+        exemption = TS_CONSISTENCY_EXEMPTIONS[record_id]
+        assert record_id in results, f"{record_id} has no driver record"
+        result = results[record_id]
+        with open(result.driver_path) as f:
+            ts = yaml.safe_load(f)["thiele_small"]
+        assert (ts["qts"], ts["qes"], ts["qms"]) == exemption["triple"]
+        assert result.errors == [exemption["error"]]
+
+    def test_marked_records_not_referenced_by_profiles(self, results):
+        """No speaker or venue config uses a record with either mark."""
+        marked = self._marked_records(results)
+        references = []
+        for path in sorted(self.CONFIGS_DIR.rglob("*.yml")):
+            if self.DRIVERS_DIR in path.parents:
+                continue
+            text = path.read_text()
+            references += [
+                f"{path.relative_to(self.PROJECT_ROOT)}: {record_id}"
+                for record_id in sorted(marked)
+                if record_id in text
+            ]
+        assert not references, "\n".join(references)
+
+    def test_ts_values_plausible(self, results):
+        """Every Q is > 0 and within its bounds, except allowlisted ones."""
+        violations = []
+        for record_id, result in sorted(results.items()):
+            with open(result.driver_path) as f:
+                ts = yaml.safe_load(f).get("thiele_small") or {}
+            for field, (lower, upper) in TS_PLAUSIBILITY_BOUNDS.items():
+                value = ts.get(field)
+                if value is None:
+                    continue
+                if value <= 0:
+                    violations.append(f"{record_id}: {field}={value} <= 0")
+                    continue
+                if lower <= value <= upper:
+                    continue
+                allowed = TS_PLAUSIBILITY_ALLOWLIST.get(record_id)
+                if allowed and (allowed["field"], allowed["value"]) == (field, value):
+                    continue
+                violations.append(
+                    f"{record_id}: {field}={value} outside [{lower}, {upper}]"
+                )
+        assert not violations, "\n".join(violations)
+
+    def test_plausibility_allowlist_is_current(self, results):
+        """Each allowlist entry still matches an out-of-bound stored value."""
+        for record_id, allowed in sorted(TS_PLAUSIBILITY_ALLOWLIST.items()):
+            quote = allowed["quote"]
+            assert quote is None or quote.strip(), f"{record_id}: empty quote"
+            assert record_id in results, f"{record_id} has no driver record"
+            with open(results[record_id].driver_path) as f:
+                ts = yaml.safe_load(f)["thiele_small"]
+            assert ts[allowed["field"]] == allowed["value"], record_id
+            lower, upper = TS_PLAUSIBILITY_BOUNDS[allowed["field"]]
+            assert not lower <= allowed["value"] <= upper, (
+                f"{record_id}: {allowed['field']}={allowed['value']} is within "
+                "bounds, remove the allowlist entry"
+            )
 
     def test_template_is_not_validated(self):
         """TEMPLATE.yml is not inside a {id}/ directory, so it shouldn't be picked up."""
