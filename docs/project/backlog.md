@@ -261,6 +261,13 @@ priority!"
   marker, so thermal limiting stays OFF until a profile is
   re-activated: it fails open. Fix: re-arm the limiter from the marker
   at startup, or fail closed. Not blocking now. Pairs with (10).
+  UPDATE (CM, TW, 2026-10-26): (9) is REMOVED from the "next pre-prod
+  safety.md batch" list. The TW's aplay commit 1c2d4bef stays on the
+  US-173 branch (no rewrite, CM rule); its safety.md text is byte for
+  byte the TW's AE-approved batch (a28f6abd). It rides with the US-173
+  PR, the AE reviews it there, and it is NOT a merge condition. TW
+  Summary row, verbatim: "US-173 | No aplay/speaker-test playback on
+  the USBStreamer (listing OK); amixer read-only; no alsactl | 9".
 - AE core items (2026-10-26): #55 and #57 wait only on CI; the HF
   bound; the CHN-50P mask after F-388; the SNR threshold; the 174c/d/e
   reviews; the US-172c/172/173 reviews (US-173 AC2/AC3a); a thermal
@@ -294,6 +301,16 @@ priority!"
   US-173 is pushed at 1c2d4bef. OBSERVE-AE-sink-1 is granted to
   worker-3 for the AE's default-sink reads (see US-173). Mac disk:
   1.92 GB free and still falling; no nix for anyone.
+  UPDATE (CM, QE, 2026-10-26, after v187): backlog v187 pushed as
+  a6666f74. #57 at 599ea52a: CI 40299659873 is RED;
+  TestAC7Identity::test_each_file_corrects_its_own_room fails, margin
+  0.68 < 1.0 dB. The QE's approval is SUSPENDED, so #57 stands at 6/7
+  and the fixed head needs a fresh 7/7 (see US-174). Fix with
+  worker-4, the Architect and the AE. #57 is not merged, so #61 and
+  #62 stay held behind it. The 548 s ARM wall time goes to F-380 and
+  does not block. OBSERVE-AE-sink-1 released (see US-173).
+  CHANGE-US172r3-diag granted (see US-172 run 3). Mac disk: 1.90 GB
+  free; no nix for anyone.
 
 ## Reserved IDs
 
@@ -2129,6 +2146,36 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      whether an operator-facing interim check goes alongside. Related,
      in US-174d: convolver priority.session 2100, so it is the default
      sink in the normal case.
+     FINAL (AE accepted the row as a real hazard, via the TW,
+     2026-10-26; SUPERSEDES the PROPOSED text above; mirrors safety.md
+     on merge), AE verbatim: "18. Filter-chain absent ⇒ no audio.
+     Proven on real PipeWire and WirePlumber, with the filter-chain
+     failing to load: (a) the daemon stays up with no restart loop,
+     and GM reports the convolver ABSENT; (b) no link exists into any
+     USBStreamer playback port (ch 1-8), including after a pw-play to
+     the default sink and after a JACK client with autoconnect forced
+     on; (c) a WirePlumber hook refuses the USBStreamer as the target
+     of every Stream/* node; (d) GM refuses to build the DJ or live
+     topology, and its watchdog latches. With the filter-chain
+     present, the convolver is the default sink."
+     AE rulings: (c) is NOT P1 (the row is a hard amps-on blocker by
+     itself); NO interim rule; carried in the US-174d PR with the
+     lead-in "The list has 18 rows. On the Pi 5, rows 1-3 and 5-18
+     must ALL hold; row 4 applies to the Pi 4 only." and the Gate rule
+     "(1-3, 5-18)"; the OPEN footnote covers rows 15, 16 and 18 (TW
+     batch with US-174d).
+     CORRECTION (TW, 2026-10-26): the AE's row 17 text never said
+     "there is no row 18"; that phrase was the TW's and the PM's own
+     v186 note outside the quote. Strike "row 17's 'there is no row
+     18' phrase goes (TW asked the AE)" above: nothing changes in row
+     17's AE text, and the PM's v186 note is superseded by this row.
+     HELD at the TW (AE to rule): a safety.md Section 5 pre-flight
+     line, "`pw-metadata` shows the convolver as default.audio.sink".
+     On main it fails today: the USBStreamer sink has priority.session
+     2000, the convolver has none (OBSERVE-AE-sink-1 confirmed, see
+     US-173). AE options: (A) an implementation requirement, or a
+     reword. PM note: the Architect's addenda 3 and 4 already put this
+     in US-174d (see US-174d), so (A) needs no new backlog item.
   NEXT safety.md TOUCH (#51 reviews, non-blocking, fail safe; TW
   drafts, AE owns the wording, this list follows per the mirror
   rule): (1) AD L1 = UX (a): the lead-in "holds" (closed and
@@ -2772,6 +2819,21 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   output (cmdline-run3.txt plus C3SHA) to the QE and the Architect,
   then the tb-pre/tb-diag CHANGE grants naming C3SHA; the tryboot
   reboot only once the owner says they are at the HDMI screen.
+  UPDATE (CM, 2026-10-26): pre-obs DONE 09:38Z, all 6 ok. C3SHA
+  5dd65567 (cmdline-run3, 182 B) = the base cmdline plus "
+  ignore_loglevel" only; tryboot-run3.txt = TB3SHA 3fb3e46d with only
+  the cmdline= line changed. Finding: the base cmdline already ends
+  with console=tty1 and has no quiet, so only ignore_loglevel tells
+  tryboot from base. The QE (5523ca53, bytes checked) and the
+  Architect ACCEPTED the pre-obs output and C3SHA; no kit change.
+  CHANGE-US172r3-diag granted to worker-2 at 09:53Z: tb-pre, then
+  tb-diag; arms tryboot; NO reboot. The tryboot reboot waits for the
+  owner to say they are at the HDMI screen.
+  QE one-liner (LOW; fix at US-172 close-out, text only, no re-review
+  now, Architect agrees): the kit comment "moved off by console=tty1"
+  is wrong for this Pi, and the drm-reads checks "quiet absent" and
+  "tty1 present" do not tell tryboot from base; only c3
+  (ignore_loglevel) does. Note it in the run-3 report.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -3644,6 +3706,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   default-sink reads. If the USBStreamer turns out to be the default
   sink, that is a potential P1 amps-on blocker (see amps-on row 18
   PROPOSED); it does not block now.
+  RESULT (CM, 2026-10-26): OBSERVE-AE-sink-1 released. The default
+  sink is the raw USBStreamer (priority.session 2000); the convolver
+  has no priority.session. Sent to the AE. Not a block now (nothing
+  connected); US-174d sets the convolver to 2100 (see US-174d) and
+  amps-on row 18 FINAL covers the convolver-absent case. worker-3
+  fast-forwarded to 1c2d4bef (confirmed) and has started the M2 fence
+  work.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -4088,6 +4157,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (not yet checked by the CM). #55 and #57 both touch room-correction,
   so the second to merge needs another update-branch, 7 diff-only
   re-checks and CI.
+  UPDATE (CM, QE, 2026-10-26): #55 merged first; #57 at 599ea52a then
+  failed CI 40299659873:
+  TestAC7Identity::test_each_file_corrects_its_own_room, the right
+  room's own filter beats the left filter by only 0.68 dB (1.15 vs
+  1.83), under the 1.0 dB margin. QE: deterministic, a real regression
+  from the #55 crossover-change interaction, not a flake. QE approval
+  SUSPENDED (#57 at 6/7). Fix (worker-4, Architect, AE): a physical
+  explanation with own/other numbers before and after #55; no
+  loosening of the margin without an AE-backed reason, no xfail; the
+  QE reviews any test change. Gate teeth fine: the real +0.94 dB sits
+  2.06 dB under the 3.0 dB gate, so the QE's <1.0 dB rule is not
+  triggered. ARM wall time 548 s: F-380, not a blocker.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -4298,6 +4379,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Consequence: amps-on row 18 PROPOSED (filter-chain absent = no
   audio). Open AE question (CM): the D-031 cut threshold at
   mandatory_hpf_hz.
+  Addenda 3 and 4 (Architect, relayed to worker-4 by the CM,
+  2026-10-26): `nofail` plus static tests in 174d; the real-PW proof
+  moves to pre-amps-on (row 18) unless CI can do it for free;
+  convolver priority.session 2100 with a relation test against the
+  USBStreamer's 2000; the verify step checks default.audio.sink =
+  pi4audio-convolver; the PR text names the ungated fallback, with the
+  WP stream-target hook as amps-on row 18 (now FINAL). The hook itself
+  is NOT in 174d.
   US-174c (measurement on the Pi, web-ui measurement/session.py)
   starts only after F-390/F-391 and builds on them, because it is the
   same file (L-046). Its Pi run is also gated by US-173 H, F-341 AC3,
@@ -6335,6 +6424,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   permanent gating (a later Linux failure reopens F-365 at High).
   Step 1 also greps the test suites for other unsorted
   iterdir/glob/listdir slicing (QE, F-363 follow-up).
+  Added (CM, 2026-10-26): the room-correction suite took 548 s on CI
+  ARM, over the 300 s line (run 40299659873, #57 at 599ea52a). Not a
+  #57 blocker (QE).
 - US-159 G16 with AE amendments a-e and architect additions 1-3; test
   T65 (not T62). Medium; re-rate on (i) volume after replug, (ii) relink
   with gate_open true. Match by node and direction.
@@ -6413,6 +6505,23 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   convolver entirely)". D-063 and link_audit.rs protect all 8 ports;
   HP and IEM go through the convolver on Dirac. The same file's
   channel table puts the singer IEM on ch 7-8.
+  Caveat (TW, 2026-10-26): "ch 6-7" there is probably 0-based
+  (AUX6/AUX7 = 1-based ch 7-8), so only the bypass claim may be wrong.
+  US-115.md:7 records the IEM routing conflict as an open OWNER
+  decision (US-115 AC#4). TW one-liner, verbatim: "TW: IEM path drift
+  in rt-audio-stack.md (90/105/707-708) and design-rationale.md
+  (48/326), fix after the owner's IEM-routing ruling (US-115 AC#4 /
+  CLAUDE.md)". Fix all docs in one pass with CLAUDE.md after the owner
+  rules; each fix states AUX6-7 = ch 7-8. Historical docs (lab notes,
+  US-028/US-030/TP-001, D-011, assumption-register:76) stay as they
+  are.
+- **Stray streams reach the PA once the convolver is the default
+  sink** (AE, 2026-10-26; P3, owners UX + Architect; not a safety
+  item): once US-174d makes the convolver the default sink, any stray
+  stream (a browser, a notification sound, pw-play) plays through the
+  PA during a gig, gain-staged and D-031-protected. Decide whether the
+  row-18 WirePlumber hook should refuse auto-targets for ALL Stream/*
+  nodes, leaving only GM-made links.
 - development.md, ONE docs item (TW offers to write it; merges UX,
   QE, Arch N2, AD L2, TW F1-F3): run `nix build
   .#checks.<system>.app-source-paths` locally (test-all no longer
