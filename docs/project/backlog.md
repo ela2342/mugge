@@ -507,6 +507,15 @@ priority!"
   (AE + Architect, narrowing the PO non-gate); PO: S4 first, as its
   own slice/PR. #63: TW batch landed as 94064cc2 (parent 3a4baba1, new
   F-400.md); worker-3 merges main next.
+  UPDATE (CM, 2026-10-26, after v225): backlog v225 pushed as
+  5f3adee0. F-262 diagnostic running as CI run 40320962929 on
+  scratch/F-262-diag at 4134852f. F-403: S4 brief condition
+  (Architect); F-403.md goes inside the F-262 PR (CM call); signal-gen
+  can't export the buffer it played (S2 finding). #63: merge head
+  5db98556 pushed, PR MERGEABLE, CI 40320814684 running; a follow-up
+  commit comes with the AE's US-173.md 248-251 text and
+  run_venue_checks on the committed WAVs. New one-liner from worker-4:
+  test-e2e.sh `set -e` makes the E2E_EXIT reporting dead code.
 
 ## Reserved IDs
 
@@ -4296,6 +4305,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   main, so no CI yet.
   UPDATE (CM, 2026-10-26): the TW batch landed as 94064cc2 (parent
   3a4baba1), including the new F-400.md. worker-3 merges main next.
+  UPDATE (CM, 2026-10-26): merge head 5db98556 pushed; the PR is
+  MERGEABLE; CI run 40320814684 running. A follow-up commit is coming
+  with the AE's US-173.md 248-251 text and run_venue_checks on the
+  committed WAVs.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -5327,6 +5340,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   gate early. The rest follows as reliability work before US-174e. If
   the Architect sees a technical dependency that forbids S4 first, the
   Architect's order applies, no PO round."
+  S4 brief condition (Architect, 2026-10-26, via CM; the Architect
+  sees no dependency against S4 first), verbatim: "take the noise
+  window from the recording BEFORE the detected onset, i.e. F-262's
+  cross-correlation onset minus a 10 ms guard. Do not take a fixed
+  first 0.5 s. If the window ends up shorter than the AE's minimum,
+  the SNR check FAILs closed. The AE sets the minimum window length
+  and the per-band 30 dB threshold."
+  S2 finding (CM, 2026-10-26): signal-gen can't export the buffer it
+  played. It does have a file-playback RPC.
   Record (QE, 2026-10-26): preferred route is worker-4 writing
   docs/project/defects/F-403.md inside the F-262 PR, so the
   xfail/branch-B citation and the record land in the same merge (TW
@@ -5337,6 +5359,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   test_full_session_api XPASS history); ACs including removal of any
   F-262 branch B or xfail citing F-403. The QE Q2 condition is met
   once the record exists. Route: CM call, pending.
+  DECIDED (CM call, 2026-10-26; resolves "Route: CM call, pending"
+  above): docs/project/defects/F-403.md goes inside the F-262 PR,
+  written by worker-4 with the QE's minimum content; the TW reviews it
+  under Rule 13. The CM briefs worker-4 at their next event (worker-4
+  is building the scratch branch).
+- scripts/test-e2e.sh: worker-4 (outside F-262, via CM, 2026-10-26),
+  verbatim: "scripts/test-e2e.sh runs under `set -e`. If the
+  service-integration pytest fails, the script exits before the
+  browser E2E runs, so the E2E_EXIT reporting below it is dead code."
+  No priority given; no ID allocated. PM cross-ref: same script as the
+  #64 -rs change (test-e2e.sh:133/139, see F-362).
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
