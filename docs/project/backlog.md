@@ -103,6 +103,20 @@ priority!"
   same key were not a worker's: 08:55Z (pts/0, sudo dmesg) very likely
   the owner; 08:58:24Z unconfirmed (team-lead is asking the owner). If
   it was an agent, that is a protocol breach (open).
+  CORRECTION (CM, 2026-10-26; to the UPDATE above): there was no later
+  reboot. The owner's power pull IS boot 60f384a1 (about 08:57:40Z),
+  and OBSERVE-US172c-3 ran on that same boot; its VOID label is kept
+  anyway. The boot evidence alone can't tell a cold start from a hard
+  reset; "COLD" rests on the owner's "Power pull." OBSERVE-US172c-4
+  completed and released 09:05:29Z (CM, 2026-10-26). GAINS-RECORD-v2
+  (observe4b/, sha256 a465a8ad...4528): two reads (T+04:58, T+07:47)
+  with pipewire, wireplumber and GM active, 8/8 Mult 0.000000, links
+  and Props unchanged across 4 dumps; GM get_gate: gate_open=false,
+  has_pending_gains=false, venue=null. The T+00:44 session is logind
+  session 2 (pts/0, from .36), STILL OPEN; only sshd/logind lines for
+  it.
+  Mac disk (CM, 2026-10-26): 2.99 GiB free, below the 3.0 GiB line. No
+  nix clearance for anyone until it recovers.
 - DJ PLAYBACK PATH (core item, PO, 2026-10-26): Mixxx on the Pi 5 ->
   GM (DJ mode, quantum 1024) -> filter-chain convolver -> gate ->
   USBStreamer, with the crossover-only FIRs from the US-155 venue
@@ -177,6 +191,13 @@ priority!"
   Qualifier: an unattributed SSH session at T+00:44, pending the
   owner's word. Scope: PW start state only; GM restart, profile
   activation and unlatch are not covered.
+  AE ruling, verbatim (via CM, 2026-10-26): "PASS, fresh boot after
+  power loss or hard reset (60f384a1), T+04:58, F-395-verifiable;
+  qualifier: unattributed SSH session at T+00:44". Scope: PW start
+  state on this image only; not a GM restart, profile activation or
+  unlatch (F-320-E/F-348/F-320-D). The frozen amps-on list is
+  untouched. Evidence observe4/GAINS-RECORD.txt, sha256
+  ffc000b5...f08d.
 - AE core items (2026-10-26): #55 and #57 wait only on CI; the HF
   bound; the CHN-50P mask after F-388; the SNR threshold; the 174c/d/e
   reviews; the US-172c/172/173 reviews (US-173 AC2/AC3a); a thermal
@@ -2451,6 +2472,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   rec-2 old_present match is broken (it matches the id with a space on
   each side, but the list is one id per line); a fix means a new sha
   and re-review. (b) The step 4 pstore read needs sudo.
+  (c) (CM, worker-2, 2026-10-26; backlog, not a blocker):
+  /boot/firmware is mounted rw on the Pi 5 (read-only observation).
+  Architect/SecSpec to rule pre-prod.
   Gains-read label (AE, verbatim, via CM, 2026-10-26): "first gains
   read after cold boot (boot ≈08:44:31Z per /proc/uptime, rsts=0x1000;
   read at <timestamp>, T+<mm:ss>; preceded only by read-only
@@ -2473,6 +2497,38 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   unattributed SSH session at T+00:44, pending the owner's word.
   Scope: PW start state only; GM restart, profile activation and
   unlatch are not covered.
+  AE ruling, verbatim (via CM, 2026-10-26): "PASS, fresh boot after
+  power loss or hard reset (60f384a1), T+04:58, F-395-verifiable;
+  qualifier: unattributed SSH session at T+00:44". Scope: PW start
+  state on this image only; not a GM restart, profile activation or
+  unlatch (F-320-E/F-348/F-320-D). The frozen amps-on list is
+  untouched. Evidence observe4/GAINS-RECORD.txt, sha256
+  ffc000b5...f08d.
+  OBSERVE-US172c-4 completed and released 09:05:29Z (CM, 2026-10-26).
+  GAINS-RECORD-v2 (observe4b/, sha256 a465a8ad...4528): two reads
+  (T+04:58, T+07:47) with pipewire, wireplumber and GM active, 8/8
+  Mult 0.000000, links and Props unchanged across 4 dumps; GM
+  get_gate: gate_open=false, has_pending_gains=false, venue=null. The
+  T+00:44 session is logind session 2 (pts/0, from .36), STILL OPEN;
+  only sshd/logind lines for it.
+  Tryboot evidence (CM, 2026-10-26): the run-2 boot 6842870c has no
+  "Restarting system" line (journald stopped first); the run's own
+  tryboot steps are logged. No boot was recorded between run 2 and
+  08:44Z, which fits the Architect's "tryboot hung before journald".
+  Kernel config: RASPBERRYPI_FIRMWARE, RASPBERRYPI_POWER,
+  RESET_RASPBERRYPI and BCM2835_WDT all =y. The FAT config.txt equals
+  the saved original; tryboot.txt (run-2 armed) was still present
+  before step 7.
+  FAT line order (CM, 2026-10-26): tryboot.txt has
+  os_prefix/kernel/initramfs/cmdline and overlay_prefix=o/ BEFORE the
+  dtoverlay lines; config.txt has them after. The Architect is ruling
+  whether that is the cause candidate.
+  Steps 7-8 (CM, 2026-10-26): CHANGE CM-CHG-.89-US172c-78 was granted
+  to worker-2 for step 7 (tb-restore) and step 8 (tb-normal, a plain
+  reboot, announced); the HDMI-watch condition applies to the next
+  tryboot. It is now SUSPENDED before use: tb-restore would delete
+  tryboot.txt and o/, which the Architect may want for run 3. Pending
+  the Architect's ruling.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -3148,6 +3204,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Pi. worker-3 is cleared to DRAFT applications.nix (no build); the
   Architect and AE review. worker-3's Pi check list goes on the P-step
   list after US-172.
+  UPDATE (CM, 2026-10-26): M5 draft pushed, head 1382490d
+  (applications.nix: Hercules L+ links, no soundconfig yet).
+  Architect rulings (via CM, 2026-10-26): python3 via writePython3Bin,
+  with M3 using the web-ui interpreter as an interim for a P-step
+  only; use the packaged Hercules mapping if Mixxx ships one;
+  soundconfig via C+ plus a z rule (ela 0644), captured on the Pi
+  before the next reboot; a REQUIRED drift-guard test (JACK, 48 kHz,
+  Master 0-1, HP 4-5 vs GM routing).
+  AE condition for the first DJ session (via CM, 2026-10-26): no
+  direct Mixxx->USBStreamer link (a FAIL means remove it and raise a
+  P1); Mixxx master/HP gains at defaults; Master stereo.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -4943,6 +5010,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   unlatch are not covered. It supersedes the "NOT VERIFIABLE" caveat
   on the earlier gains-0 readbacks (cold cycles, AC14, AC17-B, AC19)
   for the PW start state only.
+  UPDATE (CM, AE, 2026-10-26): AE ruling, verbatim (via CM,
+  2026-10-26): "PASS, fresh boot after power loss or hard reset
+  (60f384a1), T+04:58, F-395-verifiable; qualifier: unattributed SSH
+  session at T+00:44". Scope: PW start state on this image only; not a
+  GM restart, profile activation or unlatch (F-320-E/F-348/F-320-D).
+  The frozen amps-on list is untouched. Evidence
+  observe4/GAINS-RECORD.txt, sha256 ffc000b5...f08d. GAINS-RECORD-v2
+  (observe4b/, sha256 a465a8ad...4528) adds a second read at T+07:47,
+  the same result, with links and Props unchanged across 4 dumps and
+  the GM gate closed (gate_open=false, has_pending_gains=false,
+  venue=null).
 - **F-396** Production must never suspend the filter-chain or the
   USBStreamer node (P1 unless the Architect rules otherwise; AE,
   2026-10-26, from the r6b ruling draft section 4): a suspend of the
