@@ -630,6 +630,12 @@ priority!"
   re-release as pending; no v6 grant until settled. #64: head
   f715538e, CI 40333713247 running. New F-405 (QE, test-only, #64 skip
   rulings) (CM, QE).
+  UPDATE (CM, 2026-10-26, after v243): backlog v243 pushed as
+  44120a07. F-262: JOINT final (set A, released by both); worker-4
+  briefed, fix branch authorised; 174d stays frozen until F-262
+  merges. US-172: the dcec60fa gate is settled, no gate-side obstacle
+  to the v6 grant. #63 deploy-first is ON (team-lead + PO), conditions
+  pending. F-405: P2 (AE) (CM, AE).
 
 ## Reserved IDs
 
@@ -3464,6 +3470,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - OPEN (CM, 2026-10-26): the AE lists the Architect's re-release of
     the dcec60fa gate as pending; the CM's record says both released
     it. The CM has asked the AE. No v6 grant until that is settled.
+  - SETTLED (CM, 2026-10-26; resolves "OPEN" above): the AE says
+    "nothing missing"; its "pending" note was stale. dcec60fa is
+    released by both; the Architect has not amended it; 762f9035 is
+    additive. No obstacle to the v6 grant from the gate side.
+  - Pi order (CM, 2026-10-26): the #63 DEPLOY plus P-steps (QE C4)
+    runs before US-172 v6 (see #63). Team-lead's conditions: v6 keeps
+    priority; the Architect confirms no base change; the AE clears it.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -4780,6 +4793,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   stays a DRAFT and is NOT merge-ready (team-lead STOP): it merges
   only after the Pi-side DJ-session evidence is in (after US-172) and
   the QE clears C4 at the final head (CM).
+  UPDATE (CM, 2026-10-26): deploy-first is ON. Team-lead OK'd the #63
+  DEPLOY plus P-steps (QE C4) before US-172 v6, and the PO agrees.
+  Conditions: v6 keeps priority; the Architect confirms there is no v6
+  base change (pending); the AE clears worker-3's plan, also checking
+  174d's referenced-WAVs-exist and the zero-bytes check at
+  combined_sub2_lp. worker-3 is preparing the plan; the PO is told.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -5863,6 +5882,30 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Frozen copies: /tmp/cm-relay/F-262/frozen/. worker-4's analysis:
   /tmp/w4-proto/F-262/diag-40322886856-analysis.txt (sha256 3932d0ba,
   verified at PM read). worker-4 holds.
+  UPDATE (CM, 2026-10-26; supersedes the line above): F-262 ruling is
+  JOINT and final. Set A is released by both: the AE ("release set A:
+  b64aad93 9833ce7c 27f46624 27fc548d") and the Architect; the CM
+  re-verified all four shas on disk and in the frozen copies (also
+  verified at PM read in /tmp/cm-relay/F-262/frozen/).
+  - Diag validity (b64aad93 + 9833ce7c + 27f46624): VALID, CONFIRMED,
+    cause "jitter + a deterministic overshoot of at least 262 ms".
+  - S3 onset method (27fc548d, AE-written): the earliest local maximum
+    within 12 dB of the global maximum on the deconvolved IR; a 30 dB
+    SNR floor; the 6 dB second-peak rule withdrawn. v3 item 7's -20 dB
+    is not adopted.
+  - VOID: 430b07a4, 064175e6, f7a4fc20, bbf4587b.
+  - worker-4 is BRIEFED and the fix branch is authorised. 174d stays
+    frozen until F-262 merges.
+  Before the first amps-on measurement (non-blocking one-liners; no
+  F-ID, no P-level given):
+  - AE, verbatim: "F-262 item 7 Architect note: before the first
+    amps-on measurement, the AE sets the (i) pre-arrival window to
+    exclude the exp-sweep harmonic images (onset - T*ln(5)/ln(f2/f1)
+    .. onset)."
+  - Architect: in sweep deconvolution, harmonic-distortion products
+    land before the linear IR, inside the O3(ii) pre-onset SNR window.
+    The AE either confirms they stay >= 30 dB down at measurement
+    level or excludes that region. Irrelevant in the sim.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -6034,6 +6077,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the except to request and JSON errors and move the assert out of the
   try. It must be fixed before this test counts as gate-closed
   evidence (QE). Does not block #64.
+  P-level (AE, 2026-10-26; supersedes "no P-level given" above): P2.
+  AE reason: a broad except that turns a gate_open=True failure into a
+  SKIP is a false negative on the D-063 gate-closed evidence, so it is
+  real; it does not block #64, and nothing is connected now.
+  Condition: fix it before any amps-on session, and before any PR or
+  report cites test_gate_closed_e2e as gate-closed evidence; until
+  then, nobody cites it. PM cross-ref: not added to the amps-on list
+  (that needs a matching safety.md update by the TW).
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
