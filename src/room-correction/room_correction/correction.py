@@ -38,6 +38,7 @@ def generate_correction_filter(
     margin_db=D009_MARGIN_DB,
     target_phon=None,
     reference_phon=80.0,
+    max_cut_db=None,
 ):
     """
     Generate a room correction filter from a measured impulse response.
@@ -60,6 +61,12 @@ def generate_correction_filter(
     reference_phon : float
         Loudness level the content was mixed for (default 80 phon).
         Only used when target_phon is not None.
+    max_cut_db : float or None
+        Upper bound on the cut depth in dB (positive number, e.g. 18.0).
+        No gain is driven below -max_cut_db. None = no cap (default,
+        unchanged behaviour). The cut is only meaningful relative to the
+        target if the IR level has been normalized first, see
+        normalize_ir_level().
 
     Returns
     -------
@@ -96,6 +103,8 @@ def generate_correction_filter(
     # Convert to dB, clip to margin, convert back
     correction_db = dsp_utils.linear_to_db(correction_linear)
     correction_db = np.minimum(correction_db, margin_db)
+    if max_cut_db is not None:
+        correction_db = np.maximum(correction_db, -abs(max_cut_db))
     correction_linear = dsp_utils.db_to_linear(correction_db)
 
     # Step 7: Build minimum-phase FIR directly from the clipped magnitude
@@ -142,3 +151,59 @@ def generate_correction_filter(
         )
 
     return correction_filter
+
+
+def normalize_ir_level(ir, ref_band_hz, sr=SAMPLE_RATE, target_db=0.0,
+                       fraction=6):
+    """
+    Scale an impulse response so its passband level sits at target_db.
+
+    generate_correction_filter() divides the target by the measured
+    magnitude, so without this step the cut depth follows the absolute
+    measurement level (a 10x quieter IR gets 20 dB less cut). The level
+    is the MEDIAN of the 1/fraction-octave smoothed log magnitude over
+    ref_band_hz. The median ignores modal peaks and nulls, which would
+    shift a mean.
+
+    Parameters
+    ----------
+    ir : np.ndarray
+        Measured impulse response.
+    ref_band_hz : tuple of (float, float)
+        Reference band (low, high) in Hz, inside the driver's passband.
+    sr : int
+        Sample rate.
+    target_db : float
+        Level the reference band is moved to (dB re 1.0).
+    fraction : float
+        Octave fraction of the smoothing (6 = 1/6 octave).
+
+    Returns
+    -------
+    tuple of (np.ndarray, float)
+        (normalized IR, measured reference level in dB before scaling).
+    """
+    ir = np.asarray(ir, dtype=np.float64)
+    f_low, f_high = float(ref_band_hz[0]), float(ref_band_hz[1])
+    if not 0 < f_low < f_high < sr / 2:
+        raise ValueError(f"invalid reference band {ref_band_hz!r}")
+
+    n_fft = dsp_utils.next_power_of_2(max(len(ir), 65536))
+    magnitudes = np.abs(np.fft.rfft(ir, n=n_fft))
+    freqs = np.fft.rfftfreq(n_fft, d=1.0 / sr)
+
+    # Smooth only around the band (plus half a window each side).
+    edge = 2.0 ** (0.5 / fraction)
+    region = (freqs >= f_low / edge) & (freqs <= f_high * edge)
+    smoothed = dsp_utils.fractional_octave_smooth(
+        magnitudes[region], freqs[region], fraction)
+    in_band = (freqs[region] >= f_low) & (freqs[region] <= f_high)
+    if not np.any(in_band):
+        raise ValueError(f"no FFT bins in reference band {ref_band_hz!r}")
+
+    level_db = float(np.median(dsp_utils.linear_to_db(smoothed[in_band])))
+    if not np.isfinite(level_db) or level_db <= -199.0:
+        raise ValueError("impulse response has no energy in the reference band")
+
+    scale = dsp_utils.db_to_linear(target_db - level_db)
+    return ir * scale, level_db
