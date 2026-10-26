@@ -779,6 +779,12 @@ priority!"
   under US-172. Grant conditions r2 add G-7 (Architect release
   pending) and G-8 (released by the AE, record (j)). QE Q3 (REQUIRED,
   one re-pin) is still open.
+  UPDATE (CM, QE, Architect, AD, 2026-10-26, after v270; supersedes
+  the line above): backlog v270 pushed as ff61a662. US-172: QE Q3
+  CLOSED by G-8 for this run (record (l)); G-7 RELEASED by the
+  Architect (record (k)), so grant conditions r2 are fully released;
+  the AD closes P1/P2. Every v7 pre-review point is closed; no re-pin,
+  and the 815d231e run counts. F-394: fence r5, #68 head 51fae218.
 
 ## Reserved IDs
 
@@ -3824,6 +3830,34 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      cannot drift." PM cross-ref: L1 = Architect (2) = AE N2; L2
      overlaps QE N1 and AE N1. The AD also sent L1 and L2 to the PM by
      message.
+  - UPDATE (CM, QE, Architect, AD, 2026-10-26, after v270; supersedes
+    "OPEN (CM)" on Q3 and "PENDING" on G-7 above): all v7 pre-review
+    points CLOSED. No re-pin; 815d231e stands.
+     QE Q3 CLOSED, record (l)
+     /tmp/cm-relay/release-record-20261026-l.txt (sha256 6b48b8cc,
+     verified at PM read). QE, verbatim: "Q3 closed by G-8 667688ef
+     (sha verified at read). It applies to this run only. My final
+     verdict will check G-8 against the real tb-greetd file: no
+     labwc-up relay unless both GREETD ok lines are in it. The kit fix
+     and the G14c flow stay in the PM backlog for the next pin."
+     Record (l), verbatim: "815d231e stands and worker-2's current
+     flow run counts." So the run is not a dry run.
+     G-7 RELEASED by the Architect, record (k)
+     /tmp/cm-relay/release-record-20261026-k.txt (sha256 c5167e60,
+     verified at PM read). Architect, verbatim: "I choose the grant
+     condition, not the kit fix, so there is no v8 and no re-pin. G-8
+     is the AE's to release." With record (j), grant-conditions-v7-r2
+     (667688ef) is fully released.
+     AD closure: frozen-prereviews/ad-closure-g7g8-532ecf7c.md (sha256
+     532ecf7c, verified at PM read). AD, verbatim: "G-7 closes P1."
+     and "G-8 closes P2." The AD accepts the exit-status note as
+     covering L1 for this run. "This is not my final kit verdict; that
+     follows the flow output."
+     PM cross-ref (resolves the v270 cross-ref): with G-8 released and
+     Q3 closed by it, the QE, Architect, AD and AE positions on the
+     missing-read defect agree for this run. Next-pin one-liner (QE,
+     no P-level given): the Q3 kit fix (au=1 unless both GREETD ok
+     lines are present) plus flow G14c.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -8704,6 +8738,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      #52, #45, #44, #43, #42, #40 or #36 (CM).
      Side finding F-410 (unmute behind a closed gate) is filed
      separately; it is outside F-394.
+  - UPDATE (CM, 2026-10-26, after v270): head 51fae218 "fix(tests):
+    F-394 AC ii — skip GM push events in RPC replies, real PW socket
+    for pytest" pushed (PM-verified on origin, parent e050fe90). CI
+    40356547804 running.
+     Fence r5 (/tmp/cm-relay/F-394-fence-r5.txt, sha256 015ca022,
+     verified at PM read; supersedes r4 841f6715):
+     scripts/local-demo.sh widened to cover cmd_env as well (the
+     XDG_RUNTIME_DIR / pw_runtime_dir derivation around l.39-40; the
+     rest of local-demo.sh stays fenced), plus the NEW
+     src/web-ui/tests/unit/test_rpc_call_event_skip.py (T1 regression
+     test for _rpc_call skipping GM push events). Only the stale #40
+     also touches local-demo.sh: recorded, no hold (CM).
 - **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
   per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
   2026-10-26): on a suspended node, the gain readers in the r6b matrix
