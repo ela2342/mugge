@@ -333,6 +333,21 @@ priority!"
   hash-object: same 166); about 25 MB freed. Kept: v19, v44, v45, v47,
   v108, v114, v115, v132 (not in git under that content), all build
   scripts, and v181 onward. No nix for anyone.
+  UPDATE (CM, team-lead, 2026-10-26, after v191): the Mac disk hit 0
+  bytes, then recovered to 2.1 GiB. Team-lead put the team in QUIET
+  MODE (only unblocking messages; no new large /tmp files or copies;
+  park big-output work; nobody deletes outside their own verified
+  files); the PM relayed it to all advisors. The PM's files were
+  checked intact (v191 sha1 8daa407e unchanged). Quiet mode is now
+  LIFTED for messages and backlog commits; nix and large /tmp writes
+  stay held. Backlog v191 pushed as aba4e31c.
+  PROCESS NOTE (owner directive, 2026-10-26, verbatim via team-lead):
+  "I don't think change manager should ever be busy for so long. They
+  have a coordination task. Things that need work should go to
+  workers." Context: a 33-min CM CI-polling call delayed the US-172 go
+  while the owner was at the HDMI screen. Rule: CM tool calls stay
+  short (git, pushes, grants, relays); CI watching, builds, tests,
+  investigations and cleanup go to workers, run detached.
 
 ## Reserved IDs
 
@@ -3847,6 +3862,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   half plus hook-loaded evidence (a)-(e), the journal line extra
   evidence only). The batch waits for the AE's OK, then the CM applies
   it.
+  MERGE CONDITION (QE, 2026-10-26): the jack-self-connect real-PW
+  check runs in CI before merge: one ci.yml step in the ARM
+  test-and-build job, a hard failure, with the positive-control and
+  summary lines quoted from the final-head log. A one-off run is not
+  enough unless the check cannot run in the sandbox; that fallback
+  needs the QE and the Architect. The CM grants the ci.yml edit to
+  worker-3.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -4671,6 +4693,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the pi4audio group write on /etc/pi4audio/coeffs (US-174d, home-lab
   interim) is removed. Severity: medium (security-specialist).
   Gig-blocker class, next to F-037."
+  Note (SecSpec, via CM, 2026-10-26), verbatim: "web UI has
+  coefficient write access from US-174d on; F-037 auth or web-ui
+  deploy disabled required before amps-on."
 - Skip reasons invisible (QE): the integration-browser run shows 10
   skips with no reasons in the log (no -rs). Make skip reasons
   visible (cf. F-362). Low.
@@ -6604,6 +6629,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Added (CM, 2026-10-26): the room-correction suite took 548 s on CI
   ARM, over the 300 s line (run 40299659873, #57 at 599ea52a). Not a
   #57 blocker (QE).
+  QE re-confirmation (2026-10-26; cross-ref F-318), verbatim: "F-318:
+  add checks.aarch64-linux.wireplumber-no-bypass to ci.yml
+  test-and-build. Today that real-PW proof never runs in CI." Same
+  item as the CM's 2026-10-25 "Added" line above and the QE's F-318
+  condition (2); not US-173 scope; no new entry.
 - US-159 G16 with AE amendments a-e and architect additions 1-3; test
   T65 (not T62). Medium; re-rate on (i) volume after replug, (ii) relink
   with gate_open true. Match by node and direction.
@@ -6734,6 +6764,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   is still used anywhere, it silently drops rt.prio 70,
   autoconnect=false and US-173's new self-connect-mode. Fix: correct
   the path or retire the legacy script.
+- **D-031 exception as a structured field** (AE, via CM, 2026-10-26;
+  P3, owner AE), verbatim: "Replace the D-031 null-HPF exception
+  comment parse with a structured identity field (e.g.
+  `d031_exception: <reason>`). Schema change; needs the owner's file.
+  Source: AE ruling on verify_d031_protection, 2026-10-26."
+- **web-ui PW conf filter_paths point at the output dir** (worker-4,
+  via CM, 2026-10-26; P3; cross-ref US-174d, and US-174c, which owns
+  session.py, L-046), verbatim: "web-ui filter_routes:307 and
+  session.py:1131 generate the PW conf with filter_paths pointing at
+  the output dir instead of coeffs/. Source: worker-4, US-174d
+  read-only finding, 2026-10-26."
 - development.md, ONE docs item (TW offers to write it; merges UX,
   QE, Arch N2, AD L2, TW F1-F3): run `nix build
   .#checks.<system>.app-source-paths` locally (test-all no longer
