@@ -359,6 +359,11 @@ priority!"
   e17d1042, v194 as eedcf9b9. US-172 run 3: the tryboot boot HUNG
   again (see US-172). #63 (US-173, draft) CI green at 0b614d1b; Rule
   13 0/7 (see US-173).
+  UPDATE (CM, 2026-10-26, after v195): backlog v195 pushed as
+  1734c587. US-172 run 3 disarmed and verified at 11:03:47Z, session
+  released, Pi lock free; the normal boot applies no dtoverlays
+  (likely F-367 cause, see US-172). F-400 allocated (conf.d fragments
+  hash-named; worker-3 on #63).
 
 ## Reserved IDs
 
@@ -426,6 +431,10 @@ line above): F-400, US-177, D-071, T66.
 Allocated 2026-10-26 (PM, checked free across main, origin and all
 worktrees): US-177 (Architect: Web-UI filter panel on 174d coefficient
 sets). Next free (supersedes the line above): F-400, US-178, D-071,
+T66.
+Allocated 2026-10-26 (PM, checked free across main, origin and all
+worktrees): F-400 (Architect: conf.d fragments installed hash-named,
+#63). Next free (supersedes the line above): F-401, US-178, D-071,
 T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
@@ -2944,6 +2953,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   boot sits at the console, with no login and no Wayland. The
   Architect is asking the owner about a USB-serial adapter; the run-4
   ruling waits on the owner's screen and LED observation.
+  UPDATE (CM, 2026-10-26): disarmed and verified at 11:03:47Z; session
+  released, the Pi lock is free. The hung tryboot showed a black
+  screen with a live HDMI signal (owner verbatim: "Before the reboot,
+  screen was black (but turned on, so there was video output, just all
+  black)"). The normal boot applies NO dtoverlays: vc4-kms-v3d-pi5 and
+  disable-bt-pi5 are both missing (suspected cause: overlay_prefix is
+  67 characters, over a 64 limit). So there is no /dev/dri and greetd
+  is skipped; this is the likely F-367 cause. The Architect is ruling
+  on run 4.
+  Close-out item (CM, 2026-10-26): remove ~/.us172-libpi on the Pi
+  when US-172 closes.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -3897,6 +3917,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   MET. Still open: the P-step evidence (needs a CHANGE session), D-031
   M2, the WAV generation (blocked by the nix hold) and 7/7 at the
   final head. Rule 13 tally: 0/7 formal approvals.
+  F-400 (Architect via CM, 2026-10-26; not P1 per the Architect; owner
+  worker-3 on #63): pipewire.nix installs 10-audio-settings,
+  21-usbstreamer-playback, 30-filter-chain-convolver and
+  80-jack-no-autoconnect into the conf.d dirs as
+  `<storehash>-<name>.conf`. The load order is therefore hash-random,
+  and same-name overrides break. Fix: explicit destination names; a
+  static nix check that every conf.d file matches
+  `^[0-9]{2}-[a-z0-9-]+\.conf$`; a P-step that lists the deployed
+  names on the Pi.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -6842,6 +6871,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   fragment could sort before it. Should it get a fixed name?
   Cross-ref: US-173 self-connect-mode; the P3 deploy.sh JACK fragment
   path.
+  SUPERSEDED (Architect, 2026-10-26): upgraded to F-400, which covers
+  all four conf.d fragments; fixed on #63 (see US-173).
+- **No fallback login on tty1 without DRM** (UX via CM, 2026-10-26;
+  P3): greetd conflicts with getty@tty1, so when there is no /dev/dri
+  (US-172 run 3) the console offers no login at all.
+- **Pi 5 WiFi firmware missing** (CM, 2026-10-26; P3, cosmetic unless
+  WiFi is wanted): brcmfmac43455 firmware and regulatory.db are not
+  installed, which gives an "HT Avail" timeout at boot.
 - development.md, ONE docs item (TW offers to write it; merges UX,
   QE, Arch N2, AD L2, TW F1-F3): run `nix build
   .#checks.<system>.app-source-paths` locally (test-all no longer
