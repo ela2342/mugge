@@ -477,6 +477,12 @@ priority!"
   body replaced with worker-3's full-scope draft). Next: worker-3's
   WAVs + SHA256SUMS, AC5 wording, TW Q1-Q4 answers; then the TW batch,
   main merge, bundle and re-checks.
+  UPDATE (CM, 2026-10-26, after v221): backlog v221 pushed as
+  7ec44e9e; df 4.8 GB. F-262 CONFIRMED a real bug (worker-4 read-only
+  diagnosis; QE confirmed); PO: P1 in the room lane, worker-4 now,
+  before 174d; HARD GATE on US-178 (see F-262, US-178). #63:
+  worker-3's single nix-shell.drv env build cleared; AC5 wording, TW
+  Q1 and Q4 staged for the next commit.
 
 ## Reserved IDs
 
@@ -4238,6 +4244,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   then the main merge, the bundle and the re-checks.
   CORRECTION (worker-3 via CM, 2026-10-26): the thermal suite count is
   23, not 25 (QE B2 above); the QE confirms it at the final head.
+  UPDATE (CM, 2026-10-26): the CM cleared worker-3's single
+  nix-shell.drv env build (the dry run listed only that build, nothing
+  to fetch). Staged for the next commit: the AC5 "worker runs, CM
+  publishes" wording; TW Q1 (AC5 layer (a) is the WP hook, not
+  CI-gated, plus the JACK guard, which is CI-gated); Q4
+  (80-jack-no-autoconnect.conf header comment fixed). Q4 changes the
+  jack-self-connect drv hash, so CI rebuilds it and the QE gets fresh
+  log output. Q2: "(b) not started (US-175)" is still correct. Q3:
+  F-400 severity is with the Architect.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -5087,6 +5102,39 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   verbatim: "restore live verification (_run_verify, from git history
   before 174d) against the newly activated set". (The CM relay of the
   same text omits "from".)
+  ENTRY CONDITION (PO ruling, 2026-10-26, HARD GATE): US-178 must NOT
+  start before the F-262 fix has merged (see F-262).
+- **F-262** Session filters use the raw room IR as the correction
+  filter (P1, room lane; PO ruling 2026-10-26). Record
+  docs/project/defects/F-262.md on main; this entry carries the
+  2026-10-26 diagnosis and ruling.
+  Diagnosis (worker-4, read-only, files /tmp/w4-proto/F-262/; via CM,
+  relayed to the AE, Architect, QE and PO): a real bug.
+  session.py:973-981 feeds the RAW room IR as correction_filters and
+  skips generate_correction_filter, which filter_routes and
+  venue_pipeline both run. Session filters therefore apply the room's
+  response instead of correcting it, at an absolute level. Dates from
+  67f24251. The non-determinism probably comes from the wall-clock
+  capture alignment (pw_capture.py:197, the 1 s wait before link);
+  unconfirmed. D-009: the sub reaches -0.42 dB at lag 44000 (the F-299
+  gap). Combine maths is fine with correct inputs. QE (accounting):
+  confirmed as a real bug on origin/main.
+  PO RULING (2026-10-26): P1 in the room lane; worker-4 now. Order:
+  the spec'd diagnostic run, then the fix to the AE and Architect
+  spec; #65 C2 fits in between. F-262 comes before 174d; if #65 merges
+  mid-F-262, 174d waits, unless another worker has disjoint fences (CM
+  call). HARD GATE: US-178 must NOT start before the F-262 fix has
+  merged.
+  Extra AC (PO; UX/QE wording overrides): "FILTERS READY" only if the
+  filters pass the closed-loop test (correction, D-009 level);
+  otherwise a clear error state.
+  QE test conditions T1-T8 for the fix PR (sent via CM): real code
+  path with only capture mocked; red-first; closed loop; both
+  branches; lag/noise matrix with fail-closed beyond the cutoff;
+  determinism; listed mutations; strict E2E with branch B and the
+  xfail removed, plus repeated-run evidence. If the 1 s pw_capture
+  wait is a separate cause, it gets its own defect ID (not allocated
+  yet).
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
