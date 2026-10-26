@@ -537,6 +537,19 @@ priority!"
   replaces the joint-diag-final.txt Decision block. Disk:
   /System/Volumes/Data at 2.7 GiB available (4.6 at 12:14Z); no nix
   client running; cause unknown, reported to team-lead (CM).
+  UPDATE (CM, 2026-10-26, after v228): backlog v228 pushed as
+  517c182e. PR #65 (F-399) MERGED as 29f5c61f (7/7 at 13995e15, CI
+  40317165021 green, QE C1 final). #63: all 7 verdicts posted at
+  0dc2a40b and the B4 body 69ae9511 applied, but CI 40321143579 is RED
+  (room-correction 2 failed / 60 errors: main's build_channel_map
+  rejects the ch 4 zero.wav mute); worker-3 fixing it on 29f5c61f; all
+  7 verdicts lapse, diff-only re-checks at the new head. F-262:
+  diagnostic now 293cf822 (run 40322683521; 2676be53 and 7c38c463 runs
+  cancelled); AE width trigger and onset-before-gate ruling; QE
+  accepted M9. One-liners: the UMIK-1 cal-file skip (QE; files found
+  on the Mac, team-lead) and Start-after-error 409 (worker-4). Disk:
+  Data at 4.4 GiB (2.7 at the v228 reading); the owner is freeing
+  space; nix holds stay (CM).
 
 ## Reserved IDs
 
@@ -4367,6 +4380,26 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     jack-self-connect $out quote (QE C1) and the B3 run (QE C3), both
     waiting on an Architect + QE route because Mac nix is blocked
     (disk).
+  UPDATE (CM, 2026-10-26): all 7 verdicts posted at 0dc2a40b,
+  including the QE's (sha256 44e32ff2); the B4 body 69ae9511 is
+  applied. CI 40321143579 is RED: room-correction 2 failed, 60 errors.
+  Cause: main's venue_pipeline.py:164 build_channel_map rejects the ch
+  4 zero.wav mute ("venue channel '4_sub2_lp' expects 'zero.wav' but
+  no profile speaker uses channel 3"). worker-3 is fixing it on
+  29f5c61f, consulting the Architect and AE. Every verdict lapses; all
+  7 do diff-only re-checks at the new head.
+  QE C1 adds: room-correction at 0 failed / 0 errors with the count
+  explained, and build_channel_map not loosened for other venues.
+  Evidence routes FINAL (joint QE + Architect v2,
+  /tmp/cm-relay/pr63-evidence-route-joint-v2.txt, sha256 4a83b598;
+  supersedes v1 1fa1d156): no Mac nix in any route. jack-self-connect
+  $out: 1a the final-head CI step log, 1b `nix store cat` from
+  mugge.cachix with the narinfo signature checked, fallback a Pi
+  CHANGE build at the declared SHA. B3 wireplumber-no-bypass: 2a
+  (preferred) a non-gating CI arm64 job on a scratch branch at the
+  exact SHA, 2b (fallback) a Pi 5 native build under a CM CHANGE grant
+  with the sandbox on. A run carries over to a new head only with an
+  identical drvPath.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -5404,6 +5437,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     end; correlation -3 dB width for both references;
     closed_loop.minimum_phase_residual_db on every produced WAV;
     pw-record and pre-roll start times relative to the sweep start.
+  UPDATE (CM, 2026-10-26): the diagnostic is now 293cf822, run
+  40322683521, carrying decision_v2 in summary.json plus the AE's four
+  logging items. The 2676be53 and 7c38c463 runs were cancelled.
+  AE ruling (2026-10-26, via CM): width trigger > 1.5 × the reference
+  autocorrelation width (4.97 samples); the gate is unchanged at
+  -40/-60; the onset/window check is mandatory and runs before the
+  gate. Reason: sat_left reads an identical -48 dB at lag 48000 and at
+  lag -4800.
+  QE (2026-10-26, via CM): M9 accepted (bypass the onset check; it
+  must go red on the lag rows -241/-300/47521/60000).
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -5542,6 +5585,29 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   PM cross-ref: docs/architecture/measurement-daemon.md (origin/main)
   lists restore_production_mode() at the CP-2..CP-7 abort points; no
   existing backlog entry found for the gate state at session end.
+- test_mic_sim_with_cal_file never runs (QE, 2026-10-26, low; no ID
+  requested):
+  src/room-correction/tests/test_sim_config_generator.py:76-80 skips
+  whenever /home/ela/7161942.txt is missing. That path was on the
+  unreachable Pi 4 (US-174:62), so the test now runs nowhere (also the
+  one room-correction skip on CI 40317165021, not F-394; QE via CM).
+  Fix (QE): commit a calibration fixture, or point the test at the
+  re-fetched file. PM cross-ref: the same skip is named in the #54 H1
+  record (run 40241169781).
+  Files available on the Mac (team-lead, 2026-10-26, found in the
+  owner's Downloads at the owner's request; both dated 20 June):
+  ~/Downloads/7161942.txt, header "Sens Factor =-1.378dB, SERNO:
+  7161942" (matches the CLAUDE.md sensitivity), sha256
+  b1aeddb6ad0ef149d32c0f55ead271cff4456d4339ad743a080df40f3d2c02a8;
+  ~/Downloads/7161942_90deg.txt, sha256
+  192af895d55983ab335ff81680c2aa093f477adf231df993f53bddba442d1926.
+  Who commits it as a fixture or deploys it to the Pi: the CM, QE and
+  AE decide (team-lead).
+- Start after a session error (worker-4, 2026-10-26, via CM; optional,
+  no priority given, no ID), verbatim: "Start right after a session
+  error returns 409 until the GM restore finishes; the UI should
+  disable Start until mode=standby." PM cross-ref: the same
+  error-to-restore window as F-404.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -7288,6 +7354,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   TW side finding (backlog one-liner, via CM, 2026-10-26; TW docs
   queue; no priority given): F-398 and F-399 have only backlog entries
   and no defect records.
+  MERGED (CM, 2026-10-26): #65 merged as 29f5c61f; 7/7 at 13995e15, CI
+  40317165021 green, QE C1 final. PM cross-ref: this meets the "once
+  #65 merges" trigger for the US-174d CONDITIONS relay above; 174d
+  stays frozen until F-262 lands from main (see F-262).
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
