@@ -716,6 +716,13 @@ priority!"
   (3a8e85ff). US-172: fc65bcad SUPERSEDED; a v7 re-pin is required (QE
   Q1/Q2 REQUIRED). Team-lead rule: no re-pin for non-blocking points
   (CM, QE, UX).
+  UPDATE (CM, QE, AD, 2026-10-26, after v258): backlog v258 pushed as
+  2492c7f5. PR #64 (F-362) MERGED as ff091e5f, 7/7 APPROVE at
+  f715538e, CI 40333713247 green; F-362 open only for ACs 1-2 and the
+  test_filter_routes.py guard (US-174d). US-172: O1 settled,
+  fail-closed stays; grant conditions r1 G-1 to G-6 on file
+  (6c6308f5); worker-2 pinning v7. F-262: PR #66 head 4396e03c, CI
+  40344885535 queued; #66 behind main (CM).
 
 ## Reserved IDs
 
@@ -3614,6 +3621,36 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     are not written to us172-gate-refusals-<T>.txt; tb-modprobe's
     pre-checks behave the same way. "Optional" (QE). No F-ID, no
     P-level given.
+  - UPDATE (CM, AE, 2026-10-26, after v258): QE O1 settled. Architect
+    ruling (by message, per CM relay; no ruling file): "intended, no
+    change"; any bare FAIL line from the MOD reads blocks tb-greetd,
+    with no release path on the R4 boot; a new HDMI node after vc4 is
+    a real finding for the AE and the Architect. No joint ruling.
+    Architect (per CM): an HDMI audio node is UNLIKELY because of 3
+    layers: the noaudio overlay, the [R4-hdmi-dmas] pre-read, and WP
+    54-disable-other-alsa-cards.
+     AE input (NOT a verdict;
+     /tmp/cm-relay/US-172/v6-fc65bcad/frozen-AE-v7-Q1-O1-input-e5996f08.txt,
+     sha256 e5996f08, verified at PM read): Q1 "matches my intended
+     release semantics exactly, no change"; Q2 "agreed". On O1 the AE
+     offered an informational alternative under four conditions and,
+     verbatim: "If the Architect keeps literal conformance (fail
+     closed), I have no audio objection. It only costs a run."
+     Grant and go conditions r1 (CM;
+     /tmp/cm-relay/US-172/grant-conditions-v7-r1.txt, sha256 6c6308f5,
+     verified at PM read): G-1 Architect P1 (bf9f8201), no tb-greetd
+     go while the tb-modprobe file has any FINDING line unless the
+     Architect clears it in a file; G-2 Architect P2, "labwc up" alone
+     is NOT proof of hardware GL; G-3 (new, Architect O1 follow-up, by
+     message) no tb-modprobe go if tb-post's [R4-hdmi-dmas] read shows
+     "present"; G-4 tb-gains-reread is OBSERVE in the session,
+     worker-2 may run it at once on tb-post's NOT VERIFIABLE NEXT
+     line, 60 s window stays; G-5 = the O1 ruling above (AE no
+     objection, e5996f08); G-6 standing rules (one CHANGE session;
+     thermal WARN >=75 C, STOP >=80 C; owner at HDMI before any
+     tryboot or modprobe go; recovery = power pull; unbootable
+     generation = SD card fix on the Mac). Any change goes in a new
+     file.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -6496,6 +6533,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     (lag cases 71497 / 24000 / -223). Excerpt
     /tmp/cm-relay/F-262/ci-40343196576-e325c4ba-excerpt.txt (sha256
     885f52e8, verified at PM read). worker-4 is diagnosing.
+  - UPDATE (CM, 2026-10-26, after v258): new PR #66 head 4396e03c (AE
+    items 1, 3, 4 of dc9e529d) pushed; CI 40344885535 queued. #66 is
+    now behind main because #64 merged (ff091e5f).
   Before the first amps-on measurement (non-blocking one-liners; no
   F-ID, no P-level given):
   - AE, verbatim: "F-262 item 7 Architect note: before the first
@@ -6848,6 +6888,63 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     slip. It says all 7 files are under tests/unit; the diff is 4 test
     files + flake.nix + test-e2e.sh + F-362.md. The QE decides on any
     correction.
+  UPDATE (CM, 2026-10-26, after v258): PR #64 MERGED as
+  ff091e5faacf7bd00e59f9719d39fdd0cc902888 at 14:59:11Z (origin/main
+  head at PM read). 7/7 APPROVE at f715538e, CI 40333713247 green.
+  Frozen verdicts in /tmp/cm-relay/PR64/frozen-verdicts-f715538e/,
+  each sha256 verified at PM read: AE 73d1966b, SEC 6e9325f3, TW
+  42070817, QE df2c1291, ARCH 80a5b191, UX 3a8e85ff, AD 54c8912d.
+  F-362 ACs 3-5 done; ACs 1-2 and the test_filter_routes.py:35 guard
+  stay with US-174d (worker-4). SecSpec: "Must be closed there; I will
+  check it in the 174d review."
+  - QE verdict df2c1291 supersedes 0d9e52e7 and corrects the scope
+    sentence in 96abe4fb and dea15e43: the diff touches 7 files, not
+    "all under src/web-ui/tests/unit/"; conclusions unchanged. This
+    resolves the CM diff-scope note above. QE: no new one-liners.
+  - Stale body sentence (AD nit, TW item 1, QE N1): the per-module
+    numbers were re-checked unchanged at f715538e. History now
+    (merged); no action.
+  - TW item 2, verbatim: "The F-362 row in defects-index still shows
+    only "open. ..." without the new "in progress (PR #64 / 174d)".
+    It's an index summary and not wrong, so it can be refreshed when
+    F-362 closes in 174d."
+  - TW item 3, verbatim: "Once the PM assigns the F-IDs for the
+    non-accepted skips (F-402 already exists), they need defect
+    records." PM: no F-IDs allocated for them; none requested of the
+    PM so far (asked the CM).
+  - UX (3a8e85ff) supports two non-accepted skips, already one-liners
+    above. Verbatim: test_venue_gate_e2e.py:180/:165 "A timeout must
+    be a FAIL (or an xfail with an F-ID), not a skip.";
+    test_gate_closed_e2e.py:137 "Until the QE's fix lands, this test
+    is not evidence that the UI shows the gate closed at startup."
+  Non-blocking one-liners from the #64 verdicts (no F-ID; no P-level
+  given except where quoted):
+  - AE B1 (73d1966b), verbatim: "5 test_mute_e2e.py cases and 2
+    test_audio_flow.py cases SKIP on "Could not switch GM to DJ mode".
+    This is the same masking class as F-405: a mute or audio-flow
+    safety test must not read as SKIP when its precondition fails in a
+    stack that should support it. Fix before amps-on."
+  - AE B2, verbatim: "test_full_user_journey.py:348 "No completed
+    session for D-009 check" skips. The D-009 journey check never runs
+    in CI until F-262 lands. Re-check after #66."
+  - Architect N2 (80a5b191), verbatim: "the 14 service-integration
+    skips, 7 of them "Could not switch GM to DJ mode", predate #64 and
+    are the QE's documented baseline. They are not caused by this
+    diff."
+  - AD L1 (54c8912d; AD review message: "low priority"), verbatim:
+    "scripts/test/run-room-sim-e2e.sh:70 still runs pytest without
+    `-rs`. No nix app or CI step calls it (it is only cited in
+    US-174.md:32), so it is outside AC5 as written. Add `-rs` next
+    time the script is touched."
+  - -rsx (one row; Architect N1 and AD L2). Architect N1, verbatim:
+    "-rs reports skips only. If XFAIL reasons are also wanted in the
+    CI summary (see the QE's test_full_session_api XPASS/XFAIL flip),
+    -rsx is the cheap extension. Not needed for F-362's ACs." AD L2,
+    verbatim: "-rs reports skips only. An xfail can mask a failure the
+    same way a skip does (see the test_full_session_api flip and the
+    non-strict xfails), and xfail reasons stay unprinted. Backlog
+    idea: `-rsx` across the test apps." AD message: "low priority". PM
+    cross-ref: the test_full_session_api flip one-liner above.
 - **F-402** Integration test turns a 500 from POST /filters/generate
   into a skip, hiding a real server error
   (test_full_user_journey.py:179-183) (QE, 2026-10-26; option (b), ID
