@@ -21,14 +21,13 @@ Acceptance values: AE, 2026-10-25.
 """
 
 import ast
+import dataclasses
 import inspect
 import math
 import os
 import subprocess
 import sys
 from pathlib import Path
-
-import dataclasses
 
 import numpy as np
 import pytest
