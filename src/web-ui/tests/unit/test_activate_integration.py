@@ -23,14 +23,11 @@ os.environ.setdefault("PI_AUDIO_MOCK", "1")
 
 from app.main import app  # noqa: E402
 
-try:
-    from app.speaker_routes import (
-        _activate_profile_impl,
-        _PW_CONF_FILENAME,
-        _compute_target_gains,
-    )
-except ImportError:
-    pytest.skip("speaker_routes not available", allow_module_level=True)
+from app.speaker_routes import (  # noqa: E402
+    _activate_profile_impl,
+    _PW_CONF_FILENAME,
+    _compute_target_gains,
+)
 
 
 # ---------------------------------------------------------------------------
