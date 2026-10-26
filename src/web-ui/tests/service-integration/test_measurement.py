@@ -223,6 +223,17 @@ class TestLocalDemoMeasurementAPI:
             f"Error: {data.get('error_message', 'none')}. "
             f"Verification: {verification}")
         assert closed, f"No corrected channel in {verification}"
+        # The corrected set equals the requested set (Architect/AE): map
+        # the requested indices to speaker keys as session._measured_irs.
+        speakers = _api_get(
+            local_demo_url,
+            f"/api/v1/speakers/profiles/{PROFILE_NAME}")["speakers"]
+        requested = {k for ch in body["channels"]
+                     for k, s in speakers.items()
+                     if s.get("channel") == ch["index"]}
+        assert {v["channel"] for v in closed} == requested, (
+            f"Corrected {[v['channel'] for v in closed]}, "
+            f"requested {sorted(requested)}")
         for v in closed:
             assert v.get("closed_loop_max_db") is not None, v
             assert v["closed_loop_pass"] is True, v
