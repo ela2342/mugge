@@ -94,6 +94,15 @@ priority!"
   worker-5 is alive (team-lead): F-390/F-391 go to worker-5 when #55
   merges. worker-4 is fence-cleared for F-399 (runner.py:313-350).
   worker-3's US-173 core plan is approved (see US-173).
+  UPDATE (CM, 2026-10-26; supersedes the boot reference above): the
+  owner rebooted AGAIN by power pull (owner: "Power pull."). Kernel
+  start about 08:57:40Z, boot 60f384a1, COLD. The 08:44Z boot
+  (deb9ee57) ended abruptly at 674 s with that pull. OBSERVE-US172c-3
+  is VOID (partial captures kept raw); worker-2 now holds
+  OBSERVE-US172c-4 on 60f384a1. Two SSH sessions from the Mac with the
+  same key were not a worker's: 08:55Z (pts/0, sudo dmesg) very likely
+  the owner; 08:58:24Z unconfirmed (team-lead is asking the owner). If
+  it was an agent, that is a protocol breach (open).
 - DJ PLAYBACK PATH (core item, PO, 2026-10-26): Mixxx on the Pi 5 ->
   GM (DJ mode, quantum 1024) -> filter-chain convolver -> gate ->
   USBStreamer, with the crossover-only FIRs from the US-155 venue
@@ -2420,10 +2429,31 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   NOT fire overnight. The Architect's ruling on why is pending.
   Related: the CLAUDE.md watchdog-reliability TODO and AD L3
   (rt-tuning.nix:24 vs options.nix O-24).
+  RULED (Architect, 2026-10-26): EXPECTED, not a new defect, no ID.
+  The shutdown watchdog only covers up to the reset and no runtime
+  watchdog is configured: the O-24 gap (F-317/F-325). The run-2
+  tryboot most likely HUNG; "boot 0 1 s after boot -1" / "up within 40
+  s" was a no-RTC timestamp artifact. rsts=0x1000 and power_reset=0
+  are consistent with power-on (medium confidence; uptime is the
+  authority). The HAT question is dropped for the diagnosis but stays
+  relevant to US-172 AC6 (HiFiBerry gate). Before the step 7-8
+  tryboot: (i) the owner watches HDMI (on the owner list; go only once
+  the owner says they are at the screen); (ii) worker-2 diffs
+  tryboot.txt against config.txt and checks the gens/<id>/ paths.
   US-172c one-liners (CM, worker-2, 2026-10-26): (a) us172-recovery.sh
   rec-2 old_present match is broken (it matches the id with a space on
   each side, but the list is one id per line); a fix means a new sha
   and re-review. (b) The step 4 pstore read needs sudo.
+  Gains-read label (AE, verbatim, via CM, 2026-10-26): "first gains
+  read after cold boot (boot ≈08:44:31Z per /proc/uptime, rsts=0x1000;
+  read at <timestamp>, T+<mm:ss>; preceded only by read-only
+  OBSERVE-US172c-1/2, no PW/WP/GM/web-UI actions)". The AE's four
+  changes for the post-reboot read: a WARM label if the boot was soft;
+  read once pipewire, wireplumber and graph-manager are active, not
+  after a fixed wait; GM gate/venue only through a read-only query;
+  VOID captures kept separate. After the second power pull the boot
+  reference becomes about 08:57:40Z (boot 60f384a1, owner power pull);
+  the read runs under OBSERVE-US172c-4.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -3071,10 +3101,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   committed. F-318 v18: LANDED, TW verification pending (one safety.md
   hunk applied with fuzz against main's "Pi 5 row (1-3, 5-14)"
   context).
+  UPDATE (CM, TW, 2026-10-26): F-318 v18 at b973e3d9 is TW-VERIFIED
+  (the TW's own re-apply is byte-identical); "TW verification pending"
+  is DONE. The fuzz note refers to the same file: sha1 3f1a578f,
+  sha256 404d880d. TW non-blocking review note for the US-173 PR: the
+  "added by PR #45" check-10 sentences stay accurate while #45 is
+  parked.
   worker-3 core plan APPROVED (CM, 2026-10-26): M1 GM DJ link set +
   unit test; M4 thermal watch script; M5 Hercules mapping check; then
   M2 venue WAVs (after F-374); then M3 sandbox rehearsal. P1-P4 need
   the Pi and come after US-172.
+  UPDATE (CM, 2026-10-26): branch head 2fd7b252: M1 done, GM unit test
+  dj_signal_path_is_exactly_mixxx_convolver_usbstreamer, 292/292
+  green. worker-3 is on M4/M5.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
