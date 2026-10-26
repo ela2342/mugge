@@ -785,6 +785,12 @@ priority!"
   Architect (record (k)), so grant conditions r2 are fully released;
   the AD closes P1/P2. Every v7 pre-review point is closed; no re-pin,
   and the 815d231e run counts. F-394: fence r5, #68 head 51fae218.
+  UPDATE (CM, QE, AE, AD, Architect, team-lead, 2026-10-26, after
+  v271): backlog v271 pushed as 237119bc. US-172 v7 kit (815d231e):
+  all four final verdicts APPROVE (QE, AE, AD, Architect), none
+  blocking. F-394: #68 head 0cb35f0c; QE ruling on AC (iv) (where the
+  N>=5 green runs land). F-262: an XPASS in CI 40356547804 for a test
+  whose xfail cites F-262.
 
 ## Reserved IDs
 
@@ -3858,6 +3864,36 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      missing-read defect agree for this run. Next-pin one-liner (QE,
      no P-level given): the Q3 kit fix (au=1 unless both GREETD ok
      lines are present) plus flow G14c.
+  - UPDATE (QE, AE, AD, Architect via team-lead and CM, 2026-10-26,
+    after v271): v7 kit FINAL VERDICTS, all APPROVE, none blocking.
+    Frozen in /tmp/cm-relay/US-172/v7-815d231e/frozen-verdicts/ (each
+    sha256 verified at PM read): qe-final-a8ba08b0.md,
+    ae-final-3c8a1377.txt, ad-final-03e27ea5.md,
+    arch-final-372a73a1.txt. Basis: flow output flows-all-5fae86c0.out
+    (572 lines) and grant conditions r2 667688ef.
+     AD, verbatim: "This approval binds to 815d231e together with
+     5fae86c0 and 667688ef. A re-pin voids it." QE: G13b/d "PASS under
+     G-7"; Q3/G14c "closed for this run by G-8". Architect CM NOTE
+     ("not a condition change"): the sim's k() filter drops "ok"
+     VERDICT lines, so "On the Pi, check G-7 and G-8 against the full
+     us172-tb-greetd-*.txt / us172-tb-modprobe-*.txt files, never
+     against a filtered or console view."
+     Run conditions restated: QE: "US172_GAINS_AE_RELEASE is set only
+     to the sha of an actual AE ruling file"; the CM checks that sha
+     against a frozen AE file before setting it. AE (standing):
+     nothing connected; amps and HP/IEM off; warn before any
+     USBStreamer interruption; "Any "report to the AE" line comes to
+     me before the next step on that boot."; G-8 at relay.
+     Not independently verified (QE and AD): worker-2's claim that
+     flows A-O (AD: and G1-G11) match the v6 fc65bcad run. AD,
+     verbatim: "The v6 flow output is not in /tmp/cm-relay/US-172/."
+     Later-kit one-liner AE N4 (wording, non-blocking; no P-level
+     given), verbatim: "in G14a/b, the kit's last FINDING still says
+     "labwc not up (or ... the audio-read FINDING above)", although
+     labwc is up. The audio-read FINDING above it is the operative
+     line. A later kit could word it "no labwc-up result"." The AD
+     notes the same wording: "When relaying, the CM should quote the
+     OBSERVATION line as well."
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -6906,6 +6942,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      2way-80hz-ported (FileNotFoundError) and
      workshop-xrk10f-fullrange (ValueError). FilterGenSync 2WAY sub1
      50.0 dB and 4WAY sub 48.0 dB both pass. No D-031 report (CM).
+  - UPDATE (worker-1 via CM, 2026-10-26, after v271): in CI
+    40356547804 (#68 at 51fae218), test_full_session_api (class
+    TestLocalDemoMeasurementAPI,
+    tests/service-integration/test_measurement.py) XPASSed. Its
+    non-strict xfail
+    (src/web-ui/tests/service-integration/test_measurement.py
+    l.173-178 at 0cb35f0c, PM read) cites "F-262: room-sim IRs fail
+    filter verification (min-phase check)". It was XFAIL in
+    40348754608. Worker-1: the F-394 RPC/PW-env fix probably made it
+    pass. Owner: F-262 / PR #66; "The xfail marker may need to come
+    off." No P-level given.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -8750,6 +8797,35 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      src/web-ui/tests/unit/test_rpc_call_event_skip.py (T1 regression
      test for _rpc_call skipping GM push events). Only the stale #40
      also touches local-demo.sh: recorded, no hold (CM).
+  - UPDATE (CM, QE, 2026-10-26, after v271): #68 head 0cb35f0c
+    "fix(local-demo): F-394 env reads the running stack's PW paths
+    from the manifest" (PM-verified on origin, parent 51fae218).
+    Throwaway 999abd11 (tone stimulus disabled; parent 0cb35f0c) and
+    its revert e06d6296 exist (PM-verified).
+     QE ruling on AC (iv): /tmp/cm-relay/F-394/qe-ACiv-9402c6eb.md
+     (sha256 9402c6eb, verified at PM read). Verbatim: "RULING: either
+     head is acceptable. QE prefers e06d6296 (worker-1's alternative),
+     so the runs can start now." The N>=5 series counts at a head H
+     whose diff to the final head is docs only (git diff --stat
+     H..final; nothing under src/, tests/, conftest*, pytest/pyproject
+     config, nix/, flake.*, configs/, scripts/ or .github/). A red run
+     restarts the count; each run must show the DJ group really ran.
+     The 999abd11 runs are not part of the series: they are the
+     Q1-7(2) / AC (iii) RED evidence. Condition 3: e06d6296's tree
+     must equal 0cb35f0c's. Rule 13 still needs normal T1-T3 CI green
+     at the final head. AC (vi) (mute verified) is not ruled here; it
+     stays open for the AE and QE.
+     PM cross-ref: git rev-parse e06d6296^{tree} and 0cb35f0c^{tree}
+     both give a7429a26, so condition 3 holds at PM read. The QE
+     verifies it in the review.
+     One-liner (worker-1 side note, outside F-394; no F-ID, no P-level
+     given): local-demo.sh cmd_env/resolve_nix_paths, in the CM's
+     wording (/tmp/cm-relay/pm-pending.txt): "silently runs nix build
+     when PW_STORE is set but isn't a directory". PM cross-ref:
+     scripts/local-demo.sh l.121-124 at 0cb35f0c, if [ ! -d
+     "$PW_STORE/bin" ], echoes "Fetching pipewire..." and runs nix
+     build --no-link nixpkgs#pipewire (l.125-128 do the same for
+     WP_STORE).
 - **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
   per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
   2026-10-26): on a suspended node, the gain readers in the r6b matrix
