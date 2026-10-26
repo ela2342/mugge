@@ -337,12 +337,15 @@ def run_venue_pipeline(args):
             print(f"  {venue_key}: delay {ch['delay_ms']:.3f} ms, level "
                   f"{ch['reference_level_db']:+.1f} dB, suggested gain delta "
                   f"{ch['recommended_gain_delta_db']:+.1f} dB (not applied)")
+        print(f"  D-009 trim (all speaker channels): {result.d009_trim_db:+.2f} dB")
         print("Known limit: single mic position, position-independent room modes "
               "(off-position check is slice 174b-sim).")
 
-        all_passed, results = verify.run_venue_checks(
+        all_passed, results = verify.run_correction_gate(
             stage.path, bundle.expected_files(),
-            mandatory_hpf_hz=bundle.mandatory_hpf_by_file())
+            closed_loop_inputs=result.closed_loop_inputs,
+            mandatory_hpf_hz=bundle.mandatory_hpf_by_file(),
+            target_curve=bundle.profile.get("target_curve", "flat"))
         missing = set(bundle.expected_files()) - set(paths)
         if missing:
             print(f"Missing outputs: {sorted(missing)}", file=sys.stderr)

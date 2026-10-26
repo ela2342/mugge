@@ -648,3 +648,152 @@ def run_venue_checks(output_dir, expected_files, mandatory_hpf_hz=None,
 
     all_passed = bool(results) and all(r.passed for r in results)
     return all_passed, results
+
+
+# -- Shared correction gate (F-262 S6) --------------------------------------
+#
+# One gate for every product path (venue pipeline, web-UI filter routes,
+# measurement session): run_venue_checks() plus a closed-loop check of
+# each correction on the measured IR it was built from.
+
+# The AE's per-driver-role residual bands (US-174b, test_venue_closed_loop).
+# The sat band stays clear of a crossover up to 200 Hz and below the region
+# where the frequency-dependent window lets reflections through uncorrected.
+CLOSED_LOOP_BANDS_HZ = {"highpass": (250.0, 500.0), "lowpass": (30.0, 200.0)}
+
+
+def closed_loop_band(speaker):
+    """Closed-loop band for a profile speaker dict (by its filter_type)."""
+    filter_type = speaker.get("filter_type", "highpass")
+    if filter_type not in CLOSED_LOOP_BANDS_HZ:
+        raise ValueError(f"no closed-loop band for filter_type {filter_type!r}")
+    return CLOSED_LOOP_BANDS_HZ[filter_type]
+
+
+def verify_closed_loop(measured_ir, correction, band_hz, target_curve="flat",
+                       target_phon=None, reference_phon=80.0, sr=SAMPLE_RATE):
+    """
+    Closed-loop check on the measured IR (AE, F-262 S6).
+
+    Over band_hz, relative to the correction's reference level (1/6
+    octave): the corrected max positive deviation from the target must
+    not exceed the uncorrected one, and the corrected response must pass
+    closed_loop.passes_residual_gate. This catches a filter that applies
+    the room instead of correcting it.
+
+    Parameters
+    ----------
+    measured_ir : np.ndarray
+        The IR the correction was built from.
+    correction : correction.CorrectionFilter
+    band_hz : tuple of (float, float)
+        Evaluation band, see closed_loop_band().
+    """
+    from . import closed_loop
+    from . import target_curves as tc
+
+    name = "Closed Loop"
+    ir = np.asarray(measured_ir, dtype=np.float64)
+    fir = np.asarray(correction.fir, dtype=np.float64)
+    if ir.ndim != 1 or not ir.size or not np.all(np.isfinite(ir)) \
+            or not np.all(np.isfinite(fir)):
+        return VerificationResult(name, False, "Measured IR or FIR is empty or non-finite")
+
+    lo, hi = band_hz
+    level = correction.reference_level_db
+    freqs, uncorrected = closed_loop.smoothed_response_db(ir, lo, hi, sr=sr)
+    _, corrected = closed_loop.smoothed_response_db(
+        closed_loop.system_response(ir, fir), lo, hi, sr=sr)
+    uncorrected = uncorrected - level
+    corrected = corrected - level
+    target = tc.get_target_curve(
+        target_curve, freqs, target_phon=target_phon, reference_phon=reference_phon)
+
+    if not all(np.all(np.isfinite(a)) for a in (corrected, uncorrected, target)):
+        return VerificationResult(name, False, "Non-finite closed-loop response")
+    dev_corrected = closed_loop.max_positive_deviation_db(corrected, target)
+    dev_uncorrected = closed_loop.max_positive_deviation_db(uncorrected, target)
+    passed = (closed_loop.passes_residual_gate(corrected, target)
+              and dev_corrected <= dev_uncorrected)
+    message = (
+        f"Max over target {lo:g}-{hi:g} Hz: corrected {dev_corrected:+.2f}dB, "
+        f"uncorrected {dev_uncorrected:+.2f}dB "
+        f"(limit {closed_loop.MAX_POSITIVE_DEVIATION_DB}dB, corrected <= uncorrected)"
+    )
+    return VerificationResult(
+        name, passed, message,
+        {"corrected_max_db": dev_corrected, "uncorrected_max_db": dev_uncorrected,
+         "band_hz": (float(lo), float(hi))},
+    )
+
+
+def run_correction_gate(output_dir, expected_files, closed_loop_inputs=None,
+                        mandatory_hpf_hz=None, expected_taps=16384,
+                        expected_sr=SAMPLE_RATE, target_curve="flat",
+                        target_phon=None, reference_phon=80.0):
+    """
+    The shared gate (F-262 S6): run_venue_checks() plus verify_closed_loop().
+
+    Parameters
+    ----------
+    closed_loop_inputs : dict, optional
+        Filename -> (measured IR, CorrectionFilter, profile speaker dict)
+        for every 'fir' file that carries a room correction. Files without one (crossover-only)
+        get the run_venue_checks() set only.
+
+    Returns
+    -------
+    tuple of (bool, list of VerificationResult)
+    """
+    closed_loop_inputs = closed_loop_inputs or {}
+    unknown = sorted(f for f in closed_loop_inputs if expected_files.get(f) != "fir")
+    if unknown:
+        raise ValueError(f"closed-loop inputs for files that are not 'fir': {unknown}")
+
+    _, results = run_venue_checks(
+        output_dir, expected_files, mandatory_hpf_hz=mandatory_hpf_hz,
+        expected_taps=expected_taps, expected_sr=expected_sr)
+    for filename, (measured_ir, correction, speaker) in sorted(closed_loop_inputs.items()):
+        result = verify_closed_loop(
+            measured_ir, correction, closed_loop_band(speaker), target_curve=target_curve,
+            target_phon=target_phon, reference_phon=reference_phon, sr=expected_sr)
+        result.name = f"{result.name} ({filename})"
+        results.append(result)
+
+    all_passed = bool(results) and all(r.passed for r in results)
+    return all_passed, results
+
+
+def mandatory_hpf_by_file(profile, identities, filenames):
+    """Filename -> mandatory HPF (Hz), for speakers whose identity has one.
+
+    filenames maps profile speaker key -> exported filename.
+    """
+    result = {}
+    for spk_key, filename in filenames.items():
+        identity = identities.get(profile["speakers"][spk_key].get("identity", ""), {})
+        hpf = identity.get("mandatory_hpf_hz")
+        if hpf is not None:
+            result[filename] = float(hpf)
+    return result
+
+
+def gate_summary(filename, results):
+    """Per-file pass flags from run_correction_gate() results (for UI payloads)."""
+    mine = [r for r in results if r.name.endswith(f"({filename})")]
+
+    def passed(prefix, default=True):
+        found = [r.passed for r in mine if r.name.startswith(prefix)]
+        return all(found) if found else default
+
+    d009 = [r for r in mine if r.name.startswith("D-009")]
+    return {
+        "d009_pass": passed("D-009", default=False),
+        "d009_peak_db": float(round(d009[0].details.get("max_gain_db", 0.0), 2))
+        if d009 else None,
+        "min_phase_pass": passed("Minimum Phase", default=False),
+        "format_pass": passed("Format", default=False) and passed("WAV Subtype", default=False),
+        "hpf_pass": passed("Mandatory HPF"),
+        "closed_loop_pass": passed("Closed Loop"),
+        "all_pass": bool(mine) and all(r.passed for r in mine),
+    }

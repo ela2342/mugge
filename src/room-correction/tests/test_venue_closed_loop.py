@@ -610,7 +610,7 @@ class TestResidualPerChannel:
 
 def _sub_correction(bundle, sim):
     normalized, _ = normalize_ir_level(
-        sim.measured_irs["sub1"], vp.reference_band(bundle, "sub1"), sr=SR)
+        sim.measured_irs["sub1"], vp.reference_band(bundle.profile["speakers"]["sub1"]), sr=SR)
     return generate_correction_filter(normalized, n_taps=N_TAPS, sr=SR,
                                       max_cut_db=vp.MAX_CUT_DB)
 

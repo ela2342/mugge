@@ -34,6 +34,14 @@ from room_correction.crossover import (
     generate_subsonic_filter,
 )
 from room_correction.generate_profile_filters import generate_profile_filters
+from room_correction.correction import CorrectionFilter
+
+def _as_corrections(firs):
+    """Wrap synthetic test FIRs as CorrectionFilter (F-262 type gate)."""
+    return {k: CorrectionFilter(fir=np.asarray(v), reference_level_db=0.0,
+                                ref_band_hz=(400.0, 4000.0))
+            for k, v in firs.items()}
+
 
 
 # ---------------------------------------------------------------------------
@@ -445,7 +453,7 @@ class TestProfileFiltersMinPhase:
         corrections = {"sat": correction, "sub": correction}
         filters = generate_profile_filters(
             _PROFILE_2WAY, _IDENTITIES_2WAY,
-            correction_filters=corrections, n_taps=16384)
+            correction_filters=_as_corrections(corrections), n_taps=16384)
         for key, fir in filters.items():
             assert_minimum_phase(fir, f"profile_2way_corr_{key}")
 
@@ -455,7 +463,7 @@ class TestProfileFiltersMinPhase:
         corrections = {k: correction for k in ["bass", "mid", "tweeter"]}
         filters = generate_profile_filters(
             _PROFILE_3WAY, _IDENTITIES_3WAY,
-            correction_filters=corrections, n_taps=16384)
+            correction_filters=_as_corrections(corrections), n_taps=16384)
         for key, fir in filters.items():
             assert_minimum_phase(fir, f"profile_3way_corr_{key}")
 
@@ -465,7 +473,7 @@ class TestProfileFiltersMinPhase:
         corrections = {k: correction for k in ["sub", "low_mid", "high_mid", "tweeter"]}
         filters = generate_profile_filters(
             _PROFILE_4WAY, _IDENTITIES_4WAY,
-            correction_filters=corrections, n_taps=16384)
+            correction_filters=_as_corrections(corrections), n_taps=16384)
         for key, fir in filters.items():
             assert_minimum_phase(fir, f"profile_4way_corr_{key}")
 

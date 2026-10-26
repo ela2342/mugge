@@ -28,6 +28,14 @@ from room_correction.verify import verify_d009
 import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from mock.room_simulator import generate_room_ir
+from room_correction.correction import CorrectionFilter
+
+def _as_corrections(firs):
+    """Wrap synthetic test FIRs as CorrectionFilter (F-262 type gate)."""
+    return {k: CorrectionFilter(fir=np.asarray(v), reference_level_db=0.0,
+                                ref_band_hz=(400.0, 4000.0))
+            for k, v in firs.items()}
+
 
 SR = 48000
 N_TAPS = 16384
@@ -278,7 +286,7 @@ class TestFullPipelinePath:
             combined = generate_profile_filters(
                 profile=profile,
                 identities={},
-                correction_filters=correction_filters,
+                correction_filters=_as_corrections(correction_filters),
                 output_dir=tmpdir,
                 n_taps=N_TAPS,
                 sr=SR,

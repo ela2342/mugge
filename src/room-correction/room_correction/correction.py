@@ -18,7 +18,15 @@ subtractive target shaping. Room nulls are left uncorrected — boosting
 into a null wastes amplifier power and creates narrow peaks that are
 spatially unstable (they help at the mic position but make things worse
 everywhere else).
+
+Every product path (venue pipeline, web-UI filter routes, measurement
+session) builds its correction through correction_from_measurement()
+(F-262). It is the only production caller of normalize_ir_level() and
+generate_correction_filter().
 """
+
+from dataclasses import dataclass
+from typing import Tuple
 
 import numpy as np
 
@@ -28,6 +36,37 @@ from . import target_curves as tc
 
 SAMPLE_RATE = dsp_utils.SAMPLE_RATE
 D009_MARGIN_DB = -0.5
+
+# AE, 2026-10-25: level reference per driver role (median of the
+# 1/6-octave smoothed magnitude). Sats stay clear of the 200 Hz crossover
+# and the box knee; the sub band sits below the crossover.
+REFERENCE_BANDS_HZ = {
+    "highpass": (400.0, 4000.0),
+    "lowpass": (30.0, 150.0),
+}
+# AE, 2026-10-25: never cut deeper than 18 dB.
+MAX_CUT_DB = 18.0
+
+
+@dataclass(frozen=True)
+class CorrectionFilter:
+    """A room correction FIR built from a measured IR (F-262).
+
+    generate_profile_filters() accepts only this type, so a raw measured
+    IR can no longer be combined as if it were a correction.
+    """
+
+    fir: np.ndarray
+    reference_level_db: float          # measured level before normalization
+    ref_band_hz: Tuple[float, float]   # band the level was taken over
+
+
+def reference_band(speaker):
+    """Level reference band for a profile speaker dict (by its filter_type)."""
+    filter_type = speaker.get("filter_type", "highpass")
+    if filter_type not in REFERENCE_BANDS_HZ:
+        raise ValueError(f"no level reference band for filter_type {filter_type!r}")
+    return REFERENCE_BANDS_HZ[filter_type]
 
 
 def generate_correction_filter(
@@ -207,3 +246,54 @@ def normalize_ir_level(ir, ref_band_hz, sr=SAMPLE_RATE, target_db=0.0,
 
     scale = dsp_utils.db_to_linear(target_db - level_db)
     return ir * scale, level_db
+
+
+def correction_from_measurement(
+    measured_ir,
+    speaker,
+    *,
+    target_curve,
+    n_taps,
+    sr,
+    max_cut_db=MAX_CUT_DB,
+    target_phon=None,
+    reference_phon=80.0,
+):
+    """
+    Build the correction for one speaker from its measured IR.
+
+    measured IR -> normalize_ir_level (speaker's reference band) ->
+    generate_correction_filter (cut-only, capped at max_cut_db).
+
+    Parameters
+    ----------
+    measured_ir : np.ndarray
+        Measured (aligned, windowed, spatially averaged) impulse response.
+    speaker : dict
+        The profile's speaker dict; its filter_type picks the reference band.
+
+    Returns
+    -------
+    CorrectionFilter
+
+    Raises
+    ------
+    ValueError
+        If the IR is not a non-empty 1-D array, has non-finite samples, is
+        silent, or has no energy in the reference band.
+    """
+    ir = np.asarray(measured_ir, dtype=np.float64)
+    if ir.ndim != 1 or ir.size == 0:
+        raise ValueError(f"measured IR must be a non-empty 1-D array, got shape {ir.shape}")
+    if not np.all(np.isfinite(ir)):
+        raise ValueError("measured IR has non-finite samples")
+    if not np.any(ir):
+        raise ValueError("measured IR is silent")
+
+    band = reference_band(speaker)
+    normalized, level_db = normalize_ir_level(ir, band, sr=sr)
+    fir = generate_correction_filter(
+        normalized, target_curve_name=target_curve, n_taps=n_taps, sr=sr,
+        target_phon=target_phon, reference_phon=reference_phon,
+        max_cut_db=max_cut_db)
+    return CorrectionFilter(fir=fir, reference_level_db=level_db, ref_band_hz=band)

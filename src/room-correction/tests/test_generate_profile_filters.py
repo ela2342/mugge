@@ -24,6 +24,14 @@ from room_correction.generate_profile_filters import (
     _resolve_bandpass_edges,
     generate_profile_filters,
 )
+from room_correction.correction import CorrectionFilter
+
+def _as_corrections(firs):
+    """Wrap synthetic test FIRs as CorrectionFilter (F-262 type gate)."""
+    return {k: CorrectionFilter(fir=np.asarray(v), reference_level_db=0.0,
+                                ref_band_hz=(400.0, 4000.0))
+            for k, v in firs.items()}
+
 
 
 # ---------------------------------------------------------------------------
@@ -561,7 +569,7 @@ class TestGenerateProfileFiltersEdgeCases(unittest.TestCase):
         corrections = {"sat_left": attenuation, "sub1": attenuation}
         result = generate_profile_filters(
             PROFILE_2WAY, IDENTITIES_2WAY,
-            correction_filters=corrections, n_taps=N_TAPS,
+            correction_filters=_as_corrections(corrections), n_taps=N_TAPS,
         )
         # Both filters should be much quieter than without correction
         for key, fir in result.items():
