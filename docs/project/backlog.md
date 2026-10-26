@@ -774,6 +774,11 @@ priority!"
   as cb7cd9f7. US-172 v7 kit (us172.sh 815d231e) Architect pre-review:
   "NOTHING BLOCKING, NOTHING REQUIRED." Three later-kit one-liners
   recorded under US-172.
+  UPDATE (CM, QE, AE, AD, 2026-10-26, after v269): backlog v269 pushed
+  as 358ca39a. US-172 v7 pre-reviews from the QE, AE and AD recorded
+  under US-172. Grant conditions r2 add G-7 (Architect release
+  pending) and G-8 (released by the AE, record (j)). QE Q3 (REQUIRED,
+  one re-pin) is still open.
 
 ## Reserved IDs
 
@@ -3763,6 +3768,62 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      Also in the file (PM cross-ref; not in v268): N2, l.38, verbatim:
      "(from v6) capped() rc 2 leaves the background ssh pending.
      Harmless."
+  - UPDATE (CM, QE, AE, AD, 2026-10-26, after v269): the other v7
+    pre-reviews, frozen in
+    /tmp/cm-relay/US-172/v7-815d231e/frozen-prereviews/ (each sha256
+    verified at PM read): qe-prereview-1b7da488.md (identical to the
+    QE's /tmp copy), ae-prereview-ef57ad7e.txt,
+    ad-prereview-56bb31f2.md. None is a final verdict; each waits for
+    the flow output.
+     QE: v6 Q1 and Q2 CLOSED. REQUIRED Q3 (one re-pin): tb-greetd
+     prints "labwc up" when the GREETD audio read is missing. QE fix,
+     verbatim: "`au=1` unless BOTH `^VERDICT \[GREETD-gains\] ok ` and
+     `^VERDICT \[GREETD-gate\] ok gate closed` are present (drop the
+     "a GREETD line exists" precondition)", plus new flow G14c. QE,
+     verbatim: "The AE owns the meaning of point 3. If the AE rules
+     that a missing read is acceptable, Q3 drops. QE expects it
+     isn't." If the pin changes, the 815d231e run "only counts as a
+     dry run". OPEN (CM).
+     PM cross-ref (not a ruling): Q3 is the defect the Architect
+     classed non-blocking as N1 (a1660f61) and the AD classed REQUIRED
+     as P2, with a kit fix or grant condition. The AE's N3 says,
+     verbatim: "gains() always prints one, so there is no gap now."
+     The QE and the AD name a crash case (invalid pw-dump JSON) in
+     which no verdict prints. For this run, G-8 covers it (below).
+     Grant conditions r2:
+     /tmp/cm-relay/US-172/grant-conditions-v7-r2.txt (sha256 667688ef,
+     verified at PM read; r1 6c6308f5 unchanged). G-7 (AD P1 option
+     (b); release owner Architect, PENDING): a (iii) or "RESULT labwc
+     up" line in a file with any FINDING line for that verb is relayed
+     only as "(iii)/labwc up WITH FINDING, Architect classifies". G-8
+     (AD P2 option (b); release owner AE): "RESULT labwc up" is
+     relayed only if the tb-greetd file contains both "VERDICT
+     [GREETD-gains] ok " and "VERDICT [GREETD-gate] ok gate closed".
+     G-8 RELEASED by the AE: record (j)
+     /tmp/cm-relay/release-record-20261026-j.txt (sha256 3390726a,
+     verified at PM read). AE, verbatim: "G-8 closes my N3 for this
+     run, so no v8 is needed." The kit fixes behind G-7 and G-8 are
+     later-kit backlog items (CM).
+     Later-kit one-liners (all non-blocking, no re-pin; no P-level
+     given):
+     QE N1 (l.45): the reread STOP regex is narrower than the
+     (VERDICT|RESULT) prefix tb-modprobe/tb-greetd use; "no hole, only
+     an inconsistency." QE N2 (l.46): tb-modprobe's (iii) "does not
+     itself require MOD-gains ok / MOD-gate ok to be present"; "a
+     classification nicety only". QE N3 (l.47, carried from v6 N1):
+     pre-gate refusals don't go to us172-gate-refusals-<T>.txt.
+     AE N1 (l.44): the r4gate() branch 3 regex has no RESULT prefix;
+     "align them in a later kit." AE N2 (l.46): "hang() outcome (ii):
+     exit non-zero (worker-2 b)." AE N3 (l.47): tb-greetd au "is armed
+     only if some [GREETD-*] VERDICT line exists ... A later kit could
+     require both ok outright for "labwc up"." PM cross-ref: AE N2 =
+     Architect (2) (exit status); AE N3 = Architect N1 = QE Q3.
+     AD L1 (Low section): verbs exit 0 for every outcome; "Backlog:
+     derive the exit status from the final classification." AD L2:
+     "Each is correct today. Backlog: one shared helper so the regexes
+     cannot drift." PM cross-ref: L1 = Architect (2) = AE N2; L2
+     overlaps QE N1 and AE N1. The AD also sent L1 and L2 to the PM by
+     message.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
