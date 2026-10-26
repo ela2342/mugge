@@ -3,7 +3,8 @@ Venue-driven room correction pipeline (US-174b).
 
 Pure orchestration: measured acoustic IRs + venue config + speaker
 profile in, the venue's WAV set + delays + a report out. No printing, no
-argparse; file I/O only in the explicit load_* / write_* helpers.
+argparse; file I/O only in the explicit load_* / write_* helpers and in
+the staged publish (staged_outputs / publish_venue_outputs).
 
 Per speaker channel:
 
@@ -22,11 +23,33 @@ fails closed with ValueError.
 Sat/sub level balance is NOT applied (AE, S-012): the correction only
 shapes each channel. The measured balance is reported as a recommended
 gain delta for the operator.
+
+Output staging (F-399, Architect + AD): outputs are written into a
+``.rc-staging-*`` dir inside the output dir, verified there, and published
+only on commit. Without a commit (failed gate, exception, interrupt)
+the output dir is left as it was. Publish order: SIMULATED marker
+(simulated runs) -> old delays.yml removed -> stale combined_*.wav
+removed (never dirac.wav) -> WAVs -> delays.yml last -> stale SIMULATED
+removed (real runs). Every step is fsynced. A simulated set is refused
+if the output dir resolves to deploy.DEFAULT_COEFFS_DIR. So "delays.yml present" means the set next
+to it was verified; a crash mid-publish can leave a mixed WAV set, but
+never with a delays.yml, and SIMULATED is present whenever any simulated
+file may be. The atomic directory swap is US-174d.
+
+Consumers (US-174c/d deploy) treat a set as NOT deployable if SIMULATED
+is present, or delays.yml is missing, unparsable, or lacks
+``simulated: false``. Deploy copies only the top-level expected files
+and never recurses into the output dir (a SIGKILL can leave a
+``.rc-staging-*`` dir behind). Concurrent runs on one output dir are not
+supported.
 """
 
 from __future__ import annotations
 
+import contextlib
 import os
+import shutil
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -34,7 +57,7 @@ from typing import Dict, List, Optional
 import numpy as np
 import yaml
 
-from . import dsp_utils
+from . import deploy, dsp_utils
 from . import time_align
 from .correction import generate_correction_filter, normalize_ir_level
 from .export import export_filter
@@ -44,6 +67,9 @@ from .generate_profile_filters import generate_profile_filters
 SAMPLE_RATE = dsp_utils.SAMPLE_RATE
 DEFAULT_N_TAPS = 16384
 DIRAC_FILENAME = "dirac.wav"
+DELAYS_FILENAME = "delays.yml"
+SIMULATED_FILENAME = "SIMULATED"
+STAGING_PREFIX = ".rc-staging-"
 DEFAULT_IDENTITIES_DIR = (
     Path(__file__).resolve().parents[3] / "configs" / "speakers" / "identities"
 )
@@ -276,12 +302,15 @@ def write_venue_filters(result: VenueFilterResult, output_dir, n_taps=DEFAULT_N_
     return paths
 
 
-def write_delays_yaml(result: VenueFilterResult, bundle: VenueBundle, path) -> dict:
+def write_delays_yaml(result: VenueFilterResult, bundle: VenueBundle, path, *,
+                      simulated_scenario) -> dict:
     """
     Write measured delays and level suggestions per venue channel.
 
     The venue config is not touched; the operator (or 174d) applies the
-    values. Returns the written mapping.
+    values. ``simulated_scenario`` is required: the room scenario name for
+    simulated measurements, None for real ones. ``simulated`` is always
+    written explicitly (AD, F-399). Returns the written mapping.
     """
     channels = {}
     for c in bundle.channels:
@@ -297,6 +326,8 @@ def write_delays_yaml(result: VenueFilterResult, bundle: VenueBundle, path) -> d
         }
     data = {
         "venue": bundle.name,
+        "simulated": simulated_scenario is not None,
+        "scenario": None if simulated_scenario is None else str(simulated_scenario),
         "note": ("Measured values, NOT applied. recommended_gain_delta_db is a "
                  "suggestion on top of the venue gain_db (S-012)."),
         "channels": channels,
@@ -304,3 +335,128 @@ def write_delays_yaml(result: VenueFilterResult, bundle: VenueBundle, path) -> d
     with open(path, "w") as f:
         yaml.safe_dump(data, f, sort_keys=False)
     return data
+
+
+def is_deployable_name(filename: str) -> bool:
+    """Filenames a coeffs dir would load: combined_*.wav and dirac.wav."""
+    return filename == DIRAC_FILENAME or _is_combined_name(filename)
+
+
+def _is_combined_name(filename: str) -> bool:
+    return filename.startswith("combined_") and filename.endswith(".wav")
+
+
+def _refuse_simulated_into_coeffs(output_dir, simulated_scenario):
+    # Architect + AD (F-399): a simulated set never goes into the coeffs dir.
+    if simulated_scenario is not None and (
+            os.path.realpath(output_dir) == os.path.realpath(deploy.DEFAULT_COEFFS_DIR)):
+        raise ValueError(
+            f"refusing to publish simulated outputs into the coeffs dir {output_dir}")
+
+
+def _fsync_file(path):
+    fd = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _fsync_dir(path):
+    fd = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _remove(path):
+    if os.path.lexists(path):
+        os.remove(path)
+
+
+def publish_venue_outputs(staging_dir, output_dir, *, simulated_scenario=None):
+    """
+    Move a verified staged set into ``output_dir`` (order in the module doc).
+
+    The staged set must be WAVs plus delays.yml, and delays.yml's
+    ``simulated`` field must match ``simulated_scenario``; otherwise
+    ValueError before anything in ``output_dir`` changes. Returns the
+    published WAV filenames.
+    """
+    _refuse_simulated_into_coeffs(output_dir, simulated_scenario)
+    staged = sorted(os.listdir(staging_dir))
+    wavs = [n for n in staged if is_deployable_name(n)]
+    other = set(staged) - set(wavs) - {DELAYS_FILENAME}
+    if DELAYS_FILENAME not in staged or other or not wavs:
+        raise ValueError(f"publish: unexpected staged set {staged}")
+    with open(os.path.join(staging_dir, DELAYS_FILENAME)) as f:
+        staged_delays = yaml.safe_load(f)
+    simulated = simulated_scenario is not None
+    if not isinstance(staged_delays, dict) or staged_delays.get("simulated") is not simulated:
+        raise ValueError("publish: delays.yml 'simulated' does not match this publish")
+    for n in staged:
+        _fsync_file(os.path.join(staging_dir, n))
+
+    marker = os.path.join(output_dir, SIMULATED_FILENAME)
+    if simulated:
+        staged_marker = os.path.join(staging_dir, SIMULATED_FILENAME)
+        with open(staged_marker, "w") as f:
+            f.write(f"simulated room scenario: {simulated_scenario}\n")
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(staged_marker, marker)
+    _remove(os.path.join(output_dir, DELAYS_FILENAME))
+    # Stale combined_*.wav from a larger earlier set; dirac.wav stays, other
+    # channels and the Rule 10 check reference it (AD).
+    for n in sorted(os.listdir(output_dir)):
+        path = os.path.join(output_dir, n)
+        if _is_combined_name(n) and n not in wavs and not os.path.isdir(path):
+            os.remove(path)
+    _fsync_dir(output_dir)
+    for n in wavs:
+        os.replace(os.path.join(staging_dir, n), os.path.join(output_dir, n))
+    _fsync_dir(output_dir)
+    os.replace(os.path.join(staging_dir, DELAYS_FILENAME),
+               os.path.join(output_dir, DELAYS_FILENAME))
+    _fsync_dir(output_dir)
+    if not simulated and os.path.lexists(marker):
+        os.remove(marker)
+        _fsync_dir(output_dir)
+    return wavs
+
+
+class StagedOutputs:
+    """Handle yielded by staged_outputs: write into ``path``, then ``commit()``."""
+
+    def __init__(self, path, output_dir, simulated_scenario):
+        self.path = path
+        self.output_dir = output_dir
+        self.simulated_scenario = simulated_scenario
+        self._state = "open"
+
+    def commit(self):
+        """Publish the staged set. Only once, and only inside the with block."""
+        if self._state != "open":
+            raise RuntimeError(f"staged outputs already {self._state}")
+        self._state = "committed"
+        return publish_venue_outputs(self.path, self.output_dir,
+                                     simulated_scenario=self.simulated_scenario)
+
+
+@contextlib.contextmanager
+def staged_outputs(output_dir, *, simulated_scenario=None):
+    """
+    Staging dir for one run (Architect, F-399). Nothing is published
+    unless ``commit()`` is called; the staging dir is always removed.
+    """
+    _refuse_simulated_into_coeffs(output_dir, simulated_scenario)
+    os.makedirs(output_dir, exist_ok=True)
+    stage = StagedOutputs(tempfile.mkdtemp(prefix=STAGING_PREFIX, dir=output_dir),
+                          output_dir, simulated_scenario)
+    try:
+        yield stage
+    finally:
+        if stage._state == "open":
+            stage._state = "closed"
+        shutil.rmtree(stage.path, ignore_errors=True)
