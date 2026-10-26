@@ -410,6 +410,11 @@ priority!"
   b448d0ee. 174d HELD at b496250b. #57: QE C1 MET, only C2 (PR body)
   open. Disk: team-lead does not know the cause either and has asked
   the owner (non-blocking); the disk hold stays.
+  UPDATE (CM, 2026-10-26, after v207): backlog v207 pushed as
+  8011e804. #57 (US-174) MERGED at e731820c; main is 1e1495ab. #61
+  update-branched to 781b638a (content identical to 247478d5); its
+  approvals are void and 7 re-approvals are requested via team-lead.
+  Merge order next: #62, then the F-399 PR, then 174d merges main.
 
 ## Reserved IDs
 
@@ -4567,6 +4572,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (CI log /tmp/cm-ci-40310308638.log, around l.7659). It is
   xfail(strict=False) on origin/main; further evidence that F-262 is
   non-deterministic.
+  MERGED (CM, 2026-10-26): #57 at e731820c; main is 1e1495ab. The C1
+  count was resolved at +95 (all in test_venue_closed_loop.py; the
+  QE's +26 was their error). This supersedes the "only C2 open" line
+  above. #61 is update-branched to 781b638a (content identical to
+  247478d5), approvals void, 7 re-approvals requested via team-lead;
+  #62 follows.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
