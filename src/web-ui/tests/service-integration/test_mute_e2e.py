@@ -87,8 +87,8 @@ class TestUnmuteRestoresSignal:
     """Mute -> unmute -> level-bridge reports signal returns."""
 
     @pytest.mark.xfail(
-        reason="F-270: unmute path still uses sleep-based wait, "
-               "no audio stimulus in local-demo (not a reconciler race)",
+        reason="F-394: no audio stimulus on the level-bridge-sw tap in "
+               "local-demo DJ mode (was mis-cited as F-270)",
         strict=False,
     )
     def test_unmute_restores_levels(self, ensure_dj_mode, api_post,

@@ -48,6 +48,7 @@ cleanup() {
     CLEANUP_DONE=true
     log "Tearing down local-demo stack..."
     "$BASH_BIN" "$LOCAL_DEMO" stop 2>/dev/null || true
+    rm -f "${START_LOG:-}"
     log "Cleanup complete."
 }
 
@@ -71,7 +72,8 @@ cat "$START_LOG"
 # different process (different $$) and would compute a wrong manifest path.
 export LOCAL_DEMO_MANIFEST
 LOCAL_DEMO_MANIFEST=$(sed -n 's/.*Manifest written to //p' "$START_LOG")
-rm -f "$START_LOG"
+# START_LOG is kept until cleanup: the stack's services (GM, bridges) keep
+# writing their logs to it while the tests run (F-394 diagnostics).
 if [ -z "$LOCAL_DEMO_MANIFEST" ] || [ ! -f "$LOCAL_DEMO_MANIFEST" ]; then
     log_err "Could not find manifest from start output"
     exit 2
@@ -130,14 +132,21 @@ sleep 2
 
 log "Running service-integration tests..."
 cd "$REPO_DIR/src/web-ui"
-"$E2E_PYTHON" -m pytest tests/service-integration/ -v -rs --tb=short "$@"
-SI_EXIT=$?
+SI_LOG_START=$(wc -c <"$START_LOG")
+SI_EXIT=0
+"$E2E_PYTHON" -m pytest tests/service-integration/ -v -rs --tb=short "$@" || SI_EXIT=$?
+
+# F-394: show what the stack logged during the service-integration run
+# (GM mode switches, reconciliation, missing endpoints).
+log "Stack log during service-integration tests:"
+tail -c +"$((SI_LOG_START + 1))" "$START_LOG" | sed 's/^/[stack] /'
+log "End of stack log."
 
 # ---- 4. Run browser E2E tests ----
 
 log "Running browser E2E tests..."
-"$E2E_PYTHON" -m pytest tests/e2e/ -v -rs --tb=short "$@"
-E2E_EXIT=$?
+E2E_EXIT=0
+"$E2E_PYTHON" -m pytest tests/e2e/ -v -rs --tb=short "$@" || E2E_EXIT=$?
 
 # Report both results — fail if either failed.
 if [ $SI_EXIT -ne 0 ]; then

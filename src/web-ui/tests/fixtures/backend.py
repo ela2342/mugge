@@ -371,18 +371,44 @@ def read_pcm_header():
 # GM mode switching helper
 # ---------------------------------------------------------------------------
 
-def _switch_gm_mode(mode: str, gm_port: int = GM_PORT, timeout: float = 5.0) -> bool:
-    """Switch GraphManager to the given mode via RPC and wait for reconciliation."""
+def _switch_gm_mode_detail(mode: str, gm_port: int = GM_PORT,
+                           timeout: float = 5.0) -> tuple[bool, dict]:
+    """Switch GraphManager to the given mode via RPC and wait for reconciliation.
+
+    Returns (ok, detail). detail holds the raw set_mode and await_settled
+    replies ({} if the RPC call itself failed), so a failure can say why.
+    """
     resp = _rpc_call("127.0.0.1", gm_port, {"cmd": "set_mode", "mode": mode}, timeout)
+    detail = {"set_mode": resp}
     if not resp.get("ok"):
-        return False
+        return False, detail
     epoch = resp.get("epoch", 0)
     settled = _rpc_call("127.0.0.1", gm_port, {
         "cmd": "await_settled",
         "since_epoch": epoch,
         "timeout_ms": 10000,
     }, timeout=max(timeout, 15.0))
-    return settled.get("ok", False)
+    detail["await_settled"] = settled
+    return settled.get("ok", False), detail
+
+
+def _switch_gm_mode(mode: str, gm_port: int = GM_PORT, timeout: float = 5.0) -> bool:
+    """Switch GraphManager to the given mode via RPC and wait for reconciliation."""
+    return _switch_gm_mode_detail(mode, gm_port, timeout)[0]
+
+
+def _dj_mode_diagnostics(gm_port: int) -> str:
+    """Collect GM and PipeWire state for an ensure_dj_mode failure (F-394)."""
+    parts = [f"get_links: {_rpc_call('127.0.0.1', gm_port, {'cmd': 'get_links'})}"]
+    for cmd in (["pw-link", "-l"],
+                ["pw-metadata", "-n", "settings", "0", "clock.force-quantum"]):
+        try:
+            out = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+            text = (out.stdout + out.stderr).strip()
+        except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+            text = repr(exc)
+        parts.append(f"$ {' '.join(cmd)}\n{text}")
+    return "\n".join(parts)
 
 
 @pytest.fixture(scope="session")
@@ -392,8 +418,16 @@ def ensure_dj_mode(gm_port):
     Tests that need audio signal (level-bridge, measurement) require
     the GM to be in DJ mode so that signal-gen and Mixxx links are
     established through the convolver.
+
+    F-394: a failed switch is a FAIL, not a skip. DJ mode is the
+    prerequisite under test, so a skip would hide a broken DJ path.
     """
-    if not _switch_gm_mode("dj", gm_port):
-        pytest.skip("Could not switch GM to DJ mode")
+    ok, detail = _switch_gm_mode_detail("dj", gm_port)
+    if not ok:
+        pytest.fail(
+            f"Could not switch GM to DJ mode: {detail}\n"
+            f"{_dj_mode_diagnostics(gm_port)}",
+            pytrace=False,
+        )
     yield
     _switch_gm_mode("standby", gm_port)
