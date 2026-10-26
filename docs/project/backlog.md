@@ -747,6 +747,11 @@ priority!"
   40345460992 at ff985455 FAILED (12 failed, all "Filter verification
   failed"); the Architect did not release gate ruling v1 (A1
   required); the AE writes v2 (CM).
+  UPDATE (CM, AE, 2026-10-26, after v263): backlog v263 pushed as
+  f3d7df8f. F-262 gate ruling v2 (91eca61e) RELEASED by the AE and the
+  Architect and relayed to worker-4; supersedes v1 (never relayed).
+  F-408 attaches to its G4 (no v3; Architect). F-407 set to P2 (AE)
+  (CM, AE).
 
 ## Reserved IDs
 
@@ -6658,6 +6663,26 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     least 20 seeds or dither variants. Release condition, verbatim:
     "v2 with A1 folded in (wording yours). I release it on its sha. I
     need no further change." The AE writes v2.
+  - UPDATE (CM, 2026-10-26, after v263; supersedes "v1 NOT released
+    ... The AE writes v2" above): gate ruling v2
+    /tmp/cm-relay/F-262/frozen/ae-gate-xo-ruling-v2-91eca61e.txt
+    (sha256 91eca61e, verified at PM read) RELEASED by both co-authors
+    and relayed to worker-4. Release record (h)
+    /tmp/cm-relay/release-record-20261026-h.txt (sha256 eb2b06d3,
+    verified at PM read). AE: "AE: matches, release 91eca61e."
+    Architect: "release 91eca61e. I checked the sha at read time. The
+    diff from v1 0aac380f contains only the header, G2(b) with its
+    -100 dB floor (A1, as I asked), G3 P4 with 20 or more seeds, and
+    the G4 A2 data. Nothing else changed." v1 0aac380f was never
+    relayed.
+     Changes from v1 (PM diffed the two files; matches the Architect's
+     list): G2(b) applies only above a floor; if the last-5% energy is
+     <= -100 dB re total, (b) passes; above it, the last 5% must not
+     exceed taps 90-95%. G3 adds P4: P1 and the 24 dB/oct sat filter
+     with their last 10% replaced by float32-level noise (about -145
+     dB re total) must PASS G2 for at least 20 seeds each. G1, G2(a),
+     G3 P1-P3/N1-N5, G4 and G5 unchanged; the c8 10-run AC starts once
+     the session is green with G1-G3.
   Before the first amps-on measurement (non-blocking one-liners; no
   F-ID, no P-level given):
   - AE, verbatim: "F-262 item 7 Architect note: before the first
@@ -6869,6 +6894,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   reflecting gate changes is what the test checks, so a timeout should
   be a FAIL, or an xfail with an F-ID." UX (3a8e85ff) supports it: the
   gate indicator is the operator's main safety cue.
+  P-LEVEL (AE, 2026-10-26, after v263; supersedes "no P-level given"
+  above), verbatim: "yes, set F-407 to P2 (AE), the same level as
+  F-405: fix it before amps-on." F-407: P2 (AE). The AE also confirmed
+  A3 as recorded (B1 maps to F-394; no new F-number).
   UPDATE (CM, 2026-10-26, after v260): F-406 and F-407 records are PR
   #67 (docs-only, draft, head ae450041); 7 Rule 13 verdicts requested;
   CI-exempt.
@@ -6981,6 +7010,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   choosing a new metric in G4, check whether aligning the reference
   (peak or cross-correlation lag) before the residual already restores
   fine resolution. If it does, G4 may be a small fix."
+  UPDATE (CM, 2026-10-26, after v263; supersedes "Architect NOT yet
+  released" above): the source ruling is now v2
+  /tmp/cm-relay/F-262/frozen/ae-gate-xo-ruling-v2-91eca61e.txt (sha256
+  91eca61e), RELEASED by the AE and the Architect (record (h),
+  eb2b06d3). G4 text unchanged from v1. Architect, verbatim: "F-408
+  going into the backlog record instead of a v3 is fine." Owner AE
+  with the Architect; lands before the first amps-on room correction
+  (G4). F-408: no P-level given.
+  - A2 data in v2 G4 (AE; float64, oversample 16, floor -240 dB; best
+    lag and gain over +/-200 samples before the residual): BW8 LP80
+    -20.4 -> -52.5 dB (lag 15); BW8 HP20 -26.6 -> -26.6 (lag 0); P1
+    -5.1 -> -5.6 (lag 13). AE, verbatim: "So alignment fixes the LP
+    case but not the HPF (DC-zero) cases. It is part of the fix, not
+    the whole fix. G1 stays as is."
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
