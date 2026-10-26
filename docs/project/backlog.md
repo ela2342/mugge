@@ -678,6 +678,13 @@ priority!"
   approved v4 (b0623656); the Architect and the QE are pending on v5.
   F-262 releases now cited from the CM release record aca30fe1 (CM,
   QE).
+  UPDATE (CM, QE, 2026-10-26, after v252): backlog v252 pushed as
+  141e2ea2. #63 Pi plan v5 ed039bfb is APPROVED by all three plan
+  reviewers (Architect 6b0d7071, QE 24e77f04, AE release). No v6 plan
+  file (CM ruling); the grant binds v5 + N1-N3 + R-a/R-b by reference
+  and still waits for US-172 v6. QE C4 on #63 stays open. Two
+  attribution fixes (5e123a6b item 3; the AE's thermal-STOP line).
+  F-262: the Architect's own release file eb621b26 (CM, QE).
 
 ## Reserved IDs
 
@@ -4959,6 +4966,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      is deferred, or AC12 is recorded NOT VALID.
      QE-only note (not joint): if only the renderer check fails, P15's
      routing evidence still counts.
+     CORRECTION (QE via CM, Architect 6b0d7071 and f368f222,
+     2026-10-26; supersedes the two lines just above): the "QE-only
+     note" label was wrong (it came from an earlier relay and the PM
+     carried it). The renderer fallback is the Architect's own text in
+     the joint file 5e123a6b, item 3, verbatim: "If (d) fails after
+     Mixxx has started: quit Mixxx. The routing evidence from P15
+     still counts, but AC12 is recorded as NOT VALID (software GL) and
+     deferred." Per 6b0d7071, the line "If any fails, the Mixxx part
+     is deferred, or AC12 is recorded NOT VALID" above summarises the
+     Architect's cover message, not the file text: (a)-(c) fail ->
+     defer the Mixxx part; (d) fails -> NOT VALID.
   - The conditional US-173 item above still applies. worker-3 is
     writing plan v3 (CM). The deploy still comes after US-172 v6.
   - UPDATE (CM, 2026-10-26, after v249): plan v3 is frozen as
@@ -5010,6 +5028,43 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      acceptable, because the gate is closed and the Mults are 0.
      Still pending on v5: the Architect and the QE (CM). PM cross-ref:
      the QE's APPROVE above is on v4, not v5.
+  - UPDATE (CM, QE, 2026-10-26, after v252; supersedes "Still pending
+    on v5" and the PM cross-ref just above): plan v5 ed039bfb is
+    APPROVED by all three plan reviewers. All files in
+    /tmp/cm-relay/PR63/, each verified at PM read.
+     Architect: APPROVE v5
+     (frozen-pr63-pi-plan-v5-ed039bfb-architect-verdict-6b0d7071.md,
+     sha256 6b0d7071). C7 matches 2aeff13a; R-a and R-b are now
+     explicit in the text. Everything outside the v4->v5 delta is
+     covered by the Architect's v4 APPROVE f368f222
+     (frozen-pr63-pi-plan-v4-3d3bfff7-architect-verdict-f368f222.md).
+     From f368f222: R-a "The FAIL clause takes precedence.
+     force-quantum 1024 is a FAIL even if the A2 baseline was 1024.";
+     R-b: a STOP follows if it is still FAIL on either criterion
+     (force-quantum 1024, or an effective driver quantum other than
+     256 in pw-top); section 9: both sessions are NOT required before
+     #63 merges (on path N, or on path D with (d) failed, #63 may
+     merge on the session-1 evidence under QE-S (i)-(iii)).
+     QE: APPROVE v5 (/tmp/pr63-qe-piplan-verdict-v5-ed039bfb.md; CM
+     frozen copy
+     frozen-pr63-qe-piplan-verdict-v5-ed039bfb-24e77f04.md; sha256
+     24e77f04), superseding b0623656 and c1e573fe. N1-N3 non-blocking
+     (CM summary): P16 outcomes labelled PASS/FINDING/FAIL; the
+     screenshot and mixxx.log saved with sha256 and the capture
+     command; the expected link list logged before P15. The QE's C4 on
+     #63 stays open until the QE has checked the session-1 evidence.
+     AE: released v5 (record (b) 71db4f71, above).
+     CM ruling: no v6 plan file. The grant binds v5 + N1-N3 + R-a/R-b
+     by reference, so the plan sha stays stable. The grant still waits
+     for US-172 v6.
+  - CORRECTION (CM, 2026-10-26; record (c)
+    /tmp/cm-relay/release-record-20261026-c.txt, sha256 1099250e,
+    verified at PM read): the thermal-STOP line attributed to the CM
+    above is the AE's own text, from the AE's v4 release, verbatim:
+    "Being left in DJ mode on a thermal STOP is acceptable: the gate
+    is closed and the Mults are 0." Record (b) had quoted only the
+    first sentence of that release. The AE's v5 release supersedes the
+    v4 release.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -6140,6 +6195,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      objections." AE on dfffcfbf: "release dfffcfbf". The same record
      holds the QE's "release 5e123a6b" for the #63 P17/Q1 joint
      ruling.
+     Architect release file (CM, 2026-10-26; cite alongside aca30fe1):
+     /tmp/cm-relay/F-262/frozen/:
+     F1-F5-architect-release-a8386f4b-eb621b26.txt (sha256 eb621b26,
+     verified at PM read). It records the release given by message:
+     "the Architect releases the AE's F1-F5 ruling ... as written. No
+     objections. F3 supersedes 9833ce7c item 1 for room captures only,
+     and I agree with that."
      F6 (dfffcfbf): the Architect wrote it, the AE released it; frozen
      as /tmp/cm-relay/F-262/frozen/:
      F6-source-scan-architect-dfffcfbf.txt (sha256 dfffcfbf, verified
