@@ -419,6 +419,10 @@ Allocated 2026-10-26 (PM, checked free across main, origin and all
 worktrees): F-399 (AD M1, #57 review: the venue runner leaves
 deployable-named files on a gate failure). Next free (supersedes the
 line above): F-400, US-177, D-071, T66.
+Allocated 2026-10-26 (PM, checked free across main, origin and all
+worktrees): US-177 (Architect: Web-UI filter panel on 174d coefficient
+sets). Next free (supersedes the line above): F-400, US-178, D-071,
+T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -6296,6 +6300,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
 
 ## P2
 
+- **US-177** Web-UI filter panel on 174d coefficient sets (Architect,
+  2026-10-26, from the US-174d fallback; P2 PRE-PROD unless the
+  Architect or the PO rule otherwise). Scope: deploy via the 174d set
+  swap; readback; rollback; versions from MANIFEST/index; refusal of
+  3-way profiles. Inherits SecSpec's AC (2) (web-UI deploys only via a
+  validated set swap) and the Architect's channel-map rules (ch4 :=
+  sub1, shared or inverted per the profile; refuse if unspecified).
+  Until it lands, US-174d disables the web-UI /deploy, /rollback,
+  /snapshot and /cleanup (409), and venue deploy is the only path.
+  Cross-ref: the SecSpec gig-blocker "Coefficient sets: single
+  validated writer" (and its US-174d write-access note); the P3
+  "web-ui PW conf filter_paths point at the output dir".
 - **Stale HP/IEM routing docs** (AE, docs, P2; AE review; folded per
   team-lead, 2026-10-25). docs/architecture/graph-manager.md section
   5.3/5.4 (0e0cbd38, same on main; lines ~164-195) still documents
