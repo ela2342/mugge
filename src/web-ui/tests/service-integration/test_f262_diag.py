@@ -124,6 +124,49 @@ def _run_near_or_beyond(row, ref):
     return any(_near_or_beyond_cutoff(c, ref) for c in row["captures"])
 
 
+def _truncated(row):
+    """Decision rule v2: TRUNCATED if any capture's IR peak is within 50 ms of
+    the cutoff or its onset vs the generator.rs port is >= 950 ms."""
+    return any(_near_or_beyond_cutoff(c, "siggen_port") for c in row["captures"])
+
+
+def _verify_failed(row):
+    return any(not v["min_phase_pass"] for v in row["verify"])
+
+
+def _decision_v2(rows):
+    valid = [r for r in rows if r["state"] in ("complete", "error")]
+    onset = _spread([c.get("onset_siggen_port_ms") for r in valid for c in r["captures"]])
+    trunc = [r for r in valid if _truncated(r)]
+    out = {"n_valid": len(valid), "onset_siggen_port_ms": onset,
+           "truncated_runs": [r["run"] for r in trunc],
+           "ok_runs": [r["run"] for r in valid if not _truncated(r)],
+           "verify_fail_runs": [r["run"] for r in valid if _verify_failed(r)],
+           "error_runs": [r["run"] for r in valid if r["state"] == "error"],
+           # Reported by name: TRUNCATED but "complete" (old gate accepted it).
+           "truncated_complete": [{
+               "run": r["run"],
+               "closed_loop_min_phase_residual_db": {
+                   v["file"]: v.get("closed_loop_min_phase_residual_db")
+                   for v in r["verify"]}} for r in trunc if r["state"] == "complete"]}
+    if len(valid) < N_RUNS:
+        out["verdict"] = f"NO VERDICT: {len(valid)} valid runs < {N_RUNS}"
+    elif trunc and all(_truncated(r) for r in valid if _verify_failed(r)):
+        out["verdict"] = "CONFIRMED"
+        spread = onset["spread"] if onset else None
+        if spread is not None and spread < 5.0 and len(trunc) == len(valid):
+            out["named_cause"] = "deterministic truncation"
+        elif spread is not None and spread > 100.0:
+            out["named_cause"] = "jitter"
+        else:
+            out["named_cause"] = "as measured (between named causes)"
+    elif not trunc:
+        out["verdict"] = "REFUTED: report to AE + Architect before S3"
+    else:
+        out["verdict"] = "OTHER: some verify failures are not TRUNCATED; report"
+    return out
+
+
 def _median(values):
     values = sorted(v for v in values if v is not None)
     if not values:
@@ -243,6 +286,8 @@ class TestF262Diag:
             [c.get("ir_peak_ms") for r in rows for c in r["captures"]])
         summary["verify_min_phase_fail_runs"] = [
             r["run"] for r in rows if any(not v["min_phase_pass"] for v in r["verify"])]
+        summary["decision_v2"] = _decision_v2(rows)
+        summary["n_valid"] = summary["decision_v2"]["n_valid"]
         summary["n_runs_with_captures"] = sum(bool(r["captures"]) for r in rows)
         # Architect (3): per-run warm-up overlap vs pass/fail.
         summary["per_run"] = [{
@@ -251,9 +296,17 @@ class TestF262Diag:
             "captures": [{k: c.get(k) for k in (
                 "key", "onset_siggen_port_ms", "onset_session_sweep_ms",
                 "onset_siggen_port_peak_width_3db_samples", "ir_peak_ms",
-                "ir_peak_to_cutoff_ms", "pre_roll_rms_dbfs", "rec_tail_rms_dbfs",
-                "warmup_overlap_sweep_ms", "warmup_overlap_preroll_ms", "timing")}
+                "onset_session_sweep_peak_width_3db_samples",
+                "ir_peak_to_cutoff_ms", "ir_peak_to_window_end_ms",
+                "pre_roll_rms_dbfs", "rec_tail_rms_dbfs",
+                "warmup_overlap_sweep_ms", "warmup_overlap_preroll_ms",
+                "pw_record_start_rel_sweep_ms", "preroll_start_rel_sweep_ms", "timing")}
                 for c in r["captures"]],
+            "truncated": _truncated(r),
+            "verify": [{k: v.get(k) for k in (
+                "channel", "file", "min_phase_pass", "residual_pass",
+                "closed_loop_min_phase_residual_db", "d009_pass")}
+                for v in r["verify"]],
         } for r in rows]
         summary["n_diag_errors"] = sum(len(r["diag_errors"]) for r in rows)
         with open(os.path.join(OUT_DIR, "summary.json"), "w") as f:
@@ -261,6 +314,9 @@ class TestF262Diag:
         print(json.dumps(summary, indent=2, default=float), flush=True)
 
         n_captured = sum(bool(r["captures"]) for r in rows)
+        assert summary["n_valid"] >= N_RUNS, (
+            f"F-262 diag: only {summary['n_valid']} valid runs (rule v2 needs "
+            f">= {N_RUNS}); states={summary['states']}")
         assert n_captured == N_RUNS, (
             f"F-262 diag: only {n_captured}/{N_RUNS} runs produced captures; "
             f"states={summary['states']}; the decision rule needs all {N_RUNS}")

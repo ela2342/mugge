@@ -121,6 +121,7 @@ def capture(key, recording, pre_roll, sweep, ir, sr, timing, level_dbfs):
         out["ir_peak_idx"] = peak
         out["ir_peak_ms"] = peak / sr * 1e3
         out["ir_peak_to_cutoff_ms"] = (IR_CUTOFF_S * sr - peak) / sr * 1e3
+        out["ir_peak_to_window_end_ms"] = (len(ir) - peak) / sr * 1e3
         out["siggen_level_dbfs"] = level_dbfs
         out["session_sweep_peak_dbfs"] = float(
             20 * np.log10(np.max(np.abs(sweep)) + 1e-300))
@@ -136,6 +137,14 @@ def capture(key, recording, pre_roll, sweep, ir, sr, timing, level_dbfs):
                 out["warmup_overlap_sweep_ms"] = (warm_end - t["t_sweep_play_call"]) * 1e3
             if "t_capture_returned" in t:
                 out["warmup_overlap_preroll_ms"] = (warm_end - t["t_capture_returned"]) * 1e3
+        # AE rerun item 4: pw-record start and pre-roll start relative to
+        # the sweep play call (negative = before the sweep).
+        if "t_sweep_play_call" in t:
+            t0 = t["t_sweep_play_call"]
+            if "t_capture_call" in t:
+                out["pw_record_start_rel_sweep_ms"] = (t["t_capture_call"] - t0) * 1e3
+            if "t_capture_returned" in t:
+                out["preroll_start_rel_sweep_ms"] = (t["t_capture_returned"] - t0) * 1e3
         _emit(out)
         # Keep the IR for the driver; it uploads only failing runs' IRs.
         from room_correction.export import export_filter
@@ -165,6 +174,9 @@ def verify(name, path, min_phase, d009):
                "min_phase_message": min_phase.message,
                "min_phase_details": min_phase.details,
                "residual_pass": bool(resid.passed),
+               # AE rerun item 3: closed_loop.minimum_phase_residual_db
+               # (what verify_minimum_phase_residual computes) on this WAV.
+               "closed_loop_min_phase_residual_db": resid.details.get("residual_db"),
                "residual_details": resid.details,
                "d009_pass": bool(d009.passed), "d009_details": d009.details})
     except Exception as exc:
