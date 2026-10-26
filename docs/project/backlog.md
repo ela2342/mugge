@@ -685,6 +685,12 @@ priority!"
   and still waits for US-172 v6. QE C4 on #63 stays open. Two
   attribution fixes (5e123a6b item 3; the AE's thermal-STOP line).
   F-262: the Architect's own release file eb621b26 (CM, QE).
+  UPDATE (CM, 2026-10-26, after v253): backlog v253 pushed as
+  bca7c488. F-262: worker-4 pushed c1-c4 (fix/F-262-shared-correction
+  at d677f253); DRAFT PR #66 opened so CI runs (run 40338944793 in
+  progress). Five new worker-4 findings frozen (b76bc353): (1)-(4) AE
+  writes, Architect releases; (5) Architect alone. PR #66 is now the
+  F-262 PR (CM).
 
 ## Reserved IDs
 
@@ -6222,6 +6228,37 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     allowlist. Fix the deploy.py:8/:99 run_all_checks wording with or
     after 174d." AE (via CM): a manual human run of the legacy CLI is
     the only remaining path, and this line covers it.
+  - UPDATE (CM, 2026-10-26, after v253): DRAFT PR #66 is the F-262 PR.
+    Branch fix/F-262-shared-correction at d677f253 (base 29f5c61f; 4
+    commits, 19 files, +985/-145): worker-4's c1-c4. CI run
+    40338944793 in progress; nothing has run locally (CM).
+     Still to do: c7 (onset/window, per a8386f4b), c8 (T8 xfail
+     removal and the F-403 doc), and mutations M1-M9 (CM).
+     New worker-4 findings on d677f253, frozen verbatim as
+     /tmp/cm-relay/F-262/frozen/: w4-c1c4-findings-d677f253.txt
+     (sha256 b76bc353, verified at PM read). (1) the closed-loop gate
+     uses the AE residual bands, not the level-reference band; (2) the
+     closed loop does not catch a dropped normalize_ir_level, two unit
+     tests guard it instead; (3) bandpass and 3-/4-way profiles now
+     fail closed in all three correction paths ("Measurement
+     rejected"), crossover-only generation unchanged; (4) the session
+     and filter_routes gate is now run_venue_checks plus the closed
+     loop, stricter than the old verify_minimum_phase; (5) the
+     source-scan allowlist is pending a ruling. Rulings: (1)-(4) the
+     AE writes, the Architect releases; (5) is the Architect's alone
+     (CM).
+     Behaviour change pending the AE ruling (CM): bandpass and
+     3-/4-way profiles now fail closed with "Measurement rejected"
+     (item 3).
+     Possible conflict (CM): worker-4's allowlist names
+     verify.run_all_checks, which F6 makes a forbidden callee. PM
+     cross-ref, for the Architect (no ruling implied): F6 item 3
+     itself allowlists "verify.py run_all_checks" as an enclosing def
+     (verify_minimum_phase :487) and run_full_pipeline's call of
+     run_all_checks (:280). worker-4's list names
+     "generate_bose_filters.verify_all" where F6 names the def
+     generate_bose_filters, and it does not list the run_full_pipeline
+     run_all_checks :280 entry.
   Before the first amps-on measurement (non-blocking one-liners; no
   F-ID, no P-level given):
   - AE, verbatim: "F-262 item 7 Architect note: before the first
