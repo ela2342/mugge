@@ -4,7 +4,7 @@
 // OfflineAudioContext with synthetic input.
 
 import { assert, close, eq } from "./assert.js";
-import { METER, MeterStream, MicMeter } from "../../../static/js/meter-core.js";
+import { METER, MeterStream, MicMeter, Recorder } from "../../../static/js/meter-core.js";
 import { STOP } from "../../../static/js/safety.js";
 
 const SR = 48000;
@@ -183,4 +183,77 @@ export async function test_worklet_clip_stops() {
   const under = new Float32Array(SR / 2);
   under[7777] = 10 ** (-1.01 / 20);
   eq(causes(await runWorklet(under, null)).length, 0, "under -1 dBFS");
+}
+
+// -- capture recording (AC2d, AC7) -------------------------------------------
+
+export async function test_recorder_takes_exact_frames_across_blocks() {
+  const sig = new Float32Array(1000).map((_, i) => i);
+  const rec = new Recorder(300);
+  let out = null;
+  let pushes = 0;
+  for (let i = 0; i < sig.length && !out; i += Q) {
+    out = rec.push(sig.subarray(i, i + Q));
+    pushes++;
+  }
+  eq(pushes, 3, "done in the third block");
+  eq(out.length, 300);
+  for (let i = 0; i < 300; i++) eq(out[i], i, "sample " + i);
+  assert(rec.done);
+  eq(rec.push(sig.subarray(0, Q)), null, "nothing after done");
+}
+
+export async function test_recorder_rejects_bad_frames() {
+  for (const f of [0, -1, 1.5, NaN, "10"]) {
+    let threw = false;
+    try { new Recorder(f); } catch (e) { threw = e instanceof RangeError; }
+    assert(threw, "rejects " + f);
+  }
+}
+
+/** The worklet records contiguous samples from the meter's own input. */
+export async function test_worklet_records_bit_exact() {
+  const len = SR;
+  const sig = new Float32Array(len);
+  let x = 12345;
+  for (let i = 0; i < len; i++) {
+    x = (x * 1103515245 + 12345) >>> 0;
+    sig[i] = (x / 2 ** 32 - 0.5) * 0.01;
+  }
+  const ctx = new OfflineAudioContext(1, len, SR);
+  await ctx.audioWorklet.addModule(WORKLET);
+  const buf = ctx.createBuffer(1, len, SR);
+  buf.copyToChannel(sig, 0);
+  const src = new AudioBufferSourceNode(ctx, { buffer: buf });
+  const node = new AudioWorkletNode(ctx, "webrc-mic-meter", {
+    numberOfInputs: 1, numberOfOutputs: 0, channelCount: 1,
+    channelCountMode: "explicit", channelInterpretation: "discrete",
+    processorOptions: { splOffsetDb: null },
+  });
+  const got = [];
+  node.port.onmessage = (e) => { if (e.data.type === "recorded") got.push(e.data); };
+  src.connect(node);
+  src.start();
+  const frames = 20000;
+  // Ask at a known point: suspend, post, give the port time, resume.
+  ctx.suspend(0.25).then(async () => {
+    node.port.postMessage({ type: "record", id: 7, frames });
+    await new Promise((r) => setTimeout(r, 100));
+    ctx.resume();
+  });
+  await ctx.startRendering();
+  for (let i = 0; i < 20 && !got.length; i++) {
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  eq(got.length, 1, "one recording");
+  const r = got[0];
+  eq(r.id, 7);
+  eq(r.samples.length, frames);
+  eq(r.startFrame % Q, 0, "starts on a quantum");
+  assert(r.startFrame + frames <= len, "inside the signal");
+  for (let i = 0; i < frames; i++) {
+    if (r.samples[i] !== sig[r.startFrame + i]) {
+      throw new Error("sample " + i + " differs");
+    }
+  }
 }

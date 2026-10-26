@@ -107,3 +107,31 @@ export class MeterStream {
     return report;
   }
 }
+
+/**
+ * Records a fixed number of contiguous mic samples (AC2d, AC7). push()
+ * takes every quantum the meter sees and returns the finished Float32Array
+ * once `frames` samples are in, else null. offset = index in the first
+ * pushed block where the recording starts (0 unless told otherwise).
+ */
+export class Recorder {
+  constructor(frames) {
+    if (!(Number.isInteger(frames) && frames > 0)) {
+      throw new RangeError("frames must be a positive integer");
+    }
+    this.buf = new Float32Array(frames);
+    this.n = 0;
+  }
+
+  get done() {
+    return this.n === this.buf.length;
+  }
+
+  push(block) {
+    if (this.done) return null;
+    const take = Math.min(block.length, this.buf.length - this.n);
+    this.buf.set(block.subarray(0, take), this.n);
+    this.n += take;
+    return this.done ? this.buf : null;
+  }
+}
