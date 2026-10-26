@@ -835,6 +835,11 @@ priority!"
   origin fix/F-262-shared-correction = 4724e65d; PR CI run
   40395927172, then the R5 series. Architect one-liner filed in P3
   (session.py _profile_dirs ignores PI4AUDIO_SPEAKERS_DIR).
+  UPDATE (CM, AE, QE, team-lead, 2026-10-26, after v282): backlog v282
+  pushed as cb87c39d (v281 was 31846ac9). F-411 set to P2 (AE); owner
+  worker-7, two phases (QE release; worker-4 release withdrawn). QE:
+  no R5 rule change at 4724e65d. TW F-403 v3 (F-411 swap, QE AC 6
+  citation) held until after the R5 series.
 
 ## Reserved IDs
 
@@ -7246,6 +7251,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     fix/F-262-shared-correction = 4724e65d (PM read: 4724e65d, parent
     cd1f63e7, then eb178a19; origin/main is an ancestor, A1 OK). PR CI
     run 40395927172 (CM); the R5 series starts after it.
+     UPDATE (CM, QE, 2026-10-26): QE, per CM: no R5 rule change at
+     4724e65d; the series goes once CI 40395927172 is green. The TW's
+     F-411 swap and the QE's AC 6 citation point (ebd890d0) are held
+     as a post-series TW v3, so the streak head does not move.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -7726,6 +7735,53 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   not changed to make this pass." Not in the F-262 fence (fence r4).
   No owner or worker assigned yet. Links: F-403, F-262 (its browser
   xfail removal needs F-411 resolved, see F-403).
+  UPDATE (AE, 2026-10-26; supersedes "no P-level given" above): P2.
+  AE, verbatim: "F-411 P-level, AE: P2. It is a correctness issue in
+  core room correction, and the F-403 browser xfail can't be removed
+  until it is resolved. The owner is for you and the QE to allocate.
+  The investigation route is in ruling 2218daf5 (B2)."
+  OWNER (PM + QE, 2026-10-26; supersedes "No owner or worker assigned
+  yet" above): worker-7, also owning the F-403 B1 room-sim fixture
+  fix. The PM first proposed worker-4 and the QE released worker-4
+  (sequential after the R5 series); after team-lead's input (the
+  owner's standing rule that nobody idles while a PR waits on CI;
+  worker-7 idle, worker-4 blocked in the R5 series) the PM proposed
+  worker-7 in two phases, and the QE released it, verbatim: "release
+  worker-7, with your two-phase plan. My worker-4 release is
+  withdrawn."
+  Phases (PM proposal, QE released): phase 1 now, the B2 investigation
+  from 2218daf5, read-only and offline on a scratch copy of 4724e65d,
+  no commits to the #66 files; findings to the AE as a frozen file,
+  and the AE rules which view is right before any code change. Phase
+  2: the F-411 fix and the B1 fixture fix on a branch cut after the
+  #66 merge, or earlier only under a CM fence revision. Reason (PM
+  cross-ref, git diff origin/main...4724e65d): #66 already changes
+  scripts/generate-room-sim-ir.py and room_correction/correction.py,
+  alignment.py and verify.py.
+  QE conditions, verbatim: "(a) The phase-1 scratch copy of 4724e65d
+  must NOT be a git checkout in the shared repo dir, because worker-4
+  and the CM work there. Use a separate directory: a CM-made clone or
+  worktree, or git archive 4724e65d into /tmp. Never in-tree, and
+  never isolation:"worktree". (b) Pin the phase-1 data to the 4724e65d
+  fixture, and name that sha in the frozen file. (c) My earlier
+  conditions 2 and 3 apply in phase 2: B1 and F-411 as separate
+  commits with before/after numbers, and a deterministic test that
+  does not depend on local-demo, fails today, and keeps the limits
+  fixed."
+  Earlier QE conditions 2 and 3 (from the worker-4 release), verbatim:
+  "2. Keep B1 and F-411 as separate commits, each with its own
+  before/after numbers. B1 changes the room-sim fixture, so the F-411
+  analysis states which fixture sha it used. The mock-room Left
+  numbers must be shown unaffected by B1, or re-taken after it. 3. The
+  F-411 fix needs a deterministic test that does not depend on
+  local-demo. It must fail today: a +3.95 dB 1/6-oct peak near 272.6
+  Hz is cut by only 0.71 dB. The 3.0 dB limit, the 18 dB cap and the
+  1/6-oct gate smoothing stay as they are (2218daf5 B2). If the AE
+  rules the two smoothing views differ by design, the test follows
+  that ruling." Condition 1 of that release (no B1 or F-411 commit on
+  the F-262 branch: scripts/ and src/ are on the ebd890d0 A no-carry
+  list, so such a commit voids the R5 series at 4724e65d) is covered
+  by phase 2.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
