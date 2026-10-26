@@ -248,6 +248,19 @@ priority!"
   word wins. PM asked the AE; until the AE answers, (9) stays as
   labelled above. The muted-spare line is no longer a separate line:
   it is amps-on row 17, sentence 2 (US-174d gate).
+  AE ANSWER (2026-10-26; supersedes "PM asked the AE" above): (9) is
+  PRE-PROD, for the TW's next safety.md batch; it does NOT gate the
+  US-173 merge. AE reason: US-173 never runs aplay, speaker-test,
+  amixer set or alsactl; it is an operator rule, and nothing is
+  connected. The TW's aplay/amixer/alsactl rule rode along on the
+  US-173 branch anyway (1c2d4bef, see US-173); it is not a merge
+  condition.
+  (11) (AE, via team-lead, 2026-10-26; PRE-PROD, owner AE): after a
+  web-ui restart the thermal limiter comes up "unconfigured, awaiting
+  profile" (main.py:213-219) and nothing re-reads the active-profile
+  marker, so thermal limiting stays OFF until a profile is
+  re-activated: it fails open. Fix: re-arm the limiter from the marker
+  at startup, or fail closed. Not blocking now. Pairs with (10).
 - AE core items (2026-10-26): #55 and #57 wait only on CI; the HF
   bound; the CHN-50P mask after F-388; the SNR threshold; the 174c/d/e
   reviews; the US-172c/172/173 reviews (US-173 AC2/AC3a); a thermal
@@ -274,6 +287,13 @@ priority!"
   to the owner). Mac disk: about 2.17 GB free, below the line; no nix
   for anyone. The US-174d crash design is being re-settled by the
   Architect and the AD (see US-174d).
+  UPDATE (CM, 2026-10-26, after v186): the US-174d crash design is
+  SETTLED (see US-174d). #61 and #62 have 7/7 at their heads; their
+  merges are held until after #57, so #57's approvals are not voided.
+  worker-5 is also permission-blocked on read-only grep (escalated).
+  US-173 is pushed at 1c2d4bef. OBSERVE-AE-sink-1 is granted to
+  worker-3 for the AE's default-sink reads (see US-173). Mac disk:
+  1.92 GB free and still falling; no nix for anyone.
 
 ## Reserved IDs
 
@@ -2075,6 +2095,40 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      (sandbox: proven for non-suspended nodes, Gate-2 r6b; Pi:
      boot-state zeros read on running nodes, OBSERVE-US172c-4,
      2026-10-26; non-zero set-and-read check pending)."
+  18. PROPOSED (Architect, AD concurs, AE input, 2026-10-26; number
+     proposed by the PM; the TW and the AE keep the final wording;
+     mirrors safety.md on merge): "Filter-chain absent = no audio,
+     proven on real PW." Why: US-174d adds `nofail` to the
+     filter-chain module, so a failed load (a dangling `current` after
+     ROLLBACK-FAILED, or a corrupt or missing WAV) leaves PW running
+     with no convolver and no gains. Before amps-on, a real-PW/WP test
+     shows, all in the convolver-ABSENT state: (1) zero links into
+     USBStreamer playback ch 1-8; (2) the USBStreamer is not the
+     default sink; (3) GM refuses DJ/live topology, its watchdog
+     latches, and its fallback destroys the USBStreamer links; (4)
+     behavioural, the deciding proof: a pw-play to the default target
+     produces no USBStreamer link; (5) a JACK client with autoconnect
+     forced on gets no USBStreamer link either (AE). Preconditions of
+     the test: the daemon stays up, NRestarts is stable, and the
+     convolver ABSENT state is reported loudly. Mechanism: a WP
+     stream-target hook that refuses the USBStreamer as a target for
+     Stream/* nodes, with a real-WP test, because WP falls back to the
+     only remaining sink whatever priority or metadata says; changing
+     media.class is ruled out (F-292). Today only GM's reactive link
+     audit (link_audit.rs) covers this, and only while GM runs.
+     Classification (AE ruling, via the Architect): NOT P1 now; a HARD
+     pre-amps-on blocker, because the US-174d `nofail` creates the
+     state it covers, so it is a real hazard under the frozen-list
+     rule. Carrier (Architect, TW, PM agree): the US-174d PR carries
+     the row into safety.md next to rows 15-17 and states the gap in
+     its description; the hook itself is a separate later story. If
+     the row lands: lead-in "The list has 18 rows. On the Pi 5, rows
+     1-3 and 5-18 must ALL hold; row 4 applies to the Pi 4 only.",
+     Gate rule "(1-3, 5-18)", and row 17's "there is no row 18" phrase
+     goes (TW asked the AE). Open at the TW: the AE's final text and
+     whether an operator-facing interim check goes alongside. Related,
+     in US-174d: convolver priority.session 2100, so it is the default
+     sink in the normal case.
   NEXT safety.md TOUCH (#51 reviews, non-blocking, fail safe; TW
   drafts, AE owns the wording, this list follows per the mirror
   rule): (1) AD L1 = UX (a): the lead-in "holds" (closed and
@@ -2707,6 +2761,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   21be4395/9876375e: the tryboot diff is one line (3fb3e46d) and the
   marker is restored. Still outstanding at worker-2: change 2 (nix
   shell dtc, nix copy), QE C2 and C3. NOT frozen.
+  UPDATE (QE, CM, 2026-10-26): the v3 kit is APPROVED. QE C4
+  (diff-only): us172.sh 3cd7509b, us172-drm-reads.sh 91ffcb6e, the
+  other 4 files unchanged; C1-C4 MET. Verdict verbatim at
+  /tmp/us172-run3-C4-QE-verdict.md (sha256 ce71a587), for the US-172
+  PR. Nit (non-blocking): the pull-obs usage text doesn't mention $2,
+  the power-pull time. The Architect CONFIRMED v3; the raw .dtb
+  "differs" in tb-post is expected (/chosen), not a finding.
+  OBSERVE-US172r3-pre is granted to worker-2 (pre-obs only). Next: its
+  output (cmdline-run3.txt plus C3SHA) to the QE and the Architect,
+  then the tb-pre/tb-diag CHANGE grants naming C3SHA; the tryboot
+  reboot only once the owner says they are at the HDMI screen.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -3563,6 +3628,22 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   US-172 labwc/session unit (worker-2, via CM, 2026-10-26): NO. greetd
   runs `dbus-run-session labwc` (display.nix:55); the only new user
   unit is wayvnc under mkIf vnc. Dropping Before= stands; RESOLVED.
+  UPDATE (CM, 2026-10-26): pushed at 1c2d4bef = worker-3's main merge
+  548da0a6 plus the TW's safety.md aplay/amixer/alsactl rule (not a
+  merge condition, see AE one-liner (9)).
+  M2 ruling (Architect, via CM, 2026-10-26): the venue source set
+  lives in configs/coeffs/markaudio-ultimax-200hz/, with a narrow
+  gitignore negation. M2 item 3 (pipewire.nix) is DROPPED;
+  pipewire.nix stays with US-174d. The Pi bridge is a CM CHANGE that
+  replaces the 4 flat combined_*.wav files: sha check, rebuild, sha
+  check. zero.wav lives at configs/coeffs/zero.wav, created by
+  worker-3 only and consumed by US-174d. The US-174d migration notes
+  cover removing the flat files. worker-4 owns the shared static check
+  functions.
+  OBSERVE-AE-sink-1 (CM, 2026-10-26): granted to worker-3 for the AE's
+  default-sink reads. If the USBStreamer turns out to be the default
+  sink, that is a potential P1 amps-on blocker (see amps-on row 18
+  PROPOSED); it does not block now.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -4206,6 +4287,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     format; (2) the venue declaration; (3) the zero-sample verify; (4)
     the spare's gain stays 0, plus the safety.md text, now amps-on row
     17 sentence 2; (5) the tests.
+  SETTLED (Architect superseding note, relayed to worker-4 by the CM;
+  the AD concurs; 2026-10-26; replaces "being re-settled" above): a
+  `committed` link, no marker file. Addendum A: a ROLLBACK-FAILED
+  fail-closed path, with `current` repointed to a dangling
+  sets/.rollback-failed. Addendum B: sub2 is negated from the decoded
+  sub1 array. Addendum 2 (Architect: a design gap, IN SCOPE, not a
+  backlog edge): the filter-chain conf sets `flags = [ nofail ]`, with
+  a real-PW dangling-current test and an `L`-not-`L+` static test.
+  Consequence: amps-on row 18 PROPOSED (filter-chain absent = no
+  audio). Open AE question (CM): the D-031 cut threshold at
+  mandatory_hpf_hz.
   US-174c (measurement on the Pi, web-ui measurement/session.py)
   starts only after F-390/F-391 and builds on them, because it is the
   same file (L-046). Its Pi run is also gated by US-173 H, F-341 AC3,
@@ -4598,6 +4690,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   /etc/pi4audio/speakers (F-390 R4)."
   Status (CM, 2026-10-26): worker-5 is permission-blocked on running
   tests (escalated to the owner).
+  F-c (worker-5, via CM, 2026-10-26; outside the F-390 fence): see the
+  P3 entry "/protection status reads the wrong marker". AE: NOT under
+  the AE's F-390 condition.
 - **F-391** Measurement sweep ignores mandatory_hpf_hz (P1; AE,
   2026-10-25). Gates the same sessions as F-390. /measurement/start
   accepts ChannelConfig.mandatory_hpf_hz (session.py:193), but
@@ -5297,6 +5392,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     dead bridge or closed 9100 would show as XFAIL. Narrow it: split
     the liveness asserts into an un-quarantined test. QE/AD decide
     how."
+    QE (#61 review, 2026-10-26): test_mute_e2e.py
+    TestUnmuteRestoresSignal still cites F-270; the F-394 fix PR
+    re-points it to F-394 (AC v/viii).
   Rules (QE, AE; via CM 2026-10-25): no quarantine marker in #54 or
   #55; one logged rerun only if this test is the sole failure; a green
   E2E most likely means the group was skipped; later PRs touching GM,
@@ -6297,6 +6395,24 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   anyway; if it merges first, check whether the line is already gone.
 ## P3
 
+- **/protection status reads the wrong marker** (F-c; worker-5, AE
+  ruling via team-lead, 2026-10-26; P3, owner UX; cross-ref F-390):
+  thermal_routes reads active-profile.txt from the speakers dir, but
+  activation writes active-profile.yml to PI4AUDIO_STATE_DIR
+  (~/.config/pi4audio). Only the read-only GET /protection view is
+  affected (thermal_routes.py:145-157): it always shows "no channels /
+  has_thermal false". Misleading, but no gain changes: profile
+  activation configures the limiter directly
+  (_configure_thermal_protection, speaker_routes.py step 7) and never
+  reads the marker. AE note: app.state.active_speaker_profile is never
+  set anywhere in app/.
+- **CLAUDE.md IEM-path sentence outdated** (Architect, docs drift,
+  2026-10-26; owner's file, flagged to team-lead for the owner and to
+  the TW; nobody else edits it): CLAUDE.md says "IEM signal path:
+  Reaper → direct PipeWire link → USBStreamer ch 6-7 (bypasses
+  convolver entirely)". D-063 and link_audit.rs protect all 8 ports;
+  HP and IEM go through the convolver on Dirac. The same file's
+  channel table puts the singer IEM on ch 7-8.
 - development.md, ONE docs item (TW offers to write it; merges UX,
   QE, Arch N2, AD L2, TW F1-F3): run `nix build
   .#checks.<system>.app-source-paths` locally (test-all no longer
