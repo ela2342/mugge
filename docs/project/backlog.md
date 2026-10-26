@@ -431,6 +431,10 @@ priority!"
   files, +443/-27); worker-4 adds the AE's (a0) commit and body draft
   2, then the CM opens the PR. Both placement rulings are in (see
   F-399 and US-174d).
+  UPDATE (CM, 2026-10-26, after v212): backlog v212 pushed as
+  e41e9416. F-399 open as PR #65 at final head 13995e15; CI run
+  40317165021 in progress (code, not CI-exempt); 7 reviews requested
+  via team-lead. Next: 174d, after #65 merges.
 
 ## Reserved IDs
 
@@ -6530,6 +6534,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   absolute premise `assert uncorrected_right >= 4.0`, marked (a0), and
   keep the difference assert (a). worker-4 adds the (a0) commit and
   body draft 2; then the CM opens the PR.
+  PR #65 OPEN (CM, 2026-10-26): "fix(F-399): stage venue runner
+  outputs, publish only a passing set". Final head 13995e15 (the (a0)
+  commit on top of 2fb05039); body draft 2 (sha1 b863b180); diff
+  against main 289f1a72: 3 files, +444/-27. Review bundle
+  /tmp/pr65-review-13995e15/ (pr65.diff sha256 d06cb3ef...). CI run
+  40317165021 in progress; code, not CI-exempt. Team-lead asked for
+  the 7 reviews. Tally 0/7.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
