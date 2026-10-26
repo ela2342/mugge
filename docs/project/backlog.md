@@ -400,6 +400,12 @@ priority!"
   6b66902d. F-362 / PR #64 final head 0d9e52e7 pushed, CI run
   40314977506 (CM report, relayed by team-lead). US-172: run-4 kit
   delivered, under Architect + QE review, no grant yet.
+  UPDATE (CM, 2026-10-26, after v205): backlog v205 pushed as
+  02f1683e. US-172: the run-4 kit is NOT acceptable as delivered
+  (Architect); worker-2 rebuilds it to RUN-4 v2. 174d code-complete,
+  HELD locally at 5ffb319c. #57 CI green (40310308638); merge waits on
+  QE C1/C2. #64: AC4 MET. Mac disk 2.1 -> 6.8 GB free, cause unknown
+  (CM asked team-lead); the disk hold stays until settled.
 
 ## Reserved IDs
 
@@ -3054,6 +3060,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the kit matches RUN-4 v2.
   One-liner (worker-2 via CM, 2026-10-26): the v3 recovery script has
   a missing-newline bug; it is not carried into kit v4.
+  RULING (Architect via CM, 2026-10-26): the run-4 kit is NOT
+  acceptable as delivered; it armed the dropped R4-0. worker-2
+  rebuilds it off the Pi to RUN-4 v2: R4-1 armed with dtdebug=1 and
+  cmdline-run4 = r41 + modprobe.blacklist=vc4,v3d; a loadable-module
+  precondition; outcomes (i), (ii) and (iii); then a separate CHANGE
+  for a live modprobe of v3d and then vc4; an optional greetd go. The
+  QE's 5 points and the AE's 3 conditions apply.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -4533,6 +4546,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   C2, worker-4 updates the PR body once CI is done, with the
   before/after numbers. #61 and #62 follow; they need an
   update-branch, re-checks and CI once main moves.
+  UPDATE (CM, 2026-10-26): #57 CI is green (run 40310308638) and the
+  PR body is set (AC7 margin 4.36 dB). The merge waits on the QE's
+  C1/C2 confirmation.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -4793,6 +4809,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   grep; any non-app caller is reported and disabled. The live
   verification sweep (session._run_verify and its PASS/FAIL display)
   is removed in 174d too; US-178 restores it against the new set.
+  UPDATE (CM, 2026-10-26): 174d is code-complete and HELD locally at
+  5ffb319c. The Architect also removed cleanup_old_coefficients and
+  the read-only orphans list_versioned_files/_get_active_filenames. QE
+  requirement: the two-branch E2E (no xfail), with a line in F-262.md.
+  UX narrowed the c-safe rule to deploy, verify and status only.
   US-174c (measurement on the Pi, web-ui measurement/session.py)
   starts only after F-390/F-391 and builds on them, because it is the
   same file (L-046). Its Pi run is also gated by US-173 H, F-341 AC3,
@@ -4905,6 +4926,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   F-362.md AC5 and status), held until mutation run 40314266261
   finished, then pushed; CI run 40314977506 (CM report, relayed by
   team-lead).
+  QE (via CM, 2026-10-26): AC4 MET (the mutation run failed as
+  intended).
 - **F-373** (AE; availability HIGH, safety-relevant; amps-on item
   13; linked US-159 G16): the USBStreamer sink does not recover after
   USB re-enumeration. AC17-B step (a), CM-CHG-.89-5: authorized 0->1
