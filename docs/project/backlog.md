@@ -241,12 +241,39 @@ priority!"
   load failure on profile activation is a warning only. Pre-prod: make
   activation fail closed (gate stays closed, loud UI error) when the
   limiter cannot be configured."
+  Merge gate for (9) (team-lead, 2026-10-26): (9) goes in the same
+  paused safety.md queue as the US-174d lines but has its own gate.
+  Team-lead reads (9) as the AE's US-173 (DJ path) item, gating the
+  US-173 merge; the AE's label above is PRE-PROD. Team-lead: the AE's
+  word wins. PM asked the AE; until the AE answers, (9) stays as
+  labelled above. The muted-spare line is no longer a separate line:
+  it is amps-on row 17, sentence 2 (US-174d gate).
 - AE core items (2026-10-26): #55 and #57 wait only on CI; the HF
   bound; the CHN-50P mask after F-388; the SNR threshold; the 174c/d/e
   reviews; the US-172c/172/173 reviews (US-173 AC2/AC3a); a thermal
   soak under DJ load (no fan on the Pi 5 is a gig risk). While
   "nothing connected" stands, nothing safety-related blocks lane A or
   B.
+  Lane status (CM, 2026-10-26, after v185): #55 (F-374) MERGED as
+  5f3af36ac1c1db2fc1a7ee516b2765d8584380fe at 09:26:48Z, 7/7 at
+  17144904, CI 40294373355 green. F-390 is no longer waiting on #55.
+  #57 was update-branched to 599ea52a (merging main 5f3af36a); its own
+  diff is identical, but strict protection voided the 6f4ae3d1
+  approvals. 7/7 diff-only re-checks are in at 599ea52a; it waits on
+  CI 40299659873. QE condition on #57: that run green with the test
+  file at 95 passed and the count = main + 26, and the PR body's
+  closed-loop numbers refreshed from the CI log or labelled pre-#55
+  (#55 moves crossover-section profiles to LR alignment, so
+  residual/teeth numbers can move although the diffs share no file).
+  UX N1/N2 for US-174e stand. Docs-only PRs (CI-exempt, 7 approvals
+  still needed): #61 (TW F-394 status batch, head 247478d5) and #62
+  (PM BS1 batch, head 20903a04, 3 files, +4/-4, base blobs = main
+  5f3af36a, MANIFEST verified). Tallies so far: #61 AD, QE (source
+  owner, F-394 facts cross-checked), UX APPROVE; #62 AD (L1), QE, UX
+  APPROVE. worker-5 is permission-blocked on running tests (escalated
+  to the owner). Mac disk: about 2.17 GB free, below the line; no nix
+  for anyone. The US-174d crash design is being re-settled by the
+  Architect and the AD (see US-174d).
 
 ## Reserved IDs
 
@@ -2017,6 +2044,37 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      safety.md wording stays pre-prod with F-396 AC4 (Pi
      confirmation). PO: row 16 minimal form is an amps-on row for the
      first D-070 session as is.
+  17. Dirac/passthrough and muted spare (AE FINAL, verbatim,
+     2026-10-26; number allocated by the PM; lands in safety.md in the
+     US-174d PR): "Dirac on ch 1-4 ⇒ venue is a declared passthrough
+     AND no own speakers/amps on ch 1-4. No driver is connected to a
+     channel the venue declares as a muted spare (all-zero filler)."
+     The muted-spare condition is this row's second sentence (AE
+     ruling); there is no row 18.
+     ORDER (AE picked (b), via TW, 2026-10-26; team-lead ruled out
+     (a)): the US-174d PR carries rows 15, 16 and 17 into safety.md;
+     US-174d does not wait on v19; v19 rebases onto US-174d. Rows 15
+     and 16 stay OPEN until US-175 is verified and v19 merges. AE
+     requirement: the lead-in or a footnote says rows 15 and 16 are
+     OPEN, so nobody takes the absent v19 text as in force (TW drafts
+     it in the US-174d batch; the AE sees it). Row 16 is acceptable as
+     written (fail-safe: it can only block amps-on). Lead-in,
+     verbatim: "The list has 17 rows. On the Pi 5, rows 1-3 and 5-17
+     must ALL hold; row 4 applies to the Pi 4 only." Gate rule: "(1-3,
+     5-17)". This list follows the merged safety.md wording (mirror
+     rule).
+     Row 15 FINAL (AE verbatim, via TW, 2026-10-26; supersedes the
+     v160/v161 Row 15 text above; it now leads with "US-175:" and the
+     status parenthesis is updated): "US-175: After any WirePlumber
+     restart: amps stay off, including the headphone/IEM amps, and
+     headphones/IEMs not worn, until PipeWire is restarted or the Pi
+     is cold power-cycled, with the gains verified at their boot
+     values on a node that is idle or running (row 14) and the gate
+     closed (safety.md, WirePlumber restart). Interim, until US-175 is
+     verified and the live gains readback is proven on the Pi
+     (sandbox: proven for non-suspended nodes, Gate-2 r6b; Pi:
+     boot-state zeros read on running nodes, OBSERVE-US172c-4,
+     2026-10-26; non-zero set-and-read check pending)."
   NEXT safety.md TOUCH (#51 reviews, non-blocking, fail safe; TW
   drafts, AE owns the wording, this list follows per the mirror
   rule): (1) AD L1 = UX (a): the lead-in "holds" (closed and
@@ -2645,6 +2703,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   QE's C4 diff-only check; OBSERVE pre-obs, output to the QE and
   Architect; CHANGE tb-pre and tb-diag; then tb-reboot only with the
   owner at the HDMI screen.
+  Run-3 plan v2 (CM, 2026-10-26) at the interim pins
+  21be4395/9876375e: the tryboot diff is one line (3fb3e46d) and the
+  marker is restored. Still outstanding at worker-2: change 2 (nix
+  shell dtc, nix copy), QE C2 and C3. NOT frozen.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -3498,6 +3560,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   silently; update both with an AE review. The stale file fails HP and
   CamillaDSP; the sample passes 5/5. The open AE HP-offset question is
   RESOLVED.
+  US-172 labwc/session unit (worker-2, via CM, 2026-10-26): NO. greetd
+  runs `dbus-run-session labwc` (display.nix:55); the only new user
+  unit is wayvnc under mkIf vnc. Dropping Before= stands; RESOLVED.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -4089,6 +4154,58 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     runs a read-only check of how web-ui deploy_filters writes to the
     root-owned coeffs dir today and reports the finding to the PM and
     the SecSpec.
+  SUPERSEDED (2026-10-26) in the list above: the seed-dirac fallback
+  row, the seed-dirac fail-closed row, the coeffs/.trial-pending row
+  and the A5b "filters live under /var/lib, not /etc" condition.
+  Current texts follow. The crash design is being re-settled by the
+  Architect and the AD (CM, 2026-10-26); the Architect's final answer
+  governs.
+  - In scope (AD FINAL): a dangling `current` with no verified
+    `committed` stops loud with audio disabled; status flag "no
+    verified set: audio disabled", test-asserted. No auto-fallback; it
+    repoints to `committed` only if `committed` verifies.
+  - In scope (AD FINAL): `current` resolving to seed-dirac (fresh
+    install, or the tmpfiles L recreating it) means audio works with
+    no driver protection. Flag "seed-dirac: no driver protection"
+    whenever this happens on a venue that is not a declared
+    passthrough; tests for both venue cases.
+  - PRE-PROD (AD, kept, reworded): "gate refuses to open on seed-dirac
+    unless the venue is a declared passthrough (declared in the venue
+    YAML plus operator confirmation)". Same item (Architect one-liner
+    2, owner AE): "the 'seed-dirac: no driver protection' startup
+    warning (keyed on current resolving to seed-dirac with a
+    non-passthrough venue) becomes fail closed."
+  - PRE-PROD (Architect one-liner 1, owner Architect/AE; = the AD's
+    crash-mid-trial row, now keyed on `current != committed`, since
+    the .trial-pending marker was dropped for a `committed` link):
+    "after a crash mid-trial, the next boot loads the untested trial
+    set. The GM/web-ui gate unlatch must refuse while
+    readlink(coeffs/current) != readlink(coeffs/committed)."
+  - PRE-PROD gate condition (AE A1, via the Architect): before the
+    first amps-on venue deploy, either F-346 is done (all 8 channels
+    loaded and proven, USBStreamer not suspended across the reload,
+    row-16 readback) or the gate enforces an amps-off confirmation per
+    PW restart. Links to the F-346 row above.
+  - With F-348 (Architect one-liner 3, owner Architect): "move the
+    generated filter-chain conf onto the venue's explicit
+    channel->file map, so the deploy no longer materializes conf names
+    for unused channels."
+  - Coeffs dir (team-lead correction, 2026-10-26): the filters STAY at
+    /etc/pi4audio/coeffs for now. The Architect deviated from the
+    SecSpec's /var/lib condition; the SecSpec accepted that (about
+    09:25:56Z), with a check that NixOS doesn't manage that path. The
+    other four A5b conditions stand as US-174d ACs. Low backlog (owner
+    Architect; SecSpec, verbatim): "Move the coeffs dir from
+    /etc/pi4audio/coeffs to /var/lib/pi4audio/coeffs (mutable state
+    out of /etc). This touches Rule 10, the F-399 guard literal and
+    the docs."
+  - Spare channel (AE ruling, via team-lead, 2026-10-26): option (2).
+    Ch 4 of the markaudio-ultimax-200hz venue (the muted spare) gets a
+    committed all-zero filter file, zero.wav, not Dirac. US-174d
+    approval conditions (AE, with worker-4): (1) the file and its
+    format; (2) the venue declaration; (3) the zero-sample verify; (4)
+    the spare's gain stays 0, plus the safety.md text, now amps-on row
+    17 sentence 2; (5) the tests.
   US-174c (measurement on the Pi, web-ui measurement/session.py)
   starts only after F-390/F-391 and builds on them, because it is the
   same file (L-046). Its Pi run is also gated by US-173 H, F-341 AC3,
@@ -4197,6 +4314,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   realpath + os.path.commonpath (or Path.is_relative_to), an
   allowlist pattern for the profile name, and tests that actually run
   (depends on F-362). No owner escalation (home lab rule).
+- **Coefficient sets: single validated writer** (SecSpec, MEDIUM,
+  PRE-PROD gig-blocker class next to F-037 and F-372; from the US-174d
+  A5b ruling, 2026-10-26), verbatim: "Coefficient sets: single
+  validated writer. Before amps-on or gig use, a root-owned systemd
+  helper (path unit or localhost RPC) becomes the only writer to the
+  coeffs dir. It runs the static checks (verify_format, mandatory HPF
+  per D-031, name regex, links resolving inside coeffs/sets/) before
+  any repoint of `current`. Alternatively, the web-ui deploy_filters
+  path stays disabled until F-037 auth lands. When the helper lands,
+  the pi4audio group write on /etc/pi4audio/coeffs (US-174d, home-lab
+  interim) is removed. Severity: medium (security-specialist).
+  Gig-blocker class, next to F-037."
 - Skip reasons invisible (QE): the integration-browser run shows 10
   skips with no reasons in the log (no -rs). Make skip reasons
   visible (cf. F-362). Low.
@@ -4444,6 +4573,31 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   D6 (web-ui.nix env plus tmpfiles C seeding, unbuilt); F-b
   (deploy.sh:565-575 rsync --delete overwrites operator edits to
   /etc/pi4audio/speakers; backlog?).
+  RULED (Architect, via CM, 2026-10-26; supersedes "Open to the
+  Architect" above): D1 approved. D2: repo fallback only if
+  PI_AUDIO_MOCK != "0". D3: one main.py handler for SpeakersDirError
+  only, 503, logged once per request; the session path maps it to
+  ERROR. D4: a stacked follow-up commit in F-390 naming the superseded
+  #55 lines. D5 approved: a mid-session edit is a WARNING plus
+  cp5_check. D6 approved: C seeding never overwrites operator edits,
+  with the trade-off in a web-ui.nix comment; unbuilt. F-a is fixed in
+  F-390. R6 (a)-(d) approved; the grep guard also catches
+  /etc/pi4audio/speakers and ~/pi4-audio-workstation. CM grants:
+  main.py, web-ui.nix, the D4 edit and thermal_ceiling.py. Fence:
+  speakers_config.py (new), session.py, speaker_routes.py,
+  filter_routes.py, main.py, web-ui.nix,
+  room-correction/thermal_ceiling.py and their tests.
+  Record line (Architect, verbatim): "#55 merges with the fail-open
+  FileNotFoundError warning-skip in _check_profile_crossover; F-390
+  closes it. Not a #55 blocker under the owner priority (nothing
+  connected)."
+  F-b one-liner (Architect, verbatim): "Check whether
+  scripts/deploy/deploy.sh is still used for the NixOS Pi 5. If not,
+  delete its rsync --delete block (deploy.sh:565-575) or the script
+  (Raspbian legacy). If it is, it must not clobber operator edits in
+  /etc/pi4audio/speakers (F-390 R4)."
+  Status (CM, 2026-10-26): worker-5 is permission-blocked on running
+  tests (escalated to the owner).
 - **F-391** Measurement sweep ignores mandatory_hpf_hz (P1; AE,
   2026-10-25). Gates the same sessions as F-390. /measurement/start
   accepts ChannelConfig.mandatory_hpf_hz (session.py:193), but
@@ -4846,6 +5000,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - SecSpec LOW: the measurement session's profile_name has no slug
     check and can load any readable *.yml. Fix before F-037 is
     closed for gigs.
+    SecSpec (2026-10-26, from the #55 verdict, F-374 lane): this is
+    path traversal to any *.yml, the same class as F-372 and F-398.
   - Architect N2: the room-correction import path is set up 3
     ways; consolidate it into one helper.
   - Architect N3 = AD N5: the editor and validate_profile_crossover
@@ -5040,6 +5196,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the same LR order." Batch BS1 frozen: /tmp/pm-bs1/, MANIFEST sha1
   c37b8f3c (base main dfdbbbd6); applied after #55 merges (CM routes).
   PO informed.
+  BS1 is PR #62 (CM, 2026-10-26; head 20903a04, docs-only). #62 review
+  one-liners (AD L1, TW; not blocking; the author kept the #62 head so
+  the approvals stand): (1) AD, verbatim: "The US-089 AC crossover
+  editor slope preset '24/48/96' (US-089.md:32 and
+  user-stories.md:6733) contradicts F-374 (LR 24/48 only, one per
+  profile). Narrow it the same way as US-011 and US-091." TW: since
+  F-374 the editor save rejects 96; UX sees the narrowing. (2) AD,
+  verbatim: "The crossover.py:14 docstring still says '48-96 dB/oct',
+  but the generator only accepts 24 and 48. Fix the comment the next
+  time someone touches the file."
 - Steeper crossover slopes (96 dB/oct LR and up; PO, 2026-10-25;
   Low/P3, future work): steeper slopes as minimum-phase FIR. AC (AE):
   the AE first evaluates the group delay and pre-echo behaviour at the
@@ -5059,6 +5225,22 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   AC (AE): "the validator refuses a profile where the two legs meeting
   at a crossover point use different slopes". No shipped profile sets
   high_slope_db_per_oct, so nothing deployed is affected.
+  UPDATE (#62 reviews, 2026-10-26; QE, UX, Architect and AE raised the
+  same gap; one row, no new ID): it is the counterpart of the US-091
+  AC that #62 narrows; main 5f3af36a still accepts it
+  (generate_profile_filters.py:46-69 and :154). AE (P3, not a safety
+  item), verbatim: "validate_profile_crossover
+  (generate_profile_filters.py:46-69) accepts a bandpass driver's
+  high_slope_db_per_oct ≠ the slope of the leg it meets, so mismatched
+  LR orders at one crossover point (non-flat sum) can be generated.
+  That conflicts with the US-091 AC 'same LR order at one crossover
+  point'. Fix: reject high_slope_db_per_oct ≠ section slope (or derive
+  it), with a test. No profile on main sets it today." QE adds: also
+  reject mixed slopes between crossover sections, with a test that a
+  mixed LR4/LR8 profile raises CrossoverSpecError. Architect: e.g. BP
+  high 24 against HP 48; reject the mismatch or drop the key.
+  Priority: P2 above (AE 2026-10-25) vs P3 now (AE); the AE's latest
+  word governs (P3).
 - **F-393** Check-sandbox guard misses configs/drivers (P2, PM
   provisional, QE to confirm; AD L1 + QE, #54 at 46343238,
   non-blocking there, via CM 2026-10-25): the room-correction check's
@@ -5110,6 +5292,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     xfail is removed; (3) if it doesn't, the sw signal test and the
     mute tests get a stimulus added.
   - (viii) the fix PR removes the quarantine marker, if one was added.
+    SecSpec LOW (#59 verdict, 2026-10-26), verbatim: "The quarantine
+    xfail on test_level_bridge_sw_has_signal covers any failure, so a
+    dead bridge or closed 9100 would show as XFAIL. Narrow it: split
+    the liveness asserts into an un-quarantined test. QE/AD decide
+    how."
   Rules (QE, AE; via CM 2026-10-25): no quarantine marker in #54 or
   #55; one logged rerun only if this test is the sole failure; a green
   E2E most likely means the group was skipped; later PRs touching GM,
@@ -5511,6 +5698,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   and subnormal as 0.000000, NaN > 1.0 is false, and a suspended node
   reads 0 (F-395), so the check cannot see a NaN/Inf Mult or any gain
   on a suspended node. Added to the consumer list (AC audit).
+  AC addition (AE, agreed by the Architect, 2026-10-26): any gain
+  readback or consumer that sees Mult < 0 on any channel reports FAIL.
+  Polarity lives only in the immutable coefficient set (US-174d, sub2
+  option (a)), never in runtime gain.
   PRE-PROD (P2, PO re-plan 2026-10-26): F-397 waits until the core is
   running; no new rounds.
 - **F-398** Config-supplied names used as path components unchecked
@@ -5524,6 +5715,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   F-372 and the #55 profile_name item. Not a #57 blocker.
   PRE-PROD (P2, PO re-plan 2026-10-26), except the AC itself: it stays
   an AC on the step that writes coefficients to the Pi (PO).
+  Link (SecSpec, 2026-10-26): covered by the US-174d AC (d) the
+  Architect adopted (name regex, links resolving inside coeffs/sets/);
+  no duplicate row.
 - **F-399** Venue runner leaves deployable-named files on a gate
   failure (AD M1, #57 review at 05d306bc, 2026-10-26; fix before
   US-174c/d): run_venue_pipeline writes deployable-named
@@ -6770,6 +6964,10 @@ merge needs update-branch and 7 reconfirmations at the new head.
   body. More pre-prod one-liners: SecSpec LOW: curl -k -> --cacert
   after F-037. AE addendum: the pw-dump vs pw-cli readback
   contradiction is bound to v19.
+  SecSpec (2026-10-26, #45 verdict, review paused), verbatim: "The
+  documented gate-close recovery uses `curl -k`. When F-037 auth
+  lands, switch to `--cacert`/a pinned fingerprint, so credentials are
+  never sent over an unverified connection." Ties to F-037.
 - #45 dangling citations (TW, 2026-10-25): AC14, F-320, F-338,
   F-339 and F-347 cite "pre-flight #10 (PR #45)". #45
   (docs/safety-d063-gate,
