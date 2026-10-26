@@ -52,10 +52,13 @@ def siggen_sweep(duration_s, sr, level_dbfs, f_start=20.0, f_end=20000.0):
 
 
 def _xcorr_onset(rec, ref, sr):
-    """Lag of ref inside rec (samples), and peak uniqueness in dB.
+    """Lag of ref inside rec (samples), peak uniqueness in dB, -3 dB width.
 
     Uniqueness = main peak vs the largest correlation value more than
     5 ms away from it (AE S3: within 6 dB means not unique).
+    Width = -3 dB width of the main peak in samples, crossings linearly
+    interpolated (joint-diag-final addendum: median > 2 samples means the
+    AE re-rules the sweep-law assumption).
     """
     from scipy.signal import fftconvolve
 
@@ -66,7 +69,24 @@ def _xcorr_onset(rec, ref, sr):
     rest[max(0, i - guard): i + guard + 1] = 0.0
     second = float(rest.max()) if rest.size else 0.0
     uniq_db = 20 * np.log10(xc[i] / second) if second > 0 else float("inf")
-    return i - (len(ref) - 1), float(uniq_db)
+    return i - (len(ref) - 1), float(uniq_db), _width_3db(xc, i)
+
+
+def _width_3db(xc, i):
+    half = xc[i] / np.sqrt(2.0)
+    lo = i
+    while lo > 0 and xc[lo - 1] >= half:
+        lo -= 1
+    hi = i
+    while hi < len(xc) - 1 and xc[hi + 1] >= half:
+        hi += 1
+    left = float(lo)
+    if lo > 0:
+        left = lo - (xc[lo] - half) / (xc[lo] - xc[lo - 1])
+    right = float(hi)
+    if hi < len(xc) - 1:
+        right = hi + (xc[hi] - half) / (xc[hi] - xc[hi + 1])
+    return float(right - left)
 
 
 def _rms_dbfs(x):
@@ -86,11 +106,15 @@ def capture(key, recording, pre_roll, sweep, ir, sr, timing, level_dbfs):
                "pre_roll_samples": len(pre), "rec_samples": len(rec)}
         for name, ref in (("session_sweep", sweep),
                           ("siggen_port", siggen_sweep(duration_s, sr, level_dbfs))):
-            lag_full, uniq = _xcorr_onset(full, ref, sr)
+            lag_full, uniq, width = _xcorr_onset(full, ref, sr)
             lag = lag_full - len(pre)  # relative to the 0.5 s trim point
             out[f"onset_{name}_samples"] = lag
             out[f"onset_{name}_ms"] = lag / sr * 1e3
             out[f"onset_{name}_uniqueness_db"] = uniq
+            out[f"onset_{name}_peak_width_3db_samples"] = width
+            # Ideal width for this reference (its own autocorrelation): a log
+            # sweep's peak is ~3.3 samples wide even with a perfect law match.
+            out[f"onset_{name}_ref_autocorr_width_3db_samples"] = _xcorr_onset(ref, ref, sr)[2]
         ir = np.asarray(ir, dtype=float)
         peak = int(np.argmax(np.abs(ir)))
         out["ir_len"] = len(ir)

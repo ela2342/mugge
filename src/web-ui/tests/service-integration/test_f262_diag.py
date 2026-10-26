@@ -87,8 +87,23 @@ def _spread(values):
             "spread": max(values) - min(values), "n": len(values)}
 
 
-def _near_or_beyond_cutoff(onset_ms):
-    return onset_ms >= CUTOFF_MS - NEAR_MS
+def _near_or_beyond_cutoff(cap, ref):
+    """joint-diag-final Decision: onset >= 950 ms OR IR peak within 50 ms of the cutoff."""
+    peak_to_cutoff = cap.get("ir_peak_to_cutoff_ms")
+    return (cap[f"onset_{ref}_ms"] >= CUTOFF_MS - NEAR_MS
+            or (peak_to_cutoff is not None and abs(peak_to_cutoff) <= NEAR_MS))
+
+
+def _run_near_or_beyond(row, ref):
+    return any(_near_or_beyond_cutoff(c, ref) for c in row["captures"])
+
+
+def _median(values):
+    values = sorted(v for v in values if v is not None)
+    if not values:
+        return None
+    m = len(values) // 2
+    return values[m] if len(values) % 2 else (values[m - 1] + values[m]) / 2
 
 
 class TestF262Diag:
@@ -158,23 +173,45 @@ class TestF262Diag:
             all_on = onsets(ref, lambda r: True)
             fail_on = onsets(ref, lambda r: not r["passed"])
             pass_on = onsets(ref, lambda r: r["passed"])
+            failing = [r for r in rows if not r["passed"]]
+            passing = [r for r in rows if r["passed"]]
             st = _spread(all_on)
             summary[ref] = {
                 "onset_ms": st,
                 "within_50ms_of_cutoff": sum(abs(o - CUTOFF_MS) <= NEAR_MS for o in all_on),
                 "failing_onsets_ms": fail_on,
                 "passing_onsets_ms": pass_on,
-                # AE AND rule inputs (verdict is the AE's/Architect's call):
+                # joint-diag-final Decision inputs (lines 22-28):
                 "rule_spread_gt_100ms": bool(st and st["spread"] > 100.0),
-                "rule_all_failing_near_or_beyond": bool(fail_on) and all(
-                    _near_or_beyond_cutoff(o) for o in fail_on),
+                "rule_all_failing_near_or_beyond": bool(failing) and all(
+                    _run_near_or_beyond(r, ref) for r in failing),
                 "rule_no_passing_near_or_beyond": not any(
-                    _near_or_beyond_cutoff(o) for o in pass_on),
+                    _run_near_or_beyond(r, ref) for r in passing),
+                "near_or_beyond_runs": [
+                    r["run"] for r in rows if _run_near_or_beyond(r, ref)],
+                "peak_width_3db_samples_median": _median(
+                    [c.get(f"onset_{ref}_peak_width_3db_samples")
+                     for r in rows for c in r["captures"]]),
+                "peak_width_3db_samples": _spread(
+                    [c.get(f"onset_{ref}_peak_width_3db_samples")
+                     for r in rows for c in r["captures"]]),
+                "ref_autocorr_width_3db_samples_median": _median(
+                    [c.get(f"onset_{ref}_ref_autocorr_width_3db_samples")
+                     for r in rows for c in r["captures"]]),
             }
             s2 = summary[ref]
             s2["and_rule_all_three"] = (s2["rule_spread_gt_100ms"]
                                         and s2["rule_all_failing_near_or_beyond"]
                                         and s2["rule_no_passing_near_or_beyond"])
+            if s2["and_rule_all_three"]:
+                s2["outcome"] = "CONFIRMED"
+            elif st and st["spread"] < 5.0 and not failing:
+                s2["outcome"] = "REFUTED"
+            else:
+                s2["outcome"] = "OTHER: report to AE + Architect"
+            s2["peak_width_ae_rerule"] = bool(
+                s2["peak_width_3db_samples_median"] is not None
+                and s2["peak_width_3db_samples_median"] > 2.0)
         summary["ir_peak_ms"] = _spread(
             [c.get("ir_peak_ms") for r in rows for c in r["captures"]])
         summary["verify_min_phase_fail_runs"] = [
