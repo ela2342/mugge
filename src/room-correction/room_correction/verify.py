@@ -295,9 +295,11 @@ def verify_mandatory_hpf(filter_path, mandatory_hpf_hz, min_attenuation_db=18.0)
     Verify that a filter provides adequate subsonic protection.
 
     Checks that the magnitude response at half the mandatory HPF frequency
-    is at least min_attenuation_db below the passband level. This ensures
-    the subsonic protection filter is actually present and effective in the
-    combined FIR.
+    is at least min_attenuation_db below the passband peak: the maximum gain
+    over [mandatory_hpf_hz, min(20 kHz, 0.95 * Nyquist)] (AE ruling H1,
+    F-262). The peak is the channel's own passband level for HP, LP, BP and
+    fullrange channels alike. This ensures the subsonic protection filter is
+    actually present and effective in the combined FIR.
 
     Parameters
     ----------
@@ -307,7 +309,7 @@ def verify_mandatory_hpf(filter_path, mandatory_hpf_hz, min_attenuation_db=18.0)
         The mandatory highpass frequency declared in the speaker identity.
     min_attenuation_db : float
         Minimum required attenuation at (mandatory_hpf_hz / 2) relative
-        to passband. Default 18dB.
+        to the passband peak. Default 18dB.
 
     Returns
     -------
@@ -322,9 +324,10 @@ def verify_mandatory_hpf(filter_path, mandatory_hpf_hz, min_attenuation_db=18.0)
     idx_check = np.argmin(np.abs(freqs - check_freq))
     gain_at_check = gains_db[idx_check]
 
-    # Passband reference: average gain between 2x HPF and min(10x HPF, 20kHz)
-    passband_low = mandatory_hpf_hz * 2.0
-    passband_high = min(mandatory_hpf_hz * 10.0, 20000.0)
+    # Passband reference: peak gain from the HPF frequency up. A mean over a
+    # fixed window lands in the crossover stopband of LP subs and HF drivers.
+    passband_low = float(mandatory_hpf_hz)
+    passband_high = min(20000.0, 0.95 * sr / 2.0)
     passband_mask = (freqs >= passband_low) & (freqs <= passband_high)
 
     if not np.any(passband_mask):
@@ -334,13 +337,14 @@ def verify_mandatory_hpf(filter_path, mandatory_hpf_hz, min_attenuation_db=18.0)
             {},
         )
 
-    passband_level = float(np.mean(gains_db[passband_mask]))
-    attenuation = passband_level - gain_at_check
+    passband_peak = float(np.max(gains_db[passband_mask]))
+    attenuation = passband_peak - gain_at_check
 
     passed = attenuation >= min_attenuation_db
     message = (
         f"Attenuation at {check_freq:.0f}Hz: {attenuation:.1f}dB "
-        f"(passband ref: {passband_level:.1f}dB, "
+        f"(passband peak: {passband_peak:.1f}dB over "
+        f"[{passband_low:.0f}, {passband_high:.0f}] Hz, "
         f"required: >= {min_attenuation_db}dB)"
     )
 
@@ -351,7 +355,7 @@ def verify_mandatory_hpf(filter_path, mandatory_hpf_hz, min_attenuation_db=18.0)
         {
             "check_freq_hz": check_freq,
             "attenuation_db": attenuation,
-            "passband_level_db": passband_level,
+            "passband_peak_db": passband_peak,
             "gain_at_check_db": gain_at_check,
         },
     )

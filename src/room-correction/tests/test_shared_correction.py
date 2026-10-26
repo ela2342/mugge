@@ -340,6 +340,10 @@ class TestMinPhaseGateControls:
         for spk, fir in filters.items():
             result = _gate(tmp_path, fir, f"{spk}.wav")
             assert result.passed, f"{profile_name} {spk}: {result.message}"
+            hpf = identities[profile["speakers"][spk]["identity"]].get("mandatory_hpf_hz")
+            if hpf is not None:
+                hpf_result = verify.verify_mandatory_hpf(str(tmp_path / f"{spk}.wav"), hpf)
+                assert hpf_result.passed, f"{profile_name} {spk}: {hpf_result.message}"
 
     @pytest.mark.parametrize("profile_name", sorted(XO_UNBUILDABLE))
     def test_unbuildable_profiles_raise(self, profile_name):
@@ -401,6 +405,57 @@ class TestMinPhaseGateControls:
             if r.name.startswith(("Minimum Phase", "Closed Loop")):
                 print(f"N4 {r.name}: {'PASS' if r.passed else 'FAIL'} {r.message}")
         assert not all(r.passed for r in results if r.name.startswith("Closed Loop"))
+
+
+def _hpf(tmp_path, fir, hpf_hz):
+    """verify_mandatory_hpf() on a float32 WAV round-trip."""
+    path = str(tmp_path / "hpf.wav")
+    export_filter(fir, path, n_taps=N_TAPS)
+    return verify.verify_mandatory_hpf(path, hpf_hz)
+
+
+LP80 = _butter(8, 80, "low")
+
+
+class TestMandatoryHpfReference:
+    """H1 (AE ruling cfe9bf66): reference = peak over [hpf, min(20 kHz, 0.95 Nyquist)]."""
+
+    @pytest.mark.parametrize("sections, hpf_hz", [
+        ((LP80, _butter(4, 30, "high")), 30),
+        ((LP80, _butter(4, 20, "high")), 20),
+        ((_butter(8, 100, "low"), _butter(8, 25, "high")), 25),
+        ((_butter(8, 2000, "high"),), 25),
+        ((_butter(4, 80, "high"),), 80),
+    ], ids=["sub-LP80-HP30o4", "sub-LP80-HP20o4", "sub-LP100-HP25o8",
+            "hf-HP2000-hpf25", "sat-HP80o4"])
+    def test_real_hpf_passes(self, tmp_path, sections, hpf_hz):
+        result = _hpf(tmp_path, _iir_impulse(*sections), hpf_hz)
+        assert result.passed, result.message
+
+    @pytest.mark.parametrize("sections", [
+        (LP80,),
+        (LP80, _butter(4, 15, "high")),
+        (LP80, _butter(1, 30, "high")),
+        (LP80, _butter(2, 30, "high")),
+    ], ids=["no-HPF", "HPF-at-15", "HPF-1st-order", "HPF-2nd-order"])
+    def test_missing_or_shallow_hpf_fails(self, tmp_path, sections):
+        result = _hpf(tmp_path, _iir_impulse(*sections), 30)
+        assert not result.passed, result.message
+
+    def test_sealed_sub_regression(self, tmp_path):
+        """2way-80hz-sealed sub: 16.7 dB FAIL on the old mean reference."""
+        profile, identities = config_generator.load_profile_with_identities("2way-80hz-sealed")
+        filters, _ = combine.uniform_d009_trim(
+            generate_profile_filters(profile, identities, n_taps=N_TAPS, sr=SR))
+        hpf_hz = identities[profile["speakers"]["sub1"]["identity"]]["mandatory_hpf_hz"]
+        result = _hpf(tmp_path, filters["sub1"], hpf_hz)
+        assert result.passed, result.message
+        assert result.details["attenuation_db"] >= 40.0
+
+    def test_empty_window_fails_closed(self, tmp_path):
+        result = _hpf(tmp_path, _p1(), 30000)
+        assert not result.passed
+        assert "No passband bins" in result.message
 
 
 class TestMandatoryHpfInGate:
