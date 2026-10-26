@@ -497,6 +497,16 @@ priority!"
   (capture redesign, PO: P1 after F-262; gates US-174e, not US-178).
   #64 new head 15bd74eb, CI 40320048783 running. #63 new head
   3a4baba1, still conflicts with main, no CI yet.
+  UPDATE (CM, 2026-10-26, after v224): backlog v224 pushed as
+  187c7b1e. F-262: the diagnostic decision rule is CLOSED (Architect
+  tie-break: the three-outcome Decision block in joint-diag-final.txt,
+  not the AE AND text v224 quotes); Q2/Q3/Q4/Q5/Q8 settled. F-403:
+  does not block the F-262 merge but blocks any amps-on
+  room-correction deploy (Architect); it gates US-178's amps-on
+  activation and acceptance step, not development or amps-off testing
+  (AE + Architect, narrowing the PO non-gate); PO: S4 first, as its
+  own slice/PR. #63: TW batch landed as 94064cc2 (parent 3a4baba1, new
+  F-400.md); worker-3 merges main next.
 
 ## Reserved IDs
 
@@ -4284,6 +4294,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   UPDATE (CM, 2026-10-26): #63 new head 3a4baba1 pushed (WAVs,
   SHA256SUMS, test, AC5, Q4 conf header). It still CONFLICTS with
   main, so no CI yet.
+  UPDATE (CM, 2026-10-26): the TW batch landed as 94064cc2 (parent
+  3a4baba1), including the new F-400.md. worker-3 merges main next.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -4316,6 +4328,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   constraints) on top of it.
   GATE (PO, 2026-10-26): F-403 (capture redesign) blocks US-174e,
   because one button needs reliable captures (see F-403).
+  UPDATE (2026-10-26, see F-403): if the F-403 US-178 gate lifts early
+  (S4 landed, peak width ≤ 2 samples), S2 and the continuous stream
+  gate US-174e as reliability work (AE + Architect; PO order: S4
+  first, the rest before US-174e).
   c) and d) wait strictly for US-173's H, F-341 AC3 (no signal-gen
   measurement session before it) and D-070 / the amps-on list.
   Pending: the Architect and AE define the first slice and the file
@@ -5141,6 +5157,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   unless the AE or Architect rules that the current capture can pass
   F-262's fail-closed check and still deliver wrong filters (see
   F-403).
+  AMENDED (AE + Architect, 2026-10-26; narrows the F-403 line above;
+  verbatim in F-403): F-403 gates US-178's amps-on activation and
+  acceptance step. US-178 development and amps-off testing may start
+  without it (still after the F-262 HARD GATE). Early lift: S4 lands
+  before US-178 AND the F-262 diagnostic shows a median
+  correlation-peak width ≤ 2 samples.
 - **F-262** Session filters use the raw room IR as the correction
   filter (P1, room lane; PO ruling 2026-10-26). Record
   docs/project/defects/F-262.md on main; this entry carries the
@@ -5221,6 +5243,40 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   strict session gate, fail-closed onset/window check on the current
   capture. Exit: "FILTERS READY" only for correct filters, otherwise a
   clear error. The capture redesign is a new defect (F-403).
+  CORRECTION (CM, 2026-10-26; supersedes the "AE rule, verbatim"
+  two-outcome text and the "decision rule REPLACED by the AE's AND
+  rule" note above): the decision rule is CLOSED by the Architect's
+  tie-break. The final rule is the Decision block in
+  /tmp/cm-relay/F-262/joint-diag-final.txt (lines 22-28), verbatim:
+  "CONFIRMED (wall-clock hypothesis) if ALL of these hold: the onset
+  spread is > 100 ms; every failing run has its onset >= 950 ms or its
+  IR peak within 50 ms of the 1 s cutoff; no passing run does. REFUTED
+  if the spread is < 5 ms and no run fails. Anything else: report to
+  the AE and the Architect before the alignment design is frozen.
+  Either way, the alignment fix stays (AE S3: cross-correlation onset,
+  no wall clock, deterministic for the same samples). The diagnostic
+  only decides whether the 1 s pw_capture wait gets its own defect ID
+  (QE T8)."
+  SETTLED (CM, 2026-10-26; supersedes "Open: Q4 verdicts and Q5/Q8"
+  above; verbatim in /tmp/cm-relay/F-262/joint-Q2-Q5-final-v2.txt and
+  ae-qe-Q3-Q4-final.txt). Q2: worker-4's split (A, S5 shared D-009
+  trim, S6 shared gate, fail-closed onset/window check on today's
+  capture). Q5: ONE shared gate used by session.py,
+  filter_routes._run_pipeline and venue_pipeline (run_venue_checks
+  itself, or a function it delegates to); verify_minimum_phase stops
+  being a gate everywhere (session.py:1045 and 1143,
+  filter_routes.py:209 and 270); the source scan forbids it outside
+  the shared gate; M7 mutates each former call site separately and
+  records the failing test name for each. The residual metric is
+  closed_loop.minimum_phase_residual_db only. Q8: reference_level_db
+  and ref_band_hz are required in the payloads. Q3: the AE's
+  tolerances. Q4: the AE + QE capture layout and verdict table. The 1
+  s ir_duration cutoff goes as part of F-262. The -150 dB floor
+  expectation is dropped (AE). Boundary with 174d: in
+  filter_routes.py, F-262 touches only _load_correction_filters and
+  _run_pipeline, not _verify_all_wavs, _run_deploy or /deploy.
+  Diagnostic addendum: log the -3 dB width of the correlation peak per
+  capture (median > 2 samples: the AE re-rules).
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -5237,6 +5293,50 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   AE or Architect rules that the current capture can pass the
   fail-closed check and still deliver wrong filters, the new defect
   becomes a US-178 gate. AE/Architect call, no PO round needed."
+  Scope (joint AE + Architect, verbatim in joint-Q2-Q5-final-v2.txt):
+  S2 signal-gen plays and exports the session array, deconvolution
+  runs against the played array; S3 one continuous play+record stream,
+  cross-correlation alignment, no wall clock; S4 a 0.5 s pre-capture
+  and a 30 dB per 1/3-octave SNR gate.
+  Gate (Architect, 2026-10-26, verbatim via CM): "PM: a new P1 defect
+  for the S2/S3/S4 capture redesign, directly after F-262. It doesn't
+  block the F-262 merge, but it blocks deploying any room-correction
+  filter with the amps on. The PM puts that in the backlog line."
+  Rationale (joint v2, verbatim): "Until then, cut-only correction +
+  max_cut + the S5 trim + the S6 gate + the fail-closed window mean a
+  bad capture gives a refused or quieter filter, never a boost."
+  US-178 gate (AE + Architect, 2026-10-26; the PO exception above
+  applies), verbatim: "The capture-redesign defect gates US-178's
+  amps-on activation and acceptance step. US-178 development and
+  amps-off testing may start without it. The gate lifts early if S4
+  (silent pre-capture + fail-closed SNR check) lands before US-178 AND
+  the F-262 diagnostic shows a median correlation-peak width ≤ 2
+  samples. S2 and the continuous stream then become reliability-only
+  and gate US-174e instead." Reason (via CM): without an SNR gate a
+  noisy capture can pass the onset check and the correction then cuts
+  noise; S6 cannot catch it because it uses the same measured IR; the
+  result is a wrong filter, not a dangerous one, because correction is
+  cut-only. Architect: nothing more needed from the PO; the PO's "no
+  US-178 gate" is narrowed to "no gate on US-178 development or
+  amps-off testing".
+  Order (PO, 2026-10-26, verbatim): "pull S4 forward. Order inside the
+  defect: S4 (silent pre-capture + fail-closed SNR check) as its own
+  first slice/PR, directly after F-262 and before the rest (S2,
+  continuous stream). Reason: S4 is the correctness part and, together
+  with the correlation-peak criterion, can lift the US-178 amps-on
+  gate early. The rest follows as reliability work before US-174e. If
+  the Architect sees a technical dependency that forbids S4 first, the
+  Architect's order applies, no PO round."
+  Record (QE, 2026-10-26): preferred route is worker-4 writing
+  docs/project/defects/F-403.md inside the F-262 PR, so the
+  xfail/branch-B citation and the record land in the same merge (TW
+  reviews under Rule 13); the TW queue is acceptable if merged before
+  or with F-262. Minimum content: the PO scope (sweep export, one
+  continuous play+record stream, noise pre-capture, the wall-clock / 1
+  s pw_capture wait cause); evidence (the F-262 diagnosis files, the
+  test_full_session_api XPASS history); ACs including removal of any
+  F-262 branch B or xfail citing F-403. The QE Q2 condition is met
+  once the record exists. Route: CM call, pending.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
