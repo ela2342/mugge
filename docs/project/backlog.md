@@ -579,6 +579,12 @@ priority!"
   rulings D1 NO, D2 YES, D3 YES; worker-2 building v6 off the Pi. The
   tb-modprobe gate is NOT settled (joint AE + Architect ruling
   requested); no grant yet. Disk 4.4 GiB; holds stay (CM).
+  UPDATE (CM, 2026-10-26, after v233): backlog v233 pushed as
+  bf823e42. US-172 tb-modprobe gate SETTLED: joint AE + Architect
+  ruling dcec60fa (both released the same sha); it replaces Architect
+  R2 and the AE's v5 note. v6 relayed to worker-2. QE C1 still open.
+  #63 evidence route v2: scratch/pr63-evidence-3f28b6c7 = 2a17ed77,
+  run 40324085388 in progress, gates nothing (CM).
 
 ## Reserved IDs
 
@@ -3332,6 +3338,36 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     QE C1 (on the v6 script), the QE's n1-n3, D2 and D3. PM cross-ref:
     R2 is not in the CM's v6 list (gate ruling pending). No grant yet.
     AD L1 goes into the go-text.
+  - QE verdict file (CM, 2026-10-26):
+    /tmp/us172-qe-verdict-v5-e62744a7.md, sha256 363b751d (verified at
+    PM read), with the C2 addendum.
+  - GATE SETTLED (CM, 2026-10-26; supersedes "GATE NOT SETTLED"
+    above): FINAL is the joint AE + Architect ruling
+    /tmp/us172-r4-gate-joint.md, sha256 dcec60fa (verified at PM read;
+    CM read-only copy
+    /tmp/cm-relay/US-172/joint-gate-ruling-dcec60fa.md). The AE and
+    the Architect both released this same sha. VOID: c8eb180e (its
+    file /tmp/us172-r4v5-joint-gate-ruling.txt is now only a pointer,
+    sha256 3d727ca4), and the Architect's earlier release line with
+    its two notes (dcec60fa covers tb-greetd and the re-read verb). R2
+    is replaced by dcec60fa; the AE's v5 note is superseded.
+     Content (ruling text): tb-modprobe (and tb-greetd, D3) refuses
+     unless tb-post has both "VERDICT [R4-gains] ok" and "VERDICT
+     [R4-gate] ok gate closed" and no STOP/ABORT/FAIL line. (1) Gains
+     FAIL: refused, no CHANGE 3, report to the AE, R4 boot left as is.
+     (2) Gains NOT VERIFIABLE: refused by default; one re-read allowed
+     first as an OBSERVE (new verb tb-gains-reread, at most 60 s
+     later, own file, its "ok" accepted in place of tb-post's); or the
+     AE releases it with a ruling relayed by the CM
+     (US172_GAINS_AE_RELEASE=<ruling sha256>, printed, content not
+     checked). (3) Gate not proven closed: refused, no release path.
+     Why: CHANGE 3 is run 4's riskiest step, so the audio safety state
+     is proven first (AE (c)).
+  - QE C2 (CM, 2026-10-26): met by the gate ruling; the QE said either
+    outcome satisfies it. C1 still OPEN.
+  - v6 (CM, 2026-10-26; supersedes "Next" above, including its PM
+    cross-ref on R2): R1 + R3 + dcec60fa + D2 + D3 + AD M1/flow L + QE
+    n1-n3 + C1 on the v6 script; relayed to worker-2. No grant yet.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -4580,6 +4616,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   failed / 0 errors of 1364 collected. The caa63d9e points are moot:
   the AE accepted its wording and the Architect waived the constant
   name.
+  UPDATE (CM, 2026-10-26): evidence route v2:
+  scratch/pr63-evidence-3f28b6c7 = 2a17ed77 pushed, run 40324085388 in
+  progress; it gates nothing.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
