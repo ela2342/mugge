@@ -3,7 +3,7 @@
 import { assert, close, eq, throws } from "./assert.js";
 import {
   LIMITS, LevelCheck, ROLE, ROLE_LIMITS, STOP, SUB_LIMIT_REFUSAL,
-  capabilityText, changeRole, checkDeclaration, checkDspFlags,
+  capabilityText, changeEnclosure, changeLimit, changeRole, checkDeclaration, checkDspFlags,
   checkSampleRates, levelNoiseBand, levelNoiseBandLabel, micStopCause,
   roleFileTag, speakerDict, stopMessage, limitRangeText, parseLimitHz,
   emptyDeclaration, stopReturnsToSetup, sweepPlan,
@@ -410,4 +410,22 @@ export async function test_level_check_tick_timeout() {
   eq(lc.running, false);
   eq(lc.stopCause, STOP.TIMEOUT);
   eq(lc.tick(90000), null, "once");
+}
+
+/** A tick for one limit or port tuning never carries over to another. */
+export async function test_limit_and_tuning_changes_clear_ticks() {
+  const before = { ...changeRole(emptyDeclaration(), ROLE.SUBWOOFER),
+    limitHz: 25, capabilityConfirmed: true, enclosure: "ported",
+    portTuningHz: 30, portConfirmed: true };
+  eq(checkDeclaration(before).ok, true);
+  const l = changeLimit(before, 30);
+  eq(l.limitHz, 30);
+  eq(l.capabilityConfirmed, false);
+  eq(l.portConfirmed, false);
+  eq(l.enclosure, "ported", "enclosure stays");
+  const t = changeEnclosure(before, "ported", 35);
+  eq(t.portTuningHz, 35);
+  eq(t.portConfirmed, false);
+  eq(t.capabilityConfirmed, true, "the limit tick stays");
+  eq(changeEnclosure(before, "closed", 30).portConfirmed, false);
 }

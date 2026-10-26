@@ -156,6 +156,19 @@ export function changeRole(decl, role) {
 }
 
 /**
+ * A new low limit clears the 3b and 3c confirmations: they name or depend
+ * on the limit, so a tick for another limit never carries over.
+ */
+export function changeLimit(decl, limitHz) {
+  return { ...decl, limitHz, capabilityConfirmed: false, portConfirmed: false };
+}
+
+/** A new enclosure or port tuning clears the separate 3c confirmation. */
+export function changeEnclosure(decl, enclosure, portTuningHz) {
+  return { ...decl, enclosure, portTuningHz, portConfirmed: false };
+}
+
+/**
  * E2e: the one speaker dict a channel passes to the shared Python code.
  * The filter_type keys are internal and never shown. Throws without a
  * role, so the shared default ("highpass") is never relied on.

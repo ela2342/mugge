@@ -62,3 +62,36 @@ export function unboundText(fileName, micLabel) {
     " belongs to " + mic + ", or choose another file. Until then, " +
     "measuring runs uncalibrated.";
 }
+
+// UX 436f962f (c): the uncalibrated warning. The banner's safety sentence
+// is pending the AE's check (worker-6 AE file P3).
+export const UNCAL_BANNER = "UNCALIBRATED — levels are shown in dBFS, not " +
+  "dB SPL. The 90 dB and 105 dB SPL safety stops are off; only the clip " +
+  "stop and the level cap apply. Keep the amp at a low setting.";
+
+export const UNCAL_RESULT = "Measured uncalibrated: levels in dBFS; the " +
+  "microphone's own frequency response is not compensated.";
+
+/**
+ * The one reason line under the banner, or "" when calibrated.
+ * cal: { fileName, parsed } or null; unbound: E5b D3 (file not confirmed
+ * for the selected mic).
+ */
+export function uncalibratedReason(cal, unbound) {
+  if (!cal) return "No calibration file loaded.";
+  if (!cal.parsed.ok) {
+    if (cal.parsed.sensFactorDb === null) {
+      return "The calibration file has no \"Sens Factor\" line.";
+    }
+    return "The calibration file's Sens Factor (" + cal.parsed.sensFactorDb +
+      " dB) is outside -6 to +6 dB, so it is not used.";
+  }
+  if (unbound) return "Calibration not confirmed for this microphone.";
+  return "";
+}
+
+/** The short form at the calibration field in setup. */
+export function uncalibratedFieldText(cal, unbound) {
+  const reason = uncalibratedReason(cal, unbound);
+  return reason ? "Uncalibrated: " + reason.replace(/\.$/, "") + "." : "";
+}

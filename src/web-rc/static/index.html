@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mugge room correction (standalone)</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="web-rc.css">
+<script type="module" src="js/app.js"></script>
+</head>
+<body class="webrc">
+<header class="webrc-header">
+  <h1>Room correction</h1>
+  <p id="header" class="webrc-standalone"></p>
+</header>
+
+<main>
+  <p id="pipeline-error" class="webrc-error" role="alert" hidden></p>
+
+  <div id="notice" class="webrc-notice" role="alert" hidden>
+    <p id="notice-text"></p>
+    <p id="notice-detail" hidden></p>
+  </div>
+
+  <button id="stop" class="webrc-stop" type="button" hidden>STOP (Esc)</button>
+
+  <!-- setup (AC2, AC3, E5) -->
+  <section id="step-setup" class="webrc-step" hidden>
+    <h2>Setup</h2>
+    <div class="webrc-row">
+      <label>Output device <select id="sink"></select></label>
+      <label>Microphone <select id="mic"></select></label>
+      <button id="open" type="button">Use these devices</button>
+    </div>
+    <ul id="rate-lines" class="webrc-plain"></ul>
+    <p id="rate-refusal" class="webrc-error" hidden></p>
+
+    <fieldset id="decl">
+      <legend>Speaker on this output</legend>
+      <label>Output channel <select id="channel"></select></label>
+      <div class="webrc-row" role="radiogroup" aria-label="What is connected to this output">
+        <label><input type="radio" name="role" value="fullrange"> Full-range speaker</label>
+        <label><input type="radio" name="role" value="subwoofer"> Subwoofer</label>
+      </div>
+      <label>Low limit (Hz) <input id="limit" type="text" inputmode="numeric" size="5"></label>
+      <p id="limit-error" class="webrc-error" hidden></p>
+      <label><input id="capability" type="checkbox"> <span id="capability-text"></span></label>
+      <div class="webrc-row" role="radiogroup" aria-label="Enclosure">
+        <label><input type="radio" name="enclosure" value="ported"> Ported (bass reflex)</label>
+        <label><input type="radio" name="enclosure" value="closed"> Closed</label>
+      </div>
+      <label id="tuning-row" hidden>Port tuning (Hz) <input id="tuning" type="text" inputmode="decimal" size="5"></label>
+      <p id="port-warning" class="webrc-warning" hidden></p>
+      <label id="port-confirm-row" hidden><input id="port-confirm" type="checkbox">
+        I want to measure below the port tuning.</label>
+    </fieldset>
+
+    <fieldset id="cal">
+      <legend>Microphone calibration</legend>
+      <input id="cal-file" type="file" accept=".txt,.cal,text/plain">
+      <p id="cal-status" class="webrc-warning" hidden></p>
+      <div id="cal-unbound" class="webrc-amber" hidden>
+        <p id="cal-unbound-text"></p>
+        <button id="cal-bind" type="button"></button>
+        <button id="cal-other" type="button">Choose another file</button>
+      </div>
+      <p id="cal-gain-note" hidden></p>
+      <p id="deep-bass-hint" hidden></p>
+    </fieldset>
+
+    <ul id="problems" class="webrc-problems"></ul>
+    <button id="confirm" type="button">Continue</button>
+  </section>
+
+  <!-- safety acknowledgement (4a) -->
+  <section id="step-ack" class="webrc-step" hidden>
+    <h2 id="ack-title"></h2>
+    <ul id="ack-items"></ul>
+    <button id="ack" type="button"></button>
+    <button class="back" type="button">Back to setup</button>
+  </section>
+
+  <!-- level check (4b, 4d, 4h, 4i) -->
+  <section id="step-level" class="webrc-step" hidden>
+    <h2>Level check</h2>
+    <div id="uncal-banner" class="webrc-amber" hidden>
+      <p id="uncal-banner-text"></p>
+      <p id="uncal-banner-reason"></p>
+    </div>
+    <p id="band-label"></p>
+    <p>Microphone: <output id="mic-level" class="webrc-meter"></output></p>
+    <p id="cap"></p>
+    <div class="webrc-row">
+      <button id="start" type="button">Start level check</button>
+      <button id="plus" type="button">+6 dB</button>
+      <button id="measure" type="button">Measure</button>
+    </div>
+    <p id="target-text" hidden></p>
+    <button class="back" type="button">Back to setup</button>
+  </section>
+
+  <!-- measure (progress only) -->
+  <section id="step-measure" class="webrc-step" hidden>
+    <h2>Measuring</h2>
+    <p id="progress" aria-live="polite"></p>
+  </section>
+
+  <!-- result -> download -->
+  <section id="step-result" class="webrc-step" hidden>
+    <h2 id="ready"></h2>
+    <p id="result-uncal" hidden></p>
+    <p id="prediction"></p>
+    <ul id="downloads" class="webrc-plain"></ul>
+    <p id="pi-note"></p>
+    <div class="webrc-row">
+      <button id="again" type="button">Start level check</button>
+      <button class="back" type="button">Measure another channel</button>
+    </div>
+  </section>
+</main>
+</body>
+</html>

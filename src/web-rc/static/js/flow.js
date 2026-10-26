@@ -51,6 +51,9 @@ export const FLOW = Object.freeze({
 export const FLOW_TEXT = Object.freeze({
   NO_LEVEL_TABLE: "Can't play test noise for this setting.",
   SWEEP_OVER_CAP: "Can't measure: the sweep would exceed the output cap.",
+  // UX 82b5b616 W1, AE cf32c0a6 (b): a stop during capture 2.
+  BOTH_DISCARDED: "Both captures were discarded: the two captures must be " +
+    "taken back to back. Press Start level check to measure again.",
 });
 
 /** E5b D4: download name of a filter measured before a device change. */
@@ -140,8 +143,11 @@ export class Flow {
     }));
   }
 
-  markDownloaded() {
-    for (const f of this.filters.values()) f.downloaded = true;
+  /** One channel's file, or every file without a channel. */
+  markDownloaded(channel) {
+    for (const [ch, f] of this.filters) {
+      if (channel === undefined || ch === channel) f.downloaded = true;
+    }
   }
 
   // -- setup --------------------------------------------------------------
@@ -151,7 +157,7 @@ export class Flow {
    * outputChannels, dspSettings, micId, micLabel }.
    */
   setAudio(audio) {
-    this.audio = { ...audio };
+    this.audio = audio ? { ...audio } : null;
     return [];
   }
 
@@ -389,6 +395,12 @@ export class Flow {
     return this._capture();
   }
 
+  /** The pipeline could not make the sweep: named error, back to the level check. */
+  sweepFailed(token, message) {
+    if (!this._is(token, "sweep")) return [];
+    return this._abortMeasure("rejected", message);
+  }
+
   /** A finished recording from the meter worklet. */
   recorded(token, samples) {
     if (!this._is(token, "record")) return [];
@@ -397,7 +409,7 @@ export class Flow {
     this.run.sounding = false;
     if (this.run.captures.length < FLOW.CAPTURES) return this._capture();
     const t = this._wait("analyze");
-    return [{
+    return [{ type: "output-stop" }, {
       type: "analyze",
       token: t,
       request: {
@@ -505,13 +517,18 @@ export class Flow {
     return cmds;
   }
 
-  /** E4: an auto-STOP during the measure returns to the level check. */
+  /**
+   * E4: an auto-STOP during the measure returns to the level check. Every
+   * capture is discarded; a stop during capture 2 says so (AE cf32c0a6 b).
+   */
   _abortMeasure(cause, text) {
+    const both = this.run.capturing && this.run.captures.length > 0;
     const cmds = this._halt();
     this._resetRun();
     this.step = STEP.LEVEL;
     this.notice = { cause,
       text: text || stopMessage(cause, { calibrated: this.calibrated }) };
+    if (both) this.notice.detail = FLOW_TEXT.BOTH_DISCARDED;
     return cmds;
   }
 }

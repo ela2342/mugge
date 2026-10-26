@@ -2,7 +2,8 @@
 
 import { assert, close, eq } from "./assert.js";
 import {
-  CAL_GAIN_NOTE, parseCalibration, parseSensFactor, unboundText,
+  CAL_GAIN_NOTE, UNCAL_BANNER, UNCAL_RESULT, parseCalibration,
+  parseSensFactor, unboundText, uncalibratedFieldText, uncalibratedReason,
 } from "../../../static/js/calibration.js";
 
 const UMIK = '"Sens Factor =-1.378dB, SERNO: 7161942"\n* Freq(Hz)  dB\n' +
@@ -55,4 +56,26 @@ export async function test_texts() {
     "that 7161942.txt belongs to UMIK-1, or choose another file. Until then, " +
     "measuring runs uncalibrated.");
   assert(unboundText("a.txt", "").includes("belongs to the selected microphone"));
+}
+
+/** UX 436f962f (c), AE c5bd03c0: the uncalibrated texts, one reason each. */
+export async function test_uncalibrated_texts() {
+  eq(UNCAL_BANNER, "UNCALIBRATED — levels are shown in dBFS, not dB SPL. " +
+    "The 90 dB and 105 dB SPL safety stops are off; only the clip stop and " +
+    "the level cap apply. Keep the amp at a low setting.");
+  eq(UNCAL_RESULT, "Measured uncalibrated: levels in dBFS; the microphone's " +
+    "own frequency response is not compensated.");
+  const file = (text) => ({ fileName: "x.txt", parsed: parseCalibration(text) });
+  eq(uncalibratedReason(null, false), "No calibration file loaded.");
+  eq(uncalibratedReason(file("20.0\t0.0\n"), false),
+    'The calibration file has no "Sens Factor" line.');
+  eq(uncalibratedReason(file('"Sens Factor =7.5dB"\n'), false),
+    "The calibration file's Sens Factor (7.5 dB) is outside -6 to +6 dB, " +
+    "so it is not used.");
+  eq(uncalibratedReason(file(UMIK), true),
+    "Calibration not confirmed for this microphone.");
+  eq(uncalibratedReason(file(UMIK), false), "", "calibrated");
+  eq(uncalibratedFieldText(null, false),
+    "Uncalibrated: No calibration file loaded.");
+  eq(uncalibratedFieldText(file(UMIK), false), "");
 }

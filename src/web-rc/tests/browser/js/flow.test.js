@@ -302,8 +302,8 @@ export async function test_measure_two_captures_then_analyze() {
   eq(f.recorded(s[0].token, cap1).length, 0, "old token ignored");
   const cap2 = new Float32Array(10);
   const a = f.recorded(s2[0].token, cap2);
-  eq(types(a), "analyze");
-  const r = a[0].request;
+  eq(types(a), "output-stop,analyze", "the sweep output stops before the analysis");
+  const r = a[1].request;
   eq(r.captures.length, 2);
   eq(r.captures[0], cap1, "capture 1 = filter");
   eq(r.captures[1], cap2, "capture 2 = hold-out");
@@ -315,7 +315,7 @@ export async function test_measure_two_captures_then_analyze() {
   eq(f.step, STEP.MEASURE);
   assert(f.hasUnsavedWork());
 
-  f.analysisDone(a[0].token, { fileName: "sub_ch2.wav", wavBytes: new Uint8Array(4) });
+  f.analysisDone(a[1].token, { fileName: "sub_ch2.wav", wavBytes: new Uint8Array(4) });
   eq(f.step, STEP.RESULT);
   const d = f.downloads();
   eq(d.length, 1);
@@ -355,11 +355,37 @@ export async function test_sweep_auto_stop_discards_captures() {
     eq(f.step, STEP.LEVEL);
     eq(f.notice.cause, cause);
     eq(f.notice.text, stopMessage(cause));
+    eq(f.notice.detail, FLOW_TEXT.BOTH_DISCARDED, "stop in capture 2: " + cause);
     eq(f.recorded(s2[0].token, new Float32Array(10)).length, 0,
       "late capture discarded: " + cause);
     eq(f.measure().length, 0, "needs a fresh level check");
     eq(types(f.startLevel(0)), "noise-start");
   }
+}
+
+/** A stop in capture 1 has nothing more to discard: no W1 line. */
+export async function test_stop_in_capture_1_has_no_both_discarded_line() {
+  const f = atLevel();
+  const m = toMeasure(f);
+  f.sweepReady(m[1].token, unitSweep());
+  f.userStop();
+  eq(f.step, STEP.LEVEL);
+  eq(f.notice.text, stopMessage(STOP.USER));
+  eq(f.notice.detail, undefined);
+  eq(FLOW_TEXT.BOTH_DISCARDED, "Both captures were discarded: the two " +
+    "captures must be taken back to back. Press Start level check to " +
+    "measure again.");
+}
+
+export async function test_sweep_failure_names_the_error() {
+  const f = atLevel();
+  const m = toMeasure(f);
+  eq(f.sweepFailed(m[1].token + 1, "x").length, 0, "other token");
+  eq(f.step, STEP.MEASURE);
+  eq(f.sweepFailed(m[1].token, "ValueError: bad limit").length, 0, "no sound");
+  eq(f.step, STEP.LEVEL);
+  eq(f.notice.text, "ValueError: bad limit");
+  eq(f.sweepReady(m[1].token, unitSweep()).length, 0, "late sweep dropped");
 }
 
 export async function test_stop_while_waiting_for_sweep_or_analysis() {
@@ -376,7 +402,7 @@ export async function test_stop_while_waiting_for_sweep_or_analysis() {
   const a = g.recorded(s2[0].token, new Float32Array(1));
   g.hidden();
   eq(g.step, STEP.LEVEL);
-  eq(g.analysisDone(a[0].token, { fileName: "x.wav" }).length, 0);
+  eq(g.analysisDone(a[1].token, { fileName: "x.wav" }).length, 0);
   eq(g.filters.size, 0, "stale analysis not kept");
 }
 
@@ -401,7 +427,7 @@ export async function test_analysis_failure_names_the_error() {
   const s = f.sweepReady(m[1].token, unitSweep());
   const s2 = f.recorded(s[0].token, new Float32Array(1));
   const a = f.recorded(s2[0].token, new Float32Array(1));
-  f.analysisFailed(a[0].token, "Capture rejected: SNR 12 dB below 20 dB.");
+  f.analysisFailed(a[1].token, "Capture rejected: SNR 12 dB below 20 dB.");
   eq(f.step, STEP.LEVEL);
   eq(f.notice.text, "Capture rejected: SNR 12 dB below 20 dB.");
   eq(f.filters.size, 0);
@@ -414,7 +440,7 @@ export async function test_analyze_request_records_calibration() {
   const m = f.measure();
   const s = f.sweepReady(m[1].token, unitSweep());
   const s2 = f.recorded(s[0].token, new Float32Array(1));
-  const r = f.recorded(s2[0].token, new Float32Array(1))[0].request;
+  const r = f.recorded(s2[0].token, new Float32Array(1))[1].request;
   eq(r.calibrated, true);
   eq(r.calibrationFile, "7161942.txt");
 }
@@ -426,7 +452,7 @@ function finishedFilter(f, name) {
   const s = f.sweepReady(m[1].token, unitSweep());
   const s2 = f.recorded(s[0].token, new Float32Array(1));
   const a = f.recorded(s2[0].token, new Float32Array(1));
-  f.analysisDone(a[0].token, { fileName: name, wavBytes: new Uint8Array(1) });
+  f.analysisDone(a[1].token, { fileName: name, wavBytes: new Uint8Array(1) });
 }
 
 /** E5d: everything is cleared, the cal binding too; finished filters marked. */
@@ -476,6 +502,19 @@ export async function test_device_change_rebind_restores_calibration() {
   // A different mic id later unbinds it again.
   f.setAudio({ ...AUDIO, micId: "mic-C" });
   eq(f.calibrated, false);
+}
+
+export async function test_mark_downloaded_per_channel() {
+  const f = atLevel();
+  finishedFilter(f, "a_ch2.wav");
+  f.backToSetup();
+  f.setChannel(3);
+  f.confirmSetup();
+  finishedFilter(f, "b_ch3.wav");
+  f.markDownloaded(2);
+  assert(f.hasUnsavedWork(), "channel 3 not downloaded");
+  f.markDownloaded(3);
+  eq(f.hasUnsavedWork(), false);
 }
 
 export async function test_mixed_download_marks_only_pre_change() {

@@ -1,0 +1,51 @@
+/* web-rc.css -- the standalone page's own layout, on top of the shared
+   web-ui style.css (its colour variables). */
+
+body.webrc {
+  margin: 0 auto;
+  max-width: 52rem;
+  padding: 1rem;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+.webrc-header h1 { margin: 0; }
+.webrc-standalone { color: var(--text-secondary); margin-top: 0.25rem; }
+
+.webrc-step { margin-top: 1rem; }
+.webrc-step fieldset { margin: 1rem 0; border: 1px solid var(--border); }
+.webrc-step label { display: block; margin: 0.4rem 0; }
+.webrc-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+.webrc-row label { display: inline-block; }
+
+.webrc-plain { list-style: none; padding: 0; }
+.webrc-meter { font-family: var(--font-numeric, var(--font-mono)); font-size: 1.4rem; }
+
+.webrc-error, .webrc-problems { color: var(--danger); }
+.webrc-warning { color: var(--warning); }
+
+.webrc-amber {
+  border: 2px solid var(--amber);
+  background: var(--bg-elevated);
+  padding: 0.5rem 0.75rem;
+}
+
+.webrc-notice {
+  border: 2px solid var(--danger);
+  background: var(--danger-bg);
+  padding: 0.5rem 0.75rem;
+}
+
+.webrc-stop {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 10;
+  font-size: 1.5rem;
+  font-weight: bold;
+  padding: 0.6rem 2rem;
+  background: var(--danger);
+  color: var(--text-primary);
+}
+
+[hidden] { display: none !important; }
