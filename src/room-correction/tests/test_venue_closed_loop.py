@@ -719,6 +719,7 @@ class TestAC7Identity:
         uncorrected_right = _db_at(path, f0, lo, hi) - level
         uncorrected_left = (_db_at(sim.true_paths["sat_left"], f0, lo, hi)
                             - ref.reference_levels_db["sat_left"])
+        assert uncorrected_right >= 4.0, (uncorrected_right,)                # (a0)
         assert uncorrected_right - uncorrected_left >= 4.0, (
             uncorrected_right, uncorrected_left)                              # (a)
         own_at_f0 = _db_at(closed_loop.system_response(path, own_fir), f0, lo, hi) - level
