@@ -489,6 +489,14 @@ priority!"
   (F-262 from main first, 174d frozen); diagnostic route pending the
   AE. #63 conflicts with main, so no CI since 9b1aa8a1 until the main
   merge. F-400 severity medium (Architect).
+  UPDATE (CM, 2026-10-26, after v223): backlog v223 pushed as
+  02fb3ae5. F-262 diagnostic spec FINAL (AE AND rule; worker-4
+  building scratch/F-262-diag from 289f1a72); QE rulings
+  Q1/Q2/Q3/Q4/Q7 in; Q4 verdicts and Q5/Q8 open with the AE and
+  Architect. New IDs: F-402 (journey-test skip-on-500, QE) and F-403
+  (capture redesign, PO: P1 after F-262; gates US-174e, not US-178).
+  #64 new head 15bd74eb, CI 40320048783 running. #63 new head
+  3a4baba1, still conflicts with main, no CI yet.
 
 ## Reserved IDs
 
@@ -570,6 +578,11 @@ PM correction 2026-10-26: F-401 WITHDRAWN as a duplicate of F-362
 main, origin and all worktrees): US-178 (Architect: measurement flow
 deploys via 174d sets). Next free (supersedes the line above): F-402,
 US-179, D-071, T66.
+Allocated 2026-10-26 (PM, checked free across main, all origin/* and
+local branches, and worktrees): F-402 (QE option (b): journey-test
+skip-on-500 hides a server error) and F-403 (PO: capture redesign, P1
+after F-262). Next free (supersedes the line above): F-404, US-179,
+D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -4268,6 +4281,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   for the coeff/mute tests is cleared with the same guards. #63 has
   had no CI since 9b1aa8a1 because the PR CONFLICTS with main; this
   clears with the main merge.
+  UPDATE (CM, 2026-10-26): #63 new head 3a4baba1 pushed (WAVs,
+  SHA256SUMS, test, AC5, Q4 conf header). It still CONFLICTS with
+  main, so no CI yet.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -4298,6 +4314,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   step is defined only in US-178." 174e does NOT re-design that step;
   it builds the end-to-end venue workflow (UI, UX N2, US-090/097
   constraints) on top of it.
+  GATE (PO, 2026-10-26): F-403 (capture redesign) blocks US-174e,
+  because one button needs reliable captures (see F-403).
   c) and d) wait strictly for US-173's H, F-341 AC3 (no signal-gen
   measurement session before it) and D-070 / the amps-on list.
   Pending: the Architect and AE define the first slice and the file
@@ -5119,6 +5137,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   same text omits "from".)
   ENTRY CONDITION (PO ruling, 2026-10-26, HARD GATE): US-178 must NOT
   start before the F-262 fix has merged (see F-262).
+  F-403 (capture redesign) does NOT gate US-178 (PO, 2026-10-26),
+  unless the AE or Architect rules that the current capture can pass
+  F-262's fail-closed check and still deliver wrong filters (see
+  F-403).
 - **F-262** Session filters use the raw room IR as the correction
   filter (P1, room lane; PO ruling 2026-10-26). Record
   docs/project/defects/F-262.md on main; this entry carries the
@@ -5160,6 +5182,61 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   proposal, PENDING the AE's concurrence): a CI scratch branch from
   289f1a72, N=20 local-demo runs, artifacts uploaded, nothing on the
   Mac.
+  SETTLED (CM, 2026-10-26; supersedes "PENDING the AE's concurrence"
+  above): the diagnostic spec is FINAL, verbatim in
+  /tmp/cm-relay/F-262/diag-spec-FINAL.txt: the Architect's joint text
+  with its decision rule REPLACED by the AE's AND rule (Architect
+  concurs), plus the Architect's worker notes (a) and (b). worker-4 is
+  building scratch/F-262-diag from 289f1a72. AE rule, verbatim:
+  "CONFIRMED only if all three hold: onset spread > 100 ms across
+  runs; every failing run's onset is >= ~1 s or within 50 ms of the 1
+  s cutoff; and no passing run's onset is. Otherwise REFUTED: the
+  worker reports to the AE and the Architect before any S3 work."
+  QE rulings (verbatim in /tmp/cm-relay/F-262/qe-po-rulings.txt): Q1
+  the residual gate (verify_minimum_phase_residual) replaces T3; add a
+  check that the session (and filter_routes, if Q5 merges the gates)
+  no longer gates on the old verify_minimum_phase; T7 mutation (a)
+  (raw IR) must go red on the residual gate. Q3 1e-6 identity on
+  noise-free captures only; with noise, closed-loop metrics within the
+  AE's tolerance; T6 determinism unchanged. Q4 verdicts are the AE's
+  call; the test names the capture layout as constants, states the
+  expected verdict per lag explicitly (no computed or "either"
+  outcome), has boundary pairs at both ends of the window, and pins
+  negative lag (QE default: FAIL "capture misaligned" unless the AE
+  rules otherwise). Q2 split accepted (see F-403): the new defect ID
+  is filed before F-262 merges; T8 adapts by the 10x outcome (all 10
+  PASS: remove branch B and the xfail; any named fail-closed "capture
+  misaligned" with nothing deployed: branch B asserts only that error
+  and the not-deployed state, xfail reason cites F-403; any other
+  failure still fails F-262). Q7 the CI scratch/dispatch route for T8
+  is confirmed on conditions (a)-(e): the exact head SHA under review
+  with the checkout SHA logged; the same local-demo E2E command CI
+  uses; 10 iterations, each with its own pytest summary line plus the
+  session API outcome; the log uploaded and published by the CM in the
+  review bundle; the PR branch's ci.yml unchanged, the scratch branch
+  or dispatch input outside the PR and cleaned up afterwards. Open: Q4
+  verdicts and Q5/Q8 (AE and Architect).
+  PO on Q2 (verbatim in the same file): split accepted as worker-4
+  proposes. F-262 (P1, now) = shared correction function, D-009 trim,
+  strict session gate, fail-closed onset/window check on the current
+  capture. Exit: "FILTERS READY" only for correct filters, otherwise a
+  clear error. The capture redesign is a new defect (F-403).
+- **F-403** Capture redesign (P1, room lane, directly after F-262; PO
+  ruling 2026-10-26; ID allocated by the PM, checked free across main,
+  all branches and worktrees). PO, verbatim: "capture redesign
+  (signal-gen sweep export, one continuous play+record stream, noise
+  pre-capture)"; it also takes the QE's wall-clock cause (the 1 s
+  pw_capture wait, pw_capture.py:197). QE Q2 scope: the S2/S3 stream
+  redesign and the S4 noise gate. Must be filed before F-262 merges
+  (QE).
+  Gate (PO, verbatim): "the new defect does NOT block US-178. Reason:
+  with F-262's fail-closed check, a bad capture produces an error,
+  never wrong filters; the redesign improves reliability, not
+  correctness. It DOES block US-174e (one-button venue workflow),
+  because one button needs reliable captures." Exception (PO): "if the
+  AE or Architect rules that the current capture can pass the
+  fail-closed check and still deliver wrong filters, the new defect
+  becomes a US-178 gate. AE/Architect call, no PO round needed."
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -5250,6 +5327,38 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   main) is exactly that symptom and is marked RESOLVED (task #159).
   Cross-ref F-362 AC5 (the filter_routes import skip) and F-262
   (session filter-gen).
+  UPDATE (CM, 2026-10-26): #64 new head 15bd74eb (-rs on
+  test-e2e.sh:133/139) pushed; CI run 40320048783 running. QE: e2e -rs
+  accepted inside AC5; diff-only re-check at the new head, counts
+  expected unchanged; the approval at 0d9e52e7 is superseded once the
+  head moves. The QE's condition text names
+  test_full_user_journey.py:181 as F-402 (see F-402).
+- **F-402** Integration test turns a 500 from POST /filters/generate
+  into a skip, hiding a real server error
+  (test_full_user_journey.py:179-183) (QE, 2026-10-26; option (b), ID
+  allocated by the PM, checked free across main, all branches and
+  worktrees). QE reason: the defect is the skip that hides failures,
+  whatever causes the 500; whether F-156 regressed is unknown, and
+  reopening it now would guess the cause and record the wrong fix.
+  Priority (QE): room-correction path, goes with the F-262 and US-174
+  work, not the safety backlog (no P-level given).
+  ACs (QE suggested):
+  - (1) test_full_user_journey.py:179-183 no longer turns a 500 into a
+    skip; any 5xx from POST /filters/generate FAILS the test, with the
+    response body in the assert message.
+  - (2) the current 500 gets a diagnosis, with the traceback from the
+    CI or local-demo server log. If it is numpy bool_ again: reopen
+    F-156, link it, and close F-402 as the test-side fix. If it is
+    something else: name it, under F-402 or a new ID.
+  - (3) at the final head, generate_crossover_only,
+    crossover_filters_are_d009_compliant and pw_config_generated PASS.
+    The two dependent Phase-8 skips (l.331 and l.348, "no completed
+    session") are rechecked: they pass, or skip only for a reason that
+    is real and named.
+  - (4) sweep tests/integration and tests/e2e for pytest.skip driven
+    by an HTTP status; list what is found.
+  Cross-refs: F-156 (stale reason text; RESOLVED, task #159), F-362
+  AC5 (the filter_routes import skip), F-262 (session filter-gen).
 - **F-373** (AE; availability HIGH, safety-relevant; amps-on item
   13; linked US-159 G16): the USBStreamer sink does not recover after
   USB re-enumeration. AC17-B step (a), CM-CHG-.89-5: authorized 0->1
