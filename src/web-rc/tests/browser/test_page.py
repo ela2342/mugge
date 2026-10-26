@@ -140,6 +140,50 @@ def test_hidden_holds_start_until_visible_again(fake_page, page_url):
     assert errors == []
 
 
+def test_hold_text_next_to_disabled_start(fake_page, page_url):
+    """E6b: a hold that came while idle shows its text by the disabled Start."""
+    page, errors = fake_page
+    page.goto(page_url)
+    page.wait_for_function("window.__webrcApp !== undefined")
+    page.evaluate("""() => {
+        const app = window.__webrcApp, f = app.flow;
+        const off = { echoCancellation: false, noiseSuppression: false,
+            autoGainControl: false };
+        f.setAudio({ outputRate: 48000, inputRate: 48000, outputChannels: 2,
+            dspSettings: off, micId: "m", micLabel: "UMIK-1" });
+        f.setChannel(0);
+        f.setDeclaration({ ...f.decl, role: "fullrange", limitHz: 80,
+            capabilityConfirmed: true, enclosure: "closed" });
+        f.confirmSetup();
+        for (let i = 0; i < 4; i++) f.tickAck(i, true);
+        f.acknowledge();
+        f.output({ type: "stopped", cause: "heartbeat" });
+        app.render();
+    }""")
+    hold = page.locator("#hold-text")
+    expect(page.locator("#start")).to_be_disabled()
+    expect(hold).to_be_visible()
+    expect(hold).to_have_text(
+        "Stopped for safety: the microphone level monitor stopped "
+        "responding, so the sound was stopped. This can happen when the "
+        "computer is busy. Go back to setup, press Use these devices, then "
+        "start the level check again.")
+    expect(page.locator("#notice")).to_be_hidden()
+    # Released by opening the devices again.
+    page.evaluate("""() => { const app = window.__webrcApp;
+        app.flow.setAudio(app.flow.audio); app.render(); }""")
+    expect(page.locator("#start")).to_be_enabled()
+    expect(hold).to_be_hidden()
+    # The result step's Start shows it too.
+    page.evaluate("""() => { const app = window.__webrcApp;
+        app.flow.step = "result"; app.flow.audioError(); app.render(); }""")
+    expect(page.locator("#again")).to_be_disabled()
+    expect(page.locator("#again-hold-text")).to_have_text(
+        "Stopped: an audio error occurred. Go back to setup, press Use these "
+        "devices, then start the level check again.")
+    assert errors == []
+
+
 def test_ack_checkboxes_gate_the_button(fake_page, page_url):
     """4a (UX 64c83e3e): one checkbox per item; the button needs them all."""
     page, errors = fake_page

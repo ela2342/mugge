@@ -194,6 +194,7 @@ export function viewModel(flow, extras = {}) {
       safetyLimit: run.band ? TEXT.SAFETY_LIMIT : "",
       plusLabel: lc && lc.running && !lc.canStepUp() ? TEXT.TOP_STEP : TEXT.PLUS,
       canStart: flow.canStart,
+      holdText: flow.canStart ? "" : flow.holdText,
       canStepUp: flow.canStepUp(),
       canMeasure: flow.step === STEP.LEVEL && !!lc && lc.running && rms !== null,
       targetText: lc && lc.running && rms !== null && !lc.targetReached

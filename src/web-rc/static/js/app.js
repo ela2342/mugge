@@ -352,6 +352,8 @@ export class App {
     $("plus").disabled = !vm.level.canStepUp;
     $("measure").disabled = !vm.level.canMeasure;
     text("target-text", vm.level.targetText);
+    text("hold-text", vm.level.holdText);
+    text("again-hold-text", vm.level.holdText);
 
     // measure, result
     $("progress").textContent = vm.measure.progress;

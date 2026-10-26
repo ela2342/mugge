@@ -208,13 +208,16 @@ function release(f, cause) {
   if (cause === STOP.HIDDEN) {
     eq(f.canStart, false, "held: hidden");
     eq(f.startLevel(40000).length, 0, "no Start while hidden");
+    eq(f.holdText, "", "a hidden page has no hold text (E6b)");
     f.visible();
-  } else if (cause === STOP.AUDIO_ERROR) {
-    eq(f.canStart, false, "held: audio error");
-    eq(f.startLevel(40000).length, 0, "no Start after an audio error");
+  } else if (cause === STOP.AUDIO_ERROR || cause === STOP.HEARTBEAT) {
+    eq(f.canStart, false, "held: " + cause);
+    eq(f.startLevel(40000).length, 0, "no Start after " + cause);
+    eq(f.holdText, stopMessage(cause), "E6b: the hold names itself");
     f.setAudio(AUDIO);
   }
   eq(f.canStart, true, "released: " + cause);
+  eq(f.holdText, "", "released: no hold text");
 }
 
 /** 4d/4i/E4: each auto-STOP names its cause; a restart is fresh at -60. */
@@ -228,6 +231,7 @@ export async function test_level_auto_stops() {
     [(f) => f.hidden(), STOP.HIDDEN],
     [(f) => f.userStop(), STOP.USER],
     [(f) => f.audioError(), STOP.AUDIO_ERROR],
+    [(f) => f.output({ type: "stopped", cause: LATCH.HEARTBEAT }), STOP.HEARTBEAT],
   ];
   // The last user action is the "+" at 20 ms: 30 s later, not before.
   const early = atLevel();
@@ -264,17 +268,31 @@ export async function test_render_thread_stop_reaches_the_flow() {
   eq(f.output({ type: "stopped", cause: null }).length, 0, "a plain zero-reached");
 }
 
-/** A4: a heartbeat stop is an audio error, held until the devices reopen. */
+/** A4, E6: a heartbeat stop is held until the devices reopen, with its text. */
 export async function test_heartbeat_stop_is_a_held_audio_error() {
   const f = atLevel();
   f.startLevel(0);
   eq(types(f.output({ type: "stopped", cause: LATCH.HEARTBEAT })), "output-stop");
-  eq(f.notice.cause, STOP.AUDIO_ERROR);
-  release(f, STOP.AUDIO_ERROR);
-  // Not sounding: still held.
-  f.output({ type: "stopped", cause: LATCH.HEARTBEAT });
+  eq(f.notice.cause, STOP.HEARTBEAT);
+  eq(f.notice.text, stopMessage(STOP.HEARTBEAT));
+  release(f, STOP.HEARTBEAT);
+  // E6b: not sounding: still held, and the text shows without a stop box.
+  f.notice = null;
+  eq(f.output({ type: "stopped", cause: LATCH.HEARTBEAT }).length, 0);
+  eq(f.notice, null, "nothing was sounding");
   eq(f.canStart, false, "held while idle too");
+  eq(f.holdText, stopMessage(STOP.HEARTBEAT));
+  // The latest hold names it; opening the devices releases both.
+  f.audioError();
+  eq(f.holdText, stopMessage(STOP.AUDIO_ERROR));
+  f.output({ type: "stopped", cause: LATCH.HEARTBEAT });
+  eq(f.holdText, stopMessage(STOP.HEARTBEAT), "re-held: latest again");
+  f.hidden();
+  eq(f.holdText, stopMessage(STOP.HEARTBEAT), "hidden adds no text");
   f.setAudio(AUDIO);
+  eq(f.canStart, false, "still hidden");
+  eq(f.holdText, "");
+  f.visible();
   eq(f.canStart, true);
 }
 
@@ -284,12 +302,14 @@ export async function test_held_causes_and_device_change() {
   f.hidden();
   eq(f.canStart, false, "hidden while idle");
   f.audioError();
+  f.output({ type: "stopped", cause: LATCH.HEARTBEAT });
   f.deviceChange({ ...AUDIO });
   f.setChannel(2);
   f.setDeclaration(sub40());
   f.confirmSetup();
   ackAll(f);
   eq(f.held.has(STOP.AUDIO_ERROR), false, "the devices were opened again");
+  eq(f.held.has(STOP.HEARTBEAT), false, "the heartbeat hold too");
   eq(f.canStart, false, "still hidden");
   eq(f.startLevel(0).length, 0);
   f.visible();

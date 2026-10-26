@@ -7,7 +7,7 @@ import {
 } from "../../../static/js/calibration.js";
 import { topStepDbfs } from "../../../static/js/crest.js";
 import {
-  ROLE, changeRole, levelNoiseBand, levelNoiseBandLabel,
+  ROLE, STOP, changeRole, levelNoiseBand, levelNoiseBandLabel, stopMessage,
 } from "../../../static/js/safety.js";
 import {
   TEXT, ackOutputText, capText, micLevelText, portConfirmText, predictionText,
@@ -144,8 +144,10 @@ export async function test_level_uncalibrated_banner_and_dbfs() {
   eq(vm.level.canStart, false, "one level check at a time");
   f.hidden();
   eq(viewModel(f).level.canStart, false, "held while hidden (latch r2 A3)");
+  eq(viewModel(f).level.holdText, "", "a hidden page has no hold text (E6b)");
   f.visible();
   eq(viewModel(f).level.canStart, true);
+  eq(viewModel(f).level.holdText, "");
   f.startLevel(0);
   vm = viewModel(f);
   eq(vm.level.canStepUp, true);
@@ -246,4 +248,22 @@ export async function test_notice_detail_after_capture_2_stop() {
   const vm = viewModel(f);
   eq(vm.notice, "Stopped.");
   assert(vm.noticeDetail.startsWith("Both captures were discarded"));
+}
+
+/** E6b: a device hold that came while idle shows next to the disabled Start. */
+export async function test_hold_text_next_to_disabled_start() {
+  const f = ready();
+  f.confirmSetup();
+  ackAll(f);
+  for (const cause of [STOP.HEARTBEAT, STOP.AUDIO_ERROR]) {
+    if (cause === STOP.HEARTBEAT) f.output({ type: "stopped", cause: "heartbeat" });
+    else f.audioError();
+    const vm = viewModel(f);
+    eq(vm.notice, "", "nothing was sounding: no stop box");
+    eq(vm.level.canStart, false);
+    eq(vm.level.holdText, stopMessage(cause), cause);
+    f.setAudio(f.audio);
+    eq(viewModel(f).level.holdText, "", "released: " + cause);
+    eq(viewModel(f).level.canStart, true);
+  }
 }

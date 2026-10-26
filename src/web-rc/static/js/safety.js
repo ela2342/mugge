@@ -277,6 +277,7 @@ export const STOP = Object.freeze({
   DEVICE: "device",
   RATE: "rate",
   AUDIO_ERROR: "audio-error",
+  HEARTBEAT: "heartbeat",       // the meter's heartbeat stopped (latch r2 A4)
 });
 
 const STOP_MESSAGES = Object.freeze({
@@ -299,7 +300,13 @@ const STOP_MESSAGES = Object.freeze({
     "output and microphone are selected. Then confirm the safety check, the " +
     "speaker settings and the microphone calibration again. Unfinished " +
     "measurements were discarded; finished filters can still be downloaded.",
-  [STOP.AUDIO_ERROR]: "Stopped: an audio error occurred. Restart when ready.",
+  // E6 (UX a62af4b1): held causes name the step that releases the hold.
+  [STOP.AUDIO_ERROR]: "Stopped: an audio error occurred. Go back to setup, " +
+    "press Use these devices, then start the level check again.",
+  [STOP.HEARTBEAT]: "Stopped for safety: the microphone level monitor " +
+    "stopped responding, so the sound was stopped. This can happen when the " +
+    "computer is busy. Go back to setup, press Use these devices, then start " +
+    "the level check again.",
 });
 
 // E4a: the mic-clip text depends on whether a calibration file is loaded at
@@ -327,6 +334,9 @@ export function stopMessage(cause, { calibrated = false, rate } = {}) {
   }
   return STOP_MESSAGES[cause] || STOP_MESSAGES[STOP.AUDIO_ERROR];
 }
+
+/** Causes that hold Start until the devices are opened again (E6). */
+export const DEVICE_HOLDS = Object.freeze([STOP.AUDIO_ERROR, STOP.HEARTBEAT]);
 
 /** Causes that send the user back to the setup step (AC2b). */
 export function stopReturnsToSetup(cause) {

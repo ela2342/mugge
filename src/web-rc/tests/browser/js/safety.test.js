@@ -2,7 +2,7 @@
 
 import { assert, close, eq, throws } from "./assert.js";
 import {
-  LIMITS, LevelCheck, ROLE, ROLE_LIMITS, STOP, SUB_LIMIT_REFUSAL,
+  DEVICE_HOLDS, LIMITS, LevelCheck, ROLE, ROLE_LIMITS, STOP, SUB_LIMIT_REFUSAL,
   capabilityText, changeEnclosure, changeLimit, changeRole, checkDeclaration, checkDspFlags,
   checkSampleRates, levelNoiseBand, levelNoiseBandLabel, micStopCause,
   roleFileTag, speakerDict, stopMessage, limitRangeText, parseLimitHz,
@@ -338,8 +338,13 @@ export async function test_stop_messages_per_cause() {
   eq(stopMessage(STOP.RATE, { rate: 44100 }), "Stopped: the audio device " +
     "now runs at 44100 Hz. mugge filters need 48 kHz. Set the device back " +
     "to 48 kHz in your system's audio settings, then reload this page.");
-  eq(stopMessage(STOP.AUDIO_ERROR),
-    "Stopped: an audio error occurred. Restart when ready.");
+  eq(stopMessage(STOP.AUDIO_ERROR), "Stopped: an audio error occurred. Go " +
+    "back to setup, press Use these devices, then start the level check " +
+    "again.");
+  eq(stopMessage(STOP.HEARTBEAT), "Stopped for safety: the microphone level " +
+    "monitor stopped responding, so the sound was stopped. This can happen " +
+    "when the computer is busy. Go back to setup, press Use these devices, " +
+    "then start the level check again.");
   eq(stopMessage("no-such-cause"), stopMessage(STOP.AUDIO_ERROR));
   const texts = Object.values(STOP).map((c) => stopMessage(c));
   eq(new Set(texts).size, texts.length, "one distinct text per cause");
@@ -428,4 +433,14 @@ export async function test_limit_and_tuning_changes_clear_ticks() {
   eq(t.portConfirmed, false);
   eq(t.capabilityConfirmed, true, "the limit tick stays");
   eq(changeEnclosure(before, "closed", 30).portConfirmed, false);
+}
+
+/** E6a: each held cause names the step that releases it, not a restart. */
+export async function test_e6_held_causes_name_use_these_devices() {
+  eq(DEVICE_HOLDS.join(), [STOP.AUDIO_ERROR, STOP.HEARTBEAT].join());
+  for (const cause of DEVICE_HOLDS) {
+    const t = stopMessage(cause);
+    assert(t.includes("press Use these devices"), cause + ": " + t);
+    assert(!t.includes("Restart when ready"), cause + ": " + t);
+  }
 }

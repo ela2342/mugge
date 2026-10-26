@@ -31,7 +31,7 @@ import { LATCH } from "./stop-latch.js";
 import {
   LIMITS, LevelCheck, STOP, captureSeconds, checkDeclaration, checkDspFlags,
   checkSampleRates, dbToLinear, emptyDeclaration, levelNoiseBand,
-  stopMessage, sweepPlan, sweepStopCause,
+  DEVICE_HOLDS, stopMessage, sweepPlan, sweepStopCause,
 } from "./safety.js";
 
 export const STEP = Object.freeze({
@@ -120,8 +120,9 @@ export class Flow {
 
   /**
    * Can a level check start? Not while a main-thread stop cause is held
-   * (latch r2 A3): the page hidden, or an audio error until the devices
-   * are opened again. A device change is held by the reset 4a ack.
+   * (latch r2 A3): the page hidden, or an audio error or heartbeat stop
+   * until the devices are opened again (E6). A device change is held by
+   * the reset 4a ack.
    */
   get canStart() {
     return !this.run.sounding && this.ack && this.held.size === 0 &&
@@ -173,7 +174,7 @@ export class Flow {
    */
   setAudio(audio) {
     this.audio = audio ? { ...audio } : null;
-    if (audio) this.held.delete(STOP.AUDIO_ERROR);  // opened again
+    if (audio) this._releaseDeviceHolds();  // opened again
     return [];
   }
 
@@ -331,7 +332,7 @@ export class Flow {
   output(msg) {
     if (msg.type === "error") return this.audioError();
     if (msg.type === "stopped" && msg.cause === LATCH.HEARTBEAT) {
-      return this.audioError();
+      return this._hold(STOP.HEARTBEAT);
     }
     if (!this.run.sounding) return [];
     if (msg.type === "clamped") return this.autoStop(STOP.CAP);
@@ -359,8 +360,27 @@ export class Flow {
 
   /** Held until the devices are opened again (setAudio, deviceChange). */
   audioError() {
-    this.held.add(STOP.AUDIO_ERROR);
-    return this.autoStop(STOP.AUDIO_ERROR);
+    return this._hold(STOP.AUDIO_ERROR);
+  }
+
+  /**
+   * E6b: the text next to a Start disabled by a device hold, also when the
+   * hold came while nothing was sounding; the latest hold names it. A
+   * hidden page has no text.
+   */
+  get holdText() {
+    const causes = [...this.held].filter((c) => DEVICE_HOLDS.includes(c));
+    return causes.length ? stopMessage(causes[causes.length - 1]) : "";
+  }
+
+  _hold(cause) {
+    this.held.delete(cause);           // re-added last: the latest names it
+    this.held.add(cause);
+    return this.autoStop(cause);
+  }
+
+  _releaseDeviceHolds() {
+    for (const c of DEVICE_HOLDS) this.held.delete(c);
   }
 
   /** Any stop cause except device and rate changes. */
@@ -376,7 +396,7 @@ export class Flow {
     this._resetRun();
     if (audio) {
       this.audio = { ...audio };
-      this.held.delete(STOP.AUDIO_ERROR);
+      this._releaseDeviceHolds();
     }
     this.ack = false;                   // D1
     this.ackTicks.clear();              // D1: every tick again
