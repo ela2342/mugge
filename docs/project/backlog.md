@@ -593,6 +593,9 @@ priority!"
   hold itself stays (every nix build/run/develop needs a CM clearance,
   store deletes need the owner's OK, nobody touches the linux-builder)
   (CM).
+  UPDATE (CM, 2026-10-26, after v235): backlog v235 pushed as
+  9a59deda. QE PR #63 evidence accounting: route 2a MET, route 1 MET
+  pending R1-x (QE).
 
 ## Reserved IDs
 
@@ -4642,6 +4645,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (exit 0, checkout exactly 3f28b6c7). Extracts in
   /tmp/pr63-evidence-40324085388/ (full.log sha256 e2ba739b, verified
   at PM read). The QE and the Architect are judging it.
+  QE accounting (2026-10-26;
+  /tmp/pr63-qe-evidence-verdict-3f28b6c7.md, sha256 32ab3975, verified
+  at PM read): evidence at 3f28b6c7 (run 40324085388): B3 (route 2a)
+  MET; route 1 MET pending R1-x. R1-x: the jack-self-connect out path
+  in PR CI run 40323763997 must match m689zyzw. Still open for the
+  QE's #63 approval: the C1 items from that CI run, the B4 body, R1-x.
+  Backlog one-liner (QE, from the #63 evidence; non-blocking;
+  AE/Architect domain; no F-ID, no P-level given): a WirePlumber
+  restart drops the GM-style link; it also happens with the policy
+  off, so the policy is not the cause.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
