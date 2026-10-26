@@ -206,23 +206,43 @@ class TestAC1Outputs:
         assert mapping[4] == ("zero.wav", None)
         assert b.expected_files() == EXPECTED_FILES
 
-    def test_zero_wav_never_generated(self, home_lab, home_lab_dir, bundle):
-        # The mute file is the committed configs/coeffs/zero.wav only.
+    @staticmethod
+    def _exported(monkeypatch, result, out):
+        names = []
+        real = vp.export_filter
+
+        def spy(fir, path, **kw):
+            names.append(os.path.basename(path))
+            return real(fir, path, **kw)
+        monkeypatch.setattr(vp, "export_filter", spy)
+        vp.write_venue_filters(result, str(out))
+        return sorted(names)
+
+    def test_nothing_written_for_mute_channel(self, monkeypatch, tmp_path, bundle, home_lab):
+        # Ruling v3 item 2(a): the mute file is the committed
+        # configs/coeffs/zero.wav only; dirac.wav is there because ch 5-8 name it.
         _, result = home_lab
         assert "zero.wav" not in result.filters
         assert "zero.wav" not in bundle.expected_files()
-        assert not (home_lab_dir / "zero.wav").exists()
+        assert self._exported(monkeypatch, result, tmp_path) == sorted(EXPECTED_FILES)
+        assert sorted(p.name for p in tmp_path.iterdir()) == sorted(EXPECTED_FILES)
 
-    def test_no_dirac_without_dirac_channel(self, bundle, home_lab):
-        # dirac.wav is generated only if some channel names it.
+    def test_no_dirac_without_dirac_channel(self, monkeypatch, tmp_path, bundle, home_lab):
+        # Ruling v3 item 2(b): only ch 4 is speakerless (zero.wav), nothing
+        # names dirac.wav, so neither dirac.wav nor anything for ch 4 is written.
+        import copy
         sim, _ = home_lab
-        channels = [dataclasses.replace(c, coefficients="zero.wav")
-                    if c.coefficients == "dirac.wav" else c for c in bundle.channels]
-        muted = dataclasses.replace(bundle, channels=channels)
-        assert "dirac.wav" not in muted.expected_files()
-        result = vp.generate_venue_filters(muted, sim.measured_irs)
-        assert sorted(result.filters) == sorted(
-            k for k, v in EXPECTED_FILES.items() if v == "fir")
+        venue = copy.deepcopy(bundle.venue)
+        for key in [k for k, v in venue["channels"].items() if v["coefficients"] == "dirac.wav"]:
+            del venue["channels"][key]
+        only_mute = dataclasses.replace(
+            bundle, venue=venue, channels=vp.build_channel_map(venue, bundle.profile))
+        assert [c.number for c in only_mute.channels if c.speaker_key is None] == [4]
+        assert "dirac.wav" not in only_mute.expected_files()
+        result = vp.generate_venue_filters(only_mute, sim.measured_irs)
+        fir_files = sorted(k for k, v in EXPECTED_FILES.items() if v == "fir")
+        assert self._exported(monkeypatch, result, tmp_path) == fir_files
+        assert sorted(p.name for p in tmp_path.iterdir()) == fir_files
 
     def test_every_expected_file_written_float32(self, home_lab_dir):
         assert sorted(p.name for p in home_lab_dir.glob("*.wav")) == sorted(EXPECTED_FILES)
@@ -999,7 +1019,7 @@ class TestCLI:
                         "--scenario", "home_lab", "--output-dir", str(out))
         assert proc.returncode == 0, proc.stderr
         assert "ch 3 3_sub1_lp: combined_sub1_lp.wav <- sub1" in proc.stdout
-        assert "ch 4 4_sub2_lp: zero.wav <- mute" in proc.stdout
+        assert "ch 4 4_sub2_lp: muted (zero.wav, not generated)" in proc.stdout
         assert "ch 5 5_eng_l: dirac.wav <- passthrough" in proc.stdout
         assert "RESULT: ALL CHECKS PASSED" in proc.stdout
         assert "Known limit" in proc.stdout

@@ -70,7 +70,7 @@ from .generate_profile_filters import generate_profile_filters
 SAMPLE_RATE = dsp_utils.SAMPLE_RATE
 DEFAULT_N_TAPS = 16384
 DIRAC_FILENAME = "dirac.wav"
-MUTE_FILENAME = "zero.wav"
+ZERO_FILENAME = "zero.wav"
 DELAYS_FILENAME = "delays.yml"
 SIMULATED_FILENAME = "SIMULATED"
 STAGING_PREFIX = ".rc-staging-"
@@ -124,7 +124,8 @@ class VenueBundle:
 
     @property
     def has_dirac_channel(self) -> bool:
-        return any(c.coefficients == DIRAC_FILENAME for c in self.channels)
+        return any(c.speaker_key is None and c.coefficients == DIRAC_FILENAME
+                   for c in self.channels)
 
     def mandatory_hpf_by_file(self) -> Dict[str, float]:
         """Filename -> mandatory HPF (Hz) for channels whose identity has one."""
@@ -194,7 +195,7 @@ def build_channel_map(venue: dict, profile: dict) -> List[ChannelAssignment]:
         if not coeffs:
             raise ValueError(f"venue channel {key!r} has no coefficients file")
         spk_key = speaker_by_number.get(number)
-        if spk_key is None and coeffs not in (DIRAC_FILENAME, MUTE_FILENAME):
+        if spk_key is None and coeffs not in (DIRAC_FILENAME, ZERO_FILENAME):
             raise ValueError(
                 f"venue channel {key!r} expects {coeffs!r} but no profile "
                 f"speaker uses channel {number - 1}")
@@ -202,10 +203,10 @@ def build_channel_map(venue: dict, profile: dict) -> List[ChannelAssignment]:
             raise ValueError(
                 f"profile speaker {spk_key!r} maps to venue channel {key!r}, "
                 f"which is a dirac passthrough")
-        if spk_key is not None and coeffs == MUTE_FILENAME:
+        if spk_key is not None and coeffs == ZERO_FILENAME:
             raise ValueError(
                 f"profile speaker {spk_key!r} maps to venue channel {key!r}, "
-                f"which is muted ({MUTE_FILENAME})")
+                f"which is muted ({ZERO_FILENAME})")
         assignments.append(ChannelAssignment(number, key, coeffs, spk_key))
 
     filenames = [a.coefficients for a in assignments if a.speaker_key]
