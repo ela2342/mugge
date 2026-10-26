@@ -550,6 +550,13 @@ priority!"
   on the Mac, team-lead) and Start-after-error 409 (worker-4). Disk:
   Data at 4.4 GiB (2.7 at the v228 reading); the owner is freeing
   space; nix holds stay (CM).
+  UPDATE (CM, 2026-10-26, after v229): backlog v229 pushed as
+  fc17ee27. US-174d CONDITIONS (1)+(2) and the Architect's
+  single-writer condition (3) relayed verbatim to worker-4; 174d stays
+  frozen until F-262 lands. #63: the Architect accepted worker-3's
+  zero.wav option (A); the AE accepts it with three conditions;
+  worker-3 building on 29f5c61f. F-262 diagnostic now aedf4a82 / run
+  40322886856 (293cf822 run 40322683521 cancelled).
 
 ## Reserved IDs
 
@@ -4400,6 +4407,25 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   exact SHA, 2b (fallback) a Pi 5 native build under a CM CHANGE grant
   with the sandbox on. A run carries over to a new head only with an
   identical drvPath.
+  FIX ROUTE (Architect, 2026-10-26, via CM): worker-3's option (A)
+  accepted. zero.wav is a canonical mute in venue_pipeline, allowed
+  only on speakerless channels; a speaker on zero.wav raises
+  ValueError (AE may amend). It is never generated, and verify.py
+  doesn't change. dirac is generated only when it is named. One added
+  test: both venue YAMLs load through load_venue_bundle.
+  venue_pipeline.py and test_venue_closed_loop.py are now in #63's
+  scope. worker-3 is building on 29f5c61f; CI is the test run while
+  disk is below the line. worker-3 owns up to one process slip: they
+  ran only the two coefficient test files locally.
+  AE (2026-10-26, via CM; relayed to worker-3): accepts option (A);
+  point (a) stands (a speaker on zero.wav raises). Conditions:
+  - a test that the pipeline output has no file at all for ch 4, and
+    that a speakerless channel naming anything other than dirac.wav or
+    zero.wav still raises;
+  - the committed-bytes tests test_venue_spare_channel_mute.py:50/58
+    run in T1;
+  - the closed-loop report lists ch 4 as "muted (zero.wav, not
+    generated)".
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -5447,6 +5473,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   lag -4800.
   QE (2026-10-26, via CM): M9 accepted (bypass the onset check; it
   must go red on the lag rows -241/-300/47521/60000).
+  UPDATE (CM, 2026-10-26; supersedes "the diagnostic is now 293cf822"
+  above): the diagnostic is now aedf4a82, run 40322886856. It adds the
+  normalized correlation peak and the 1.5× width trigger (AE ruling
+  2). The CM cancelled the 293cf822 run 40322683521.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -7358,6 +7388,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   40317165021 green, QE C1 final. PM cross-ref: this meets the "once
   #65 merges" trigger for the US-174d CONDITIONS relay above; 174d
   stays frozen until F-262 lands from main (see F-262).
+  (3) Architect, single-writer condition (2026-10-26, via CM),
+  verbatim: "the single writer materializes every file the convolver
+  conf loads. A speakerless convolver channel named zero.wav gets the
+  canonical configs/coeffs/zero.wav bytes under its convolver filename
+  (e.g. combined_sub2_lp.wav), and dirac likewise. A missing file is
+  refused." Background (CM): the convolver loads fixed names
+  (combined_*.wav), while venue_pipeline names files after the venue
+  `coefficients:` field, so a generated set never contains
+  combined_sub2_lp.wav for a speakerless ch 4, and whatever file was
+  deployed before stays live. AE agrees (it covers the AE's N1 above)
+  and adds that the installer verifies the zero bytes are all-zero
+  before the swap.
+  RELAYED (CM, 2026-10-26): CONDITIONS (1)+(2) and (3) sent verbatim
+  to worker-4. 174d stays frozen until F-262 lands.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
