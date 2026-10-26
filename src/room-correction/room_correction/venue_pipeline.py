@@ -73,6 +73,7 @@ from .correction import (  # noqa: F401
     CorrectionFilter,
     correction_from_measurement,
     reference_band,
+    require_correctable,
 )
 from .export import export_filter
 from .generate_profile_filters import generate_profile_filters
@@ -260,6 +261,7 @@ def generate_venue_filters(
     if missing or extra:
         raise ValueError(f"IRs do not match profile speakers: missing {missing}, extra {extra}")
 
+    require_correctable(speakers)
     target_curve = bundle.profile.get("target_curve", "flat")
     shaped = {
         spk_key: correction_from_measurement(

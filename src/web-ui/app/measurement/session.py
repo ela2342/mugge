@@ -1065,7 +1065,9 @@ class MeasurementSession:
             validate_and_raise,
         )
         from room_correction.combine import uniform_d009_trim
-        from room_correction.correction import correction_from_measurement
+        from room_correction.correction import (
+            correction_from_measurement, require_correctable,
+        )
         from room_correction.generate_profile_filters import generate_profile_filters
         from room_correction.export import export_filter
         from room_correction.verify import (
@@ -1104,6 +1106,10 @@ class MeasurementSession:
         target_curve = profile.get("target_curve", "flat")
         correction_filters = None
         if measured_irs:
+            try:
+                require_correctable(profile["speakers"])
+            except ValueError as exc:
+                raise RuntimeError(str(exc)) from exc
             log.info("Building %d corrections from measured IRs",
                      len(measured_irs))
             # GAP-6: Save IRs with speaker-key naming so filter_routes

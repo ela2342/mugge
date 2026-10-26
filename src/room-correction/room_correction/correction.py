@@ -61,9 +61,23 @@ class CorrectionFilter:
     ref_band_hz: Tuple[float, float]   # band the level was taken over
 
 
+# AE, F-262 item 3: no residual or level reference band is defined for
+# bandpass drivers yet, so 3-/4-way profiles fail closed in every correction
+# path. Crossover-only generation is unchanged.
+BANDPASS_NOT_SUPPORTED = "room correction not supported for bandpass (3-/4-way) profiles"
+
+
+def require_correctable(speakers):
+    """Raise ValueError if a profile's speakers can't get a room correction."""
+    if any(spk.get("filter_type") == "bandpass" for spk in speakers.values()):
+        raise ValueError(f"Measurement rejected: {BANDPASS_NOT_SUPPORTED}")
+
+
 def reference_band(speaker):
     """Level reference band for a profile speaker dict (by its filter_type)."""
     filter_type = speaker.get("filter_type", "highpass")
+    if filter_type == "bandpass":
+        raise ValueError(f"no level reference band: {BANDPASS_NOT_SUPPORTED}")
     if filter_type not in REFERENCE_BANDS_HZ:
         raise ValueError(f"no level reference band for filter_type {filter_type!r}")
     return REFERENCE_BANDS_HZ[filter_type]

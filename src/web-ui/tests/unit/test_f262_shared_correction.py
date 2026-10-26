@@ -11,7 +11,10 @@ simulated venue measurement and check:
 - session, filter_routes and the venue pipeline write the same samples.
 """
 
+import copy
+import dataclasses
 import os
+import re
 import sys
 from pathlib import Path
 from unittest.mock import patch
@@ -111,7 +114,21 @@ class TestSessionClosedLoop:
                 bundle.profile["speakers"][v["channel"]])
 
     def test_trim_reported(self, session_run):
+        # AE F-262 item 4: the trim never raises gain, and every speaker FIR
+        # peaks at or below -0.5 dB after it.
         assert session_run[1]["d009_trim_db"] <= 0.0
+        for v in session_run[1]["verification"]:
+            assert v["d009_peak_db"] <= -0.5, v
+
+
+BANDPASS_REJECTED = ("Measurement rejected: room correction not supported for "
+                     "bandpass (3-/4-way) profiles")
+
+
+def _with_bandpass(bundle):
+    profile = copy.deepcopy(bundle.profile)
+    profile["speakers"]["sat_left"]["filter_type"] = "bandpass"
+    return dataclasses.replace(bundle, profile=profile)
 
 
 class TestSessionFailsClosed:
@@ -120,6 +137,28 @@ class TestSessionFailsClosed:
         irs = dict(measured_irs, sat_left=np.zeros_like(measured_irs["sat_left"]))
         with pytest.raises(RuntimeError, match="Measurement rejected for sat_left"):
             _run_session(bundle, irs, str(tmp_path))
+
+    def test_bandpass_profile_rejected(self, bundle, measured_irs, tmp_path):
+        """AE F-262 item 3: the text names the cause; nothing is written."""
+        out = tmp_path / "out"
+        with pytest.raises(RuntimeError, match=re.escape(BANDPASS_REJECTED)):
+            _run_session(_with_bandpass(bundle), measured_irs, str(out))
+        assert not out.exists() or not list(out.rglob("*.wav"))
+
+
+class TestRoutesFailClosed:
+
+    def test_bandpass_profile_rejected(self, bundle, tmp_path):
+        load, validate = _patched_profile(_with_bandpass(bundle))
+        req = filter_routes.FilterGenerateRequest(
+            profile=PROFILE_NAME, mode="crossover_plus_correction",
+            generate_pw_conf=False)
+        with load, validate, \
+                patch.object(filter_routes, "DEFAULT_SESSION_DIR", str(tmp_path / "session")), \
+                patch.object(filter_routes, "DEFAULT_OUTPUT_DIR", str(tmp_path / "routes")):
+            with pytest.raises(ValueError, match=re.escape(BANDPASS_REJECTED)):
+                filter_routes._run_pipeline(req)
+        assert not (tmp_path / "routes").exists()
 
 
 class TestParity:

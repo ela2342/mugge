@@ -8,7 +8,10 @@ A source scan keeps the production call sites on that path.
 """
 
 import ast
+import copy
+import dataclasses
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -18,9 +21,10 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from mock import venue_sim
-from room_correction import combine, verify
+from room_correction import closed_loop, combine, verify
 from room_correction import venue_pipeline as vp
 from room_correction.correction import (
+    BANDPASS_NOT_SUPPORTED,
     MAX_CUT_DB,
     CorrectionFilter,
     correction_from_measurement,
@@ -102,6 +106,36 @@ class TestCorrectionFromMeasurement:
         ir = sim.measured_irs["sat_left"]
         np.testing.assert_array_equal(_correction(ir, HP).fir, _correction(ir, HP).fir)
 
+    def test_bandpass_names_the_cause(self, sim):
+        with pytest.raises(ValueError, match=re.escape(BANDPASS_NOT_SUPPORTED)):
+            _correction(sim.measured_irs["sat_left"], {"filter_type": "bandpass"})
+
+
+# -- bandpass profiles fail closed (AE item 3) -------------------------------
+
+BANDPASS_REJECTED = ("Measurement rejected: room correction not supported for "
+                     "bandpass (3-/4-way) profiles")
+
+
+def _with_bandpass(bundle, spk="sat_left"):
+    profile = copy.deepcopy(bundle.profile)
+    profile["speakers"][spk]["filter_type"] = "bandpass"
+    return dataclasses.replace(bundle, profile=profile)
+
+
+class TestBandpassRejected:
+
+    def test_text(self):
+        with pytest.raises(ValueError, match=re.escape(BANDPASS_REJECTED)):
+            vp.require_correctable({"mid": {"filter_type": "bandpass"}, "sub": LP})
+
+    def test_two_way_accepted(self, bundle):
+        vp.require_correctable(bundle.profile["speakers"])
+
+    def test_venue_pipeline_rejects(self, bundle, sim):
+        with pytest.raises(ValueError, match=re.escape(BANDPASS_REJECTED)):
+            vp.generate_venue_filters(_with_bandpass(bundle), sim.measured_irs)
+
 
 # -- generate_profile_filters type gate --------------------------------------
 
@@ -153,6 +187,16 @@ class TestUniformTrim:
         assert (combine.max_gain_db(trimmed["a"]) - combine.max_gain_db(trimmed["b"])
                 == pytest.approx(8.0))
 
+    @pytest.mark.parametrize("peaks_db", [
+        (-6.0, -12.0), (-0.5, -3.0), (-0.49, -3.0), (0.0, -1.0), (2.0, -6.0), (20.0, 19.0)])
+    def test_trim_never_raises_gain(self, peaks_db):
+        """AE item 4: the trim is 0 or negative, and no peak ends above -0.5 dB."""
+        filters = {f"s{i}": _peaking_fir(p) for i, p in enumerate(peaks_db)}
+        trimmed, trim_db = combine.uniform_d009_trim(filters)
+        assert trim_db <= 0.0
+        for fir in trimmed.values():
+            assert combine.max_gain_db(fir) <= combine.D009_TRIM_MARGIN_DB + 1e-9
+
     def test_non_finite_raises(self):
         with pytest.raises(ValueError, match="non-finite"):
             combine.uniform_d009_trim({"a": np.full(4096, np.inf)})
@@ -169,6 +213,32 @@ class TestClosedLoop:
         result = verify.verify_closed_loop(
             ir, _correction(ir, speaker), verify.closed_loop_band(speaker))
         assert result.passed, result.message
+        # AE item 1: the 500-4000 Hz deviations are logged, not gated.
+        assert result.details["log_band_hz"] == (500.0, 4000.0)
+        assert np.isfinite(result.details["log_corrected_max_db"])
+        assert np.isfinite(result.details["log_uncorrected_max_db"])
+        assert "log only 500-4000 Hz" in result.message
+
+    def test_log_band_never_gates(self, bundle, sim, monkeypatch):
+        """A huge HF deviation changes the log, not the verdict."""
+        speaker = bundle.profile["speakers"]["sat_left"]
+        ir = sim.measured_irs["sat_left"]
+        cf = _correction(ir, speaker)
+        band = verify.closed_loop_band(speaker)
+        before = verify.verify_closed_loop(ir, cf, band)
+        real = closed_loop.max_positive_deviation_db
+        lo, hi = verify.CLOSED_LOOP_LOG_BAND_HZ
+
+        def inflated(response, target):
+            dev = real(response, target)
+            return dev + 40.0 if len(response) == n_log else dev
+        n_log = len(closed_loop.smoothed_response_db(ir, lo, hi)[0])
+        assert n_log != len(closed_loop.smoothed_response_db(ir, *band)[0])
+        monkeypatch.setattr(closed_loop, "max_positive_deviation_db", inflated)
+        after = verify.verify_closed_loop(ir, cf, band)
+        assert after.passed == before.passed is True
+        assert after.details["log_corrected_max_db"] == pytest.approx(
+            before.details["log_corrected_max_db"] + 40.0)
 
     @pytest.mark.parametrize("spk", ["sat_left", "sat_right", "sub1"])
     def test_raw_ir_as_correction_fails(self, bundle, sim, spk):

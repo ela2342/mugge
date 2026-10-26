@@ -207,7 +207,9 @@ def _run_pipeline(req: FilterGenerateRequest) -> dict:
         validate_and_raise,
     )
     from room_correction.combine import uniform_d009_trim
-    from room_correction.correction import correction_from_measurement
+    from room_correction.correction import (
+        correction_from_measurement, require_correctable,
+    )
     from room_correction.generate_profile_filters import generate_profile_filters
     from room_correction.export import export_filter
     from room_correction.verify import (
@@ -231,6 +233,7 @@ def _run_pipeline(req: FilterGenerateRequest) -> dict:
     measured_irs = {}
     correction_filters = None
     if req.mode == "crossover_plus_correction":
+        require_correctable(profile["speakers"])
         session_dir = os.path.join(DEFAULT_SESSION_DIR, req.profile)
         if not os.path.isdir(session_dir):
             raise FileNotFoundError(

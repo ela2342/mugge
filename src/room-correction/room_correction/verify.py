@@ -11,6 +11,8 @@ distortion through the PA system. The -0.5dB safety margin is not conservative â
 it is the absolute minimum for safe operation.
 """
 
+import logging
+
 import numpy as np
 import soundfile as sf
 
@@ -18,6 +20,7 @@ from . import dsp_utils
 
 
 SAMPLE_RATE = dsp_utils.SAMPLE_RATE
+log = logging.getLogger(__name__)
 
 
 class VerificationResult:
@@ -660,6 +663,10 @@ def run_venue_checks(output_dir, expected_files, mandatory_hpf_hz=None,
 # The sat band stays clear of a crossover up to 200 Hz and below the region
 # where the frequency-dependent window lets reflections through uncorrected.
 CLOSED_LOOP_BANDS_HZ = {"highpass": (250.0, 500.0), "lowpass": (30.0, 200.0)}
+# AE, F-262 item 1: logged per channel so an HF regression is visible, never
+# gated. On the unwindowed IR this band is dominated by reflections the
+# frequency-dependent window leaves uncorrected on purpose.
+CLOSED_LOOP_LOG_BAND_HZ = (500.0, 4000.0)
 
 
 def closed_loop_band(speaker):
@@ -679,7 +686,8 @@ def verify_closed_loop(measured_ir, correction, band_hz, target_curve="flat",
     octave): the corrected max positive deviation from the target must
     not exceed the uncorrected one, and the corrected response must pass
     closed_loop.passes_residual_gate. This catches a filter that applies
-    the room instead of correcting it.
+    the room instead of correcting it. The same deviations over
+    CLOSED_LOOP_LOG_BAND_HZ are logged and returned, but never gate.
 
     Parameters
     ----------
@@ -699,31 +707,47 @@ def verify_closed_loop(measured_ir, correction, band_hz, target_curve="flat",
             or not np.all(np.isfinite(fir)):
         return VerificationResult(name, False, "Measured IR or FIR is empty or non-finite")
 
-    lo, hi = band_hz
     level = correction.reference_level_db
-    freqs, uncorrected = closed_loop.smoothed_response_db(ir, lo, hi, sr=sr)
-    _, corrected = closed_loop.smoothed_response_db(
-        closed_loop.system_response(ir, fir), lo, hi, sr=sr)
-    uncorrected = uncorrected - level
-    corrected = corrected - level
-    target = tc.get_target_curve(
-        target_curve, freqs, target_phon=target_phon, reference_phon=reference_phon)
+    system = closed_loop.system_response(ir, fir)
 
+    def responses(lo, hi):
+        freqs, uncorrected = closed_loop.smoothed_response_db(ir, lo, hi, sr=sr)
+        _, corrected = closed_loop.smoothed_response_db(system, lo, hi, sr=sr)
+        target = tc.get_target_curve(
+            target_curve, freqs, target_phon=target_phon, reference_phon=reference_phon)
+        return corrected - level, uncorrected - level, target
+
+    lo, hi = band_hz
+    corrected, uncorrected, target = responses(lo, hi)
     if not all(np.all(np.isfinite(a)) for a in (corrected, uncorrected, target)):
         return VerificationResult(name, False, "Non-finite closed-loop response")
     dev_corrected = closed_loop.max_positive_deviation_db(corrected, target)
     dev_uncorrected = closed_loop.max_positive_deviation_db(uncorrected, target)
     passed = (closed_loop.passes_residual_gate(corrected, target)
               and dev_corrected <= dev_uncorrected)
+
+    log_lo, log_hi = CLOSED_LOOP_LOG_BAND_HZ
+    log_corrected, log_uncorrected, log_target = responses(log_lo, log_hi)
+    if all(np.all(np.isfinite(a)) for a in (log_corrected, log_uncorrected, log_target)):
+        log_dev_corrected = closed_loop.max_positive_deviation_db(log_corrected, log_target)
+        log_dev_uncorrected = closed_loop.max_positive_deviation_db(log_uncorrected, log_target)
+    else:
+        log_dev_corrected = log_dev_uncorrected = float("nan")
+
     message = (
         f"Max over target {lo:g}-{hi:g} Hz: corrected {dev_corrected:+.2f}dB, "
         f"uncorrected {dev_uncorrected:+.2f}dB "
-        f"(limit {closed_loop.MAX_POSITIVE_DEVIATION_DB}dB, corrected <= uncorrected)"
+        f"(limit {closed_loop.MAX_POSITIVE_DEVIATION_DB}dB, corrected <= uncorrected); "
+        f"log only {log_lo:g}-{log_hi:g} Hz: corrected {log_dev_corrected:+.2f}dB, "
+        f"uncorrected {log_dev_uncorrected:+.2f}dB"
     )
     return VerificationResult(
         name, passed, message,
         {"corrected_max_db": dev_corrected, "uncorrected_max_db": dev_uncorrected,
-         "band_hz": (float(lo), float(hi))},
+         "band_hz": (float(lo), float(hi)),
+         "log_corrected_max_db": log_dev_corrected,
+         "log_uncorrected_max_db": log_dev_uncorrected,
+         "log_band_hz": (float(log_lo), float(log_hi))},
     )
 
 
@@ -758,6 +782,7 @@ def run_correction_gate(output_dir, expected_files, closed_loop_inputs=None,
             measured_ir, correction, closed_loop_band(speaker), target_curve=target_curve,
             target_phon=target_phon, reference_phon=reference_phon, sr=expected_sr)
         result.name = f"{result.name} ({filename})"
+        log.info("%s: %s", result.name, result.message)
         results.append(result)
 
     all_passed = bool(results) and all(r.passed for r in results)
