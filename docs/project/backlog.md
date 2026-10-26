@@ -10838,6 +10838,71 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the Architect (writer). Note for the record: D009_SCALAR_OVERSAMPLE
   = 8 is defined in correction.py (combine.py fenced out; no import
   cycle).
+  F-384 FENCE r1 VERIFIED (PM, v305): fence 80317b5a is
+  /tmp/cm-relay/F-383/w7-F384-impl-brief-r1.txt (sha256 80317b5a, 2427
+  bytes, verified at PM read); this supersedes the "not PM-verified"
+  cross-ref above. Branch fix/F-384-step9-peak-scalar is local only
+  (CM: worktree .claude/worktrees/fix-F-384, base 4724e65d); the CM
+  pushes it when worker-7 declares a commit.
+  F-383 PHASE 0b FINAL SET (CM, per team-lead final ruling,
+  2026-10-26; files in /tmp/cm-relay/F-383/frozen/, shas verified at
+  PM read). Relayed to worker-7: AE c54b6b14 + note e6e73487;
+  Architect reading r3 3100a728; F-384 q1 answer r2 d1a0cc21 (option
+  c); AE release 7cda69e8. Record stays A r3 89c3bb1b + B r1 349b585f.
+  VOID, never relayed: Architect readings r1 69f5bdda and r2 536fc363;
+  q1 answer r1 309a1c92; AE bcab5e3e and dbdd1216; Architect note
+  7e998481 (architect/F383-record-note-R0-withdrawn-architect-r1.txt
+  under /tmp/cm-relay/F-383/) and its AE release b1db2b83
+  (/tmp/cm-relay/F-383/ae-F383-record-note-7e998481-release.txt).
+  - Architect reading r3 arch-F383-phase0b-reading-r3-3100a728.txt
+    (sha256 3100a728, 9537 bytes). R1 mechanism CONFIRMED. R2 F-374
+    tightened gate: verbatim "the AC is SCOPED, not loosened"; R2d
+    CLOSED (AE dbdd1216, F-418). R3 B3 amendment, replacing "with the
+    band 20 Hz-20 kHz as today;": verbatim "over the FULL band, DC to
+    Nyquist, on the 8x grid (a new band argument of max_gain_db,
+    default unchanged for every other caller);". R4: verbatim "A1c
+    stays -60 dB and FAIL-CLOSED"; PA 80 Hz profiles
+    (pa-2way-80hz-lavoce, -s218) may raise; any fix is a correction
+    length budget in correction.py, not a lower A1c limit. R5: no
+    change. R6b fix F1 in generate_subsonic_filter ONLY: n_fft =
+    next_power_of_2(n_taps * SUBSONIC_DESIGN_OVERSAMPLE), new constant
+    in crossover.py, value 64 unless r2 data picks otherwise;
+    floor=_LR_LOG_FLOOR (1e-20). R6c: F1 acceptance read at 256x with
+    1e-20 AND 1e-30, both <= -60 dB. R6d: phase 0b r2 data run
+    (variants (i) and F1 at 32/64/128; slopes 24 AND 48 at 11 corners,
+    22 cases). R6f A3 amendment, verbatim: "S2 found a real defect at
+    40/48 (AE c54b6b14). The fix lands in the same commit as A1b or
+    before it, never after, so that A1b never fail-closes a profile on
+    main (A6 order per the F-384 q1 answer r2, step 3)." Margin:
+    COMBINE_MARGIN_DB -0.6 stays; no change. R7: verbatim "The code
+    hold is F-383 ONLY".
+  - AE release ae-release-arch-r3-q1r2-7cda69e8.txt (sha256 7cda69e8,
+    1274 bytes): verbatim "3100a728: RELEASED, R0-R7." OBJ-1 and OBJ-2
+    closed ("F1 replaces build (ii)"). R6d clarification, verbatim:
+    'the ">= 6 dB margin" applies to the dB-residual limits only (M1
+    and tail <= -66 dB at 256x)'. Verbatim "d1a0cc21: RELEASED (answer
+    (c); A6 order: helper, F-384, fix + A1b, combine, gates)."
+    Supersedes AE bcab5e3e (released the void pair 536fc363 /
+    309a1c92).
+  - F-384 q1 answer r2 arch-F384-q1-answer-r2-d1a0cc21.txt (sha256
+    d1a0cc21, 2036 bytes), verbatim: "Answer: (c). The A2 helper moves
+    FORWARD into its own commit, immediately BEFORE F-384." New A6
+    order: 1. A2 helper (own commit); 2. F-384 (A5) with T1-T5 incl.
+    T3b; 3. subsonic fix (S3) + A1b, one commit or fix first, verbatim
+    "Never A1b first."; 4. F-383 combine change; 5. tightened F-374
+    gate and LR8 80 Hz PA profile gate. D009_SCALAR_OVERSAMPLE moves
+    to combine.py in step 4.
+  - F-384 fence r3 /tmp/cm-relay/F-383/w7-F384-impl-brief-r3.txt
+    (sha256 e9da4dc5, 1992 bytes): supersedes r1 80317b5a only in
+    "Scope". TWO commits: commit 1 the A2 helper (min_phase.py or
+    dsp_utils.py + tests; closed_loop.py, verify.py,
+    test_venue_closed_loop untouched); commit 2 F-384 with T1-T5 incl.
+    T3b (correction.py + tests). Still fenced OUT: combine.py,
+    crossover.py, the subsonic fix, A1b, the combine change, gate
+    changes. CM draft r2 059243d6 never sent.
+  - Next for worker-7 after F-384 (CM): the phase 0b r2 data run; the
+    CM sets its order against F-411. (PM cross-ref: the CM message
+    calls it R6b; in 3100a728 the data run is R6d, R6b is the fix F1.)
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
