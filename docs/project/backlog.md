@@ -691,6 +691,12 @@ priority!"
   progress). Five new worker-4 findings frozen (b76bc353): (1)-(4) AE
   writes, Architect releases; (5) Architect alone. PR #66 is now the
   F-262 PR (CM).
+  UPDATE (CM, 2026-10-26, after v254): backlog v254 pushed as
+  50d9a5bb. F-262 PR #66: all rulings on worker-4's c1-c4 findings are
+  in and relayed: item (5) Architect e65ced02 (scan changes S1-S6, F6
+  allowlist correction), items (1)-(4) AE dc9e529d released by the
+  Architect (record (d) a8bf9931). Two new AE backlog one-liners under
+  F-262 (CM).
 
 ## Reserved IDs
 
@@ -6259,6 +6265,51 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      "generate_bose_filters.verify_all" where F6 names the def
      generate_bose_filters, and it does not list the run_full_pipeline
      run_all_checks :280 entry.
+  - UPDATE (CM, 2026-10-26, after v254): all rulings on the d677f253
+    findings are in and relayed to worker-4 (CM). Files in
+    /tmp/cm-relay/F-262/frozen/, each verified at PM read.
+     Item (5), Architect sole writer:
+     F6-reconcile-d677f253-architect-e65ced02.txt (sha256 e65ced02).
+     worker-4's allowlist is RIGHT on the call sites. F6 correction
+     (the Architect's own error): generate_bose_filters.py:192 is
+     inside def verify_all, so (generate_bose_filters.py, verify_all)
+     replaces F6's (generate_bose_filters.py, generate_bose_filters).
+     Six scan changes S1-S6, all in test_shared_correction.py, no
+     production code: S1 run_all_checks only from
+     runner.run_full_pipeline (:280); S2 entries keyed by
+     repo-relative path; S3 scan every .py under src/; S4 stale
+     entries fail; S5 aliased imports of forbidden names are
+     offenders; S6 import quarantine of runner /
+     generate_bose_filters. Every other part of F6 stands. The
+     possible run_all_checks conflict in v254 did not exist; the
+     Architect confirms both PM cross-ref points are covered
+     (verify_all; :280 via S1) (CM).
+     Items (1)-(4), AE sole writer, Architect released:
+     ae-c1c4-items1-4-ruling-dc9e529d.txt (sha256 dc9e529d); release
+     lines verbatim in /tmp/cm-relay/release-record-20261026-d.txt
+     (sha256 a8bf9931). All four ACCEPTED. Additions: (1) log-only
+     per-channel 500-4000 Hz corrected/uncorrected deviation; (2) the
+     QE adds a mutation that drops normalize_ir_level, killed by the
+     two required T1 unit tests; (3) the reject text must name the
+     cause, verbatim: "Measurement rejected: room correction not
+     supported for bandpass (3-/4-way) profiles"; (4) required T1
+     assertion: d009_trim_db <= 0.0 and no speaker FIR peak above -0.5
+     dB after the trim, and the UI label must not say
+     "verify_minimum_phase". Architect note (record (d)): "S5"/"S6" in
+     item (4) are the AE's labels, not the scan changes S1-S6 in
+     e65ced02.
+     This resolves the item 3 behaviour change above: the bandpass and
+     3-/4-way fail-closed is ACCEPTED by the AE.
+  - F-262 follow-up line amended (Architect, e65ced02): the PM backlog
+    line from F6 now reads "generate_bose_filters.py (verify_all)" for
+    the legacy entry.
+  - F-262 follow-up (AE, dc9e529d item (1); no ID allocated; no
+    P-level given), verbatim: "PM backlog: a gating HF check on the
+    FDW-windowed IR (the same window the correction used)."
+  - F-262 follow-up (AE, dc9e529d item (3); no ID allocated; no
+    P-level given), verbatim: "PM backlog: a bandpass residual band
+    and level-reference band (AE to define) before any 3-/4-way
+    venue."
   Before the first amps-on measurement (non-blocking one-liners; no
   F-ID, no P-level given):
   - AE, verbatim: "F-262 item 7 Architect note: before the first
