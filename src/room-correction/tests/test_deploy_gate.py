@@ -245,3 +245,292 @@ class TestHeader:
     def test_max_taps_is_a_parameter(self, real_set, names, root):
         issues = check_deployable_set(str(real_set), names, str(root), max_taps=DEFAULT_TAPS - 1)
         assert len(issues) == len(names)
+
+
+# -- set swap (Architect Q1/Q2) ----------------------------------------------
+
+from datetime import datetime, timezone
+
+from room_correction.closed_loop import MEASUREMENT_SNR_MIN_DB, Verdict
+from room_correction.deploy import (
+    CURRENT_LINK, KEEP_EXTRA_SETS, PREVIOUS_LINK, SETS_DIRNAME,
+    DeployRefused, RollbackFailed, deploy_venue_set, prune_sets, trial_deploy,
+)
+
+T0 = datetime(2026, 10, 26, 12, 0, 0, tzinfo=timezone.utc)
+
+
+class FakeReload:
+    """Records what ``current`` points at on each Reload; scripted results."""
+
+    def __init__(self, root, results=()):
+        self.root, self.results, self.seen = root, list(results), []
+
+    def __call__(self):
+        self.seen.append(os.readlink(self.root / CURRENT_LINK))
+        return self.results.pop(0) if self.results else True
+
+
+@pytest.fixture
+def live(tmp_path, names):
+    """A coeffs root as tmpfiles seeds it: sets/dirac and current -> sets/dirac."""
+    r = tmp_path / "live"
+    seed = r / SETS_DIRNAME / "dirac"
+    seed.mkdir(parents=True)
+    for n in names:
+        sf.write(str(seed / n), np.r_[1.0, np.zeros(DEFAULT_TAPS - 1)].astype(np.float32),
+                 SR, subtype="FLOAT")
+    (r / CURRENT_LINK).symlink_to(os.path.join(SETS_DIRNAME, "dirac"))
+    return r
+
+
+def _links(root):
+    return {k: (os.readlink(root / k) if (root / k).is_symlink() else None)
+            for k in (CURRENT_LINK, PREVIOUS_LINK)}
+
+
+def _litter(root):
+    sets = root / SETS_DIRNAME
+    return sorted(p.name for p in list(sets.iterdir()) + list(root.iterdir())
+                  if p.name.startswith("."))
+
+
+class TestTrialDeploy:
+
+    def test_commit_swaps_in_the_set(self, real_set, names, live):
+        reload = FakeReload(live)
+        with trial_deploy(str(real_set), names, str(live), reload=reload, now=T0) as t:
+            assert _links(live)[CURRENT_LINK] == f"sets/{t.set_id}"
+            t.commit()
+        links = _links(live)
+        assert links == {CURRENT_LINK: f"sets/{t.set_id}", PREVIOUS_LINK: "sets/dirac"}
+        assert t.set_id.startswith("20261026T120000Z-")
+        assert reload.seen == [f"sets/{t.set_id}"]
+        for n in names:
+            assert (live / CURRENT_LINK / n).read_bytes() == (real_set / n).read_bytes()
+        assert sorted(p.name for p in (live / CURRENT_LINK).iterdir()) == sorted(names)
+        assert _litter(live) == []
+
+    @pytest.mark.parametrize("exc", [None, ValueError, KeyboardInterrupt])
+    def test_no_commit_rolls_back(self, real_set, names, live, exc):
+        reload = FakeReload(live)
+        try:
+            with trial_deploy(str(real_set), names, str(live), reload=reload, now=T0) as t:
+                if exc:
+                    raise exc("measurement crashed")
+        except BaseException as e:
+            assert exc is not None and isinstance(e, exc)
+        else:
+            assert exc is None
+        assert _links(live) == {CURRENT_LINK: "sets/dirac", PREVIOUS_LINK: None}
+        assert reload.seen == [f"sets/{t.set_id}", "sets/dirac"]
+        # The tried set is not pruned during a trial; it stays immutable.
+        assert (live / SETS_DIRNAME / t.set_id).is_dir()
+
+    def test_rollback_restores_the_old_previous(self, real_set, names, live):
+        older = live / SETS_DIRNAME / "20261025T000000Z-000000000000"
+        older.mkdir()
+        (live / PREVIOUS_LINK).symlink_to(f"sets/{older.name}")
+        with trial_deploy(str(real_set), names, str(live), reload=FakeReload(live), now=T0):
+            assert _links(live)[PREVIOUS_LINK] == "sets/dirac"
+        assert _links(live) == {CURRENT_LINK: "sets/dirac",
+                                PREVIOUS_LINK: f"sets/{older.name}"}
+
+    def test_failed_reload_on_swap_rolls_back(self, real_set, names, live):
+        reload = FakeReload(live, [False, True])
+        with pytest.raises(RuntimeError, match="reload failed after swapping in"):
+            with trial_deploy(str(real_set), names, str(live), reload=reload, now=T0):
+                pytest.fail("body must not run after a failed reload")
+        assert _links(live)[CURRENT_LINK] == "sets/dirac"
+        assert len(reload.seen) == 2 and reload.seen[1] == "sets/dirac"
+
+    @pytest.mark.parametrize("second", [False, OSError("pw-cli gone")])
+    def test_failed_rollback_is_loud_and_raised(self, real_set, names, live, capsys, second):
+        def reload():
+            if not hasattr(reload, "n"):
+                reload.n = 1
+                return True
+            if isinstance(second, Exception):
+                raise second
+            return second
+        with pytest.raises(RollbackFailed):
+            with trial_deploy(str(real_set), names, str(live), reload=reload, now=T0):
+                pass
+        assert "ROLLBACK FAILED" in capsys.readouterr().err
+
+    def test_double_commit_raises_and_stays_committed(self, real_set, names, live):
+        with pytest.raises(RuntimeError, match="already committed"):
+            with trial_deploy(str(real_set), names, str(live), reload=FakeReload(live),
+                              now=T0) as t:
+                t.commit()
+                t.commit()
+        assert _links(live)[CURRENT_LINK] == f"sets/{t.set_id}"
+
+    def test_refused_set_touches_nothing(self, sim_set, names, live):
+        before = sorted(p.name for p in (live / SETS_DIRNAME).iterdir())
+        reload = FakeReload(live)
+        with pytest.raises(DeployRefused, match="SIMULATED"):
+            with trial_deploy(str(sim_set), names, str(live), reload=reload):
+                pytest.fail("refused set entered")
+        assert reload.seen == []
+        assert _links(live) == {CURRENT_LINK: "sets/dirac", PREVIOUS_LINK: None}
+        assert sorted(p.name for p in (live / SETS_DIRNAME).iterdir()) == before
+
+    def test_simulated_override_never_into_production(self, sim_set, names, live, monkeypatch):
+        monkeypatch.setattr(deploy, "PRODUCTION_COEFFS_DIR", str(live))
+        with pytest.raises(DeployRefused, match="production coeffs root"):
+            with trial_deploy(str(sim_set), names, str(live), reload=FakeReload(live),
+                              allow_simulated=True):
+                pytest.fail("refused set entered")
+
+    def test_no_current_link_refuses(self, real_set, names, live):
+        (live / CURRENT_LINK).unlink()
+        with pytest.raises(DeployRefused, match="no current set"):
+            with trial_deploy(str(real_set), names, str(live), reload=FakeReload(live)):
+                pytest.fail("entered without a rollback target")
+
+    def test_staged_bytes_are_checked_again(self, real_set, names, live, monkeypatch):
+        # A file swapped after the check (TOCTOU) is caught on the staged copy.
+        monkeypatch.setattr(deploy, "check_deployable_set", lambda *a, **k: [])
+        sf.write(str(real_set / "combined_left_hp.wav"),
+                 np.zeros((8, 2), np.float32), SR, subtype="FLOAT")
+        with pytest.raises(DeployRefused, match="combined_left_hp.wav: 2 channels"):
+            with trial_deploy(str(real_set), names, str(live), reload=FakeReload(live)):
+                pytest.fail("bad staged set entered")
+        assert sorted(p.name for p in (live / SETS_DIRNAME).iterdir()) == ["dirac"]
+        assert _links(live)[CURRENT_LINK] == "sets/dirac"
+
+    def test_set_id_never_reused(self, real_set, names, live):
+        with trial_deploy(str(real_set), names, str(live), reload=FakeReload(live), now=T0) as t:
+            t.commit()
+        with pytest.raises(DeployRefused, match="already exists"):
+            with trial_deploy(str(real_set), names, str(live), reload=FakeReload(live), now=T0):
+                pytest.fail("reused id")
+        assert _links(live)[CURRENT_LINK] == f"sets/{t.set_id}"
+        assert _litter(live) == []
+
+    def test_set_id_hashes_content(self, real_set, names, live):
+        with trial_deploy(str(real_set), names, str(live), reload=FakeReload(live), now=T0) as a:
+            a.commit()
+        sf.write(str(real_set / "dirac.wav"),
+                 np.r_[0.5, np.zeros(DEFAULT_TAPS - 1)].astype(np.float32), SR, subtype="FLOAT")
+        with trial_deploy(str(real_set), names, str(live), reload=FakeReload(live), now=T0) as b:
+            b.commit()
+        assert a.set_id[:17] == b.set_id[:17] and a.set_id != b.set_id
+
+    def test_crash_between_links_restores_both(self, real_set, names, live, monkeypatch):
+        real_point = deploy._point
+
+        def point(root, link, target):
+            if link == CURRENT_LINK and target != "sets/dirac":
+                raise OSError("power cut")
+            return real_point(root, link, target)
+        monkeypatch.setattr(deploy, "_point", point)
+        reload = FakeReload(live)
+        with pytest.raises(OSError, match="power cut"):
+            with trial_deploy(str(real_set), names, str(live), reload=reload, now=T0):
+                pytest.fail("entered")
+        assert _links(live) == {CURRENT_LINK: "sets/dirac", PREVIOUS_LINK: None}
+
+
+def _measure(verdict):
+    good = MEASUREMENT_SNR_MIN_DB + 20
+    curve = {Verdict.PASS: np.zeros(8), Verdict.FAIL: np.full(8, 9.0),
+             Verdict.INVALID: np.zeros(8)}[verdict]
+    snr = good if verdict is not Verdict.INVALID else MEASUREMENT_SNR_MIN_DB - 1
+    band = (curve, np.zeros(8), snr)
+    return lambda: ({"sat_left": band}, band)
+
+
+class TestDeployVenueSet:
+
+    def test_pass_commits(self, real_set, names, live):
+        r = deploy_venue_set(str(real_set), names, str(live), measure=_measure(Verdict.PASS),
+                             reload=FakeReload(live), now=T0)
+        assert r.verdict is Verdict.PASS
+        links = _links(live)
+        assert links[PREVIOUS_LINK] == "sets/dirac"
+        assert links[CURRENT_LINK].startswith("sets/20261026T120000Z-")
+
+    @pytest.mark.parametrize("verdict", [Verdict.FAIL, Verdict.INVALID])
+    def test_fail_and_invalid_keep_the_previous_filters(self, real_set, names, live, verdict):
+        reload = FakeReload(live)
+        r = deploy_venue_set(str(real_set), names, str(live), measure=_measure(verdict),
+                             reload=reload, now=T0)
+        assert r.verdict is verdict
+        assert _links(live) == {CURRENT_LINK: "sets/dirac", PREVIOUS_LINK: None}
+        assert reload.seen[-1] == "sets/dirac"
+
+    @pytest.mark.parametrize("measure", [
+        lambda: (_ for _ in ()).throw(RuntimeError("mic unplugged")),
+        lambda: None,
+        lambda: ({"sat_left": None}, None),
+    ])
+    def test_broken_measurement_keeps_the_previous_filters(self, real_set, names, live, measure):
+        try:
+            r = deploy_venue_set(str(real_set), names, str(live), measure=measure,
+                                 reload=FakeReload(live), now=T0)
+        except Exception:
+            pass
+        else:
+            assert r.verdict is Verdict.FAIL
+        assert _links(live)[CURRENT_LINK] == "sets/dirac"
+
+
+    def test_simulated_set_refused_before_measuring(self, sim_set, names, live):
+        def measure():
+            pytest.fail("measured a refused set")
+        with pytest.raises(DeployRefused, match="SIMULATED"):
+            deploy_venue_set(str(sim_set), names, str(live), measure=measure,
+                             reload=FakeReload(live))
+        assert _links(live)[CURRENT_LINK] == "sets/dirac"
+
+class TestPrune:
+
+    def _commit(self, real_set, names, live, i):
+        sf.write(str(real_set / "dirac.wav"),
+                 np.r_[1.0 - i / 100, np.zeros(DEFAULT_TAPS - 1)].astype(np.float32),
+                 SR, subtype="FLOAT")
+        now = T0.replace(minute=i)
+        with trial_deploy(str(real_set), names, str(live), reload=FakeReload(live),
+                          now=now) as t:
+            t.commit()
+        return t.set_id
+
+    def test_keeps_current_previous_and_n_newest(self, real_set, names, live):
+        ids = [self._commit(real_set, names, live, i) for i in range(KEEP_EXTRA_SETS + 4)]
+        kept = sorted(p.name for p in (live / SETS_DIRNAME).iterdir())
+        assert kept == sorted(["dirac"] + ids[-(KEEP_EXTRA_SETS + 2):])
+        assert _links(live) == {CURRENT_LINK: f"sets/{ids[-1]}",
+                                PREVIOUS_LINK: f"sets/{ids[-2]}"}
+
+    def test_never_removes_a_linked_set_even_if_old(self, real_set, names, live):
+        ids = [self._commit(real_set, names, live, i) for i in range(KEEP_EXTRA_SETS + 3)]
+        # previous re-pointed at a set that is already pruned-eligible by age.
+        (live / PREVIOUS_LINK).unlink()
+        (live / PREVIOUS_LINK).symlink_to(f"sets/{ids[1]}")
+        removed = prune_sets(str(live), keep=0)
+        assert sorted(os.path.basename(p) for p in removed) == ids[2:-1]
+        assert sorted(p.name for p in (live / SETS_DIRNAME).iterdir()) == sorted(
+            ["dirac", ids[1], ids[-1]])
+
+    def test_removes_leftover_staging_but_not_foreign_dirs(self, real_set, names, live):
+        (live / SETS_DIRNAME / ".staging-deadbeef0000").mkdir()
+        (live / SETS_DIRNAME / "operator-backup").mkdir()
+        self._commit(real_set, names, live, 0)
+        names_left = sorted(p.name for p in (live / SETS_DIRNAME).iterdir())
+        assert ".staging-deadbeef0000" not in names_left
+        assert "operator-backup" in names_left and "dirac" in names_left
+
+    def test_rollback_does_not_prune(self, real_set, names, live):
+        ids = [self._commit(real_set, names, live, i) for i in range(KEEP_EXTRA_SETS + 2)]
+        before = sorted(p.name for p in (live / SETS_DIRNAME).iterdir())
+        sf.write(str(real_set / "dirac.wav"),
+                 np.r_[0.25, np.zeros(DEFAULT_TAPS - 1)].astype(np.float32), SR, subtype="FLOAT")
+        with trial_deploy(str(real_set), names, str(live), reload=FakeReload(live),
+                          now=T0.replace(hour=13)) as t:
+            pass
+        after = sorted(p.name for p in (live / SETS_DIRNAME).iterdir())
+        assert after == sorted(before + [t.set_id])
+        assert _links(live)[CURRENT_LINK] == f"sets/{ids[-1]}"
+

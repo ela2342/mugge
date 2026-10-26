@@ -23,12 +23,23 @@ D-040: All CamillaDSP references replaced with PipeWire filter-chain
 equivalents. The .conf drop-in deploys to
 ~/.config/pipewire/pipewire.conf.d/30-filter-chain-convolver.conf
 and WAV coefficients to /etc/pi4audio/coeffs/.
+
+US-174d: venue sets go through check_deployable_set (refuses simulated
+sets) and trial_deploy / deploy_venue_set, which swap immutable set dirs
+under coeffs/sets/ via the ``current`` and ``previous`` symlinks and keep
+the new set only if the measured gate passes. Not wired to the PW conf
+yet: the conf still reads the flat coeffs/<name>.wav files.
 """
 
+import contextlib
 import glob
+import hashlib
 import os
 import re
+import secrets
 import shutil
+import sys
+from datetime import datetime, timezone
 
 import soundfile as sf
 import yaml
@@ -239,6 +250,223 @@ def check_deployable_set(set_dir, expected_names, coeffs_root, *,
             continue
         issues.extend(_wav_header_issues(path, name, max_taps))
     return issues
+
+
+# Set-swap layout (Architect, US-174d Q2 option b): immutable versioned set
+# dirs under <coeffs_root>/sets/<set-id>/, and the relative symlinks
+# <coeffs_root>/current and <coeffs_root>/previous -> sets/<set-id>.
+# Replacing ``current`` with rename(2) is the commit point.
+SETS_DIRNAME = "sets"
+CURRENT_LINK = "current"
+PREVIOUS_LINK = "previous"
+# Unreferenced sets kept besides current and previous.
+KEEP_EXTRA_SETS = 3
+_SET_ID_RE = re.compile(r"^\d{8}T\d{6}Z-[0-9a-f]{12}$")
+_SET_STAGING_PREFIX = ".staging-"
+
+
+class RollbackFailed(RuntimeError):
+    """Restoring the previous set (or reloading it) failed."""
+
+
+def _fsync_path(path):
+    fd = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def make_set_id(set_dir, names, now=None):
+    """UTC timestamp + short hash of the names and bytes deployed."""
+    h = hashlib.sha256()
+    for name in sorted(names):
+        h.update(name.encode() + b"\0")
+        with open(os.path.join(set_dir, name), "rb") as f:
+            h.update(hashlib.sha256(f.read()).digest())
+    now = now or datetime.now(timezone.utc)
+    return f"{now.strftime('%Y%m%dT%H%M%SZ')}-{h.hexdigest()[:12]}"
+
+
+def _stage_set(set_dir, names, coeffs_root, now=None):
+    """
+    Copy the names into sets/<set-id>/ (steps 1-4) and return the set id.
+
+    The id hashes the staged bytes, and the staged copies are header-checked
+    again, so what is renamed into place is what was checked. Never reuses
+    an id.
+    """
+    sets = os.path.join(coeffs_root, SETS_DIRNAME)
+    os.makedirs(sets, exist_ok=True)
+    staging = os.path.join(sets, _SET_STAGING_PREFIX + secrets.token_hex(6))
+    os.mkdir(staging)
+    try:
+        issues = []
+        for name in names:
+            dst = os.path.join(staging, name)
+            shutil.copyfile(os.path.join(set_dir, name), dst, follow_symlinks=False)
+            if os.path.islink(dst) or not os.path.isfile(dst):
+                issues.append(f"{name}: not a regular file when staged")
+                continue
+            issues.extend(_wav_header_issues(dst, name, DEFAULT_TAPS))
+            _fsync_path(dst)
+        if issues:
+            raise DeployRefused(issues)
+        set_id = make_set_id(staging, names, now)
+        final = os.path.join(sets, set_id)
+        if os.path.lexists(final):
+            raise DeployRefused([f"set id {set_id} already exists"])
+        _fsync_path(staging)
+        os.rename(staging, final)
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
+    _fsync_path(sets)
+    return set_id
+
+
+def _link_target(coeffs_root, link):
+    path = os.path.join(coeffs_root, link)
+    return os.readlink(path) if os.path.islink(path) else None
+
+
+def _point(coeffs_root, link, target):
+    """Atomically make <coeffs_root>/<link> -> target, or remove it for None."""
+    path = os.path.join(coeffs_root, link)
+    if target is None:
+        if os.path.lexists(path):
+            os.remove(path)
+        return
+    tmp = os.path.join(coeffs_root, f".{link}.tmp-{os.getpid()}")
+    if os.path.lexists(tmp):
+        os.remove(tmp)
+    os.symlink(target, tmp)
+    os.replace(tmp, path)
+
+
+class _Trial:
+    def __init__(self, coeffs_root, set_id):
+        self.coeffs_root = coeffs_root
+        self.set_id = set_id
+        self.committed = False
+
+    def commit(self):
+        if self.committed:
+            raise RuntimeError(f"trial deploy of {self.set_id} already committed")
+        self.committed = True
+
+
+def _reload_or_raise(reload, what):
+    if not reload():
+        raise RuntimeError(f"convolver reload failed after {what}")
+
+
+@contextlib.contextmanager
+def trial_deploy(set_dir, expected_names, coeffs_root, *, reload=None,
+                 allow_simulated=False, now=None):
+    """
+    Swap ``set_dir`` in as the current set; keep it only if committed.
+
+    Architect, US-174d Q1/Q2. On enter: check_deployable_set (raises
+    DeployRefused), copy into sets/<set-id>/, point ``previous`` at the old
+    set and ``current`` at the new one, Reload. The body re-measures and
+    calls ``.commit()`` on a pass. On exit without a commit (fail, invalid,
+    exception, KeyboardInterrupt) ``current`` and ``previous`` go back to
+    what they were and Reload runs again. A failed rollback is printed
+    loudly and raised as RollbackFailed. After a commit, old sets are
+    pruned (prune_sets). ``reload`` defaults to reload_convolver.
+    """
+    reload = reload or reload_convolver
+    issues = check_deployable_set(set_dir, expected_names, coeffs_root,
+                                  allow_simulated=allow_simulated)
+    old_current = _link_target(coeffs_root, CURRENT_LINK)
+    if old_current is None:
+        issues.append(f"no {CURRENT_LINK} set in {coeffs_root} to roll back to")
+    if issues:
+        raise DeployRefused(issues)
+
+    names = sorted(expected_names)
+    old_previous = _link_target(coeffs_root, PREVIOUS_LINK)
+    set_id = _stage_set(set_dir, names, coeffs_root, now)
+    trial = _Trial(coeffs_root, set_id)
+    swapped = False
+    try:
+        _point(coeffs_root, PREVIOUS_LINK, old_current)
+        swapped = True
+        _point(coeffs_root, CURRENT_LINK, os.path.join(SETS_DIRNAME, set_id))
+        _fsync_path(coeffs_root)
+        _reload_or_raise(reload, f"swapping in {set_id}")
+        yield trial
+    finally:
+        if not trial.committed and swapped:
+            try:
+                _point(coeffs_root, CURRENT_LINK, old_current)
+                _point(coeffs_root, PREVIOUS_LINK, old_previous)
+                _fsync_path(coeffs_root)
+                _reload_or_raise(reload, f"rolling back to {old_current}")
+            except BaseException as exc:
+                print(f"\n  !!! ROLLBACK FAILED: {coeffs_root}/{CURRENT_LINK} should be "
+                      f"{old_current}: {exc}\n  !!! The convolver may be running "
+                      f"set {set_id}. Check before any audio.", file=sys.stderr)
+                raise RollbackFailed(f"rollback to {old_current} failed: {exc}") from exc
+    if trial.committed:
+        prune_sets(coeffs_root)
+
+
+def deploy_venue_set(set_dir, expected_names, coeffs_root, *, measure,
+                     reload=None, allow_simulated=False, now=None):
+    """
+    Deploy a venue set behind the measured gate (US-174d).
+
+    ``measure()`` re-measures with the new set live and returns
+    ``(channels, system)`` for closed_loop.measured_gate. Only PASS
+    commits; FAIL and INVALID (repeat the measurement) keep the previous
+    filters. Returns the MeasuredGateResult.
+    """
+    from .closed_loop import Verdict, measured_gate
+
+    with trial_deploy(set_dir, expected_names, coeffs_root, reload=reload,
+                      allow_simulated=allow_simulated, now=now) as trial:
+        channels, system = measure()
+        result = measured_gate(channels, system)
+        if result.verdict is Verdict.PASS:
+            trial.commit()
+    return result
+
+
+def prune_sets(coeffs_root, keep=KEEP_EXTRA_SETS):
+    """
+    Remove old unreferenced set dirs; return the removed paths.
+
+    Keeps whatever ``current`` and ``previous`` resolve to (by realpath),
+    the ``keep`` newest other set ids, and anything that is not a set id
+    (e.g. the dirac seed). Leftover staging dirs are removed. Call only
+    after a commit, never during a trial.
+    """
+    sets = os.path.join(coeffs_root, SETS_DIRNAME)
+    if not os.path.isdir(sets):
+        return []
+    referenced = {os.path.realpath(os.path.join(coeffs_root, link))
+                  for link in (CURRENT_LINK, PREVIOUS_LINK)
+                  if os.path.lexists(os.path.join(coeffs_root, link))}
+    ids, removed = [], []
+    for entry in os.listdir(sets):
+        path = os.path.join(sets, entry)
+        if os.path.islink(path) or not os.path.isdir(path):
+            continue
+        if os.path.realpath(path) in referenced:
+            continue
+        if entry.startswith(_SET_STAGING_PREFIX):
+            removed.append(path)
+        elif _SET_ID_RE.match(entry):
+            ids.append(entry)
+    ids.sort()
+    removed.extend(os.path.join(sets, i) for i in ids[:max(len(ids) - keep, 0)])
+    for path in removed:
+        shutil.rmtree(path)
+    if removed:
+        _fsync_path(sets)
+    return removed
 
 
 def deploy_pw_config(
