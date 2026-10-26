@@ -917,6 +917,11 @@ priority!"
   APPROVE r1 (fafd59fc; all 9 design points accepted, R5b
   classification not a step-c precondition, non-blocking N1/N2, no new
   kit); QE pending.
+  UPDATE (PO, AE, UX, CM, 2026-10-26, after v294): backlog v294 pushed
+  as 0a117e45. US-179: erratum E5 df065993 FINAL (rate/device-change
+  stop texts, device-change reset 2e D1-D4, whole-Hz low limit,
+  tests), released by the AE (c56fd763) and UX (by message); relayed
+  to worker-6 with the AE's test note; worker-6's ack is pending.
 
 ## Reserved IDs
 
@@ -11692,6 +11697,93 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      reports uncalibrated until it is re-confirmed;
      - an old capture can't be used for the analysis.
   - No safety limit changes. The PO decides on the erratum.
+  ERRATUM E5 FINAL (PO, 2026-10-26; supersedes the UX section 1
+  PENDING status and "The PO decides on the erratum" above):
+  /tmp/po-drafts/us179-r8-erratum-E5.md (sha256 df065993, 3954 bytes,
+  verified at PM read); CM frozen copy
+  /tmp/cm-relay/US-179/frozen/us179-r8-erratum-E5-FINAL-df065993.md
+  (same sha). No safety limit changes; scope and estimate unchanged
+  (PO).
+  Releases: AE, /tmp/cm-relay/US-179/frozen/ae-E5-release-c56fd763.txt
+  (sha256 c56fd763, verified at PM read), "RELEASED (AE safety text
+  E5b, E5c; no objection to E5a, E5d)." UX by message, no file (per
+  PO), verbatim: "release df065993 (UX). I checked the sha at read
+  time. The E5a texts match 5eb9829c §1 and d91ce7c1 §1/§4, the D2/D3
+  placement and controls match d91ce7c1 §2-§3, and E5c matches
+  5eb9829c §2, all verbatim."
+  Governing text (PO): r8 978c3e1b + E1 v2 6a78af9f + E2 bca0d86b + E3
+  8f508af1 + E4 r2 f692681c + E5 df065993.
+  E5 verbatim, reflowed, without its title line:
+  - Sources: UX 5eb9829c (§1 rate text, §2 whole-Hz text), AE 794b1eeb
+    (whole-Hz: refuse, never round), AE 20a9bc76 (D1-D4), UX d91ce7c1
+    (device-change texts), AE bc0c0127 (Q1 confirm button, Q2 keep
+    finished filters). E5 changes released E4 r2 text for two causes:
+    rate change and device change no longer use the 'other cause'
+    template. No safety limit changes. f692681c is not edited.
+  - E5a (AC2b, append): "Both stops show their message at the top of
+    the setup step, above the 2a rate line:
+     - Rate change: 'Stopped: the audio device now runs at <rate> Hz.
+     mugge filters need 48 kHz. Set the device back to 48 kHz in your
+     system's audio settings, then reload this page.' (The 2a red
+     state then shows as usual.)
+     - Device change (connected, removed or switched; input or
+     output): 'Stopped: the audio devices changed. Check that the
+     right output and microphone are selected. Then confirm the safety
+     check, the speaker settings and the microphone calibration again.
+     Unfinished measurements were discarded; finished filters can
+     still be downloaded.'
+  - These two causes do not use the E4 r2 'other cause' text. Any
+    later level check is a fresh -60 dBFS start (4i)."
+  - E5b (new AC2 item): "2e Device-change reset (AE 20a9bc76,
+    bc0c0127). After any device change, before any sound:
+     - D1 The 4a safety acknowledgement is cleared and must be
+     confirmed again.
+     - D2 Every AC3 declaration (role, low limit, ported/closed,
+     capability tick, channel mapping) is cleared and must be
+     confirmed again. Cleared fields look as on first load (role
+     radios unselected, ticks cleared, limit back to the role default
+     once a role is picked), with no extra per-field message.
+     - D3 The mic-calibration binding is cleared: the session is
+     uncalibrated (A1 rules, visible warning) until the user binds a
+     file to the selected mic. The calibration field shows an amber
+     state: 'Calibration not confirmed for this microphone. A
+     calibration file belongs to one microphone. Confirm that <file
+     name> belongs to <mic name>, or choose another file. Until then,
+     measuring runs uncalibrated.' Controls: [Use <file name> for this
+     microphone] (counts as re-selecting the same file) and [Choose
+     another file]. The binding is never pre-applied. <mic name> is
+     the selected input's device label, or 'the selected microphone'
+     if the browser gives none.
+     - D4 Every unfinished level-check and capture result from before
+     the change is discarded and can't be used for the analysis. A
+     finished filter that passed AC6c is kept and downloadable, marked
+     per channel 'measured before a device change' in the UI and in
+     the download (file name or included metadata). A download set
+     mixing pre- and post-change channels shows the mark on each
+     pre-change channel; a kept filter is never silently combined with
+     post-change results."
+  - E5c (AC3a, append): "The low limit is a whole number of Hz. A
+    non-integer value is refused, never rounded, with the inline
+    message 'Enter the low limit as a whole number of Hz between X and
+    Y (e.g. 40).' (X and Y from the role per E2b: Full-range 20 and
+    500, Subwoofer 20 and 50). A Subwoofer value above 50 shows the
+    E2b refusal text instead. No sound until the value is valid."
+  - E5d (AC12, add): "after a simulated devicechange: the 4a ack and
+    all AC3 declarations are empty and no output is possible until
+    both are confirmed again; with a calibration file loaded the
+    session reports uncalibrated until the binding is confirmed; an
+    unfinished pre-change capture can't be used for the analysis; a
+    finished pre-change filter stays downloadable and carries the
+    mark; the rate-change and device-change messages are shown at the
+    top of the setup step; 40.5 Hz is refused and 40 Hz accepted."
+  - Releases needed, each naming this file's sha: AE (safety text:
+    E5b, E5c), UX (wording and placement: E5a-E5c).
+  Non-blocking note for worker-6 (AE, via PO): add a test that
+  pressing [Use <file name> for this microphone] restores calibrated
+  mode. Relay (CM, 2026-10-26): E5 + the AE note relayed to worker-6
+  with the ack request; worker-6 replaces the E4 r2 "other cause" text
+  for rate and device changes. worker-6 has not yet acked the re-sent
+  bundle at this version (ack-by-sha rule running).
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
