@@ -585,6 +585,14 @@ priority!"
   R2 and the AE's v5 note. v6 relayed to worker-2. QE C1 still open.
   #63 evidence route v2: scratch/pr63-evidence-3f28b6c7 = 2a17ed77,
   run 40324085388 in progress, gates nothing (CM).
+  UPDATE (CM, 2026-10-26, after v234): backlog v234 pushed as
+  5177c551. US-172: the Architect's tb-greetd ruling stands (refuses
+  unless [MOD-gains] ok and [MOD-gate] ok). #63 evidence run
+  40324085388 green. Disk /System/Volumes/Data 21 GiB free, above the
+  4.5 line: nix clearances can be granted again on request; the nix
+  hold itself stays (every nix build/run/develop needs a CM clearance,
+  store deletes need the owner's OK, nobody touches the linux-builder)
+  (CM).
 
 ## Reserved IDs
 
@@ -3368,6 +3376,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - v6 (CM, 2026-10-26; supersedes "Next" above, including its PM
     cross-ref on R2): R1 + R3 + dcec60fa + D2 + D3 + AD M1/flow L + QE
     n1-n3 + C1 on the v6 script; relayed to worker-2. No grant yet.
+  - Gate release history (CM, 2026-10-26): the Architect first
+    released only c8eb180e; the AE's pointer text ("released by the AE
+    and the Architect") was written ahead of the Architect's release;
+    the Architect then sent the exact line "gate joint dcec60fa
+    released" (sha verified). dcec60fa is FINAL, released by both.
+  - tb-greetd (Architect-only ruling, re-sent after releasing
+    dcec60fa; CM relayed to worker-2, 2026-10-26): tb-greetd also
+    REFUSES unless tb-modprobe shows [MOD-gains] ok AND [MOD-gate] ok
+    (and no STOP/ABORT/FAIL). The re-read/OBSERVE-verb half of the
+    earlier D3 note is dropped (dcec60fa's tb-gains-reread wording
+    covers it).
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -4619,6 +4638,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   UPDATE (CM, 2026-10-26): evidence route v2:
   scratch/pr63-evidence-3f28b6c7 = 2a17ed77 pushed, run 40324085388 in
   progress; it gates nothing.
+  UPDATE (CM, 2026-10-26): evidence run 40324085388 completed green
+  (exit 0, checkout exactly 3f28b6c7). Extracts in
+  /tmp/pr63-evidence-40324085388/ (full.log sha256 e2ba739b, verified
+  at PM read). The QE and the Architect are judging it.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
