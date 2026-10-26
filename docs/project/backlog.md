@@ -3349,6 +3349,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     back and commit it, replacing the stale repo file, together with
     test_mixxx_soundconfig.py and the C+/z rules; the commit message
     names the D-040 drift.
+  UPDATE (CM, worker-3, 2026-10-26): head facd7b8a (comments only,
+  applications.nix), with a TODO. worker-3 verified from source (no
+  nix) that tmpfiles C+ does NOT replace an existing file in systemd
+  258.3, which nixpkgs 812b3986 pins: COPY_MERGE without COPY_REPLACE,
+  and O_EXCL gives EEXIST, which is then ignored. The premise "C+
+  replaces every boot" is false. This SUPERSEDES "soundconfig via C+
+  plus a z rule" in the Architect rulings above, "C+ must be
+  confirmed" in the Architect corrections, "C+ plus z 0644" at
+  bf4bcfcb and "the C+/z rules" in P-step (12). Fallback (TODO): a
+  separate user oneshot, mixxx-soundconfig, running `install -m 0644`
+  on every boot. The Architect is ruling on the oneshot versus a labwc
+  hook (labwc is in display.nix, the US-172 lane), including the
+  Before= ordering. The drift-guard test still lands in the same
+  commit as the captured soundconfig.xml.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
