@@ -407,7 +407,7 @@
             cp -r ${./src/room-correction} room-correction
             chmod -R u+w web-ui room-correction
             cd web-ui
-            python -m pytest tests/ -v --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --tb=short
+            python -m pytest tests/ -v -rs --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --tb=short
             touch $out
           '';
 
@@ -423,7 +423,7 @@
             cp ${./src/camilladsp-test/test_config.yml} src/room-correction/test_camilladsp.yml
             test -d configs/venues && test -d configs/speakers || { echo "configs/ missing in sandbox"; exit 1; }
             cd src/room-correction
-            python -m pytest tests/ -v --tb=short
+            python -m pytest tests/ -v -rs --tb=short
             touch $out
           '';
 
@@ -435,7 +435,7 @@
             cp -r ${./configs} configs
             chmod -R u+w midi configs
             cd midi
-            python -m pytest tests/ -v --tb=short
+            python -m pytest tests/ -v -rs --tb=short
             touch $out
           '';
 
@@ -448,7 +448,7 @@
             ln -s "$PWD/drivers" scripts/drivers
             chmod -R u+w drivers
             cd drivers
-            python -m pytest tests/ -v --tb=short
+            python -m pytest tests/ -v -rs --tb=short
             touch $out
           '';
         } // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
@@ -471,7 +471,7 @@
               set -euo pipefail
               export PI_AUDIO_MOCK=1
               cd ${repoSrc}/src/web-ui
-              exec ${testPython}/bin/python -m pytest tests/unit/ -v "$@"
+              exec ${testPython}/bin/python -m pytest tests/unit/ -v -rs "$@"
             ''}";
           };
 
@@ -483,7 +483,7 @@
               export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
               export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
               cd ${repoSrc}/src/web-ui
-              exec ${e2ePython}/bin/python -m pytest tests/integration/ -v "$@"
+              exec ${e2ePython}/bin/python -m pytest tests/integration/ -v -rs "$@"
             ''}";
           };
 
@@ -498,7 +498,7 @@
               export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
               export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
               cd ${repoSrc}/src/web-ui
-              exec ${e2ePython}/bin/python -m pytest tests/integration/test_full_user_journey.py -v "$@"
+              exec ${e2ePython}/bin/python -m pytest tests/integration/test_full_user_journey.py -v -rs "$@"
             ''}";
           };
 
@@ -508,7 +508,7 @@
               set -euo pipefail
               export PI_AUDIO_MOCK=1
               cd ${repoSrc}/src/room-correction
-              exec ${testPython}/bin/python -m pytest tests/ -v "$@"
+              exec ${testPython}/bin/python -m pytest tests/ -v -rs "$@"
             ''}";
           };
 
@@ -547,7 +547,7 @@
               echo "Output:  $ROOM_SIM_OUTPUT_DIR"
               echo ""
               cd "$REPO_DIR/src/room-correction"
-              exec ${testPython}/bin/python -m pytest tests/ -v --tb=short \
+              exec ${testPython}/bin/python -m pytest tests/ -v -rs --tb=short \
                 -k "test_sim_ or test_correction_roundtrip or test_mock_e2e" \
                 "$@"
             ''}";
@@ -560,19 +560,19 @@
               export PI_AUDIO_MOCK=1
               echo "=== web-ui unit tests ==="
               cd ${repoSrc}/src/web-ui
-              ${testPython}/bin/python -m pytest tests/ -v --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --tb=short
+              ${testPython}/bin/python -m pytest tests/ -v -rs --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --tb=short
               echo ""
               echo "=== room-correction tests ==="
               cd ${repoSrc}/src/room-correction
-              ${testPython}/bin/python -m pytest tests/ -v --tb=short
+              ${testPython}/bin/python -m pytest tests/ -v -rs --tb=short
               echo ""
               echo "=== midi tests ==="
               cd ${repoSrc}/src/midi
-              ${testPython}/bin/python -m pytest tests/ -v --tb=short
+              ${testPython}/bin/python -m pytest tests/ -v -rs --tb=short
               echo ""
               echo "=== drivers tests ==="
               cd ${repoSrc}/scripts/drivers
-              ${testPython}/bin/python -m pytest tests/ -v --tb=short
+              ${testPython}/bin/python -m pytest tests/ -v -rs --tb=short
               echo ""
               echo "=== audio-common tests ==="
               cd ${repoSrc}/src
@@ -620,19 +620,19 @@
               echo "========== test-all (unit + integration) =========="
               export PI_AUDIO_MOCK=1
               cd ${repoSrc}/src/web-ui
-              ${testPython}/bin/python -m pytest tests/ -v --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --tb=short
+              ${testPython}/bin/python -m pytest tests/ -v -rs --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --tb=short
               echo ""
               echo "=== room-correction tests ==="
               cd ${repoSrc}/src/room-correction
-              ${testPython}/bin/python -m pytest tests/ -v --tb=short
+              ${testPython}/bin/python -m pytest tests/ -v -rs --tb=short
               echo ""
               echo "=== midi tests ==="
               cd ${repoSrc}/src/midi
-              ${testPython}/bin/python -m pytest tests/ -v --tb=short
+              ${testPython}/bin/python -m pytest tests/ -v -rs --tb=short
               echo ""
               echo "=== drivers tests ==="
               cd ${repoSrc}/scripts/drivers
-              ${testPython}/bin/python -m pytest tests/ -v --tb=short
+              ${testPython}/bin/python -m pytest tests/ -v -rs --tb=short
               echo ""
               echo "=== audio-common tests ==="
               cd ${repoSrc}/src
@@ -646,7 +646,7 @@
               export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
               export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
               cd ${repoSrc}/src/web-ui
-              ${e2ePython}/bin/python -m pytest tests/integration/ -v --tb=short
+              ${e2ePython}/bin/python -m pytest tests/integration/ -v -rs --tb=short
               echo ""
               echo "All test suites passed (unit + integration + integration-browser)."
             ''}";
@@ -772,7 +772,7 @@
               set -euo pipefail
               export PI_AUDIO_BACKEND=pi-loopback
               cd ${repoSrc}/src/web-ui
-              exec ${e2ePython}/bin/python -m pytest tests/e2e/ -v -m "not needs_acoustic" --loopback-confirmed "$@"
+              exec ${e2ePython}/bin/python -m pytest tests/e2e/ -v -rs -m "not needs_acoustic" --loopback-confirmed "$@"
             ''}";
           };
 
@@ -783,7 +783,7 @@
               set -euo pipefail
               export PI_AUDIO_BACKEND=pi-full
               cd ${repoSrc}/src/web-ui
-              exec ${e2ePython}/bin/python -m pytest tests/e2e/ -v --owner-confirmed --destructive "$@"
+              exec ${e2ePython}/bin/python -m pytest tests/e2e/ -v -rs --owner-confirmed --destructive "$@"
             ''}";
           };
 
