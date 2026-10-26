@@ -17,12 +17,21 @@ Metrics (values: AE, 2026-10-25):
 - Minimum phase: energy of (h - minphase(|H|)) relative to energy of h.
 - Causality / wrap-around: energy in the last 5% of taps.
 
+Measured gate (US-174d, Architect + AE): measured_gate judges the
+re-measurement taken with the new filters loaded. Per band PASS, FAIL or
+INVALID; INVALID (measurement SNR too low or unknown) means repeat the
+measurement, never a pass. It fails closed and never raises.
+
 Known limit (Architect, 2026-10-25): the room simulator has a single mic
 position and position-independent room modes, so off-position robustness
 (AC4) cannot be evaluated yet; that is slice 174b-sim.
 """
 
 import math
+import numbers
+from dataclasses import dataclass
+from enum import Enum
+from typing import Mapping, Optional, Tuple
 
 import numpy as np
 
@@ -39,6 +48,16 @@ POINTS_PER_OCTAVE = 48
 # measurements; this value is not changed by 174d. Changing or loosening it
 # needs AE review.
 MAX_POSITIVE_DEVIATION_DB = 3.0
+# Measured gate (AE, 2026-10-25): the same metric on the real
+# re-measurement after deploy (US-174d). Kept separate from
+# MAX_POSITIVE_DEVIATION_DB so real data can't loosen the simulated gate,
+# or the reverse. Any change needs AE review, never in the same PR as a
+# correction-algorithm change.
+MEASURED_MAX_POSITIVE_DEVIATION_DB = 3.0
+# Measurement SNR minimum, dB re peak (AE placeholder, not yet derived;
+# the AE sets it in the measurement SNR backlog item). Below it, or
+# unknown, a re-measurement is INVALID.
+MEASUREMENT_SNR_MIN_DB = 60.0
 
 
 def log_grid(f_low, f_high, points_per_octave=POINTS_PER_OCTAVE):
@@ -270,3 +289,102 @@ def summed_response(acoustic_irs, firs, delays_samples=None):
     for p in parts:
         total[:len(p)] += p
     return total
+
+
+class Verdict(Enum):
+    PASS = "pass"
+    FAIL = "fail"
+    INVALID = "invalid"     # repeat the measurement
+
+
+@dataclass(frozen=True)
+class BandResult:
+    name: str
+    verdict: Verdict
+    deviation_db: Optional[float]
+    snr_db: Optional[float]
+    reason: str
+
+
+@dataclass(frozen=True)
+class MeasuredGateResult:
+    verdict: Verdict
+    channels: Tuple[BandResult, ...]
+    system: BandResult
+
+    @property
+    def passed(self):
+        return self.verdict is Verdict.PASS
+
+
+def _real_number(x):
+    return isinstance(x, numbers.Real) and math.isfinite(x)
+
+
+def _as_curve(x):
+    """1-D finite float array, or None. Never raises (AD L2)."""
+    if x is None or isinstance(x, (str, bytes)):
+        return None
+    try:
+        a = np.asarray(x, dtype=float)
+    except (TypeError, ValueError):
+        return None
+    if a.ndim != 1 or a.size == 0 or not np.all(np.isfinite(a)):
+        return None
+    return a
+
+
+def measured_band_result(name, response_db, target_db, *, snr_db):
+    """
+    One band of the measured gate: smoothed measured response vs target
+    (same smoothing and band as the simulated gate). SNR is checked first:
+    a measurement that can't be trusted is INVALID, whatever it shows.
+    """
+    if not _real_number(snr_db):
+        return BandResult(name, Verdict.INVALID, None, None, "SNR unknown")
+    snr_db = float(snr_db)
+    if snr_db < MEASUREMENT_SNR_MIN_DB:
+        return BandResult(name, Verdict.INVALID, None, snr_db,
+                          f"SNR {snr_db:.1f} dB < {MEASUREMENT_SNR_MIN_DB:.1f} dB")
+    response, target = _as_curve(response_db), _as_curve(target_db)
+    if response is None or target is None or response.shape != target.shape:
+        return BandResult(name, Verdict.FAIL, None, snr_db, "malformed response or target")
+    dev = max_positive_deviation_db(response, target)
+    ok = deviation_within_limit(dev, limit=MEASURED_MAX_POSITIVE_DEVIATION_DB)
+    return BandResult(name, Verdict.PASS if ok else Verdict.FAIL, dev, snr_db,
+                      f"max+ {dev:+.2f} dB vs limit {MEASURED_MAX_POSITIVE_DEVIATION_DB:.2f} dB")
+
+
+def _overall(results):
+    verdicts = [r.verdict for r in results]
+    if Verdict.INVALID in verdicts:
+        return Verdict.INVALID
+    if Verdict.FAIL in verdicts:
+        return Verdict.FAIL
+    return Verdict.PASS
+
+
+def measured_gate(channels, system):
+    """
+    Measured gate over all channels plus the summed system band.
+
+    ``channels`` maps a channel name to (response_db, target_db, snr_db);
+    ``system`` is one such triple. Any INVALID band makes the result
+    INVALID (repeat), otherwise any FAIL makes it FAIL (Architect; AE
+    confirms). No channels, or a missing system band, is FAIL. Never raises.
+    """
+    def band(name, triple):
+        try:
+            response_db, target_db, snr_db = triple
+        except (TypeError, ValueError):
+            return BandResult(name, Verdict.FAIL, None, None, "malformed band")
+        return measured_band_result(name, response_db, target_db, snr_db=snr_db)
+
+    if not isinstance(channels, Mapping) or not channels:
+        missing = BandResult("channels", Verdict.FAIL, None, None, "no channels")
+        return MeasuredGateResult(Verdict.FAIL, (missing,),
+                                  band("system", system))
+    results = tuple(band(str(name), triple) for name, triple in sorted(channels.items(),
+                                                                         key=lambda kv: str(kv[0])))
+    system_result = band("system", system)
+    return MeasuredGateResult(_overall(results + (system_result,)), results, system_result)

@@ -433,6 +433,23 @@ class TestResidualPerChannel:
         assert r["raised"] < 0 and r["over_cut"] <= MAX_OVER_CUT_DB
         assert r["far_field"] > MAX_FAR_FIELD_DB
 
+    def test_measured_gate_on_simulated_corrections(self, bundle, home_lab):
+        # US-174d: the measured gate on the same chain. Corrected passes,
+        # uncorrected fails, low SNR is INVALID. The system band stands in
+        # with the sub here: the AC3 system judgement waits on F-374.
+        sim, result = home_lab
+        snr = closed_loop.MEASUREMENT_SNR_MIN_DB + 20.0
+        cor, unc = {}, {}
+        for spk in result.corrections:
+            _, c, u = _corrected_and_uncorrected(bundle, sim, result, spk)
+            cor[spk] = (c, np.zeros_like(c), snr)
+            unc[spk] = (u, np.zeros_like(u), snr)
+        gate = closed_loop.measured_gate(cor, cor["sub1"])
+        assert gate.verdict is closed_loop.Verdict.PASS, gate
+        assert closed_loop.measured_gate(unc, cor["sub1"]).verdict is closed_loop.Verdict.FAIL
+        low = dict(cor, sub1=(cor["sub1"][0], cor["sub1"][1], snr - 30.0))
+        assert closed_loop.measured_gate(low, cor["sub1"]).verdict is closed_loop.Verdict.INVALID
+
     def test_scenario_is_not_vacuous(self, bundle, residual_run):
         # QE: in every residual scenario some channel starts well above the
         # bar and the correction brings it under.
@@ -520,6 +537,9 @@ class TestResidualPerChannel:
                         if (path.name == "closed_loop.py" and isinstance(kw.value, ast.Name)
                                 and kw.value.id == "limit"):
                             forwards.append(path)
+                        elif (path.name == "closed_loop.py" and isinstance(kw.value, ast.Name)
+                                and kw.value.id == "MEASURED_MAX_POSITIVE_DEVIATION_DB"):
+                            pass  # US-174d measured gate, its own AE constant
                         else:
                             overrides.append(f"{path.relative_to(REPO_ROOT)}:{node.lineno}")
         assert forwards, "scanner did not find the wrapper's own forwarding call"
