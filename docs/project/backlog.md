@@ -929,6 +929,13 @@ priority!"
   worker-2, Phase A1 pre-obs only. F-412 filed (P2, QE): the kit
   decides TRYBOOT by absence. US-179 E5: UX release detail (by message
   21:20:58Z, relayed by team-lead).
+  UPDATE (CM, worker-2, 2026-10-26, after v296): backlog v296 pushed
+  as 1c6a0433. US-172: worker-2's five one-liners (49ab9ebb) sorted:
+  F-413 (recovery boot-id match), F-414 (pstore read needs sudo),
+  F-415 (date Pi 5 boots by /proc/uptime or NTP sync) filed, no
+  P-level given; the tty1 fallback and the watchdog comment merge into
+  existing items (no new ID). Run-2 report v2 1fe62b96 in review
+  (Architect, QE).
 
 ## Reserved IDs
 
@@ -1061,6 +1068,9 @@ F-412, US-183, D-072, T66 (F-411 filed in this version, see F-403).
 Next free (v296; supersedes the line above; F-412 confirmed free on
 main and all origin/* branches at PM read, filed in this version, see
 P2): F-413, US-183, D-072, T66.
+Next free (v297; supersedes the line above; F-413, F-414 and F-415
+confirmed free on main, all origin/* and local branches at PM read,
+filed in this version, see P3): F-416, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -3411,6 +3421,46 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (c) (CM, worker-2, 2026-10-26; backlog, not a blocker):
   /boot/firmware is mounted rw on the Pi 5 (read-only observation).
   Architect/SecSpec to rule pre-prod.
+  US-172 ONE-LINERS v1 (worker-2 via CM, 2026-10-26):
+  /tmp/cm-relay/US-172/frozen/w2-backlog-oneliners-v1-49ab9ebb.txt
+  (sha256 49ab9ebb, 1177 bytes, verified at PM read), "from run 2 /
+  recovery". Verbatim, each with the PM disposition:
+  - 1. us172-recovery.sh step 2/2b: the old-boot-id check matches the
+    id with surrounding spaces, but the id list has one id per line,
+    so it falsely reports "old boot id not in journal" (rec-2
+    INCONCLUSIVE, 2b empty); match whole lines (grep -qx) instead.
+     PM: filed as F-413 (P3 section); same defect as US-172c one-liner
+     (a) above, now with the fix.
+  - 2. us172-recovery.sh step 4: `ls /sys/fs/pstore` needs sudo
+    (Permission denied as ela), so pstore was never read after the
+    hang.
+     PM: filed as F-414 (P3 section); same as US-172c one-liner (b)
+     above.
+  - 3. Pi 5 base generation: without /dev/dri, greetd is skipped
+    (ConditionPathExistsGlob=/dev/dri/card*) and tty1 has no getty, so
+    the HDMI screen shows nothing usable; add a tty1 login fallback.
+     PM: no new ID; already filed as the P3 item "No fallback login on
+     tty1 without DRM" (UX, QE, Architect and worker-2 merged there);
+     merged again.
+  - 4. nix/nixos/rt-tuning.nix:24 claims the BCM2835 watchdog is a
+    backstop for lockups; as deployed only the 10-min shutdown
+    watchdog is armed (no RuntimeWatchdogSec), and it did not recover
+    the hung tryboot (Pi down ~11.7 h); fix the comment or configure
+    the runtime watchdog (O-24, F-317/F-325) -- skip if already filed.
+     PM cross-ref: no new ID. Already covered: the runtime watchdog is
+     the O-24 gap (F-317/F-325; Architect RULED above, "EXPECTED, not
+     a new defect, no ID"), and the rt-tuning.nix:24 comment is AD L3
+     (comment vs options.nix O-24, P3 section, PR #45 context). New
+     evidence added there: Pi down ~11.7 h.
+  - 5. Boot timelines on the Pi 5 (no RTC): tooling and reports must
+    date boots by /proc/uptime or the first NTP sync, never by journal
+    wall-clock or `uptime` "up HH:MM" (the run-2 "came back in ~40 s"
+    misreading).
+     PM: filed as F-415 (P3 section).
+  RUN-2 REPORT v2 (CM, 2026-10-26):
+  /tmp/cm-relay/US-172/frozen/w2-run2-report-v2-1fe62b96.txt (sha256
+  1fe62b96, verified at PM read) is in review with the Architect and
+  the QE. Verdicts: not yet relayed to the PM at this version.
   Gains-read label (AE, verbatim, via CM, 2026-10-26): "first gains
   read after cold boot (boot ≈08:44:31Z per /proc/uptime, rsts=0x1000;
   read at <timestamp>, T+<mm:ss>; preceded only by read-only
@@ -12602,6 +12652,30 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   3/5, so this matters for gigs; run 3 also needs it on bcm2835.
   Linked to F-389 and the CLAUDE.md watchdog reliability TODO
   (Architect, 2026-10-25).
+- **F-413** (worker-2 via CM, 2026-10-26; no P-level given, listed
+  under P3 until ruled; was US-172c one-liner (a)) us172-recovery.sh
+  step 2/2b: the old-boot-id check matches the id with surrounding
+  spaces while the id list has one id per line, so it falsely reports
+  "old boot id not in journal" (rec-2 INCONCLUSIVE, 2b empty). Fix
+  (worker-2): match whole lines (grep -qx). A fix means a new sha and
+  re-review (CM, earlier one-liner). Source: 49ab9ebb item 1.
+- **F-414** (worker-2 via CM, 2026-10-26; no P-level given, listed
+  under P3 until ruled; was US-172c one-liner (b)) us172-recovery.sh
+  step 4: `ls /sys/fs/pstore` needs sudo (Permission denied as ela),
+  so pstore was never read after the hang. Source: 49ab9ebb item 2. PM
+  cross-ref (PM read of the v8 kit files, shas d23d752b / 5100d29f
+  verified): us172.sh:442 reads pstore with `sudo -n ls -la
+  /sys/fs/pstore`, but us172-drm-reads.sh:40 (the $TAG-pstore data
+  read, "data only") runs `ls -la /sys/fs/pstore 2>&1` without sudo,
+  so that read will likely show Permission denied as ela. Not a run-5
+  safety item (OBSERVE data only); sent to the CM for worker-2 and the
+  Architect.
+- **F-415** (worker-2 via CM, 2026-10-26; no P-level given, listed
+  under P3 until ruled) Boot timelines on the Pi 5 (no RTC): tooling
+  and reports must date boots by /proc/uptime or the first NTP sync,
+  never by journal wall-clock or `uptime` "up HH:MM" (the run-2 "came
+  back in ~40 s" misreading). Source: 49ab9ebb item 5. Related: the
+  Architect's RULED note under US-172 ("a no-RTC timestamp artifact").
 
 ## Open PRs (2026-10-24, per CM)
 
