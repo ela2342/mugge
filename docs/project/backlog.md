@@ -9909,6 +9909,22 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     (b) the new-head CI log shows the same three items. Verbatim: "The
     Q1-7(2) negative control (40398705324, my ruling 8251397b) stays
     valid under (a)." Nothing needs to be kept at e06d6296 / 0cb35f0c.
+  - 47f1319f frozen by the CM at
+    /tmp/cm-relay/F-394/frozen/qe-Q1-7-1-update-ruling-r1-47f1319f.md
+    (sha256 47f1319f, verified at PM read).
+  - #68 UPDATE-BRANCH (CM, 2026-10-26): defect/F-394-dj-mode-e2e-fail
+    at 3b190d6a (PM read: ls-remote matches; parents e06d6296 +
+    498fa3e5 = origin/main at PM read). PM read: `git diff --stat
+    e06d6296 3b190d6a` = docs/project/defects-index.md,
+    defects/F-406.md, defects/F-407.md only (3 files, +86), nothing
+    under scripts/, src/, nix/, tests or .github; QE condition (a) MET
+    (CM; PM-checked). Condition (b) open: CI 40413648491 running at
+    3b190d6a. Rule 13 bundle /tmp/pr68-review-3b190d6a/
+    (REVIEW-REQUEST.txt sha256 91926244, verified at PM read) sent to
+    all 7 reviewers.
+  - PM note (v309): v308 adds 21 lines; the PM report of 22 was a
+    stale pre-reflow count (CM caught it at the fence check; content
+    complete).
 - **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
   per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
   2026-10-26): on a suspended node, the gain readers in the r6b matrix
@@ -12616,6 +12632,25 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     needed. 3: B4 100 ms fallback matches AE 6f220842.
   - Branch story/US-179-web-rc at 4082560f (PM read: ls-remote,
     2026-10-26; latch r2 implementation head).
+  - UX OUTPUT-LABEL EDGE CASE (CM, 2026-10-26; frozen in
+    /tmp/cm-relay/US-179/frozen/, shas verified at PM read; relayed to
+    worker-6): ux-w6-output-label-10bc34bf.md (sha256 10bc34bf, 864
+    bytes), on worker-6 head 67695d93. A specific (non-default) output
+    with an unknown label: the default-device text would be UNTRUE;
+    use instead, verbatim: 'Sound plays on the output device selected
+    in setup (the browser does not show its name). I have checked that
+    it is connected to the speaker I want to measure.' Verbatim: "The
+    rule is: the text follows the sinkId actually in use, not whether
+    a label exists." Test: a non-default sinkId with an empty label
+    shows this text.
+  - AE release ae-ux-output-label-release-1f5a4d8c.txt (sha256
+    1f5a4d8c, 618 bytes), verbatim: "RELEASE 10bc34bf. No objections."
+    No further gate needed; E5 D1 applies unchanged.
+  - AE onset clock condition (CM, 2026-10-26; message only, no file):
+    the onset frame must be taken on the same AudioContext clock (CM
+    summary; relayed to worker-6).
+  - Branch story/US-179-web-rc at 67695d93 (PM read: ls-remote,
+    2026-10-26).
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
