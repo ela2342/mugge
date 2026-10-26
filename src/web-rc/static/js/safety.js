@@ -5,8 +5,8 @@
 // code only ever applies what this module returns, so every rule here is
 // unit-testable without sound.
 //
-// AC references are to US-179 r8 (978c3e1b) with errata E1 v2 (6a78af9f)
-// and E2 (bca0d86b).
+// AC references are to US-179 r8 (978c3e1b) with errata E1 v2 (6a78af9f),
+// E2 (bca0d86b), E3 (8f508af1) and E4 r2 (f692681c).
 
 /** Code constants. No UI can change them (AC4c). */
 export const LIMITS = Object.freeze({
@@ -17,7 +17,8 @@ export const LIMITS = Object.freeze({
   OUTPUT_PEAK_CAP_DBFS: -20,     // AC4c, hard cap on the actual output
   MIC_TARGET_SPL_DB: 75,         // AC4b, calibrated mic
   MIC_TARGET_DBFS: -40,          // AC4b, uncalibrated mic, RMS (AE A1)
-  MIC_MAX_SPL_DB: 90,            // AC4d, calibrated mic
+  MIC_MAX_SPL_DB: 90,            // AC4d/E3, calibrated mic, 100 ms RMS
+  MIC_MAX_PEAK_SPL_DB: 105,      // E3, calibrated mic, true-peak backstop
   MIC_CLIP_DBFS: -1,             // AC4d, mic clip (peak >= this)
   SWEEP_MAX_RISE_DB: 6,          // AC4d, sweep vs level check at the mic
   IDLE_TIMEOUT_MS: 30000,        // AC4d, level check without user action
@@ -234,6 +235,7 @@ export const STOP = Object.freeze({
   TIMEOUT: "timeout",
   CAP: "cap",
   MIC_SPL: "mic-spl",
+  MIC_SPL_PEAK: "mic-spl-peak",
   MIC_CLIP: "mic-clip",
   SWEEP_RISE: "sweep-rise",
   HIDDEN: "hidden",
@@ -248,19 +250,33 @@ const STOP_MESSAGES = Object.freeze({
     "Start level check to continue.",
   [STOP.CAP]: "Stopped: level cap reached. Lower the amp or interface " +
     "gain, then restart.",
-  [STOP.MIC_SPL]: "Stopped: more than 90 dB SPL at the mic. Lower the amp " +
-    "or interface gain, then restart.",
-  [STOP.MIC_CLIP]: "Stopped: the mic input clipped. Lower the mic gain or " +
-    "the amp, then restart.",
+  // E4a texts.
+  [STOP.MIC_SPL]: "Stopped: too loud at the microphone (over 90 dB SPL). " +
+    "Lower the amp or interface output gain, then restart.",
+  [STOP.MIC_SPL_PEAK]: "Stopped: a very loud peak at the microphone (over " +
+    "105 dB SPL). Check that nothing touched the mic. Lower the amp or " +
+    "interface output gain, then restart.",
   [STOP.SWEEP_RISE]: "Stopped: the sweep was more than 6 dB louder at the " +
-    "mic than the level check. Lower the amp, then restart.",
-  [STOP.HIDDEN]: "Stopped: the page was hidden. Restart when you are back.",
-  [STOP.DEVICE]: "Stopped: an audio device changed. Check the setup again.",
-  [STOP.RATE]: "Stopped: the sample rate changed. Check the setup again.",
-  [STOP.AUDIO_ERROR]: "Stopped: audio error.",
+    "microphone than the level check. Restart when ready.",
+  [STOP.HIDDEN]: "Stopped: the page was hidden. Restart when ready.",
+  [STOP.DEVICE]: "Stopped: an audio device changed. Restart when ready.",
+  [STOP.RATE]: "Stopped: the sample rate changed. Restart when ready.",
+  [STOP.AUDIO_ERROR]: "Stopped: an audio error occurred. Restart when ready.",
 });
 
-export function stopMessage(cause) {
+// E4a: the mic-clip text depends on whether a calibration file is loaded at
+// the moment of the stop (its SPL mapping depends on the mic input gain).
+const MIC_CLIP_CALIBRATED = "Stopped: the microphone input clipped. Lower " +
+  "the amp or interface output gain, then restart. Leave the microphone " +
+  "input gain as it is: the SPL calibration depends on it.";
+const MIC_CLIP_UNCALIBRATED = "Stopped: the microphone input clipped. " +
+  "Lower the amp or interface output gain, or the microphone input gain, " +
+  "then restart.";
+
+export function stopMessage(cause, { calibrated = false } = {}) {
+  if (cause === STOP.MIC_CLIP) {
+    return calibrated ? MIC_CLIP_CALIBRATED : MIC_CLIP_UNCALIBRATED;
+  }
   return STOP_MESSAGES[cause] || STOP_MESSAGES[STOP.AUDIO_ERROR];
 }
 
@@ -270,13 +286,23 @@ export function stopReturnsToSetup(cause) {
 }
 
 /**
- * Mic-side auto-STOP rules shared by the level check and the sweep (AC4d).
- * reading = { peakDbfs, splDb } (splDb null when uncalibrated).
+ * Mic-side auto-STOP rules shared by the meter worklet, the level check and
+ * the sweep (AC4d, E3a/b).
+ *
+ * reading = { peakDbfs, rmsDbfs }: the per-quantum true peak and the 100 ms
+ * sliding RMS from the meter (meter-core.js), never a display value.
+ * splOffsetDb maps mic dBFS to dB SPL; null without a calibration file, and
+ * then neither SPL stop can act (AE A1).
  */
-export function micStopCause(reading) {
+export function micStopCause(reading, splOffsetDb) {
   if (reading.peakDbfs >= LIMITS.MIC_CLIP_DBFS) return STOP.MIC_CLIP;
-  if (reading.splDb != null && reading.splDb > LIMITS.MIC_MAX_SPL_DB) {
-    return STOP.MIC_SPL;
+  if (splOffsetDb != null) {
+    if (reading.rmsDbfs + splOffsetDb > LIMITS.MIC_MAX_SPL_DB) {
+      return STOP.MIC_SPL;
+    }
+    if (reading.peakDbfs + splOffsetDb > LIMITS.MIC_MAX_PEAK_SPL_DB) {
+      return STOP.MIC_SPL_PEAK;
+    }
   }
   return null;
 }
@@ -284,17 +310,22 @@ export function micStopCause(reading) {
 /**
  * Level-check state machine (AC4b, 4d, 4h, 4i).
  *
- * maxLevelDbfs is the highest noise level the "+" steps may reach, derived
- * from the noise's crest factor (AC5d); it must leave the output peak below
- * the AC4c cap. micTarget is { splDb } (calibrated) or { dbfs } (not).
+ * maxLevelDbfs is the highest noise level the "+" steps may reach, from the
+ * noise's crest factor (crest.js levelCeilingDbfs); it must leave the output
+ * peak below the AC4c cap. splOffsetDb is the calibration's dBFS-to-SPL
+ * offset, or null without a calibration file. The mic target follows from
+ * it: 75 dB SPL, or -40 dBFS RMS uncalibrated (AE A1). Both are constants.
  */
 export class LevelCheck {
-  constructor({ maxLevelDbfs, micTarget }) {
+  constructor({ maxLevelDbfs, splOffsetDb = null }) {
     if (!(maxLevelDbfs < LIMITS.OUTPUT_PEAK_CAP_DBFS)) {
       throw new RangeError("maxLevelDbfs must stay below the output cap");
     }
+    if (!(splOffsetDb === null || Number.isFinite(splOffsetDb))) {
+      throw new RangeError("splOffsetDb must be a number or null");
+    }
     this.maxLevelDbfs = maxLevelDbfs;
-    this.micTarget = micTarget;
+    this.splOffsetDb = splOffsetDb;
     this.running = false;
     this.levelDbfs = null;
     this.lastActionMs = 0;
@@ -303,7 +334,14 @@ export class LevelCheck {
   }
 
   get calibrated() {
-    return this.micTarget.splDb != null;
+    return this.splOffsetDb !== null;
+  }
+
+  /** The mic RMS (dBFS) that counts as "target reached". */
+  get micTargetRmsDbfs() {
+    return this.calibrated
+      ? LIMITS.MIC_TARGET_SPL_DB - this.splOffsetDb
+      : LIMITS.MIC_TARGET_DBFS;
   }
 
   /** Fresh start at -60 dBFS, never a resume (AC4i). */
@@ -333,8 +371,8 @@ export class LevelCheck {
 
   /**
    * Feed one meter reading. Returns a stop cause, or null.
-   * reading = { rmsDbfs, peakDbfs, splDb } at the mic, plus outputClamped
-   * when the worklet's last-stage clamp was touched (AC5d).
+   * reading = { rmsDbfs, peakDbfs } at the mic (see micStopCause), plus
+   * outputClamped when the worklet's last-stage clamp was touched (AC5d).
    */
   update(nowMs, reading) {
     if (!this.running) return null;
@@ -342,7 +380,7 @@ export class LevelCheck {
     if (reading.outputClamped) {
       cause = STOP.CAP;
     } else {
-      cause = micStopCause(reading);
+      cause = micStopCause(reading, this.splOffsetDb);
     }
     if (cause === null && nowMs - this.lastActionMs >= LIMITS.IDLE_TIMEOUT_MS) {
       cause = STOP.TIMEOUT;
@@ -351,13 +389,7 @@ export class LevelCheck {
       this.stop(cause);
       return cause;
     }
-    if (this.calibrated) {
-      if (reading.splDb != null && reading.splDb >= this.micTarget.splDb) {
-        this.targetReached = true;
-      }
-    } else if (reading.rmsDbfs >= this.micTarget.dbfs) {
-      this.targetReached = true;
-    }
+    if (reading.rmsDbfs >= this.micTargetRmsDbfs) this.targetReached = true;
     return null;
   }
 
@@ -373,8 +405,8 @@ export class LevelCheck {
  * Sweep-time mic rule (AC4d): the mic level during the sweep may not rise
  * more than 6 dB above the confirmed level-check reading.
  */
-export function sweepStopCause(levelCheckMicRmsDbfs, reading) {
-  const mic = micStopCause(reading);
+export function sweepStopCause(levelCheckMicRmsDbfs, reading, splOffsetDb) {
+  const mic = micStopCause(reading, splOffsetDb);
   if (mic !== null) return mic;
   if (reading.rmsDbfs > levelCheckMicRmsDbfs + LIMITS.SWEEP_MAX_RISE_DB) {
     return STOP.SWEEP_RISE;

@@ -9,10 +9,12 @@ import {
   sweepStopCause,
 } from "../../../static/js/safety.js";
 
-const QUIET = { rmsDbfs: -70, peakDbfs: -60, splDb: null };
+const QUIET = { rmsDbfs: -70, peakDbfs: -60 };
+// Example calibration: 0 dBFS = 120 dB SPL, so 75 dB SPL = -45 dBFS.
+const CAL = 120;
 
-function levelCheck(micTarget = { dbfs: -30 }) {
-  return new LevelCheck({ maxLevelDbfs: -36, micTarget });
+function levelCheck(splOffsetDb = null) {
+  return new LevelCheck({ maxLevelDbfs: -36, splOffsetDb });
 }
 
 export async function test_limits_are_frozen_constants() {
@@ -21,6 +23,9 @@ export async function test_limits_are_frozen_constants() {
   eq(LIMITS.STEP_DB, 6);
   eq(LIMITS.IDLE_TIMEOUT_MS, 30000);
   eq(LIMITS.SWEEP_MAX_S, 10);
+  eq(LIMITS.MIC_CLIP_DBFS, -1);
+  eq(LIMITS.MIC_MAX_SPL_DB, 90);
+  eq(LIMITS.MIC_MAX_PEAK_SPL_DB, 105);
   assert(Object.isFrozen(LIMITS));
   try { LIMITS.OUTPUT_PEAK_CAP_DBFS = 0; } catch (e) { /* strict mode */ }
   eq(LIMITS.OUTPUT_PEAK_CAP_DBFS, -20, "cap cannot be raised");
@@ -210,7 +215,9 @@ export async function test_level_check_ceiling() {
   eq(lc.canStepUp(), false);
   eq(lc.stepUp(10), null);
   eq(lc.levelDbfs, -36);
-  throws(() => new LevelCheck({ maxLevelDbfs: -20, micTarget: { dbfs: -30 } }));
+  throws(() => new LevelCheck({ maxLevelDbfs: -20 }));
+  throws(() => new LevelCheck({ maxLevelDbfs: -36, splOffsetDb: NaN }));
+  throws(() => new LevelCheck({ maxLevelDbfs: -36, splOffsetDb: "120" }));
 }
 
 export async function test_level_check_30s_timeout() {
@@ -241,15 +248,63 @@ export async function test_clamp_touch_stops_with_cap_message() {
     "interface gain, then restart.");
 }
 
-export async function test_mic_clip_and_spl_stop() {
-  eq(micStopCause({ peakDbfs: -1, splDb: null }), STOP.MIC_CLIP);
-  eq(micStopCause({ peakDbfs: -1.01, splDb: null }), null);
-  eq(micStopCause({ peakDbfs: -10, splDb: 90 }), null);
-  eq(micStopCause({ peakDbfs: -10, splDb: 90.1 }), STOP.MIC_SPL);
-  const lc = levelCheck({ splDb: 75 });
+export async function test_mic_clip_stop_both_modes() {
+  for (const off of [null, CAL]) {
+    eq(micStopCause({ rmsDbfs: -60, peakDbfs: -1 }, off), STOP.MIC_CLIP);
+  }
+  eq(micStopCause({ rmsDbfs: -60, peakDbfs: -1.01 }, null), null);
+  // Calibrated, a peak just under clip is far over 105 dB SPL: backstop.
+  eq(micStopCause({ rmsDbfs: -60, peakDbfs: -1.01 }, CAL), STOP.MIC_SPL_PEAK);
+  const lc = levelCheck(CAL);
   lc.start(0);
-  eq(lc.update(10, { rmsDbfs: -20, peakDbfs: -0.5, splDb: 80 }),
-    STOP.MIC_CLIP);
+  eq(lc.update(10, { rmsDbfs: -40, peakDbfs: -0.5 }), STOP.MIC_CLIP);
+}
+
+/** E3: 90 dB SPL on the 100 ms RMS, 105 dB SPL on the true peak. */
+export async function test_spl_stops_rms_and_peak() {
+  // RMS below 90 dB while the peak crosses 90 dB: no stop.
+  eq(micStopCause({ rmsDbfs: 89.9 - CAL, peakDbfs: 100 - CAL }, CAL), null);
+  // RMS at 90 dB is not over 90; just over is.
+  eq(micStopCause({ rmsDbfs: 90 - CAL, peakDbfs: 100 - CAL }, CAL), null);
+  eq(micStopCause({ rmsDbfs: 90.01 - CAL, peakDbfs: 100 - CAL }, CAL),
+    STOP.MIC_SPL);
+  // A single click above 105 dB SPL peak with quiet RMS: stop.
+  eq(micStopCause({ rmsDbfs: 60 - CAL, peakDbfs: 105 - CAL }, CAL), null);
+  eq(micStopCause({ rmsDbfs: 60 - CAL, peakDbfs: 105.01 - CAL }, CAL),
+    STOP.MIC_SPL_PEAK);
+  // Uncalibrated: neither SPL stop can act (AE A1), only the clip.
+  eq(micStopCause({ rmsDbfs: -2, peakDbfs: -1.01 }, null), null);
+}
+
+/** E4a/E4b: every auto-STOP cause has its own text. */
+export async function test_stop_messages_per_cause() {
+  eq(stopMessage(STOP.MIC_CLIP, { calibrated: true }),
+    "Stopped: the microphone input clipped. Lower the amp or interface " +
+    "output gain, then restart. Leave the microphone input gain as it is: " +
+    "the SPL calibration depends on it.");
+  eq(stopMessage(STOP.MIC_CLIP, { calibrated: false }),
+    "Stopped: the microphone input clipped. Lower the amp or interface " +
+    "output gain, or the microphone input gain, then restart.");
+  eq(stopMessage(STOP.MIC_CLIP), stopMessage(STOP.MIC_CLIP,
+    { calibrated: false }), "default is uncalibrated");
+  eq(stopMessage(STOP.MIC_SPL), "Stopped: too loud at the microphone (over " +
+    "90 dB SPL). Lower the amp or interface output gain, then restart.");
+  eq(stopMessage(STOP.MIC_SPL_PEAK), "Stopped: a very loud peak at the " +
+    "microphone (over 105 dB SPL). Check that nothing touched the mic. " +
+    "Lower the amp or interface output gain, then restart.");
+  eq(stopMessage(STOP.SWEEP_RISE), "Stopped: the sweep was more than 6 dB " +
+    "louder at the microphone than the level check. Restart when ready.");
+  eq(stopMessage(STOP.HIDDEN),
+    "Stopped: the page was hidden. Restart when ready.");
+  eq(stopMessage(STOP.DEVICE),
+    "Stopped: an audio device changed. Restart when ready.");
+  eq(stopMessage(STOP.RATE),
+    "Stopped: the sample rate changed. Restart when ready.");
+  eq(stopMessage(STOP.AUDIO_ERROR),
+    "Stopped: an audio error occurred. Restart when ready.");
+  eq(stopMessage("no-such-cause"), stopMessage(STOP.AUDIO_ERROR));
+  const texts = Object.values(STOP).map((c) => stopMessage(c));
+  eq(new Set(texts).size, texts.length, "one distinct text per cause");
 }
 
 export async function test_restart_is_fresh_start() {
@@ -268,27 +323,34 @@ export async function test_restart_is_fresh_start() {
 }
 
 export async function test_target_reached_disables_plus() {
-  const cal = levelCheck({ splDb: 75 });
+  const cal = levelCheck(CAL);
+  eq(cal.calibrated, true);
+  eq(cal.micTargetRmsDbfs, 75 - CAL);
   cal.start(0);
-  eq(cal.update(1, { rmsDbfs: -40, peakDbfs: -30, splDb: 74.9 }), null);
+  eq(cal.update(1, { rmsDbfs: 74.9 - CAL, peakDbfs: -30 }), null);
   eq(cal.canStepUp(), true);
-  eq(cal.update(2, { rmsDbfs: -40, peakDbfs: -30, splDb: 75 }), null);
+  eq(cal.update(2, { rmsDbfs: 75 - CAL, peakDbfs: -30 }), null);
   eq(cal.canStepUp(), false);
   eq(cal.stepUp(3), null);
 
-  const uncal = levelCheck({ dbfs: -30 });
+  const uncal = levelCheck(null);
   eq(uncal.calibrated, false);
+  eq(uncal.micTargetRmsDbfs, -40);
   uncal.start(0);
-  uncal.update(1, { rmsDbfs: -30, peakDbfs: -20, splDb: null });
+  uncal.update(1, { rmsDbfs: -40.1, peakDbfs: -20 });
+  eq(uncal.canStepUp(), true);
+  uncal.update(2, { rmsDbfs: -40, peakDbfs: -20 });
   eq(uncal.canStepUp(), false);
 }
 
 export async function test_sweep_rise_stop() {
-  eq(sweepStopCause(-40, { rmsDbfs: -34, peakDbfs: -25, splDb: null }), null);
-  eq(sweepStopCause(-40, { rmsDbfs: -33.9, peakDbfs: -25, splDb: null }),
+  eq(sweepStopCause(-40, { rmsDbfs: -34, peakDbfs: -25 }, null), null);
+  eq(sweepStopCause(-40, { rmsDbfs: -33.9, peakDbfs: -25 }, null),
     STOP.SWEEP_RISE);
-  eq(sweepStopCause(-40, { rmsDbfs: -50, peakDbfs: 0, splDb: null }),
+  eq(sweepStopCause(-40, { rmsDbfs: -50, peakDbfs: 0 }, null),
     STOP.MIC_CLIP);
+  eq(sweepStopCause(-40, { rmsDbfs: 90.5 - CAL, peakDbfs: -25 }, CAL),
+    STOP.MIC_SPL, "SPL stops apply during the sweep");
 }
 
 export async function test_device_and_rate_stops_return_to_setup() {
