@@ -237,6 +237,10 @@ priority!"
   it makes a power loss a gain increase, and the cold-cycle proof
   would need redoing. safety.md is the TW's file; the PM only records
   the line.
+  (10) (AE, via CM, 2026-10-26; PRE-PROD), verbatim: "Thermal ceiling
+  load failure on profile activation is a warning only. Pre-prod: make
+  activation fail closed (gate stays closed, loud UI error) when the
+  limiter cannot be configured."
 - AE core items (2026-10-26): #55 and #57 wait only on CI; the HF
   bound; the CHN-50P mask after F-388; the SNR threshold; the 174c/d/e
   reviews; the US-172c/172/173 reviews (US-173 AC2/AC3a); a thermal
@@ -2630,6 +2634,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Step-8 timing precision (CM, 2026-10-26): the first ping was NOT
   measured (SSH-only poll) and /proc/uptime at first SSH was NOT
   captured. Not a finding.
+  Run-3 review (CM, 2026-10-26): the QE APPROVED with C1-C3 and the
+  Architect APPROVED; both agree with the CM changes (keep
+  disable_splash=1; no nix shell dtc; nix copy only if the root is
+  absent, otherwise STOP). C1: the one-line diff plus the restored m=1
+  marker verdict and the full H1 positive control. C2: a
+  TRYBOOT/NOT-TRYBOOT classification line. C3: tb-diag requires
+  US172_C3SHA. worker-2 is revising; the kit is NOT frozen yet
+  (interim pins 21be4395/9876375e carry change 1 only). Sequence: the
+  QE's C4 diff-only check; OBSERVE pre-obs, output to the QE and
+  Architect; CHANGE tb-pre and tb-diag; then tb-reboot only with the
+  owner at the HDMI screen.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -3477,6 +3492,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   literal HP offset 4, besides == speakerChannels? worker-2's answer
   on a US-172 labwc/session unit is still pending. CI for #55/#57 is
   still in test-and-build.
+  UPDATE (CM, AE, 2026-10-26): drift test sha1 0d5dc793 (untracked;
+  capture commit only) pins HP == speakerChannels AND == "4" (AE:
+  yes). Its comment says a speakerChannels change must not pass
+  silently; update both with an AE review. The stale file fails HP and
+  CamillaDSP; the sample passes 5/5. The open AE HP-offset question is
+  RESOLVED.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -4033,6 +4054,41 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   grant because it changes which coeff files PW reads. This supersedes
   the earlier "NOT cleared ... pending Architect Q2" (convolver conf,
   pipewire.nix, pw_config_generator).
+  Design consult result (AD, 2026-10-26): joint result
+  /tmp/us174d-joint-result-v3.md (sha256 273a2b85; frozen copy
+  /tmp/pm-backlog/us174d-joint-result-v3-273a2b85.md); the AE accepted
+  it with 2 amendments, which worker-4 builds:
+  - In scope (AE): the static check "no Dirac on ch 1-4" has a
+    passthrough exception, only for a declared passthrough venue AND
+    no own speakers/amps on ch 1-4. AD: software can't verify "no own
+    speakers", so the exception comes only from the venue YAML
+    declaring passthrough plus an explicit per-deploy operator
+    confirmation, never a default.
+  - In scope (AE): a fallback to seed-dirac (dangling `current`) is
+    loud: logged, and a GM/web-ui status flag "seed-dirac: no driver
+    protection" is set, which a test asserts.
+  - PRE-PROD (AE): make the seed-dirac fallback fail-closed instead of
+    only loud.
+  - PRE-PROD (Architect): after a crash mid-trial, the next boot loads
+    the untested trial set silently. The GM/web-ui gate unlatch/open
+    must refuse while coeffs/.trial-pending exists.
+  - Backlog (Architect/AE): the F-346 fix, a verified full-channel
+    in-place reload, so the gate no longer needs a PW restart (amps
+    off) for each trial or rollback. See the F-346 defect record.
+  - A5b, a group-writable coeffs tree (2775 root pi4audio): listed as
+    open by the AD, but RULED by the SecSpec (about 09:23Z, to the
+    Architect; via team-lead): acceptable for the home lab, no sudo or
+    helper for now. Conditions for the US-174d ACs: check whether the
+    web UI runs as ela, and add no separate service user if it does;
+    filters live under /var/lib, not /etc; format and D-031
+    driver-protection validation before any swap; plain names only,
+    with current pointing inside the sets dir; atomic switch via a
+    temp link plus rename. Pre-amps-on/gig backlog (SecSpec): a single
+    validated writer (a root helper, or no web-UI deploy until auth
+    exists), with ela's group write removed at that point. worker-4
+    runs a read-only check of how web-ui deploy_filters writes to the
+    root-owned coeffs dir today and reports the finding to the PM and
+    the SecSpec.
   US-174c (measurement on the Pi, web-ui measurement/session.py)
   starts only after F-390/F-391 and builds on them, because it is the
   same file (L-046). Its Pi run is also gated by US-173 H, F-341 AC3,
@@ -4368,6 +4424,26 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   ADDENDUM 7e467465, then PART B 60095f5d, then PART C b91ac082, plus
   the AE review; A1/A2 are superseded. US-174c builds on this lane
   (see US-174).
+  F-a (worker-5; AE ruling, via CM, 2026-10-26):
+  speaker_routes.py:957-963 passes project_root=base.parents[1] to
+  thermal_ceiling.load_channel_ceilings. On the /etc layout that is
+  /etc, so it raises, the exception is caught as a warning, and the
+  thermal limiter is NOT configured on profile activation. A
+  regression caused by F-390, so it is fixed IN F-390; the AE won't
+  approve the F-390 PR otherwise. The CM granted worker-5
+  thermal_ceiling.py, the speaker_routes call site and the tests. AE
+  conditions: (1) an /etc-layout activation test asserts the limiter
+  is configured with the expected per-channel ceilings; (2) a
+  repo-layout backward-compatibility test; (3) all
+  load_channel_ceilings/load_speaker_identity callers are grepped and
+  fixed in the same change. Fail-closed activation is AE pre-prod
+  one-liner (10).
+  Open to the Architect (F-390, via CM, 2026-10-26): D2 (repo fallback
+  only when PI_AUDIO_MOCK != "0"); D3 (a main.py 503 handler vs
+  per-handler); D4 (an edit to #55's _check_profile_crossover, held);
+  D6 (web-ui.nix env plus tmpfiles C seeding, unbuilt); F-b
+  (deploy.sh:565-575 rsync --delete overwrites operator edits to
+  /etc/pi4audio/speakers; backlog?).
 - **F-391** Measurement sweep ignores mandatory_hpf_hz (P1; AE,
   2026-10-25). Gates the same sessions as F-390. /measurement/start
   accepts ChannelConfig.mandatory_hpf_hz (session.py:193), but
