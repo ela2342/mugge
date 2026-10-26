@@ -3,3 +3,4 @@
 # the measurement pipeline.  Only dirac.wav (permanent identity coefficient)
 # is tracked in git.
 combined_*.wav
+!/markaudio-ultimax-200hz/*.wav
