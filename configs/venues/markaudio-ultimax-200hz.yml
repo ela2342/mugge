@@ -1,7 +1,8 @@
 # Venue config: Markaudio CHN-50P mains + Dayton Ultimax UMII18-22 sub.
 #
 # 200Hz crossover, LR4-equivalent (24 dB/oct) minimum-phase FIR.
-# Single sub on ch 3 (AUX2). Ch 4 (AUX3) is spare, permanently muted.
+# Single sub on ch 3 (AUX2). Ch 4 (AUX3) is spare, muted: zero.wav (all-zero
+# FIR; a dirac.wav would pass audio through).
 #
 # Speaker profile: configs/speakers/profiles/2way-200hz-markaudio-ultimax.yml
 # Sub identity: configs/speakers/identities/dayton-ultimax-umii18-22-sealed-120l.yml
@@ -41,7 +42,7 @@ channels:
   4_sub2_lp:
     gain_db: -120
     delay_ms: 0
-    coefficients: "dirac.wav"
+    coefficients: "zero.wav"
   5_eng_l:
     gain_db: 0
     delay_ms: 0
