@@ -411,16 +411,25 @@ def _dj_mode_diagnostics(gm_port: int) -> str:
     return "\n".join(parts)
 
 
-@pytest.fixture(scope="session")
-def ensure_dj_mode(gm_port):
-    """Switch GM to DJ mode once for the entire test session.
+def _gm_mode(gm_port: int) -> str | None:
+    """Return the mode the GM reports via get_state, or None if unreadable."""
+    return _rpc_call("127.0.0.1", gm_port, {"cmd": "get_state"}).get("mode")
 
-    Tests that need audio signal (level-bridge, measurement) require
-    the GM to be in DJ mode so that signal-gen and Mixxx links are
-    established through the convolver.
+
+@pytest.fixture()
+def ensure_dj_mode(gm_port):
+    """Put the GM in DJ mode for one test, and back to standby afterwards.
+
+    Tests that need the DJ signal path require the GM to be in DJ mode,
+    so that the Mixxx -> convolver -> USBStreamer links exist (signal-gen
+    is not linked in DJ mode).
 
     F-394: a failed switch is a FAIL, not a skip. DJ mode is the
     prerequisite under test, so a skip would hide a broken DJ path.
+    Function scope because other modules (test_measurement,
+    test_production) switch modes between DJ tests. Every use runs
+    set_mode + await_settled, since "mode is dj" alone does not mean the
+    links have converged. The standby teardown is checked as well.
     """
     ok, detail = _switch_gm_mode_detail("dj", gm_port)
     if not ok:
@@ -429,5 +438,145 @@ def ensure_dj_mode(gm_port):
             f"{_dj_mode_diagnostics(gm_port)}",
             pytrace=False,
         )
+    mode = _gm_mode(gm_port)
+    if mode != "dj":
+        pytest.fail(
+            f"GM settled but reports mode {mode!r}, expected 'dj': {detail}\n"
+            f"{_dj_mode_diagnostics(gm_port)}",
+            pytrace=False,
+        )
     yield
-    _switch_gm_mode("standby", gm_port)
+    ok, detail = _switch_gm_mode_detail("standby", gm_port)
+    if not ok:
+        pytest.fail(
+            f"Could not switch GM back to standby: {detail}\n"
+            f"{_dj_mode_diagnostics(gm_port)}",
+            pytrace=False,
+        )
+
+
+# ---------------------------------------------------------------------------
+# D-063 gate in the virtual stack (F-394, AE ruling Q2)
+# ---------------------------------------------------------------------------
+
+# level-bridge reports -120.0 dBFS for silence (its clamp, level-bridge
+# server.rs), so the floor is the clamp value, not "anything below -120".
+LEVEL_FLOOR_DB = -120.0
+
+# hw-out channels fed by a stimulus on Mixxx out 1-2 in DJ mode: mains
+# L/R (1:1) and both subs (L+R sum), routing.rs dj_links.
+STIMULUS_HW_OUT_CHANNELS = (0, 1, 2, 3)
+
+
+def virtual_stack_refusal(backend: str, pw_objects) -> str | None:
+    """Return why opening the gate is refused, or None if it is allowed.
+
+    The gate may only be opened in the local-demo stack, and only when its
+    PipeWire graph has no ALSA hardware behind it (AE Q2 C1). The check is
+    on the factory/api properties, never on node names: local-demo names
+    its virtual nodes after the real USBStreamer.
+    """
+    if backend != "local-demo":
+        return f"PI_AUDIO_BACKEND is {backend!r}, not 'local-demo'"
+    if not pw_objects:
+        return "pw-dump returned no objects; cannot prove there is no hardware"
+    for obj in pw_objects:
+        props = (obj.get("info") or {}).get("props") or {}
+        factory = str(props.get("factory.name", ""))
+        if (props.get("device.api") == "alsa"
+                or factory.startswith("api.alsa")
+                or any(str(k).startswith("api.alsa.") for k in props)):
+            name = props.get("node.name") or props.get("device.name") or obj.get("id")
+            return f"ALSA hardware object in the graph: {name} ({factory or 'device.api=alsa'})"
+    return None
+
+
+def _pw_dump() -> list:
+    """Return the pw-dump object list of the stack's PipeWire, or [] on error."""
+    try:
+        out = subprocess.run(["pw-dump"], capture_output=True, text=True, timeout=10)
+        return json.loads(out.stdout) if out.returncode == 0 else []
+    except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        return []
+
+
+def read_live_levels(port: int, count: int = 5) -> list[dict]:
+    """Read level snapshots and FAIL unless the tap is live.
+
+    A dead tap and a silent tap both read -120.0, so a floor assert alone
+    would pass on a dead tap. Live means: snapshots arrive and their
+    graph position advances.
+    """
+    lines = _read_levels(port, count=count)
+    positions = [snap.get("pos") for snap in lines]
+    if len(lines) < 2 or len(set(positions)) < 2:
+        pytest.fail(f"level tap on port {port} is not live: {lines}", pytrace=False)
+    return lines
+
+
+def max_peak(lines: list[dict], channels) -> list[float]:
+    """Highest peak per channel over the snapshots; FAIL if a channel is missing."""
+    result = []
+    for ch in channels:
+        try:
+            result.append(max(snap["peak"][ch] for snap in lines))
+        except (KeyError, IndexError, TypeError):
+            pytest.fail(f"channel {ch} missing from level snapshots: {lines}",
+                        pytrace=False)
+    return result
+
+
+def wait_for_peaks(port: int, channels, predicate, timeout: float) -> list[float]:
+    """Poll a live tap until predicate(peaks) holds; return the last peaks.
+
+    The caller asserts on the result, so a timeout reports the last reading.
+    """
+    deadline = time.monotonic() + timeout
+    while True:
+        peaks = max_peak(read_live_levels(port, count=3), channels)
+        if predicate(peaks) or time.monotonic() >= deadline:
+            return peaks
+        time.sleep(0.1)
+
+
+def _gate_state(base_url: str) -> dict:
+    status, body = _api_get(base_url, "/api/v1/venue/current")
+    return body if status == 200 else {"status": status, **(body or {})}
+
+
+@pytest.fixture()
+def virtual_gate_open(ensure_dj_mode, base_url, level_hw_out_port):
+    """Open the D-063 gate in the virtual stack for one test (AE Q2 C1-C3).
+
+    Refuses (FAIL, never skip) unless the stack is local-demo with no ALSA
+    hardware. Opens through the product path (venue select + gate open), so
+    the gains are the venue's. Teardown, also after a failed test: unmute,
+    close the gate, assert the API reports it closed and unmuted, and
+    assert hw-out is back at the floor.
+    """
+    refusal = virtual_stack_refusal(BACKEND_TYPE, _pw_dump())
+    if refusal:
+        pytest.fail(f"Refusing to open the gate: {refusal}", pytrace=False)
+
+    status, body = _api_post(base_url, "/api/v1/venue/select", {"venue": "local-demo"})
+    if status != 200 or not body.get("ok"):
+        pytest.fail(f"venue select failed: {status} {body}", pytrace=False)
+    try:
+        status, body = _api_post(base_url, "/api/v1/venue/gate/open")
+        if status != 200 or not body.get("gate_open"):
+            pytest.fail(f"gate open failed: {status} {body}", pytrace=False)
+        yield
+    finally:
+        # Unmute before closing: unmute restores the pre-mute gains, so
+        # doing it after the close would reopen the path behind a closed gate.
+        _api_post(base_url, "/api/v1/audio/unmute")
+        _api_post(base_url, "/api/v1/venue/gate/close")
+        gate = _gate_state(base_url)
+        _, mute = _api_get(base_url, "/api/v1/audio/mute-status")
+        if gate.get("gate_open") is not False or mute.get("is_muted") is not False:
+            pytest.fail(f"teardown left gate={gate} mute={mute}", pytrace=False)
+        peaks = wait_for_peaks(level_hw_out_port, STIMULUS_HW_OUT_CHANNELS,
+                               lambda p: max(p) <= LEVEL_FLOOR_DB, timeout=2.0)
+        if max(peaks) > LEVEL_FLOOR_DB:
+            pytest.fail(f"hw-out not at the floor after gate close: {peaks}",
+                        pytrace=False)
