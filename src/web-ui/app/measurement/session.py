@@ -47,6 +47,19 @@ def _ensure_rc_path() -> None:
         sys.path.insert(0, _RC_DIR)
 
 
+# Profile used for filter generation when the session names none.
+_DEFAULT_PROFILE_NAME = "2way-80hz-sealed"
+
+
+def _profile_dirs() -> tuple[str, str]:
+    """Return (profiles_dir, identities_dir) used for filter generation."""
+    project_root = os.path.normpath(os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", ".."))
+    speakers_dir = os.path.join(project_root, "configs", "speakers")
+    return (os.path.join(speakers_dir, "profiles"),
+            os.path.join(speakers_dir, "identities"))
+
+
 # ---------------------------------------------------------------------------
 # Measurement config constants
 # ---------------------------------------------------------------------------
@@ -359,6 +372,10 @@ class MeasurementSession:
         await self._watchdog.start()
 
         try:
+            # F-374: refuse a profile the generator cannot design before
+            # any gain calibration or sweep, not at CP-5.
+            self._check_profile_crossover()
+
             # TK-199: Resolve device names to indices before any state
             # transition (fail-fast if UMIK-1 or output device not found).
             # Skipped in mock mode where __post_init__ already sets integer
@@ -446,6 +463,34 @@ class MeasurementSession:
             await self._broadcast_state({"error": str(exc)})
         finally:
             await self._cleanup()
+
+    def _check_profile_crossover(self) -> None:
+        """Run the generator's crossover check on the session's profile (F-374).
+
+        Raises RuntimeError with the generator's message for an unsupported
+        crossover type or slope.  A profile that cannot be loaded is left to
+        CP-5 filter generation, which reports it as before.
+        """
+        _ensure_rc_path()
+        from config_generator import load_profile
+        from room_correction.crossover import CrossoverSpecError
+        from room_correction.generate_profile_filters import (
+            validate_profile_crossover,
+        )
+
+        profile_name = self._config.profile_name or _DEFAULT_PROFILE_NAME
+        profiles_dir, _ = _profile_dirs()
+        try:
+            profile = load_profile(profile_name, profiles_dir=profiles_dir)
+        except FileNotFoundError as exc:
+            log.warning("F-374: crossover pre-check skipped: %s", exc)
+            return
+        try:
+            validate_profile_crossover(profile)
+        except CrossoverSpecError as exc:
+            raise RuntimeError(
+                f"Profile {profile_name}: {exc}. "
+                f"Fix it in the speaker editor.") from exc
 
     # -- Measurement mode management (D-040: GraphManager) --------------------
 
@@ -1004,16 +1049,8 @@ class MeasurementSession:
         self._check_abort("CP-5a")
 
         # Resolve profile name from session config or default.
-        profile_name = self._config.profile_name
-        if not profile_name:
-            profile_name = "2way-80hz-sealed"
-
-        _project_root = os.path.normpath(os.path.join(
-            os.path.dirname(__file__), "..", "..", "..", ".."))
-        profiles_dir = os.path.join(
-            _project_root, "configs", "speakers", "profiles")
-        identities_dir = os.path.join(
-            _project_root, "configs", "speakers", "identities")
+        profile_name = self._config.profile_name or _DEFAULT_PROFILE_NAME
+        profiles_dir, identities_dir = _profile_dirs()
 
         profile, identities = load_profile_with_identities(
             profile_name,

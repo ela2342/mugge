@@ -25,7 +25,11 @@
     var VALID_ROLES = ["fullrange", "satellite", "subwoofer"];
     var VALID_FILTER_TYPES = ["fullrange", "highpass", "lowpass"];
     var VALID_POLARITIES = ["normal", "inverted"];
-    var VALID_SLOPES = [24, 48, 96];
+    // Crossover slopes and types the generator supports (F-374). Must equal
+    // LR_SLOPES_DB_PER_OCT and CROSSOVER_TYPES in room_correction/crossover.py
+    // (parity test: test_speaker_crossover_validation.py).
+    var VALID_SLOPES = [24, 48];
+    var VALID_XOVER_TYPES = ["linkwitz-riley"];
     var VALID_TOPOLOGIES = ["2way", "3way", "4way", "custom"];
     var VALID_TARGET_CURVES = ["flat", "harman", "pa"];
 
@@ -576,6 +580,10 @@
 
     // -- Crossover inputs --
 
+    // Stored crossover values the form was opened with (F-374): an
+    // unsupported value is sent back unchanged, never coerced.
+    var storedXover = {};
+
     function buildCrossoverInputs(topo, xover) {
         var container = $("spk-f-xover-container");
         if (!container) return;
@@ -612,27 +620,55 @@
         }
 
         // Slope (shared across all crossover points).
-        var slopeRow = document.createElement("div");
-        slopeRow.className = "spk-form-row";
-        var slopeOpts = "";
+        var slope = xover.slope_db_per_oct != null ? xover.slope_db_per_oct : 48;
+        var xtype = xover.type != null ? xover.type : "linkwitz-riley";
+        storedXover = { slope: slope, type: xtype };
+        var slopeLabels = [];
         for (var s = 0; s < VALID_SLOPES.length; s++) {
-            var sel = VALID_SLOPES[s] === (xover.slope_db_per_oct || 48) ? " selected" : "";
-            slopeOpts += '<option value="' + VALID_SLOPES[s] + '"' + sel + '>' +
-                VALID_SLOPES[s] + ' dB/oct</option>';
+            slopeLabels.push(VALID_SLOPES[s] + " dB/oct");
         }
-        slopeRow.innerHTML =
-            '<label class="spk-form-label">Slope</label>' +
-            '<select class="spk-form-input" id="spk-f-xslope">' + slopeOpts + '</select>';
-        container.appendChild(slopeRow);
+        container.appendChild(crossoverSelectRow("spk-f-xslope", "Slope",
+            VALID_SLOPES, slopeLabels, slope, slope + " dB/oct",
+            "Not supported: choose 24 (LR4) or 48 (LR8)"));
 
         // Type.
-        var typeRow = document.createElement("div");
-        typeRow.className = "spk-form-row";
-        typeRow.innerHTML =
-            '<label class="spk-form-label">Type</label>' +
-            '<input class="spk-form-input" id="spk-f-xtype" type="text" value="' +
-            escapeHtml(xover.type || "linkwitz-riley") + '">';
-        container.appendChild(typeRow);
+        container.appendChild(crossoverSelectRow("spk-f-xtype", "Type",
+            VALID_XOVER_TYPES, VALID_XOVER_TYPES, xtype, String(xtype),
+            "Not supported: choose linkwitz-riley"));
+    }
+
+    // Select row for a crossover field. A stored value outside *values* is
+    // kept as a selected, disabled "(not supported)" option with an inline
+    // note, so the form never silently rewrites it (F-374); saving then
+    // returns the generator's error until a supported value is picked.
+    function crossoverSelectRow(id, label, values, labels, current, currentLabel, note) {
+        var supported = false;
+        var opts = "";
+        for (var i = 0; i < values.length; i++) {
+            var sel = values[i] === current ? " selected" : "";
+            if (sel) supported = true;
+            opts += '<option value="' + escapeHtml(String(values[i])) + '"' + sel + '>' +
+                escapeHtml(labels[i]) + '</option>';
+        }
+        if (!supported) {
+            opts = '<option value="' + escapeHtml(String(current)) + '" selected disabled>' +
+                escapeHtml(currentLabel + " (not supported)") + '</option>' + opts;
+        }
+        var row = document.createElement("div");
+        row.className = "spk-form-row";
+        row.innerHTML =
+            '<label class="spk-form-label" for="' + id + '">' + escapeHtml(label) + '</label>' +
+            '<select class="spk-form-input" id="' + id + '">' + opts + '</select>' +
+            (supported ? '' :
+                '<span class="spk-form-note c-danger" id="' + id + '-note">' +
+                escapeHtml(note) + '</span>');
+        if (!supported) {
+            row.querySelector("select").addEventListener("change", function () {
+                var noteEl = row.querySelector(".spk-form-note");
+                if (noteEl) noteEl.classList.add("hidden");
+            });
+        }
+        return row;
     }
 
     // -- Topology template application --
@@ -848,6 +884,15 @@
         return Object.keys(result).length > 0 ? result : null;
     }
 
+    // Selected crossover value; the stored value itself while the
+    // disabled "(not supported)" option is still selected (F-374).
+    function xoverValue(id, key, parse) {
+        var sel = $(id);
+        var opt = sel.options[sel.selectedIndex];
+        if (!opt || opt.disabled) return storedXover[key];
+        return parse(sel.value);
+    }
+
     // -- Collect full profile payload --
 
     function collectProfilePayload() {
@@ -875,8 +920,8 @@
             topology: $("spk-f-topology").value,
             crossover: {
                 frequency_hz: freqs.length === 1 ? (freqs[0] || 80) : freqs.sort(function(a, b) { return a - b; }),
-                slope_db_per_oct: parseInt($("spk-f-xslope").value, 10),
-                type: $("spk-f-xtype").value.trim()
+                slope_db_per_oct: xoverValue("spk-f-xslope", "slope", Number),
+                type: xoverValue("spk-f-xtype", "type", String)
             },
             speakers: speakers
         };

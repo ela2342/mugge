@@ -576,8 +576,8 @@ _VALID_MEH_PROFILE = {
     "name": "MEH 3-Way Horn System",
     "topology": "meh",
     "crossover": [
-        {"frequency_hz": 300, "slope_db_per_oct": 96, "type": "linkwitz-riley"},
-        {"frequency_hz": 3000, "slope_db_per_oct": 96, "type": "linkwitz-riley"},
+        {"frequency_hz": 300, "slope_db_per_oct": 48, "type": "linkwitz-riley"},
+        {"frequency_hz": 3000, "slope_db_per_oct": 48, "type": "linkwitz-riley"},
     ],
     "speakers": {
         "sub_left": {"identity": "sub-18-horn", "role": "subwoofer", "channel": 0,
