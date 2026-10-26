@@ -887,6 +887,9 @@ priority!"
   checked in the go-check of the first amps-on US-179 web measurement
   run relying on calibrated SPL. The AE has no objection to the PO's
   K3 ruling e720d78c.
+  UPDATE (team-lead, 2026-10-26, after v290): backlog v290 pushed as
+  f68220c1. US-179: team-lead's "either way" K4 line is superseded by
+  the AE's narrower scope in ae0c3e70.
 
 ## Reserved IDs
 
@@ -11421,6 +11424,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   verbatim: "Either way, the K4 check still has to happen before the
   first amps-on run." With the AE's NO: no amps-on row, no TW work; K4
   stays this scoped US-179 follow-up.
+  SUPERSEDED (team-lead, 2026-10-26; applies to the team-lead
+  constraint line above): that line was written before the AE answered
+  and is broader than the AE's ruling. Team-lead, verbatim: "The AE's
+  wording in ae0c3e70 governs. K4 blocks only the first amps-on US-179
+  web measurement run that relies on calibrated SPL; other amps-on
+  work is not blocked."
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
