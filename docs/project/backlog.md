@@ -9891,6 +9891,24 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     40406988590 (running at this version). Not part of this gate (QE):
     the combined_*.wav warnings (filed as F-417) and the XPASS of
     test_full_session_api (F-262 accounting, see F-262).
+  - Q1-7(1) FINAL-HEAD RULING (QE, accounting copy to PM, 2026-10-26):
+    /tmp/f394-qe-Q1-7-1-final-head-update-ruling-r1.md (sha256
+    47f1319f, 2124 bytes, verified at PM read; not in a frozen/ dir).
+    Evidence (verified at PM read): excerpt
+    ci-40406988590-e06d6296-final-head-excerpt-5833716d.txt in
+    /tmp/cm-relay/F-394/frozen/ (sha256 5833716d) and full log
+    /tmp/cm-relay/F-394/ci-40406988590-e06d6296.log (sha256 53bee6f1).
+    Section 1, verbatim: "At e06d6296 (merge 13314b4 into 498fa3e5),
+    Q1-7(1) is met in substance": stimulus log line `[local-demo]
+    Audio source: test tone (--tone)` at log line 7440; the three
+    stimulus-dependent tests PASSED; no skips for them in `-rs`.
+    Section 2, verbatim: "Update-branch: OK now. The evidence moves to
+    the new head". Conditions: (a) `git diff e06d6296 <new-head>`
+    touches only #67's docs files (nothing under scripts/, src/, nix/,
+    tests or the CI workflow; anything else goes to the QE before CI);
+    (b) the new-head CI log shows the same three items. Verbatim: "The
+    Q1-7(2) negative control (40398705324, my ruling 8251397b) stays
+    valid under (a)." Nothing needs to be kept at e06d6296 / 0cb35f0c.
 - **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
   per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
   2026-10-26): on a suspended node, the gain readers in the r6b matrix
@@ -10979,6 +10997,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     verify.py, the subsonic fix, A1b, any other combine.py change,
     gate changes. Relayed to worker-7; the Architect verified r5 (CM
     message, no file).
+  - Architect r5 check (CM, 2026-10-26; message only, no file),
+    verbatim: "Fence r5 76b8a79f (sha verified) matches S1-S3 and D2d'
+    as released. No r6 needed."
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
