@@ -752,6 +752,10 @@ priority!"
   Architect and relayed to worker-4; supersedes v1 (never relayed).
   F-408 attaches to its G4 (no v3; Architect). F-407 set to P2 (AE)
   (CM, AE).
+  UPDATE (CM, AE, 2026-10-26, after v264): backlog v264 pushed as
+  b593238e. F-394 Q1 RELEASED by the AE (a532179b) and relayed; Q1-Q3
+  all with worker-1; fence r3. F-408: AE addendum 165ae71a names it as
+  gate v2's G4 follow-up (CM).
 
 ## Reserved IDs
 
@@ -7024,6 +7028,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     -5.1 -> -5.6 (lag 13). AE, verbatim: "So alignment fixes the LP
     case but not the HPF (DC-zero) cases. It is part of the fix, not
     the whole fix. G1 stays as is."
+  UPDATE (CM, AE, 2026-10-26, after v264): AE addendum
+  /tmp/cm-relay/F-262/frozen/ae-gate-xo-v2-addendum-F408-165ae71a.txt
+  (sha256 165ae71a, verified at PM read) names F-408 as the G4
+  follow-up; it does not edit v2 91eca61e. AE, verbatim: "The
+  Architect may object to this addendum in a separate file." PM
+  cross-ref: the addendum's "the Architect's pending release of v2"
+  predates release record (h) (eb2b06d3), where the Architect released
+  91eca61e, verbatim: "F-408 going into the backlog record instead of
+  a v3 is fine." No Architect objection file seen at PM read.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -8431,6 +8444,29 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     relayable (CM); the AE input caee35e0 is NOT a release. The AE
     separately rules whether the "no signal-gen play" rule covers a
     synthetic tone.
+  - UPDATE (CM, AE, 2026-10-26, after v264; supersedes "AWAITING AE
+    RELEASE" above): Q1 0919d10d RELEASED by the AE
+    (/tmp/cm-relay/F-394/frozen/ae-Q1-release-a532179b.txt, sha256
+    a532179b, verified at PM read), verbatim: "I release 0919d10d as
+    written, with no objections." Relayed to worker-1; Q1-Q3 are all
+    relayed (CM).
+     AE values (own file; they don't change 0919d10d): V1 1000 Hz
+     exactly and -20 dBFS peak, as named constants. V2 (derived from
+     the constants, read after >= 1 s settle): level-bridge-sw ch 1-2
+     -20.0 dBFS peak +/-1.0 dB; level-bridge-hw-out ch 1-2 -40.0 dBFS
+     peak +/-1.5 dB (local-demo Dirac, gain_db -20); ch 3-8 at sw <=
+     -120 dBFS; mute <= -120 dBFS within 2 s on hw-out ch 1-2; unmute
+     back in the V2 window within 2 s. Guard, AE: "FAIL, never skip"
+     naming the cause if the active venue or coefficients aren't the
+     local-demo Dirac set. V3 (optional, not required for F-394): sub
+     channels presence only, at least 40 dB above the closed floor, no
+     window.
+     Fence r3 (/tmp/cm-relay/F-394-fence-r3.txt, sha256 1f8c0ca2,
+     verified at PM read; supersedes r1 f8440e87): worker-1 owns
+     backend.py, test_mute_e2e.py, scripts/test-e2e.sh (r2, by message
+     only, now recorded) plus, new in r3, scripts/mixxx-substitute.py
+     and scripts/local-demo.sh. No overlap with #63 (3f28b6c7), #66
+     (ff985455) or #52 (27e90a0d) (CM).
   - One-liner (QE, non-blocking; no F-ID, no P-level given): PR #36
     (F-270 audio_stimulus) is superseded for test_mute_e2e by F-394;
     its failure paths are all skips, and its signal-gen premise
