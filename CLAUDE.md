@@ -277,8 +277,9 @@ three access tiers. See orchestration protocol for full details.
 - If a worker is unresponsive during a session, WAIT. Do NOT spawn a
   replacement while the original session is active.
 
-**This project's deployment target:** Pi audio workstation
-(`ela@192.168.178.185`, SSH). Declared in `.claude/team/config.md`.
+**This project's deployment target:** Pi audio workstation, a Raspberry Pi 5
+(`ela@192.168.178.89`, SSH; identity = host key + MAC). Declared in
+`.claude/team/config.md`. The Pi 4B at `.185` is historical.
 
 ### *** STOP — DO NOT PILE UP MESSAGES (L-009, L-040) ***
 
@@ -332,10 +333,11 @@ and each role's prompt.
 
 ## Project Summary
 
-Building a portable flight-case audio workstation based on a Raspberry Pi 4B, replacing
-a Windows PC. Two operational modes: DJ/PA (psytrance events) and live vocal performance
-(Cole Porter repertoire with backing tracks). The system handles crossover, room
-correction, multi-channel routing, and time alignment — all on the Pi 4.
+Building a portable flight-case audio workstation based on a Raspberry Pi 5 (since
+2026-10-24, US-163; it replaced a Raspberry Pi 4B), replacing a Windows PC. Two
+operational modes: DJ/PA (psytrance events) and live vocal performance (Cole Porter
+repertoire with backing tracks). The system handles crossover, room correction,
+multi-channel routing, and time alignment — all on the Pi.
 
 ## Owner
 
@@ -357,8 +359,10 @@ Session 15 (2026-10-24) focus, pending owner direction:
 4. **Retroactive Rule 13 review** of work that landed without recorded
    approvals.
 
-**The NixOS image builds the PREEMPT_RT kernel (RPi fork 6.12.62) with
-hardware V3D GL (D-022).** No V3D blacklist, no pixman, no llvmpipe.
+**The Pi 5 (since 2026-10-24) is on a PREEMPT_RT 6.12.62 kernel, headless.**
+D-022 (hardware V3D GL) is NOT re-confirmed on the Pi 5: there is no
+`/dev/dri` (F-367; US-172). The Pi 4B ran `6.12.62+rpt-rpi-v8-rt` with
+hardware V3D GL (historical). CamillaDSP service stopped (D-040).
 
 See `docs/project/status.md` for the full current state and proposed work
 order. Decisions are in `docs/project/decisions/` (index:
@@ -380,9 +384,48 @@ Orchestration protocol: `.claude/team/protocol/` (self-contained copy)
 
 ### Hardware Access Protocol
 All SSH to Pi goes through the Change Manager to prevent conflicts.
-Pi: `ela@192.168.178.185` (hostname: mugge), key-based auth, passwordless sudo.
+Pi: `ela@192.168.178.89` (Raspberry Pi 5, hostname: mugge), key-based auth,
+passwordless sudo. The IP is pinned to the MAC and canonical;
+`mugge.lab.andreas.org` is an alias only. Pinned `known_hosts`, never
+`accept-new`. Deploy and rollback: `docs/guide/howto/nixos-upgrade.md` Section 8.
 
-## Pi Hardware State (verified 2026-03-10)
+## Pi 5 State (verified 2026-10-25)
+
+Evidence: `docs/lab-notes/US-163-pi5-bootstrap.md`.
+
+- **Status:** bootstrap/dev image, **NOT gig-capable**. Before amps on, see
+  `docs/operations/safety.md`, "Pi 5 Platform Status".
+- **Hardware:** Raspberry Pi 5, 4 GB RAM, HiFiBerry DAC+ HAT fitted (blocked,
+  see Audio), passive cooling only (metal case, no fan). Identity: ED25519
+  host key `SHA256:a5kILUyr7XhT3D5Vdm4Z0lBDtitGOW2gb33socC/xSE`, MAC
+  `88:a2:9e:8c:8d:4e`.
+- **OS:** NixOS, flake configuration `mugge-pi5-deploy`. PREEMPT_RT kernel
+  6.12.62 built from the flake (`bcm2711_defconfig`, 4K pages).
+- **Boot:** no U-Boot. The firmware boots the generation that the
+  `os_prefix=gens/<id>/` line in `/boot/firmware/config.txt` points to;
+  `gens/MAP.txt` maps profile generations to ids. Deploy with
+  `nixos-rebuild boot` plus an announced reboot, never `switch`.
+- **Known deviation:** the firmware merges none of the `config.txt`
+  `dtoverlay=` lines (US-172): no `/dev/dri`, Bluetooth on. D-022 (hardware
+  V3D GL) is therefore NOT re-confirmed on the Pi 5. No desktop runs (greetd
+  is condition-skipped, no labwc).
+- **Audio:** PipeWire 1.6.2 at SCHED_FIFO 88 without RTKit
+  (`configs/pipewire/05-rt-direct.conf`, F-358); D-013 re-confirmed on the
+  Pi 5. The WirePlumber allowlist disables every ALSA card except the
+  USBStreamer (and UMIK-1 capture); the HiFiBerry modules are blacklisted.
+  All 8 linear gain nodes boot with Mult and Add exactly 0; any other value
+  after a boot is a FAIL. The GraphManager gate boots closed.
+- **Services:** GraphManager (4002), signal-gen (4001), pcm-bridge (x2),
+  level-bridge (x3) and the web UI (8080, uvicorn as `ela`) all active.
+  Meter ports 9090/9091 and 9100-9102 are localhost-only.
+- **Network:** nftables input policy drop; allowed inbound tcp 22 and 8080,
+  udp 5353, ICMP echo, DHCPv6 client. 8080 is open on the LAN by owner ruling (known F-037 risk,
+  no auth). VNC is off. RPC and meter ports are localhost-only.
+
+## Pi 4B Hardware State (historical, verified 2026-03-10)
+
+The Pi 4B (`ela@192.168.178.185`) is unreachable since 2026-10-24. This
+section records its last known state; it does not describe the Pi 5.
 
 - **OS:** NixOS (flake-based, SD card image built from `flake.nix`). v0.1.0 image booted and verified (F-266). **PREEMPT_RT kernel (`6.12.62+rpt-rpi-v8-rt`)**.
 - **Desktop:** labwc (Wayland) with **hardware V3D GL compositor** (D-022). No pixman override. lightdm disabled, labwc runs as systemd user service.
@@ -423,16 +466,25 @@ pre-flight checklists, and PREEMPT_RT as a safety requirement (D-013).
   reboot, `systemctl --user restart pipewire`, or any action that causes the USBStreamer
   to lose its audio stream. This applies to all team members — workers, CM, everyone.
   The owner decides when it is safe to proceed (e.g., after turning off amps).
-  **Gain attenuation:** The filter-chain convolver config uses eight `linear`
-  builtin Mult params for gain, one per output channel. The `.conf` defaults
-  are all `Mult = 0.0`: the D-063 universal audio gate keeps every output
+  **Gain attenuation:** The filter-chain convolver config uses one `linear`
+  builtin per channel (8) for gain. Since D-063 all 8 gain nodes boot at Mult
+  0.0 and Add 0.0: the universal audio gate is closed and keeps every output
   silent until the operator opens it (`docs/operations/safety.md` Section 10).
-  Opening the gate applies the active venue's gains (production venue: 0.001 =
-  -60 dB mains, 0.000631 = -64 dB subs, unity on headphone/IEM ch 5-8).
-  Runtime `pw-cli` changes are session-only and revert to the `.conf` default
-  on PW restart (mechanism verified in C-009 with the pre-D-063 defaults; the
-  0.0 default is not yet verified by test, F-298; use pre-flight check #10 in
-  `docs/operations/safety.md` Section 5). The old `config.gain` approach is
+  Any other value after a boot is a FAIL. Opening the gate applies the active
+  venue profile's `gain_db` (D-009 hard cap 0 dB; production venue: 0.001 =
+  -60 dB mains, 0.000631 = -64 dB subs, unity on headphone/IEM ch 5-8, so turn
+  the headphone/IEM amps down before opening the gate). The first-boot default
+  venue is `foh-passthrough`: unity on all 8 channels with no D-031
+  protection; never open the gate on it with our speakers connected (Section
+  10). D-063 specifies a ramp; today the gate opens as an instant step
+  (F-315). The old fixed defaults 0.001 and 0.000631 are pre-D-063 boot
+  values; they also survive in the watchdog unlatch restore table (defect
+  F-320). Runtime `pw-cli` changes are session-only and revert to the `.conf`
+  boot value (0.0) on PW restart (mechanism verified in C-009 with the
+  pre-D-063 defaults; the 0.0 default is not yet verified by test, F-298).
+  Check the gains with pre-flight check #10 (`docs/operations/safety.md`
+  Section 5); a reading counts only with the filter-chain nodes idle or
+  running before and after it (F-395). The old `config.gain` approach is
   silently ignored by PW 1.4.9+ (TK-237).
 
 ## Key Documents
@@ -460,7 +512,8 @@ pre-flight checklists, and PREEMPT_RT as a safety requirement (D-013).
 
 | Device | Role |
 |---|---|
-| Raspberry Pi 4B | Main compute, NixOS (flake-based SD card image) |
+| Raspberry Pi 5 (4 GB) | Main compute since 2026-10-24, NixOS (flake configuration `mugge-pi5-deploy`) |
+| Raspberry Pi 4B | Previous main compute, historical (unreachable since 2026-10-24) |
 | minidsp USBStreamer B | 8in/8out USB audio interface via ADAT |
 | Behringer ADA8200 | ADAT-to-analog converter, 8 channels, has mic preamps |
 | 4-channel Class D amp (4x450W) | Amplification for speakers |

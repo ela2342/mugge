@@ -1,5 +1,16 @@
 # mugge — Setup Manual
 
+> **Platform note (US-163, 2026-10-24):** the deployment target is now a
+> Raspberry Pi 5 running NixOS, built and deployed from this repository's
+> flake. This manual was written for the Raspberry Pi 4B on Raspberry Pi OS.
+> Its OS setup, package installation (`apt`), boot configuration and
+> file-copy deploy steps are **historical** and do not apply to the Pi 5:
+> NixOS manages all of them. For the Pi 5, use
+> `docs/guide/howto/nixos-upgrade.md` Section 8 (install, deploy, rollback,
+> recovery) and `docs/operations/safety.md` ("Pi 5 Platform Status") first.
+> The audio design (signal flow, channel assignment, FIR approach, quantum
+> choices) still applies.
+
 > **Note:** For additional reference material, see the structured documentation
 > in `docs/`. In particular:
 > - `docs/architecture/rt-audio-stack.md` — detailed RT audio stack architecture

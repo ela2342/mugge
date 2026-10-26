@@ -21,7 +21,7 @@ metadata:
   datasheet_file: 12GA50-datasheet.pdf
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: qts 116.0 -> 1.16 per https://www.beyma.com/speakers/Fichas_Tecnicas/beyma-speakers-data-sheet-full-range-12GA50.pdf (no revision printed, PDF dated 2018-08-09), retrieved 2026-10-25.'
   notes: Scraped from soundimports.eu.
   quantity_owned: null
   serial_numbers: []
@@ -31,7 +31,7 @@ thiele_small:
   fs_hz: 90.0
   re_ohm: 6.2
   z_nom_ohm: 8
-  qts: 116.0
+  qts: 1.16
   qes: 1.26
   qms: 14.8
   vas_liters: 34.0

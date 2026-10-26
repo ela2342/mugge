@@ -24,6 +24,9 @@ let
   pipewireConfigs = pkgs.runCommand "pi4audio-pipewire-configs" { } ''
     # PipeWire main config fragments
     mkdir -p $out/share/pipewire/pipewire.conf.d
+    # F-358: module-rt args override (no nice step, no RTKit). Copied
+    # under its plain name; a store-path copy keeps the hash prefix.
+    cp ${../../../configs/pipewire/05-rt-direct.conf} $out/share/pipewire/pipewire.conf.d/05-rt-direct.conf
     cp ${../../../configs/pipewire/10-audio-settings.conf}     $out/share/pipewire/pipewire.conf.d/
     # F-295: 20-usbstreamer.conf (ada8200-in capture adapter) NOT deployed.
     # PipeWire promotes the node to driver=true at runtime despite config

@@ -464,6 +464,20 @@ disabled per D-043) does not interfere with GraphManager link reconciliation.
 
 ---
 
+### A35 [LOW]: Mult 1.0 corresponds to at most 450 W amplifier output
+
+**Description:** US-159 G9 derives per-speaker Mult ceilings (CHN-50P
+<= 0.112, -19 dB) assuming Mult 1.0 = 450 W, the amplifier's rated maximum,
+as a worst case. The real chain (USBStreamer, ADA8200 output level, amp
+input sensitivity and gain setting) has not been measured.
+
+**Confidence:** LOW — worst-case assumption, not measured.
+**Validation:** US-161 (amplifier chain calibration).
+**Affects:** US-159 G9, F-322, D-009, D-029
+**Status:** open
+
+---
+
 ## Cross-Reference: Blocking Findings by Story
 
 | Story | Blocking Assumptions | Notes |

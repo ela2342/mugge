@@ -4,6 +4,8 @@
 #   50  — Disable ACP for USBStreamer (static adapters handle it)
 #   52  — Lower UMIK-1 priority (measurement mic, not a driver)
 #   53  — Lua script: deny unauthorized USBStreamer ALSA access
+#   54  — Disable all other ALSA cards (US-163; boards with
+#         mugge.board.hat.blockHifiberry only, i.e. the Pi 5)
 #
 # D-040: 51-loopback-disable-acp.conf REMOVED — CamillaDSP abandoned,
 # snd-aloop not loaded, no ALSA Loopback device to disable.
@@ -32,11 +34,19 @@ let
     cp ${../../../configs/wireplumber/53-deny-usbstreamer-alsa.conf} \
        $out/share/wireplumber/wireplumber.conf.d/53-deny-usbstreamer-alsa.conf
   '';
+
+  # US-163: separate package so the Pi 4 configuration is unchanged.
+  wpBlockCardsPkg = pkgs.runCommand "pi4audio-wireplumber-block-cards" { } ''
+    mkdir -p $out/share/wireplumber/wireplumber.conf.d
+    cp ${../../../configs/wireplumber/54-disable-other-alsa-cards.conf} \
+       $out/share/wireplumber/wireplumber.conf.d/54-disable-other-alsa-cards.conf
+  '';
 in
 {
   # WirePlumber is enabled automatically by services.pipewire on NixOS.
   # Config fragments via configPackages (XDG_DATA_DIRS).
-  services.pipewire.wireplumber.configPackages = [ wpConfigPkg ];
+  services.pipewire.wireplumber.configPackages = [ wpConfigPkg ]
+    ++ lib.optional config.mugge.board.hat.blockHifiberry wpBlockCardsPkg;
 
   # Lua script referenced by 53-deny-usbstreamer-alsa.conf.
   # extraScripts deploys to share/wireplumber/scripts/ in XDG_DATA_DIRS.
