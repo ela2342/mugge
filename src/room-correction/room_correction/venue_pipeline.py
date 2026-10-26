@@ -13,7 +13,10 @@ Per speaker channel:
        x subsonic HPF, D-009 clip, min-phase) -> venue coefficient filename
 
 Channels whose venue coefficients are dirac.wav (spare, HP, IEM) get an
-exact unit impulse.
+exact unit impulse. Channels whose venue coefficients are zero.wav are a
+canonical mute (US-173, Architect 2026-10-26): the pipeline never
+generates or writes zero.wav; the committed configs/coeffs/zero.wav is
+the only copy.
 
 Channel mapping (Architect, 2026-10-25): a venue channel key starts with
 its 1-based channel number ("3_sub1_lp"); a profile speaker's ``channel``
@@ -67,6 +70,7 @@ from .generate_profile_filters import generate_profile_filters
 SAMPLE_RATE = dsp_utils.SAMPLE_RATE
 DEFAULT_N_TAPS = 16384
 DIRAC_FILENAME = "dirac.wav"
+MUTE_FILENAME = "zero.wav"
 DELAYS_FILENAME = "delays.yml"
 SIMULATED_FILENAME = "SIMULATED"
 STAGING_PREFIX = ".rc-staging-"
@@ -92,7 +96,7 @@ class ChannelAssignment:
     number: int                   # 1-based venue channel number
     venue_key: str                # e.g. "3_sub1_lp"
     coefficients: str             # WAV filename from the venue config
-    speaker_key: Optional[str]    # profile speaker, None for dirac channels
+    speaker_key: Optional[str]    # profile speaker, None for dirac/mute channels
 
 
 @dataclass
@@ -114,9 +118,13 @@ class VenueBundle:
     def expected_files(self) -> Dict[str, str]:
         """Filename -> kind ('fir' or 'dirac'), for verify.run_venue_checks."""
         files = {c.coefficients: "fir" for c in self.channels if c.speaker_key}
-        if any(c.speaker_key is None for c in self.channels):
+        if self.has_dirac_channel:
             files[DIRAC_FILENAME] = "dirac"
         return files
+
+    @property
+    def has_dirac_channel(self) -> bool:
+        return any(c.coefficients == DIRAC_FILENAME for c in self.channels)
 
     def mandatory_hpf_by_file(self) -> Dict[str, float]:
         """Filename -> mandatory HPF (Hz) for channels whose identity has one."""
@@ -155,8 +163,8 @@ def build_channel_map(venue: dict, profile: dict) -> List[ChannelAssignment]:
     Map venue output channels to profile speakers.
 
     Raises ValueError if a profile channel matches zero or several venue
-    keys, if a profile speaker would get dirac.wav, or if a venue key with
-    a non-dirac coefficients file has no profile speaker.
+    keys, if a profile speaker would get dirac.wav or zero.wav, or if a
+    venue key with any other coefficients file has no profile speaker.
     """
     venue_channels = venue.get("channels") or {}
     by_number: Dict[int, List[str]] = {}
@@ -186,7 +194,7 @@ def build_channel_map(venue: dict, profile: dict) -> List[ChannelAssignment]:
         if not coeffs:
             raise ValueError(f"venue channel {key!r} has no coefficients file")
         spk_key = speaker_by_number.get(number)
-        if spk_key is None and coeffs != DIRAC_FILENAME:
+        if spk_key is None and coeffs not in (DIRAC_FILENAME, MUTE_FILENAME):
             raise ValueError(
                 f"venue channel {key!r} expects {coeffs!r} but no profile "
                 f"speaker uses channel {number - 1}")
@@ -194,6 +202,10 @@ def build_channel_map(venue: dict, profile: dict) -> List[ChannelAssignment]:
             raise ValueError(
                 f"profile speaker {spk_key!r} maps to venue channel {key!r}, "
                 f"which is a dirac passthrough")
+        if spk_key is not None and coeffs == MUTE_FILENAME:
+            raise ValueError(
+                f"profile speaker {spk_key!r} maps to venue channel {key!r}, "
+                f"which is muted ({MUTE_FILENAME})")
         assignments.append(ChannelAssignment(number, key, coeffs, spk_key))
 
     filenames = [a.coefficients for a in assignments if a.speaker_key]
@@ -273,7 +285,7 @@ def generate_venue_filters(
         n_taps=n_taps, sr=sr)
 
     filters = {bundle.speaker_files[k]: fir for k, fir in combined.items()}
-    if any(c.speaker_key is None for c in bundle.channels):
+    if bundle.has_dirac_channel:
         dirac = np.zeros(n_taps)
         dirac[0] = 1.0
         filters[DIRAC_FILENAME] = dirac

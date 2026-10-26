@@ -319,8 +319,9 @@ def run_venue_pipeline(args):
     scenario = venue_sim.load_scenario(args.scenario)
     print(f"Venue: {bundle.name}  scenario: {args.scenario}")
     for c in bundle.channels:
+        muted = c.coefficients == venue_pipeline.MUTE_FILENAME
         print(f"  ch {c.number} {c.venue_key}: {c.coefficients}"
-              f" <- {c.speaker_key or 'passthrough'}")
+              f" <- {c.speaker_key or ('mute' if muted else 'passthrough')}")
 
     sim = venue_sim.simulate_venue_measurements(
         bundle.profile, scenario, scenario_name=str(args.scenario))
