@@ -5,6 +5,8 @@ import {
   Cascade, LEVEL_NOISE, LevelNoise, butterworth, levelNoiseCrest,
 } from "../../../static/js/dsp.js";
 
+const FULLRANGE_BAND = { lowHz: 100, highHz: 10000 };
+
 async function reference() {
   const resp = await fetch("/fixtures/butter/reference.json");
   assert(resp.ok, "reference.json " + resp.status);
@@ -36,11 +38,14 @@ export async function test_impulse_response_matches_scipy() {
 
 export async function test_level_noise_matches_scipy_on_the_pink_golden() {
   const ref = await reference();
-  const ln = ref.level_noise;
-  const src = new LevelNoise(ln.seed, ref.sample_rate);
-  const out = ln.output.map(() => src.nextSample());
-  const err = maxAbsDiff(out, ln.output);
-  assert(err < 1e-12, "level noise vs sosfilt: " + err);
+  eq(ref.level_noise.length, 2, "full-range and subwoofer bands");
+  for (const ln of ref.level_noise) {
+    const src = new LevelNoise(ln.seed, ref.sample_rate, ln.band);
+    const out = ln.output.map(() => src.nextSample());
+    const err = maxAbsDiff(out, ln.output);
+    assert(err < 1e-12, `level noise ${ln.band.lowHz}-${ln.band.highHz} Hz ` +
+      "vs sosfilt: " + err);
+  }
 }
 
 export async function test_reset_restores_initial_state() {
@@ -59,20 +64,21 @@ export async function test_rejects_bad_designs() {
   throws(() => butterworth("bandpass", 4, 100, 48000), "kind");
 }
 
-export async function test_level_noise_band() {
-  eq(LEVEL_NOISE.LOW_HZ, 100);
-  eq(LEVEL_NOISE.HIGH_HZ, 10000);
+export async function test_level_noise_constants() {
   eq(LEVEL_NOISE.ORDER, 4);
   eq(LEVEL_NOISE.CREST_SECONDS, 10);
   assert(Object.isFrozen(LEVEL_NOISE));
+  throws(() => new LevelNoise(174, 48000), "no band");
+  throws(() => new LevelNoise(174, 48000, { lowHz: 200, highHz: 200 }));
 }
 
 export async function test_crest_is_deterministic_and_plausible() {
-  const a = levelNoiseCrest(174, 48000, 1);
-  const b = levelNoiseCrest(174, 48000, 1);
+  const a = levelNoiseCrest(174, 48000, FULLRANGE_BAND, 1);
+  const b = levelNoiseCrest(174, 48000, FULLRANGE_BAND, 1);
   eq(a.crestDb, b.crestDb, "same seed, same crest");
   close(a.peak / a.rms, 10 ** (a.crestDb / 20), 1e-9);
   // Gaussian-like band-limited noise over 48k samples: roughly 11-15 dB.
   assert(a.crestDb > 9 && a.crestDb < 18, "crest " + a.crestDb);
-  assert(levelNoiseCrest(175, 48000, 1).crestDb !== a.crestDb, "seed matters");
+  assert(levelNoiseCrest(175, 48000, FULLRANGE_BAND, 1).crestDb !== a.crestDb,
+    "seed matters");
 }

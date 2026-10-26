@@ -5,18 +5,18 @@
 // code only ever applies what this module returns, so every rule here is
 // unit-testable without sound.
 //
-// AC references are to US-179 r8 (978c3e1b).
+// AC references are to US-179 r8 (978c3e1b) with errata E1 v2 (6a78af9f)
+// and E2 (bca0d86b).
 
 /** Code constants. No UI can change them (AC4c). */
 export const LIMITS = Object.freeze({
   REQUIRED_RATE: 48000,          // AC2a
-  LIMIT_MIN_HZ: 20,              // AC3a
-  LIMIT_MAX_HZ: 500,             // AC3a
-  LIMIT_DEFAULT_HZ: 20,          // AC3a
+  LIMIT_MIN_HZ: 20,              // AC3a, never below 20 Hz for any role
   START_DBFS: -60,               // AC4b, level-check start
   STEP_DB: 6,                    // AC4b, one "+" click
   OUTPUT_PEAK_CAP_DBFS: -20,     // AC4c, hard cap on the actual output
   MIC_TARGET_SPL_DB: 75,         // AC4b, calibrated mic
+  MIC_TARGET_DBFS: -40,          // AC4b, uncalibrated mic, RMS (AE A1)
   MIC_MAX_SPL_DB: 90,            // AC4d, calibrated mic
   MIC_CLIP_DBFS: -1,             // AC4d, mic clip (peak >= this)
   SWEEP_MAX_RISE_DB: 6,          // AC4d, sweep vs level check at the mic
@@ -82,19 +82,115 @@ export function captureSeconds(sweepSeconds) {
 
 // -- AC3: per-channel declarations -----------------------------------------
 
+/** E2a: what is connected to an output. There is no default. */
+export const ROLE = Object.freeze({
+  FULLRANGE: "fullrange",
+  SUBWOOFER: "subwoofer",
+});
+
+/** E2b: low-limit default and range per role (Hz, whole numbers). */
+export const ROLE_LIMITS = Object.freeze({
+  [ROLE.FULLRANGE]: Object.freeze({ defaultHz: 80, minHz: 20, maxHz: 500 }),
+  [ROLE.SUBWOOFER]: Object.freeze({ defaultHz: 20, minHz: 20, maxHz: 50 }),
+});
+
+export const SUB_LIMIT_REFUSAL =
+  "A subwoofer limit above 50 Hz is not supported here. Check the " +
+  "setting, or choose Full-range speaker.";
+
+export function isRole(role) {
+  return role === ROLE.FULLRANGE || role === ROLE.SUBWOOFER;
+}
+
+/** E2c: the 3b confirmation text for a role and limit. */
+export function capabilityText(role, limitHz) {
+  if (role === ROLE.SUBWOOFER) {
+    return "This subwoofer can safely play down to " + limitHz +
+      " Hz at moderate level. I have checked its spec sheet.";
+  }
+  if (role === ROLE.FULLRANGE) {
+    return "This speaker can safely play down to " + limitHz +
+      " Hz at moderate level. I have checked its spec sheet.";
+  }
+  throw new RangeError("no role");
+}
+
+/**
+ * E2a: a role change clears the 3b and 3c confirmations and resets the
+ * limit to the new role's default. Enclosure and port tuning stay.
+ */
+export function changeRole(decl, role) {
+  if (!isRole(role)) throw new RangeError("unknown role " + role);
+  return {
+    ...decl,
+    role,
+    limitHz: ROLE_LIMITS[role].defaultHz,
+    capabilityConfirmed: false,
+    portConfirmed: false,
+  };
+}
+
+/**
+ * E2e: the one speaker dict a channel passes to the shared Python code.
+ * The filter_type keys are internal and never shown. Throws without a
+ * role, so the shared default ("highpass") is never relied on.
+ */
+export function speakerDict(role) {
+  if (role === ROLE.FULLRANGE) return { filter_type: "highpass" };
+  if (role === ROLE.SUBWOOFER) return { filter_type: "lowpass" };
+  throw new RangeError("no role: no Python call for this channel");
+}
+
+/** E2h: role tag in the download filename. */
+export function roleFileTag(role) {
+  if (role === ROLE.FULLRANGE) return "fullrange";
+  if (role === ROLE.SUBWOOFER) return "sub";
+  throw new RangeError("no role");
+}
+
+/** E2d: level-check noise band per role (4th-order Butterworth edges). */
+export function levelNoiseBand(role, limitHz) {
+  if (role === ROLE.FULLRANGE) return { lowHz: 100, highHz: 10000 };
+  if (role === ROLE.SUBWOOFER) return { lowHz: 2 * limitHz, highHz: 200 };
+  throw new RangeError("no role: no sound on this channel");
+}
+
+/** E2d: the band as the level-check step shows it. */
+export function levelNoiseBandLabel(role, limitHz) {
+  const { lowHz, highHz } = levelNoiseBand(role, limitHz);
+  const hz = (f) => (f >= 1000 ? f / 1000 + " kHz" : f + " Hz");
+  const name = role === ROLE.SUBWOOFER ? "subwoofer" : "full-range";
+  return "Test noise: " + (role === ROLE.SUBWOOFER
+    ? lowHz + "\u2013" + hz(highHz)
+    : hz(lowHz) + "\u2013" + hz(highHz)) + " (" + name + ")";
+}
+
 /**
  * AC3: no sound on a channel until this returns ok.
  *
- * decl = { limitHz, capabilityConfirmed, enclosure: "ported" | "closed",
+ * decl = { role, limitHz, capabilityConfirmed, enclosure: "ported" | "closed",
  *          portTuningHz, portConfirmed }
+ *
+ * The role comes first (E2a): without it nothing else is checked and the
+ * channel stays silent.
  */
 export function checkDeclaration(decl) {
+  if (!isRole(decl.role)) {
+    return { ok: false, errors: ["Choose what is connected to this output."],
+      portWarning: "" };
+  }
   const errors = [];
   let portWarning = "";
+  const range = ROLE_LIMITS[decl.role];
   const limit = decl.limitHz;
-  if (typeof limit !== "number" || !Number.isFinite(limit) ||
-      limit < LIMITS.LIMIT_MIN_HZ || limit > LIMITS.LIMIT_MAX_HZ) {
-    errors.push("Low limit must be between 20 and 500 Hz.");
+  if (typeof limit !== "number" || !Number.isInteger(limit) ||
+      limit < range.minHz) {
+    errors.push("Low limit must be a whole number of Hz between " +
+      range.minHz + " and " + range.maxHz + " Hz.");
+  } else if (limit > range.maxHz) {
+    errors.push(decl.role === ROLE.SUBWOOFER ? SUB_LIMIT_REFUSAL
+      : "Low limit must be a whole number of Hz between " + range.minHz +
+        " and " + range.maxHz + " Hz.");
   }
   if (decl.capabilityConfirmed !== true) {
     errors.push("Confirm that this speaker can safely play down to the limit.");

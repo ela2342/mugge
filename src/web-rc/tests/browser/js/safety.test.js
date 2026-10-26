@@ -2,9 +2,11 @@
 
 import { assert, close, eq, throws } from "./assert.js";
 import {
-  LIMITS, LevelCheck, STOP, checkDeclaration, checkDspFlags,
-  checkSampleRates, micStopCause, stopMessage, stopReturnsToSetup,
-  sweepPlan, sweepStopCause,
+  LIMITS, LevelCheck, ROLE, ROLE_LIMITS, STOP, SUB_LIMIT_REFUSAL,
+  capabilityText, changeRole, checkDeclaration, checkDspFlags,
+  checkSampleRates, levelNoiseBand, levelNoiseBandLabel, micStopCause,
+  roleFileTag, speakerDict, stopMessage, stopReturnsToSetup, sweepPlan,
+  sweepStopCause,
 } from "../../../static/js/safety.js";
 
 const QUIET = { rmsDbfs: -70, peakDbfs: -60, splDb: null };
@@ -54,18 +56,106 @@ export async function test_dsp_flags_must_read_back_off() {
 }
 
 function decl(over) {
-  return { limitHz: 20, capabilityConfirmed: true, enclosure: "closed",
-    ...over };
+  return { role: ROLE.FULLRANGE, limitHz: 20, capabilityConfirmed: true,
+    enclosure: "closed", ...over };
 }
 
-export async function test_declaration_limit_range() {
+export async function test_declaration_limit_range_fullrange() {
   eq(checkDeclaration(decl()).ok, true);
   eq(checkDeclaration(decl({ limitHz: 500 })).ok, true);
-  eq(checkDeclaration(decl({ limitHz: 19.9 })).ok, false, "below 20");
+  eq(checkDeclaration(decl({ limitHz: 19 })).ok, false, "below 20");
   eq(checkDeclaration(decl({ limitHz: 501 })).ok, false, "above 500");
+  eq(checkDeclaration(decl({ limitHz: 40.5 })).ok, false, "whole Hz");
   eq(checkDeclaration(decl({ limitHz: NaN })).ok, false, "NaN");
   eq(checkDeclaration(decl({ limitHz: "20" })).ok, false, "string");
-  eq(LIMITS.LIMIT_DEFAULT_HZ, 20);
+  eq(LIMITS.LIMIT_MIN_HZ, 20);
+}
+
+export async function test_declaration_limit_range_subwoofer() {
+  const sub = (limitHz) => decl({ role: ROLE.SUBWOOFER, limitHz });
+  eq(checkDeclaration(sub(20)).ok, true);
+  eq(checkDeclaration(sub(50)).ok, true);
+  eq(checkDeclaration(sub(19)).ok, false, "below 20");
+  const above = checkDeclaration(sub(51));
+  eq(above.ok, false, "above 50");
+  eq(above.errors[0], SUB_LIMIT_REFUSAL);
+  eq(SUB_LIMIT_REFUSAL, "A subwoofer limit above 50 Hz is not supported " +
+    "here. Check the setting, or choose Full-range speaker.");
+}
+
+export async function test_role_defaults_and_ranges() {
+  eq(ROLE_LIMITS[ROLE.FULLRANGE].defaultHz, 80);
+  eq(ROLE_LIMITS[ROLE.FULLRANGE].minHz, 20);
+  eq(ROLE_LIMITS[ROLE.FULLRANGE].maxHz, 500);
+  eq(ROLE_LIMITS[ROLE.SUBWOOFER].defaultHz, 20);
+  eq(ROLE_LIMITS[ROLE.SUBWOOFER].minHz, 20);
+  eq(ROLE_LIMITS[ROLE.SUBWOOFER].maxHz, 50);
+  assert(Object.isFrozen(ROLE_LIMITS[ROLE.SUBWOOFER]));
+  for (const role of Object.values(ROLE)) {
+    const d = changeRole(decl(), role);
+    eq(checkDeclaration({ ...d, capabilityConfirmed: true }).ok, true,
+      role + " default is inside its range");
+  }
+}
+
+export async function test_no_role_blocks_sound() {
+  for (const role of [undefined, null, "", "highpass", "lowpass"]) {
+    const r = checkDeclaration(decl({ role }));
+    eq(r.ok, false, String(role));
+    eq(r.errors[0], "Choose what is connected to this output.");
+    throws(() => speakerDict(role), "speaker dict " + role);
+    throws(() => levelNoiseBand(role, 20), "noise band " + role);
+    throws(() => roleFileTag(role), "file tag " + role);
+  }
+}
+
+export async function test_role_change_resets() {
+  const before = decl({ limitHz: 40, enclosure: "ported", portTuningHz: 45,
+    portConfirmed: true });
+  eq(checkDeclaration(before).ok, true);
+  const after = changeRole(before, ROLE.SUBWOOFER);
+  eq(after.role, ROLE.SUBWOOFER);
+  eq(after.limitHz, 20, "subwoofer default");
+  eq(after.capabilityConfirmed, false, "3b tick cleared");
+  eq(after.portConfirmed, false, "3c tick cleared");
+  eq(after.enclosure, "ported");
+  eq(after.portTuningHz, 45);
+  eq(checkDeclaration(after).ok, false);
+  eq(changeRole(after, ROLE.FULLRANGE).limitHz, 80, "full-range default");
+  throws(() => changeRole(before, "lowpass"));
+}
+
+export async function test_capability_text_follows_role() {
+  eq(capabilityText(ROLE.FULLRANGE, 80), "This speaker can safely play " +
+    "down to 80 Hz at moderate level. I have checked its spec sheet.");
+  eq(capabilityText(ROLE.SUBWOOFER, 25), "This subwoofer can safely play " +
+    "down to 25 Hz at moderate level. I have checked its spec sheet.");
+  throws(() => capabilityText(undefined, 20));
+}
+
+export async function test_speaker_dict_and_file_tag() {
+  eq(JSON.stringify(speakerDict(ROLE.FULLRANGE)), '{"filter_type":"highpass"}');
+  eq(JSON.stringify(speakerDict(ROLE.SUBWOOFER)), '{"filter_type":"lowpass"}');
+  eq(roleFileTag(ROLE.FULLRANGE), "fullrange");
+  eq(roleFileTag(ROLE.SUBWOOFER), "sub");
+}
+
+export async function test_level_noise_band_per_role() {
+  eq(JSON.stringify(levelNoiseBand(ROLE.FULLRANGE, 80)),
+    '{"lowHz":100,"highHz":10000}');
+  eq(JSON.stringify(levelNoiseBand(ROLE.SUBWOOFER, 20)),
+    '{"lowHz":40,"highHz":200}');
+  eq(JSON.stringify(levelNoiseBand(ROLE.SUBWOOFER, 50)),
+    '{"lowHz":100,"highHz":200}');
+  eq(levelNoiseBandLabel(ROLE.SUBWOOFER, 20),
+    "Test noise: 40\u2013200 Hz (subwoofer)");
+  eq(levelNoiseBandLabel(ROLE.FULLRANGE, 20),
+    "Test noise: 100 Hz\u201310 kHz (full-range)");
+}
+
+export async function test_uncalibrated_target_is_minus_40_dbfs() {
+  eq(LIMITS.MIC_TARGET_DBFS, -40);
+  eq(LIMITS.MIC_TARGET_SPL_DB, 75);
 }
 
 export async function test_declaration_needs_capability_tick() {

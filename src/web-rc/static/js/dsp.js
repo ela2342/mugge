@@ -67,23 +67,25 @@ export class Cascade {
 }
 
 export const LEVEL_NOISE = Object.freeze({
-  LOW_HZ: 100,
-  HIGH_HZ: 10000,
-  ORDER: 4,
-  CREST_SECONDS: 10,
+  ORDER: 4,              // AC5d/E2d, Butterworth order of each band edge
+  CREST_SECONDS: 10,     // AC5d, crest measured over >= 10 s
 });
 
 /**
- * Level-check noise (AC5d): pink noise at unit level through a 4th-order
- * Butterworth 100 Hz highpass and 10 kHz lowpass. nextSample() returns the
- * band-limited value at unit gain; the caller scales it.
+ * Level-check noise (AC5d, E2d): pink noise at unit level through a
+ * 4th-order Butterworth highpass at band.lowHz and lowpass at band.highHz
+ * (safety.levelNoiseBand). nextSample() returns the band-limited value at
+ * unit gain; the caller scales it.
  */
 export class LevelNoise {
-  constructor(seed, sampleRate) {
+  constructor(seed, sampleRate, band) {
+    if (!(band && band.lowHz < band.highHz)) {
+      throw new RangeError("level noise needs a band with lowHz < highHz");
+    }
     this.pink = new PinkNoise(seed);
     this.filter = new Cascade([
-      ...butterworth("highpass", LEVEL_NOISE.ORDER, LEVEL_NOISE.LOW_HZ, sampleRate),
-      ...butterworth("lowpass", LEVEL_NOISE.ORDER, LEVEL_NOISE.HIGH_HZ, sampleRate),
+      ...butterworth("highpass", LEVEL_NOISE.ORDER, band.lowHz, sampleRate),
+      ...butterworth("lowpass", LEVEL_NOISE.ORDER, band.highHz, sampleRate),
     ]);
   }
 
@@ -93,13 +95,14 @@ export class LevelNoise {
 }
 
 /**
- * Crest factor of the band-limited level noise for one seed, measured over
- * the first `seconds` of its deterministic stream (AC5d).
+ * RMS, peak and crest factor of the band-limited level noise for one seed
+ * and band, over the first `seconds` of its deterministic stream (AC5d).
  * Returns { rms, peak, crestDb }.
  */
-export function levelNoiseCrest(seed, sampleRate, seconds = LEVEL_NOISE.CREST_SECONDS) {
+export function levelNoiseCrest(seed, sampleRate, band,
+  seconds = LEVEL_NOISE.CREST_SECONDS) {
   const n = Math.round(seconds * sampleRate);
-  const src = new LevelNoise(seed, sampleRate);
+  const src = new LevelNoise(seed, sampleRate, band);
   let sumSq = 0;
   let peak = 0;
   for (let i = 0; i < n; i++) {
