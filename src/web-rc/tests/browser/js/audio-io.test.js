@@ -185,17 +185,34 @@ export async function test_c1b_ended_sweep_retires_without_suspend() {
   assert(io.recording === 7, "the recording goes on");
 }
 
-/** AE a1736914: the output onset and the capture's first frame reach the flow. */
+/**
+ * AE a1736914: the output onset and the capture's first frame reach the
+ * flow, each with the clock of the context that counted it.
+ */
 export async function test_onset_and_start_frame_are_passed_on() {
   const { io, outputs, msgs, play } = rig();
+  io.clock = io.meter.clock = 3;
   play();
   outputs.A.send({ type: "started", frame: 1152 });
-  eq(JSON.stringify(msgs.output), JSON.stringify([{ type: "started", frame: 1152 }]));
+  eq(JSON.stringify(msgs.output),
+    JSON.stringify([{ type: "started", frame: 1152, clock: 3 }]));
   io.execute({ type: "record", token: 5, frames: 10 });
   const samples = new Float32Array(10);
+  io.clock = 4;                   // the meter's clock counts, not the latest
   io._onMeterMessage({ type: "recorded", id: 5, startFrame: 1024, samples });
   eq(msgs.recorded.length, 1);
   eq(msgs.recorded[0][0], 5);
   eq(msgs.recorded[0][1], samples);
   eq(msgs.recorded[0][2], 1024, "the capture's first frame");
+  eq(msgs.recorded[0][3], 3, "the meter's clock");
+}
+
+/** AE onset clock condition: a node keeps the clock of the context it ran on. */
+export async function test_started_carries_the_node_clock() {
+  const { io, outputs, msgs, play } = rig();
+  io.clock = 3;
+  play();
+  io.clock = 4;                   // a new context opened meanwhile
+  outputs.A.send({ type: "started", frame: 0 });
+  eq(msgs.output[0].clock, 3);
 }

@@ -32,10 +32,13 @@ function ready({ cal = false } = {}) {
   return f;
 }
 
-/** A capture as the page delivers it: the output onset, then the recording. */
+/**
+ * A capture as the page delivers it: the output onset, then the recording,
+ * both counted on context clock 1.
+ */
 function rec(f, token, samples, onset = 0) {
-  eq(f.output({ type: "started", frame: 4096 + onset }).length, 0);
-  return f.recorded(token, samples, 4096);
+  eq(f.output({ type: "started", frame: 4096 + onset, clock: 1 }).length, 0);
+  return f.recorded(token, samples, 4096, 1);
 }
 
 /** Tick every 4a item, then acknowledge (UX 64c83e3e). */
@@ -108,9 +111,20 @@ export async function test_ack_texts_and_checkboxes() {
       "to measure.",
   ].join("\n"));
   eq(vm.ack.items.length, FLOW.ACK_ITEMS);
-  eq(ackOutputText(""), "Sound plays on this browser's default output " +
+  const DEFAULT_OUT = "Sound plays on this browser's default output " +
     "device. I have checked that it is connected to the speaker I want to " +
-    "measure.");
+    "measure.";
+  eq(ackOutputText("", ""), DEFAULT_OUT);
+  eq(ackOutputText("default", ""), DEFAULT_OUT, "the default device's id");
+  // UX 10bc34bf: a chosen output whose label is unknown is not the default.
+  const CHOSEN_OUT = "Sound plays on the output device selected in setup " +
+    "(the browser does not show its name). I have checked that it is " +
+    "connected to the speaker I want to measure.";
+  eq(ackOutputText("4f1c9a", ""), CHOSEN_OUT);
+  eq(viewModel(f, { sinkId: "4f1c9a", sinkLabel: "" }).ack.items[3], CHOSEN_OUT);
+  eq(ackOutputText("4f1c9a", "USBStreamer"),
+    'Sound plays on "USBStreamer". It is connected to the speaker I want ' +
+    "to measure.");
   eq(vm.ack.button, "I have checked all of this");
   eq(vm.ack.ticked.join(), "false,false,false,false");
   eq(vm.ack.canAcknowledge, false);

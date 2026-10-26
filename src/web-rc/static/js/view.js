@@ -54,15 +54,22 @@ export const TEXT = Object.freeze({
 });
 
 /**
- * The 4a output item (UX 64c83e3e): the device chosen with setSinkId, by
- * its label, or the browser's default output device.
+ * The 4a output item (UX 64c83e3e, 10bc34bf): the text follows the sinkId
+ * in use. The device chosen with setSinkId by its label; a chosen device
+ * whose label the browser hides; else the browser's default output device.
  */
-export function ackOutputText(sinkLabel) {
-  return sinkLabel
-    ? "Sound plays on \"" + sinkLabel + "\". It is connected to the " +
-      "speaker I want to measure."
-    : "Sound plays on this browser's default output device. I have " +
-      "checked that it is connected to the speaker I want to measure.";
+export function ackOutputText(sinkId, sinkLabel) {
+  if (sinkLabel) {
+    return "Sound plays on \"" + sinkLabel + "\". It is connected to the " +
+      "speaker I want to measure.";
+  }
+  if (sinkId && sinkId !== "default") {
+    return "Sound plays on the output device selected in setup (the " +
+      "browser does not show its name). I have checked that it is " +
+      "connected to the speaker I want to measure.";
+  }
+  return "Sound plays on this browser's default output device. I have " +
+    "checked that it is connected to the speaker I want to measure.";
 }
 
 /** The 3c second confirmation, with the values it confirms (UX 64c83e3e). */
@@ -128,7 +135,7 @@ export function progressText(flow) {
   return "";
 }
 
-/** The whole page state. extras: { sinkLabel, pipelineError }. */
+/** The whole page state. extras: { sinkId, sinkLabel, pipelineError }. */
 export function viewModel(flow, extras = {}) {
   const audio = flow.audio;
   const decl = flow.decl;
@@ -179,7 +186,7 @@ export function viewModel(flow, extras = {}) {
     ack: {
       title: TEXT.ACK_TITLE,
       intro: TEXT.ACK_INTRO,
-      items: [...TEXT.ACK_ITEMS, ackOutputText(extras.sinkLabel || "")],
+      items: [...TEXT.ACK_ITEMS, ackOutputText(extras.sinkId || "", extras.sinkLabel || "")],
       ticked: Array.from({ length: FLOW.ACK_ITEMS }, (_, i) => flow.ackTicks.has(i)),
       button: TEXT.ACK_BUTTON,
       canAcknowledge: flow.canAcknowledge,

@@ -28,8 +28,8 @@ export class App {
     this.io = io || new AudioIO({
       onMeter: (m) => this.apply(this.flow.meter(this.now(), m)),
       onOutput: (m) => this.apply(this.flow.output(m)),
-      onRecorded: (id, samples, startFrame) =>
-        this.apply(this.flow.recorded(id, samples, startFrame)),
+      onRecorded: (id, samples, startFrame, clock) =>
+        this.apply(this.flow.recorded(id, samples, startFrame, clock)),
       onError: () => this.apply(this.flow.audioError()),
     });
     this.rc = rc || null;
@@ -277,6 +277,7 @@ export class App {
   render() {
     const $ = this.$;
     const vm = viewModel(this.flow, {
+      sinkId: this.io.sinkId,
       sinkLabel: this._label("audiooutput", this.io.sinkId),
       pipelineError: this.pipelineError,
     });

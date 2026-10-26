@@ -346,6 +346,7 @@ export class Flow {
       // AE a1736914: where this capture's played buffer really began.
       if (this.run.capturing && this.run.onsetFrame === null) {
         this.run.onsetFrame = msg.frame;
+        this.run.onsetClock = msg.clock;
       }
       return [];
     }
@@ -486,13 +487,16 @@ export class Flow {
 
   /**
    * A finished recording from the meter worklet; startFrame is the frame of
-   * its first sample. The output onset relative to it goes to the analysis,
-   * which removes it (AE a1736914). Unknown or out of bounds: audio error.
+   * its first sample, clock the number of the context whose clock counted
+   * it. The output onset relative to it goes to the analysis, which removes
+   * it (AE a1736914). Unknown, out of bounds, or counted on another clock
+   * than the onset (AE onset clock condition): audio error.
    */
-  recorded(token, samples, startFrame) {
+  recorded(token, samples, startFrame, clock) {
     if (!this._is(token, "record")) return [];
     const onset = this.run.onsetFrame - startFrame;
     if (this.run.onsetFrame === null || !Number.isInteger(startFrame) ||
+        clock == null || clock !== this.run.onsetClock ||
         !Number.isInteger(onset) ||
         Math.abs(onset) > FLOW.MAX_ONSET_S * LIMITS.REQUIRED_RATE) {
       return this.audioError();
@@ -553,7 +557,7 @@ export class Flow {
     this.run = {
       lc: null, band: null, entry: null, micRmsDbfs: null, confirmed: null,
       plan: null, played: null, gain: 0, captures: [], capturing: false,
-      onsets: [], onsetFrame: null,
+      onsets: [], onsetFrame: null, onsetClock: null,
       sounding: false, pending: null, result: null,
     };
   }
@@ -589,6 +593,7 @@ export class Flow {
     this.run.capturing = true;
     this.run.sounding = true;
     this.run.onsetFrame = null;
+    this.run.onsetClock = null;
     return [
       { type: "record", token, frames },
       { type: "sweep-start", channel: this.channel, samples: this.run.played,

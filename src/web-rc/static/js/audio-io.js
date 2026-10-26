@@ -18,6 +18,11 @@
 // on the render thread and reports "stopped" (zero reached). Only then is it
 // disconnected and the context suspended, and only then is a new output
 // node built and connected: an old ramp-down never overlaps a new ramp-in.
+//
+// Clock (AE onset condition): every open() is a new context with its own
+// currentFrame clock and number. Output "started" messages and recordings
+// carry the number of the context whose worklet stamped their frame, so
+// the flow only compares frames from one clock.
 // If "stopped" does not come within ZERO_TIMEOUT_MS, the context is
 // suspended anyway and the node is treated as stopped.
 
@@ -60,6 +65,8 @@ export function deviceKey(devices) {
     .join("|");
 }
 
+let clockSeq = 0;
+
 export class AudioIO {
   constructor({ onMeter, onOutput, onRecorded, onError } = {}) {
     this.onMeter = onMeter || (() => {});
@@ -67,6 +74,7 @@ export class AudioIO {
     this.onRecorded = onRecorded || (() => {});
     this.onError = onError || (() => {});
     this.ctx = null;
+    this.clock = null;            // the open context's clock number
     this.stream = null;
     this.track = null;
     this.meter = null;
@@ -113,6 +121,8 @@ export class AudioIO {
     ctx.createMediaStreamSource(stream).connect(meter);
 
     this.ctx = ctx;
+    this.clock = ++clockSeq;
+    meter.clock = this.clock;
     this.stream = stream;
     this.track = stream.getAudioTracks()[0];
     this.meter = meter;
@@ -134,7 +144,7 @@ export class AudioIO {
     this.recording = null;
     if (this.stream) for (const t of this.stream.getTracks()) t.stop();
     const ctx = this.ctx;
-    this.ctx = this.stream = this.track = this.meter = null;
+    this.ctx = this.clock = this.stream = this.track = this.meter = null;
     if (ctx) await ctx.close().catch(() => {});
   }
 
@@ -210,6 +220,7 @@ export class AudioIO {
         return;
       }
       const node = this._newOutput({ channel, gain, source });
+      node.clock = this.clock;
       node.port.onmessage = (e) => this._onOutputMessage(node, e.data);
       node.connect(ctx.destination);
       this.out = node;
@@ -283,6 +294,7 @@ export class AudioIO {
       this._retire(node, false);
     }
     // A replaced output's messages are stale, except an error.
+    if (msg.type === "started") msg = { ...msg, clock: node.clock };
     if (current || msg.type === "error") this.onOutput(msg);
   }
 
@@ -295,7 +307,7 @@ export class AudioIO {
     } else if (msg.type === "recorded") {
       if (msg.id !== this.recording) return;
       this.recording = null;
-      this.onRecorded(msg.id, msg.samples, msg.startFrame);
+      this.onRecorded(msg.id, msg.samples, msg.startFrame, this.meter.clock);
     }
   }
 
