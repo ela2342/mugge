@@ -21,6 +21,7 @@ Acceptance values: AE, 2026-10-25.
 """
 
 import ast
+import dataclasses
 import inspect
 import math
 import os
@@ -28,12 +29,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-import dataclasses
-
 import numpy as np
 import pytest
 import scipy.signal
 import soundfile as sf
+import yaml
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -135,7 +135,8 @@ def home_lab_dir(tmp_path_factory, bundle, home_lab):
     _, result = home_lab
     out = tmp_path_factory.mktemp("home_lab_out")
     vp.write_venue_filters(result, str(out))
-    vp.write_delays_yaml(result, bundle, str(out / "delays.yml"))
+    vp.write_delays_yaml(result, bundle, str(out / "delays.yml"),
+                         simulated_scenario="home_lab")
     return out
 
 
@@ -718,6 +719,7 @@ class TestAC7Identity:
         uncorrected_right = _db_at(path, f0, lo, hi) - level
         uncorrected_left = (_db_at(sim.true_paths["sat_left"], f0, lo, hi)
                             - ref.reference_levels_db["sat_left"])
+        assert uncorrected_right >= 4.0, (uncorrected_right,)                # (a0)
         assert uncorrected_right - uncorrected_left >= 4.0, (
             uncorrected_right, uncorrected_left)                              # (a)
         own_at_f0 = _db_at(closed_loop.system_response(path, own_fir), f0, lo, hi) - level
@@ -753,6 +755,191 @@ class TestAC7Identity:
         assert np.max(np.abs(a - b)) > 1e-3
 
 
+# -- F-399: staged publish ----------------------------------------------------
+
+def _files(d):
+    """Top-level regular files and their bytes."""
+    return {p.name: p.read_bytes() for p in Path(d).iterdir() if p.is_file()}
+
+
+def _staging_dirs(d):
+    return [p.name for p in Path(d).iterdir() if p.name.startswith(vp.STAGING_PREFIX)]
+
+
+def _fill_stage(stage_dir, wavs, scenario, tag):
+    for n in wavs:
+        (Path(stage_dir) / n).write_bytes(f"{tag} {n}".encode())
+    (Path(stage_dir) / vp.DELAYS_FILENAME).write_text(yaml.safe_dump(
+        {"venue": tag, "simulated": scenario is not None, "scenario": scenario}))
+
+
+def _publish(out, wavs, scenario, tag):
+    with vp.staged_outputs(str(out), simulated_scenario=scenario) as stage:
+        _fill_stage(stage.path, wavs, scenario, tag)
+        stage.commit()
+
+
+OLD_SET = ["combined_left_hp.wav", "combined_right_hp.wav",
+           "combined_sub1_lp.wav", "combined_sub2_lp.wav"]
+NEW_SET = ["combined_left_hp.wav", "combined_right_hp.wav",
+           "combined_sub1_lp.wav", "dirac.wav"]
+
+
+class TestStagedPublish:
+
+    @pytest.fixture
+    def out(self, tmp_path):
+        out = tmp_path / "out"
+        _publish(out, OLD_SET, None, "old")
+        (out / "notes.txt").write_text("operator notes")
+        return out
+
+    def test_real_publish(self, out):
+        files = _files(out)
+        assert sorted(files) == sorted(OLD_SET + ["delays.yml", "notes.txt"])
+        assert yaml.safe_load(files["delays.yml"])["simulated"] is False
+        assert _staging_dirs(out) == []
+
+    def test_no_commit_publishes_nothing(self, out):
+        before = _files(out)
+        with vp.staged_outputs(str(out), simulated_scenario="home_lab") as stage:
+            _fill_stage(stage.path, NEW_SET, "home_lab", "new")
+        assert _files(out) == before
+        assert _staging_dirs(out) == []
+
+    def test_exception_in_body_publishes_nothing(self, out):
+        before = _files(out)
+        with pytest.raises(RuntimeError, match="verify blew up"):
+            with vp.staged_outputs(str(out)) as stage:
+                _fill_stage(stage.path, NEW_SET, None, "new")
+                raise RuntimeError("verify blew up")
+        assert _files(out) == before
+        assert _staging_dirs(out) == []
+
+    def test_simulated_publish_marks_and_replaces_fewer_files(self, out):
+        _publish(out, NEW_SET, "home_lab", "new")
+        files = _files(out)
+        # combined_sub2_lp.wav from the old set must not survive next to the new set.
+        assert sorted(files) == sorted(NEW_SET + ["delays.yml", "SIMULATED", "notes.txt"])
+        assert all(files[n] == f"new {n}".encode() for n in NEW_SET)
+        delays = yaml.safe_load(files["delays.yml"])
+        assert delays["simulated"] is True and delays["scenario"] == "home_lab"
+        assert files["notes.txt"] == b"operator notes"
+
+    def test_real_publish_removes_stale_marker(self, out):
+        _publish(out, NEW_SET, "home_lab", "sim")
+        _publish(out, OLD_SET, None, "real")
+        assert "SIMULATED" not in _files(out)
+        assert yaml.safe_load(_files(out)["delays.yml"])["simulated"] is False
+
+    def test_commit_only_once_and_only_inside(self, out):
+        with vp.staged_outputs(str(out)) as stage:
+            _fill_stage(stage.path, NEW_SET, None, "new")
+            stage.commit()
+            with pytest.raises(RuntimeError):
+                stage.commit()
+        with vp.staged_outputs(str(out)) as late:
+            pass
+        with pytest.raises(RuntimeError):
+            late.commit()
+
+    @pytest.mark.parametrize("scenario,flag", [(None, True), ("home_lab", False)])
+    def test_marker_mismatch_refused_before_any_change(self, out, scenario, flag):
+        before = _files(out)
+        with pytest.raises(ValueError, match="simulated"):
+            with vp.staged_outputs(str(out), simulated_scenario=scenario) as stage:
+                _fill_stage(stage.path, NEW_SET, "x" if flag else None, "new")
+                stage.commit()
+        assert _files(out) == before
+
+    def test_unexpected_staged_file_refused(self, out):
+        before = _files(out)
+        with pytest.raises(ValueError, match="unexpected"):
+            with vp.staged_outputs(str(out)) as stage:
+                _fill_stage(stage.path, NEW_SET, None, "new")
+                (Path(stage.path) / "stray.txt").write_text("x")
+                stage.commit()
+        assert _files(out) == before
+
+    def test_sweep_keeps_dirac(self, tmp_path):
+        out = tmp_path / "out"
+        _publish(out, NEW_SET, None, "old")
+        _publish(out, OLD_SET, None, "new")
+        # combined_* not in the new set go; dirac.wav is never swept (AD).
+        assert sorted(n for n in _files(out) if vp.is_deployable_name(n)) == \
+            sorted(OLD_SET + ["dirac.wav"])
+
+    @pytest.mark.parametrize("via_symlink", [False, True])
+    def test_simulated_refused_into_coeffs_dir(self, tmp_path, monkeypatch, via_symlink):
+        from room_correction import deploy
+        coeffs = tmp_path / "coeffs"
+        coeffs.mkdir()
+        (coeffs / "combined_left_hp.wav").write_bytes(b"prod")
+        monkeypatch.setattr(deploy, "DEFAULT_COEFFS_DIR", str(coeffs))
+        target = coeffs
+        if via_symlink:
+            target = tmp_path / "link"
+            target.symlink_to(coeffs)
+        with pytest.raises(ValueError, match="coeffs dir"):
+            with vp.staged_outputs(str(target), simulated_scenario="home_lab"):
+                pytest.fail("body must not run")
+        assert _files(coeffs) == {"combined_left_hp.wav": b"prod"}
+        assert _staging_dirs(coeffs) == []
+        with pytest.raises(ValueError, match="coeffs dir"):
+            vp.publish_venue_outputs(str(tmp_path), str(target),
+                                     simulated_scenario="home_lab")
+
+    @pytest.mark.parametrize("prior,scenario", [(None, "home_lab"), ("home_lab", None),
+                                                (None, None)])
+    def test_crash_at_every_step_never_leaves_unmarked_mix(self, tmp_path, monkeypatch,
+                                                           prior, scenario):
+        # Kill the publish at its k-th filesystem change, for every k (Architect C).
+        # Afterwards a set with delays.yml must be complete and new, or the old one
+        # untouched; anything that may hold simulated files must carry SIMULATED.
+        k = 0
+        while True:
+            k += 1
+            out = tmp_path / f"out{k}"
+            _publish(out, OLD_SET, prior, "old")
+            before = _files(out)
+            calls = {"n": 0}
+            real_replace, real_remove = os.replace, os.remove
+
+            def crashing(real):
+                def f(*a, **kw):
+                    calls["n"] += 1
+                    if calls["n"] == k:
+                        raise OSError("power loss")
+                    return real(*a, **kw)
+                return f
+
+            monkeypatch.setattr(vp.os, "replace", crashing(real_replace))
+            monkeypatch.setattr(vp.os, "remove", crashing(real_remove))
+            try:
+                _publish(out, NEW_SET, scenario, "new")
+                crashed = False
+            except OSError:
+                crashed = True
+            monkeypatch.undo()
+            after = _files(out)
+            assert _staging_dirs(out) == []
+            if not crashed:
+                break
+            if after == before:
+                continue
+            if "delays.yml" in after:
+                # Either the whole new set, or the old set untouched (a crash right
+                # after the marker went in leaves old files marked: fail closed).
+                deployable = {n: b for n, b in after.items() if vp.is_deployable_name(n)}
+                new = {n: f"new {n}".encode() for n in NEW_SET}
+                old = {n: b for n, b in before.items() if vp.is_deployable_name(n)}
+                assert deployable in (new, old)
+                assert after["delays.yml"] == before["delays.yml"] or deployable == new
+            if scenario is not None or prior is not None:
+                assert "SIMULATED" in after
+        assert k > 6  # the walk reached every step, not just the first
+
+
 # -- CLI ---------------------------------------------------------------------
 
 def _run_cli(*args):
@@ -774,7 +961,10 @@ class TestCLI:
         assert "Known limit" in proc.stdout
         assert "VERIFY FAILED" not in proc.stderr
         assert sorted(p.name for p in out.glob("*.wav")) == sorted(EXPECTED_FILES)
-        assert (out / "delays.yml").stat().st_size > 0
+        delays = yaml.safe_load((out / "delays.yml").read_text())
+        assert delays["simulated"] is True and delays["scenario"] == "home_lab"
+        assert (out / "SIMULATED").is_file()
+        assert _staging_dirs(out) == []
 
     def test_venue_run_needs_profile(self, tmp_path):
         proc = _run_cli("--venue", str(VENUE), "--scenario", "home_lab",
@@ -808,3 +998,66 @@ class TestCLI:
         err = capsys.readouterr().err
         assert "VERIFY FAILED" in err
         assert "D-009 Gain Limit (combined_left_hp.wav)" in err
+        # F-399 (AD M1): nothing deployable-named is left behind.
+        assert sorted(p.name for p in tmp_path.iterdir()) == []
+
+    def _run_main(self, monkeypatch, out):
+        import runner
+        monkeypatch.setattr(sys, "argv", [
+            "runner.py", "--mock", "--venue", str(VENUE), "--speaker-profile", str(PROFILE),
+            "--scenario", "home_lab", "--output-dir", str(out)])
+        try:
+            runner.main()
+        except SystemExit as exc:
+            return exc.code
+        return 0
+
+    def _fake_run(self, monkeypatch, home_lab, filters=None):
+        sim, ref = home_lab
+        res = ref if filters is None else vp.VenueFilterResult(
+            filters, ref.corrections, ref.reference_levels_db,
+            ref.recommended_gain_delta_db, ref.delays_s, ref.delays_samples)
+        monkeypatch.setattr(venue_sim, "simulate_venue_measurements", lambda *a, **k: sim)
+        monkeypatch.setattr(vp, "generate_venue_filters", lambda *a, **k: res)
+
+    def test_failed_run_keeps_previous_passing_set(self, tmp_path, monkeypatch, home_lab):
+        out = tmp_path / "out"
+        self._fake_run(monkeypatch, home_lab)
+        assert self._run_main(monkeypatch, out) == 0
+        before = _files(out)
+        assert sorted(before) == sorted(list(EXPECTED_FILES) + ["delays.yml", "SIMULATED"])
+        boosted = dict(home_lab[1].filters)
+        boosted["combined_sub1_lp.wav"] = boosted["combined_sub1_lp.wav"] * 2.0
+        self._fake_run(monkeypatch, home_lab, boosted)
+        assert self._run_main(monkeypatch, out) == 1
+        assert _files(out) == before
+        assert _staging_dirs(out) == []
+
+    def test_verify_reads_staged_bytes(self, tmp_path, monkeypatch, home_lab):
+        # The gate must judge the files on disk, not the in-memory result (AD).
+        out = tmp_path / "out"
+        self._fake_run(monkeypatch, home_lab)
+        real_write = vp.write_venue_filters
+
+        def write_then_corrupt(result, output_dir, *a, **kw):
+            paths = real_write(result, output_dir, *a, **kw)
+            p = os.path.join(output_dir, "combined_right_hp.wav")
+            data, sr = sf.read(p, dtype="float64")
+            sf.write(p, data * 2.0, sr, subtype="FLOAT")
+            return paths
+
+        monkeypatch.setattr(vp, "write_venue_filters", write_then_corrupt)
+        assert self._run_main(monkeypatch, out) == 1
+        assert sorted(p.name for p in out.iterdir()) == []
+
+    def test_exception_in_verify_publishes_nothing(self, tmp_path, monkeypatch, home_lab):
+        out = tmp_path / "out"
+        self._fake_run(monkeypatch, home_lab)
+
+        def boom(*a, **kw):
+            raise RuntimeError("verify crashed")
+
+        monkeypatch.setattr(verify, "run_venue_checks", boom)
+        with pytest.raises(RuntimeError, match="verify crashed"):
+            self._run_main(monkeypatch, out)
+        assert sorted(p.name for p in out.iterdir()) == []
