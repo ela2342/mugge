@@ -1,0 +1,73 @@
+# F-262 diagnostic (scratch/F-262-diag ONLY, never merged).
+#
+# Runs N=20 full measurement sessions on the same ARM runner and the same
+# local-demo stack as T2 (nix run .#test-e2e), selecting only
+# tests/service-integration/test_f262_diag.py, and uploads the JSONL and
+# summary. A push to scratch/F-262-diag triggers it; ci.yml has no push
+# trigger, so T1/T2 do not run on this branch.
+
+name: F-262 diag
+
+on:
+  push:
+    branches: [scratch/F-262-diag]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: f262-diag
+  cancel-in-progress: false
+
+jobs:
+  f262-diag:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6 (= v6.1.0)
+
+      - name: Checkout SHA
+        run: git rev-parse HEAD
+
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b  # v31 = upstream master HEAD on 2026-10-24 (2 commits after v31.11.2; ships Nix 2.35.4)
+        with:
+          install_url: https://releases.nixos.org/nix/nix-2.35.4/install
+
+      - name: Verify Nix version
+        run: |
+          nix --version
+          test "$(nix --version)" = "nix (Nix) 2.35.4"
+
+      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866  # v17
+        with:
+          name: mugge
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+      # -k selects only the diag test in both pytest invocations of
+      # test-e2e.sh; the browser E2E invocation then collects nothing
+      # (exit 5), so the step's exit code is not the result. The result
+      # is summary.json; the next step checks it exists.
+      - name: F-262 diag (N=20 sessions on local-demo)
+        continue-on-error: true
+        env:
+          E2E_STACK_TIMEOUT: '60'
+          F262_N: '20'
+          F262_DIAG_DIR: /tmp/f262-diag
+          F262_DIAG_OUT: ${{ github.workspace }}/f262-diag-out
+        run: cachix watch-exec mugge -- nix run .#test-e2e -- -k F262Diag -s
+
+      - name: Check summary exists
+        run: |
+          test -f f262-diag-out/summary.json
+          cat f262-diag-out/summary.json
+
+      - name: Upload diag artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4 (= v4.6.2)
+        with:
+          name: f262-diag-${{ github.sha }}
+          path: |
+            f262-diag-out/
+            /tmp/f262-diag/events.jsonl
+          retention-days: 7
+          if-no-files-found: warn

@@ -1013,6 +1013,10 @@ def play_and_record(output_signal, output_channel, output_device_idx,
     return trimmed, pre_roll
 
 
+# F-262 diag (scratch only): monotonic timestamps of the last pw capture.
+_F262_TIMING = {}
+
+
 def _play_and_record_pw_capture(output_signal, output_channel, sr,
                                 pre_roll_s, post_roll_s,
                                 signal_gen, capture_target):
@@ -1066,6 +1070,10 @@ def _play_and_record_pw_capture(output_signal, output_channel, sr,
         # cover: the wait below (1.0s) + start_capture's internal settle
         # time (1.0s) + margin.  Use -40 dBFS to stay above PipeWire's
         # silence detection threshold.
+        _F262_TIMING.clear()
+        _F262_TIMING["level_dbfs"] = level_dbfs
+        _F262_TIMING["sig_type"] = sig_type
+        _F262_TIMING["t_warmup_play"] = time.monotonic()
         signal_gen.play(
             signal="pink",
             channels=[output_channel + 1],  # 1-indexed for RPC
@@ -1076,6 +1084,7 @@ def _play_and_record_pw_capture(output_signal, output_channel, sr,
 
         # Phase 2: Capture with the chain warm.
         # Start pw-record (connects to an already-active loopback source).
+        _F262_TIMING["t_capture_call"] = time.monotonic()
         proc = start_capture(
             output_path=cap_path,
             target=capture_target or "alsa_input.usb-miniDSP_UMIK-1",
@@ -1083,6 +1092,7 @@ def _play_and_record_pw_capture(output_signal, output_channel, sr,
             channels=1,
         )
 
+        _F262_TIMING["t_capture_returned"] = time.monotonic()
         try:
             # Pre-roll: capture silence for noise floor estimation.
             time.sleep(pre_roll_s)
@@ -1097,17 +1107,21 @@ def _play_and_record_pw_capture(output_signal, output_channel, sr,
             if sig_type == "sweep":
                 play_kwargs["freq"] = 20.0
                 play_kwargs["sweep_end"] = 20000.0
+            _F262_TIMING["t_sweep_play_call"] = time.monotonic()
             signal_gen.play(**play_kwargs)
+            _F262_TIMING["t_sweep_play_returned"] = time.monotonic()
 
             # Wait for playback + post-roll (room decay).
             time.sleep(duration_s + post_roll_s)
         finally:
             # Stop capture (SIGINT -> pw-record finalizes WAV).
+            _F262_TIMING["t_stop_capture"] = time.monotonic()
             stop_capture(proc)
 
         # Load the captured audio.
         recording = load_wav(cap_path)
         rec = recording[:, 0].astype(np.float64)
+        _F262_TIMING["captured_samples"] = len(rec)
 
         # Split into pre-roll and signal-aligned recording.
         if len(rec) > pre_roll_samples:

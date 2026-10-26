@@ -831,6 +831,13 @@ class MeasurementSession:
                     deconvolve, recording, sweep,
                     sr=self._config.sample_rate)
                 self._impulse_responses[key] = ir
+                # F-262 diag (scratch only).
+                from . import f262_diag
+                _t = dict(getattr(mn, "_F262_TIMING", {}))
+                await asyncio.to_thread(
+                    f262_diag.capture, key, recording,
+                    getattr(self, "_f262_pre_roll", None), sweep, ir,
+                    self._config.sample_rate, _t, _t.get("level_dbfs"))
                 await self._broadcast({
                     "type": "deconvolution_done",
                     "channel": ch.index, "channel_name": ch.name,
@@ -899,6 +906,8 @@ class MeasurementSession:
                 for name, delay_s in self._time_alignment_delays.items():
                     log.info("Time align %s: %.2fms (%d samples)",
                              name, delay_s * 1000, delay_samples[name])
+                from . import f262_diag  # F-262 diag (scratch only)
+                f262_diag.delays(self._time_alignment_delays, delay_samples)
                 # Save delays to output dir for deployment.
                 import yaml as _yaml
                 delays_path = os.path.join(
@@ -1142,6 +1151,8 @@ class MeasurementSession:
             d009 = verify_d009(path)
             min_phase = verify_minimum_phase(path)
             fmt = verify_format(path, expected_taps=n_taps, expected_sr=sr)
+            from . import f262_diag  # F-262 diag (scratch only)
+            f262_diag.verify(name, path, min_phase, d009)
             ch_pass = bool(
                 d009.passed and fmt.passed and min_phase.passed)
             ch_result = {
@@ -1512,6 +1523,8 @@ class MeasurementSession:
                 pass
 
         result = playrec_task.result()
+        # F-262 diag (scratch only): keep the pre-roll for onset analysis.
+        self._f262_pre_roll = result[1] if isinstance(result, tuple) else None
         # play_and_record() returns (trimmed_recording, pre_roll) tuple;
         # MockSoundDevice.playrec() returns ndarray directly.
         return result[0] if isinstance(result, tuple) else result
