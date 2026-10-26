@@ -71,9 +71,11 @@ Until the list is closed, these rules apply on the Pi 5:
     confirm, run `journalctl --user -u wireplumber | grep F-318` and look
     for `F-318: denied auto-link of stream`.
   - *How to make sound.* Use the web UI Test tab (signal-gen), Mixxx in
-    DJ mode or Reaper in Live mode. GraphManager makes their links.
+    DJ mode or Reaper in Live mode. GraphManager makes their links. The
+    Test tab is the only sanctioned way to check the speakers.
   - *Never create or remove links by hand.* Not with `pw-link <out> <in>`,
-    not with `pw-link -d`, not with a patchbay (qpwgraph, Helvum).
+    not with `pw-link -d`, not with `jack_connect`, not with a patchbay
+    (qpwgraph, Helvum).
     GraphManager owns every link. On all 8 USBStreamer playback ports
     (`playback_AUX0..7`: speakers AND headphones/IEM, D-063) the only
     allowed source is `pi4audio-convolver-out`. Any other link into the

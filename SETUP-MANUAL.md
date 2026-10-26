@@ -1943,7 +1943,8 @@ desktop app plays nothing.
 
 To make sound, use a path that GraphManager links:
 
-- the web UI Test tab (signal-gen) for test signals;
+- the web UI Test tab (signal-gen) for test signals. It is the only
+  sanctioned way to check the speakers;
 - Mixxx in DJ mode or Reaper in Live mode (select the mode first),
   started with `pw-jack`. GraphManager creates their links when they
   appear in the graph.
@@ -1959,7 +1960,8 @@ journalctl --user -u wireplumber | grep F-318
 `application.name` tells you which app was blocked. If there is no F-318
 line, the block is not the cause; continue with "No Sound Output" above.
 
-Never create or remove links by hand with `pw-link` or a patchbay.
+Never create or remove links by hand with `pw-link`, `jack_connect` or a
+patchbay (qpwgraph, Helvum).
 GraphManager owns every link. On all 8 USBStreamer playback ports the
 only allowed source is `pi4audio-convolver-out`; a hand-made link into the
 USBStreamer bypasses the crossover, the D-063 gains and the gate and can
