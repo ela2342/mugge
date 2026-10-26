@@ -765,6 +765,11 @@ priority!"
   pushed as 2f58d759. F-410 set to P2 (AE). F-262 H1 RELEASED (AE
   cfe9bf66, Architect record (i) e6ba4317) and relayed to worker-4
   with F-409. F-410 goes to worker-1 with the CM's next relay.
+  UPDATE (CM, 2026-10-26, after v267): backlog v267 pushed as
+  95f4e65e. F-262 #66 head 0c592da1 implements H1; the P3 re-run
+  passes every buildable profile, with no D-031 report. US-172: the
+  owner asked for status (via team-lead); v7 pins not yet in, and the
+  CM has sent worker-2 one status ask.
 
 ## Reserved IDs
 
@@ -3720,6 +3725,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      verbatim: "No joint ruling is needed. Please pass the dmas
      pre-check in (2) on as a CM go condition for tb-modprobe." That
      condition is G-3.
+  - UPDATE (CM, 2026-10-26, after v267): the owner asked for US-172
+    status via team-lead. The v7 pins are not yet in; the CM has sent
+    worker-2 one status ask.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -6751,6 +6759,23 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      unchanged; N4 stays asserted on the closed loop.
      Architect, verbatim: "release cfe9bf66. I checked the sha at read
      time against verify.py:293-338 at 7011419d."
+  - UPDATE (CM, 2026-10-26, after v267): head 0c592da1 "fix(F-262):
+    mandatory-HPF check references the passband peak (H1)" pushed
+    (PM-verified on origin, parent 7011419d). CI 40349317717 running;
+    the 7011419d run 40348528240 was cancelled by the concurrency
+    group. Evidence:
+    /tmp/cm-relay/F-262/frozen/w4-h1-p3-rerun-0b1b6062.txt (sha256
+    0b1b6062, verified at PM read).
+     Controls (float32): the five must-pass cases pass (24.9 / 28.6 /
+     52.8 / 149.0 / 23.2 dB) and the four must-fail cases fail (-0.0 /
+     3.4 / 6.2 / 12.4 dB). Worker-4: HP2000 "is 149.0 here vs 357.5
+     because float32 floors the stopband".
+     P3 re-run: every buildable channel passes G1+G2 and the HPF check
+     at the new reference, including the nine former false-fails
+     (lowest: pa-2way-onken sub 42.0 dB). Still unbuildable:
+     2way-80hz-ported (FileNotFoundError) and
+     workshop-xrk10f-fullrange (ValueError). FilterGenSync 2WAY sub1
+     50.0 dB and 4WAY sub 48.0 dB both pass. No D-031 report (CM).
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
