@@ -3458,6 +3458,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   it only when the readback matches. Done so far: only the CM's repo
   grep (nothing enables an ALSA restore service; no
   sound/hardware.alsa option); nix eval is blocked by the disk hold.
+  UPDATE (AE, via CM, 2026-10-26): the AE ACCEPTED the M3 ALSA check.
+  The read-only deploy check also runs `ls /etc/udev/rules.d` plus
+  `udevadm cat 2>/dev/null | grep -i alsactl`. The alsa-utils package
+  ships 90-alsa-restore.rules, which is inert without
+  services.udev.packages. If the USBStreamer amixer readback is the
+  same before and after the deploy, the item is CLOSED; no further AE
+  conditions. Still PENDING until that readback runs.
   Capture-commit kit READY (worker-3, uncommitted, via CM,
   2026-10-26): unit patch /tmp/w3-us173/mixxx-soundconfig-unit.patch
   (sha1 878e4a7c), regenerated on 55dc75e3, dry-run clean; Before=
@@ -3949,6 +3956,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   dB figure is a PLACEHOLDER, not yet derived (AE, 2026-10-25); the
   AE sets the threshold here, and US-174d's real gate points to
   this check.
+  SPLIT (AE, 2026-10-26) into two rows. (1) Correction-input
+  measurement (174c): keeps the 60 dB placeholder; its estimator is
+  still to be built. (2) US-174d re-measurement gate:
+  MEASURED_GATE_SNR_MIN_DB = 30.0, the minimum over the gate band at
+  1/6 octave, a placeholder until 174c's estimator exists. Reason: the
+  gate only needs to resolve 3 dB, while the input measurement has to
+  resolve cuts of up to 18 dB. The 174d AC wording "threshold AE-set
+  there" now points to row (2).
   Pushed (CM, 2026-10-25): US-174 head e071452b = US-174b code
   a3bc538c (55 new tests; local 1252 passed / 1 F-363 fail; sim-e2e
   130 passed) plus B6e. Its sandbox check stays red on the new
@@ -3999,6 +4014,25 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   closed_loop.py, venue_pipeline.py, runner.py and their tests; if
   crossover.py or generate_profile_filters.py are needed, stop and get
   an Architect ruling. The PR opens only after #57 and F-399 merge.
+  Fence WIDENED (CM, 2026-10-26) for worker-4's L3 HF-cut bound:
+  room_correction/correction.py (frequency-dependent cap at the
+  max_cut_db site), room_correction/verify.py (a new fail-closed HF
+  check) and their tests. Overlap: neither file is in #55 or named in
+  F-391; #57 changes both, and the branch builds on it.
+  generate_profile_filters is call-only. worker-4 sent a design
+  consult to the Architect, AE and AD.
+  Architect Q2 RULED option (b) (via CM, 2026-10-26): an atomic
+  symlink coeffs/current -> sets/<id>. The CM granted worker-4:
+  30-filter-chain-convolver.conf (paths become coeffs/current/<name>);
+  pw_config_generator.py plus its test (a shared expected-files
+  constant); pipewire.nix tmpfiles (sets/, sets/dirac seeds, and a
+  plain `L` for current, NOT `L+`, which would reset it to dirac on
+  every boot). Overlap: no active lane touches these; only the stale,
+  inactive PR #40 (sprint/session-16) touches pipewire.nix. Deploying
+  the new layout is a separate DEPLOY later; the AE is in on that
+  grant because it changes which coeff files PW reads. This supersedes
+  the earlier "NOT cleared ... pending Architect Q2" (convolver conf,
+  pipewire.nix, pw_config_generator).
   US-174c (measurement on the Pi, web-ui measurement/session.py)
   starts only after F-390/F-391 and builds on them, because it is the
   same file (L-046). Its Pi run is also gated by US-173 H, F-341 AC3,
