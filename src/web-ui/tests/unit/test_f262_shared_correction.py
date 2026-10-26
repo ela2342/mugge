@@ -11,6 +11,7 @@ simulated venue measurement and check:
 - session, filter_routes and the venue pipeline write the same samples.
 """
 
+import contextlib
 import copy
 import dataclasses
 import os
@@ -58,11 +59,16 @@ def measured_irs(bundle):
             for k, ir in sim.measured_irs.items()}
 
 
+@contextlib.contextmanager
 def _patched_profile(bundle):
+    """Serve bundle's profile by name; the .conf generator would read it from disk."""
     def load(name, profiles_dir=None, identities_dir=None):
         return bundle.profile, bundle.identities
-    return (patch("config_generator.load_profile_with_identities", side_effect=load),
-            patch("config_generator.validate_and_raise"))
+    with patch("config_generator.load_profile_with_identities", side_effect=load), \
+            patch("config_generator.validate_and_raise"), \
+            patch("room_correction.pw_config_generator.generate_filter_chain_conf",
+                  return_value="# mock PW conf"):
+        yield
 
 
 def _run_session(bundle, irs, output_dir):
@@ -78,8 +84,7 @@ def _run_session(bundle, irs, output_dir):
     for k, spk in bundle.profile["speakers"].items():
         if k in irs:
             session._impulse_responses[f"ch{spk['channel']}_pos0"] = irs[k]
-    load, validate = _patched_profile(bundle)
-    with load, validate:
+    with _patched_profile(bundle):
         return session._filter_gen_sync()
 
 
@@ -149,11 +154,10 @@ class TestSessionFailsClosed:
 class TestRoutesFailClosed:
 
     def test_bandpass_profile_rejected(self, bundle, tmp_path):
-        load, validate = _patched_profile(_with_bandpass(bundle))
         req = filter_routes.FilterGenerateRequest(
             profile=PROFILE_NAME, mode="crossover_plus_correction",
             generate_pw_conf=False)
-        with load, validate, \
+        with _patched_profile(_with_bandpass(bundle)), \
                 patch.object(filter_routes, "DEFAULT_SESSION_DIR", str(tmp_path / "session")), \
                 patch.object(filter_routes, "DEFAULT_OUTPUT_DIR", str(tmp_path / "routes")):
             with pytest.raises(ValueError, match=re.escape(BANDPASS_REJECTED)):
@@ -167,11 +171,10 @@ class TestParity:
     @pytest.fixture(scope="class")
     def routes_result(self, session_run, bundle):
         root, _ = session_run
-        load, validate = _patched_profile(bundle)
         req = filter_routes.FilterGenerateRequest(
             profile=PROFILE_NAME, mode="crossover_plus_correction",
             generate_pw_conf=False)
-        with load, validate, \
+        with _patched_profile(bundle), \
                 patch.object(filter_routes, "DEFAULT_SESSION_DIR", str(root / "session")), \
                 patch.object(filter_routes, "DEFAULT_OUTPUT_DIR", str(root / "routes")):
             return filter_routes._run_pipeline(req)
