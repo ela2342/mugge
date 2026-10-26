@@ -426,6 +426,11 @@ priority!"
   drafts the PR body, then the PR opens. Open placement rulings: AE on
   F-399 nit 2 (absolute vs difference premise); Architect on
   w4/d031-shared at 83620c87 (own PR or folded into 174d).
+  UPDATE (CM, 2026-10-26, after v211): backlog v211 pushed as
+  de2200a1. F-399 pushed at 2fb05039 (merges main 289f1a72 clean; 3
+  files, +443/-27); worker-4 adds the AE's (a0) commit and body draft
+  2, then the CM opens the PR. Both placement rulings are in (see
+  F-399 and US-174d).
 
 ## Reserved IDs
 
@@ -4874,6 +4879,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Architect it also removes the read-only orphans
   list_versioned_files, _get_active_filenames, _VERSIONED_RE and
   _PW_FILENAME_RE; deletions only.
+  RULING (Architect via CM, 2026-10-26): w4/d031-shared (83620c87)
+  folds into 174d, no separate PR; its blobs are identical on 174d.
+  The branch is retired: not pushed, not deleted. The 174d PR body
+  must name the shared D-031 helpers in its scope.
   US-174c (measurement on the Pi, web-ui measurement/session.py)
   starts only after F-390/F-391 and builds on them, because it is the
   same file (L-046). Its Pi run is also gated by US-173 H, F-341 AC3,
@@ -6516,6 +6525,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   merging main and drafting the PR body; the PR opens after that. Open
   placement ruling: the AE on F-399 nit 2 (absolute vs difference
   premise).
+  UPDATE (CM, 2026-10-26): F-399 pushed at 2fb05039, merging main
+  289f1a72 clean (3 files, +443/-27). AE RULING on nit 2: add an
+  absolute premise `assert uncorrected_right >= 4.0`, marked (a0), and
+  keep the difference assert (a). worker-4 adds the (a0) commit and
+  body draft 2; then the CM opens the PR.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
