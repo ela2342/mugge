@@ -130,13 +130,13 @@ sleep 2
 
 log "Running service-integration tests..."
 cd "$REPO_DIR/src/web-ui"
-"$E2E_PYTHON" -m pytest tests/service-integration/ -v --tb=short "$@"
+"$E2E_PYTHON" -m pytest tests/service-integration/ -v -rs --tb=short "$@"
 SI_EXIT=$?
 
 # ---- 4. Run browser E2E tests ----
 
 log "Running browser E2E tests..."
-"$E2E_PYTHON" -m pytest tests/e2e/ -v --tb=short "$@"
+"$E2E_PYTHON" -m pytest tests/e2e/ -v -rs --tb=short "$@"
 E2E_EXIT=$?
 
 # Report both results — fail if either failed.
