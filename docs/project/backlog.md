@@ -697,6 +697,11 @@ priority!"
   allowlist correction), items (1)-(4) AE dc9e529d released by the
   Architect (record (d) a8bf9931). Two new AE backlog one-liners under
   F-262 (CM).
+  UPDATE (CM, 2026-10-26, after v255): backlog v255 pushed as
+  62bf5e6e. F-262 PR #66 head e325c4ba (434cfe99 F6 scan, e325c4ba c7
+  capture alignment); CI 40343196576 running. CI 40338944793 at
+  d677f253 FAILED (10 failed, 7 errors); worker-4 diagnosing. c8 (T8
+  xfail removal) waits on an AE ruling, the QE releases (CM).
 
 ## Reserved IDs
 
@@ -6310,6 +6315,56 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     P-level given), verbatim: "PM backlog: a bandpass residual band
     and level-reference band (AE to define) before any 3-/4-way
     venue."
+  - UPDATE (CM, 2026-10-26, after v255): PR #66 head e325c4ba
+    (434cfe99 F6 scan; e325c4ba c7 capture alignment), pushed and
+    ls-remote verified. CI 40343196576 running (CM).
+     CI 40338944793 at d677f253 FAILED: 10 failed, 928 passed, 1
+     skipped, 7 errors. Cause (CM):
+     configs/speakers/profiles/f262-parity.yml missing from the nix
+     source, plus session filter-verification failures at
+     session.py:1017. worker-4 is diagnosing.
+     c7 (worker-4, frozen /tmp/cm-relay/F-262/frozen/:
+     w4-e325c4ba-c8-ruling-request-0e25d355.txt, sha256 0e25d355,
+     verified at PM read): the IR is no longer cut at the capture
+     start but kept from 5 ms before to 500 ms after the detected
+     direct sound; an untrusted capture stops the session with
+     "capture misaligned" and writes no filter files; 2 s post-roll;
+     the room sim is causal. The 69 cases in test_capture_alignment.py
+     pass as plain function calls (no local pytest);
+     test_capture_alignment_session.py has not run anywhere yet (CI is
+     its first run). worker-4 also fixed a bug that halved the
+     measured cross-correlation width.
+     c8 (removing the two T8 e2e xfails) PENDING an AE ruling; the AE
+     is single writer, the QE releases (CM). worker-4's model of
+     local-demo, against the 3.0 dB closed-loop limit: Left passes at
+     +1.92 dB; Sub1 fails at +4.73 dB (2 s sweep) / +3.60 dB (5 s),
+     from the F2 interim rule (session sweep vs the sweep signal-gen
+     plays); Sub1 against the played sweep passes by only 0.01-0.03 dB
+     (the F-403 S2 fix); the mock room Left passes by 0.03 dB.
+     worker-4: the thin margins are a risk for the required 10
+     consecutive local-demo runs either way; the API e2e test measures
+     Left only. Options worker-4 gave: (1) remove the API test's xfail
+     now and point the browser test's xfail at F-403 S2; (2) pull S2
+     into F-262 (sub margin still 0.03 dB); (3) a different ruling.
+     worker-4 note (0e25d355): "a room capture at -40 dBFS noise
+     always fails the signal-to-noise check, which matches one written
+     spec but not a literal reading of the lag/noise table." Mutation
+     runs and the source-scan follow-ups stay parked under quiet mode
+     (worker-4).
+     worker-4 flags A1-A7: the CM asked the PM to carry them over; the
+     PM has no A1-A7 text (0e25d355 mentions only "a few smaller
+     notes"). Not recorded until the CM sends the source.
+  - F-262 follow-up, worker-4's wording (via CM; the CM's ellipsis
+    kept): "retire or re-route the legacy CLI paths … onto
+    correction_from_measurement + run_correction_gate". PM cross-ref:
+    the same item as the Architect's F6 follow-up line above; no new
+    entry.
+  - F-403.md owner (worker-4 asked; via CM): PM cross-ref: the F-403
+    entry records "DECIDED (CM call, 2026-10-26)":
+    docs/project/defects/F-403.md goes inside the F-262 PR, written by
+    worker-4 with the QE's minimum content, and the TW reviews it
+    under Rule 13. The PM only allocated the ID. PM asked the CM to
+    confirm that call to worker-4.
   Before the first amps-on measurement (non-blocking one-liners; no
   F-ID, no P-level given):
   - AE, verbatim: "F-262 item 7 Architect note: before the first
