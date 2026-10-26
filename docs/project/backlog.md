@@ -791,6 +791,19 @@ priority!"
   blocking. F-394: #68 head 0cb35f0c; QE ruling on AC (iv) (where the
   N>=5 green runs land). F-262: an XPASS in CI 40356547804 for a test
   whose xfail cites F-262.
+  UPDATE (CM, PO, QE, team-lead, 2026-10-26, after v272): backlog v272
+  pushed as ecad8f35. v273 (frozen 380d4a37) and v274 (frozen
+  2a1e29ab) were never pushed: v273 filed US-179 r3, which the PO
+  voided, and v274 recorded the F-403.md writer before fence r2.
+  US-179: r3 VOID (owner corrections 2026-10-26: 20 Hz low end, the
+  seeded per-channel noise design, a Smaart-style display); r4 pending
+  at a new path; US-179 and US-180 reserved for the PO. F-262 c8:
+  fence r1 b1f0fcbf, then r2 084ad898 (F-403.md out of worker-4's set;
+  verify.py FENCED pending the Architect and the AE); 971725d7 VOID,
+  never pushed; 65af5ee2 (R2/R3 test files only) queued. QE answers
+  abfd33d7 (CI dispatch runs count as the R5 runs; the F-403 minimum
+  content). F-403.md writer: PM-allocated, not worker-4 (AE R4, QE Q2;
+  CM accepted); PM proposes the TW, TW answer pending.
 
 ## Reserved IDs
 
@@ -901,6 +914,18 @@ local branches, and worktrees): F-409 (worker-4: G1 residual not shown
 in the UI) and F-410 (worker-1: unmute restores the venue gains while
 the gate is closed). Next free (supersedes the line above): F-411,
 US-179, D-071, T66.
+Reserved 2026-10-26 (PM, for the PO; checked free across main, all
+origin/* and local branches, and worktree docs, where only Next-free
+lines mention them): US-179 (Web-only standalone room correction, P3
+side quest; reserved, text pending r4. PO: "r3 VOID; final text
+pending r4 (owner corrections 2026-10-26)": support down to 20 Hz,
+reuse of the seeded per-channel noise design (US-121 scheme), a
+Smaart-style display (US-120). r1, r2 and r3 are void; the PM's frozen
+r3 copy /tmp/pm-backlog/US-179-final-r3-75e731bc.md is history only,
+not governing text; r4 brings its own Later items) and US-180 (PO, for
+the US-179 later item "re-measure after the filters are loaded
+elsewhere"; the PO asked for it to be allocated when r4 is filed).
+Next free (supersedes the line above): F-411, US-181, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -6953,6 +6978,71 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     40348754608. Worker-1: the F-394 RPC/PW-env fix probably made it
     pass. Owner: F-262 / PR #66; "The xfail marker may need to come
     off." No P-level given.
+  - UPDATE (CM, 2026-10-26, after v272): c8 fence ask. worker-4 wanted
+    to add closed_loop_max_db and closed_loop_band_hz per corrected
+    channel to verify.py gate_summary, with the data from the
+    verify_closed_loop details already computed (CM: one line, no
+    logic change); this was outside the c8 fence. Planned in-fence
+    (CM): service-integration/test_measurement.py removes the xfail
+    (R2), asserts <= 3.0 dB per channel and emits an "F-262-AC"
+    warnings line; e2e/test_measurement.py gets the new xfail reason
+    (R3).
+     Fence r1 (CM, 2026-10-26): /tmp/cm-relay/F-262-fence-r1.txt
+     (sha256 b1f0fcbf, verified at PM read). The earlier fences were
+     message-only; r1 does not reconstruct them. Commit 971725d7 (with
+     the held verify.py line) is VOID and was never pushed; 65af5ee2
+     (R2/R3 test files only) is queued for push. OWNED for c8
+     (worker-4): the two test_measurement.py files,
+     docs/project/defects/F-403.md (NEW) and its defects-index row.
+     FENCED pending a ruling: verify.py (gate_summary keys); fence r2
+     follows. FENCED: everything else. No Pi session; no nix
+     build/run/develop (disk hold).
+     PM cross-ref (read-only git, origin, at PM read; quoted in fence
+     r1): verify.py differs from main on no open origin branch except
+     fix/F-262-shared-correction (head e7afdb36). gate_summary feeds
+     the API responses at filter_routes.py:299 and session.py:1204, so
+     the two keys change the API payload (the Architect's call on the
+     API shape; the AE's on the R5 fit). QE release record (e): a head
+     that touches the closed-loop path needs the R5 streak re-run
+     there.
+  - QE c8 answers (QE via CM, 2026-10-26): frozen file
+    qe-c8-R5-ci-F403-min-abfd33d7.md in /tmp/cm-relay/F-262/frozen/
+    (sha256 abfd33d7, verified at PM read). Q1, PM summary: 10 CI
+    workflow_dispatch runs count as the R5 local-demo runs, under
+    conditions. One head (the xfail-removal head; each checkout sha
+    equals it). The CM keeps a dispatch ledger and every run counts:
+    nothing dropped, cancelled or re-run; a red run ends the series,
+    and per R2 the xfail goes back as a finding; only a run that fails
+    before the local-demo stack's first step can be ruled void, by the
+    QE, with its log. Each run shows the API closed-loop test PASSED
+    (SKIPPED, XFAIL or XPASS don't count) and the browser test still
+    xfail strict=False. One "F-262-AC ch=… max=… band=…" line per
+    measured channel per run, or the run is void. Pass: all 10 max <=
+    3.0 dB and the worst <= 2.5 dB; 10/10 with a margin under 0.5 dB
+    is UNSTABLE, a finding. Evidence: the ledger, the per-run AC lines
+    (CM extracts and freezes them), worker-4's min/max/spread; the QE
+    recomputes it. Q2: the F-403 minimum content (see F-403).
+  - F-403.md writer (PM allocation, 2026-10-26; CM accepted;
+    supersedes the PM cross-ref above that pointed at the CM call, and
+    the CM's after-v256 confirmation): AE R4 (f8a014c7) says,
+    verbatim, "it is not written by worker-4 per the request", and the
+    QE's Q2 heading (abfd33d7) says, verbatim, "written by the
+    PM-allocated writer, not worker-4, per R4". Both postdate the CM
+    call recorded under F-403. PM proposes the TW as writer, from
+    frozen sources only (QE Q2 content, the AE's severity, worker-4's
+    R4 data as a frozen file via the CM; pending sections marked so).
+    The CM asked the TW (answer pending); if the TW can't, the CM
+    names another writer, not worker-4. worker-4 holds. The file still
+    lands inside the F-262 PR.
+     Fence r2 (CM, 2026-10-26; supersedes r1):
+     /tmp/cm-relay/F-262-fence-r2.txt (sha256 084ad898, verified at PM
+     read). Change vs r1: F-403.md and its index row are REMOVED from
+     worker-4's OWNED set (reason: QE Q2 heading and AE R4, which
+     override the earlier CM call). OWNED for c8: the two
+     test_measurement.py files only. verify.py stays FENCED pending
+     the Architect (API shape) and the AE (R5 fit). FENCED: everything
+     else, including docs/project/defects/**. worker-4 may supply the
+     R4 data as a frozen file via the CM, for the F-403 writer.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -7027,6 +7117,22 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   written by worker-4 with the QE's minimum content; the TW reviews it
   under Rule 13. The CM briefs worker-4 at their next event (worker-4
   is building the scratch branch).
+  WRITER CHANGED (AE R4 f8a014c7 and QE Q2 abfd33d7, 2026-10-26; CM
+  accepted, fence r2 084ad898; supersedes "written by worker-4" in the
+  DECIDED line above): F-403.md is written by the PM-allocated writer,
+  not worker-4; the PM proposes the TW, TW answer pending (see F-262,
+  c8). Location unchanged: inside the F-262 PR. QE minimum content
+  (abfd33d7 Q2, PM summary): header (ID, title, AE severity, status,
+  writer, owner, links to F-262/#66 and to f8a014c7 R3/R4/R5); the
+  symptom with the measured numbers (browser Sub1 +4.73 dB (2 s) /
+  +3.60 dB (5 s) vs 3.0 dB; S2 margins Sub1 0.01-0.03 dB and mock-room
+  Left 0.03 dB; offline home_lab Sub1 +0.91 dB); the cause labelled
+  VERIFIED or HYPOTHESIS; the R4 data table and which R4 branch the AE
+  ruled; the fixed constraints (3.0 and 18.0 dB, R1); the affected
+  test and its xfail reason at the merged head; the removal AC (R5 on
+  the browser test); a deterministic test that fails today and proves
+  the IR reference is the played sweep; reproduction; a matching
+  defects-index row.
   S4 condition AMENDED (Architect, 2026-10-26; supersedes the S4 brief
   condition above; verbatim in
   /tmp/cm-relay/F-262/findings-rulings-arch-ae.txt, sha1 6b9584ae):
