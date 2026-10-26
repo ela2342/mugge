@@ -911,6 +911,12 @@ priority!"
   F-262/#66: PR CI 40395927172 at 4724e65d SUCCESS; R5 series started
   (A1 OK), run 1 = 40403348924. US-172: v8 kit c96afb79 in review
   (Architect, AE, QE); worker-2 acked c96afb79.
+  UPDATE (CM, AE, Architect, 2026-10-26, after v293): backlog v293
+  pushed as 5f55f455. US-172 v8 kit c96afb79: AE APPROVE (96cf081b;
+  gains re-read verb not needed, run-time conditions C1-C4), Architect
+  APPROVE r1 (fafd59fc; all 9 design points accepted, R5b
+  classification not a step-c precondition, non-blocking N1/N2, no new
+  kit); QE pending.
 
 ## Reserved IDs
 
@@ -4077,6 +4083,121 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (/tmp/cm-relay/US-172/v8-c96afb79) is in review with the Architect,
   the AE and the QE; worker-2 acked c96afb79 (per the PROCESS RULE).
   Verdicts: not yet relayed to the PM at this version.
+  UPDATE (CM, 2026-10-26, after v293; supersedes "not yet relayed"
+  above): v8 c96afb79 verdicts relayed. QE: PENDING at this version.
+  Files in /tmp/cm-relay/US-172/frozen/, sha256 verified at PM read.
+  AE VERDICT: APPROVE (audio side). ae-v8-verdict-96cf081b.txt (sha256
+  96cf081b, 1582 bytes). Verbatim, reflowed, without its title line
+  ("AE verdict: US-172 v8 bisect kit (run 5, steps a-d, Architect r4
+  1816176e)"):
+  - Kit: /tmp/cm-relay/US-172/v8-c96afb79/, manifest sha256
+    c96afb79ec8c25b5c4ae0979aa7fbb815a32a28b6109e102a9daf7891bfabec0
+  - Verified at read time: all 29 files OK; us172.sh 5100d29f,
+    us172-drm-reads.sh d23d752b.
+  - VERDICT: APPROVE (audio side).
+  - CM question (tb-gains-reread dropped, G-1/3/5/7/8 vacuous): I do
+    NOT need the gains re-read back as a separate verb.
+     - tb-post calls `reads R5` in the R5 boot (same-boot check vs
+     r5-boot-id). That covers the full audio set (AC14/AC19: 16 gains
+     0, gate closed, FF/88, 24 links, sink running) plus the
+     F-395-form gains read (node state logged before/after, 8 Mult =
+     0.000000, nodes 1+1 running, gate via GM 4002 get_gate) and "no
+     HDMI node in PW".
+     - return-obs requires RETURN-gains ok + RETURN-gate ok, else STOP
+     "no next step, report to the AE" (AE c).
+     - tb-pre refuses unless PRE gains + gate are proven (F-395).
+  - So G-1/3/5/7/8 are carried by these reads; vacuous G-items are
+    fine.
+  - Conditions (observation only, no kit change required):
+  - C1. If any R5 reads line shows gains or gate not proven: report it
+    to me with the tb-post log; tb-restore and the return still
+    proceed (they produce no audio). No next R5 step until return-obs
+    gives AE (c) ok.
+  - C2. No audio-producing action (signal-gen, unmute, gain change,
+    profile activation) in any R5 boot. OBSERVE only, as written.
+  - C3. dtparam=audio=off stays in every tryboot file (verified in
+    a-d). R5c/R5d overlay drops are not audio paths.
+  - C4. "Nothing connected" stands (owner); reboots are announced, not
+    waited on.
+  ARCHITECT VERDICT r1: APPROVE. arch-v8-verdict-r1-fafd59fc.txt
+  (sha256 fafd59fc, 4109 bytes). Verbatim, reflowed, without its title
+  line ("US-172 run 5, v8 kit: Architect VERDICT r1 (2026-10-26).
+  Reviewed against my ruling r4 1816176e."):
+  - Read at the frozen CM copy /tmp/cm-relay/US-172/v8-c96afb79/,
+    manifest c96afb79 (all files OK at read time): us172.sh 5100d29f
+    (full file read, not only the diff), us172-drm-reads.sh d23d752b,
+    config.txt.base.template c2a461c8, pins.sha256 + 8 pin files,
+    pins-vs-base.diff, render.sh.
+  - VERDICT: APPROVE. The kit implements the r4 run-5 design. No
+    blocking points.
+  - Checked against r4
+     - R5a: tryboot.txt = config.txt except for
+     cmdline=cmdline-r5a.txt. cmdline = base + "us172r5=a panic=60".
+     No o/, no overlay_prefix, no blacklist. The expected DT state is
+     the exact base state, and overlay_prefix is the base
+     gens/<id>/overlays/.
+     - R5b: R5a + overlay_prefix=o/, placed directly after os_prefix
+     (machine-checked), plus blacklist, softlockup_panic and
+     hung_task_panic, with panic=60.
+     - R5c/R5d: one dtoverlay line dropped each; pinned by sha, with
+     the exact line diffs machine-checked.
+     - TRYBOOT = flag 1 + marker (b/c/d also need the blacklist).
+     - The r3 down-window MEASURE line is written into the verb's
+     file.
+     - Each step has a new run id and is gated on the previous step's
+     files.
+     - An R5a failure stops the chain ("stop and rule").
+     - R5c/R5d run only if R5b fails.
+  - Rulings on worker-2's open design points (mine)
+  - 1. c/d drop one dtoverlay line and keep the same 5-file o/:
+    ACCEPTED, and better than varying o/. Each step then differs from
+    R5b by exactly one config.txt line, and o/ stays sha-identical to
+    run 4.
+  - 2. Marker us172r5=<S> in every step, including a: ACCEPTED (r4
+    asks for it). Without the marker, R5a cannot be told apart from a
+    normal boot.
+  - 3. Ramoops: read-only pstore reads only, no ramoops in any R5
+    step: ACCEPTED. Adding it to R5b would be a second change in that
+    step. If R5b fails K-like with nothing persisted, worker-2 may
+    send a ramoops setup as a proposal for a later step.
+  - 4. The c gate counts R5b NOT-TRYBOOT or FAIL outcome (i) as a
+    fail, and any STOP blocks the chain: ACCEPTED. An R5b TRYBOOT with
+    a tb-post STOP (e.g. "o/ overlays NOT applied") correctly blocks c
+    and comes to me. My classification of R5b is NOT a precondition
+    for c (the kit gate + CM grant suffice), but the CM sends me the
+    R5b files at the same time as the c grant.
+  - 5. Step a expects panic=60, softlockup_panic=0, hung_task_panic=0:
+    ACCEPTED as is. Non-blocking note N1 below.
+  - 6. MEASURE uses the ping-return basis as primary and prints the
+    send basis too: ACCEPTED. The refs (D_plain 6.2 s, run 4 26.4 s)
+    were measured on the return basis, so the bases match. The kit
+    prints OBSERVATION bands only; I classify. Note: a hung-task panic
+    (timeout 120 s + panic 60 s) lands at about 190-200 s, in the
+    "unclassified" band below the 300 s DECISION. That is expected; I
+    classify it.
+  - 7. A T-bounds FINDING does not block the T-R5 RESULT: ACCEPTED. An
+    inert bound only changes the recovery path (power pull with the
+    owner at HDMI), not the evidence.
+  - 8. tb-normal after any STOP needs US172_CM_GO=1: ACCEPTED.
+  - 9. GATE lines truncated at 60 characters: ACCEPTED (cosmetic).
+  - The dropped verbs tb-gains-reread, tb-modprobe and tb-greetd: no
+    objection from me, since run 5 makes no CHANGE in the R5 boot. The
+    AE rules on them.
+  - Non-blocking notes (no new kit version needed; fold them in only
+    if v8 is reworked for another reason)
+  - N1 Step a: the softlockup_panic/hung_task_panic expectation should
+    be "== the PRE normal-boot value" rather than a hard-coded 0
+    (their defaults depend on CONFIG_BOOTPARAM_*). A mismatch is a
+    FINDING only, so the run is unaffected.
+  - N2 Every tb-normal MEASURE line is a fresh D_plain sample. When I
+    classify, I use the per-step D_plain next to the 6.2 s reference.
+    This needs no kit change.
+  - Sim: setup 30f84dd9 / flows ac416ce3 / drm-sim ad09f683, r2
+    outputs eec2d7df (12 entries). Both bugs found in the sim (the
+    tb-diag slot used up before a refusal, and tb-normal after a
+    tb-reboot STOP without GO) are fixed in 5100d29f. I checked the
+    fixes in the code: the REFUSED checks come before the OUT file is
+    created, and the STOP/GO check is in tb-normal.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
