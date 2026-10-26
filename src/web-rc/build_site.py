@@ -64,6 +64,7 @@ SHARED_WEB_ASSETS = {
 # Own Python files under src/web-rc/py (copied as-is).
 OWN_PY_FILES = (
     "soundfile.py",
+    "webrc_bridge.py",
     "webrc_pipeline.py",
 )
 
