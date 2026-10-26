@@ -11,6 +11,8 @@
 #     wireplumber user unit, the NixOS buildEnv of its configPackages).
 #
 # Each step fails the build:
+#   0. Self-test: the name pattern rejects a store-hash name and accepts a
+#      plain one (so a broken pattern cannot pass everything).
 #   1. Every file in every *.conf.d directory matches
 #      ^[0-9]{2}-[a-z0-9-]+\.conf$.
 #   2. The fragments we deploy are present under their plain names (so the
@@ -40,6 +42,18 @@ in
 pkgs.runCommand "conf-fragment-names" { } ''
   set -euo pipefail
   mkdir -p $out
+  plain_name() { echo "$1" | grep -Eq '^[0-9]{2}-[a-z0-9-]+\.conf$'; }
+
+  echo "== 0. Name pattern self-test"
+  if plain_name 12zi3gy8vq0kq2r0q4w1f3b5x7l9n6m2-10-audio-settings.conf; then
+    echo "self-test: pattern accepted a store-hash name" >&2
+    exit 1
+  fi
+  if ! plain_name 10-audio-settings.conf; then
+    echo "self-test: pattern rejected a plain name" >&2
+    exit 1
+  fi
+  echo "ok   rejects <hash>-10-audio-settings.conf, accepts 10-audio-settings.conf"
 
   echo "== 1. conf.d file names"
   for tree in ${pwTree} ${wpTree}; do
@@ -48,7 +62,7 @@ pkgs.runCommand "conf-fragment-names" { } ''
       for f in "$d"/*; do
         [ -e "$f" ] || continue
         name=$(basename "$f")
-        if echo "$name" | grep -Eq '^[0-9]{2}-[a-z0-9-]+\.conf$'; then
+        if plain_name "$name"; then
           echo "ok   $d/$name"
         else
           echo "BAD  $d/$name"
