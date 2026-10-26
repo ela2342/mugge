@@ -59,7 +59,7 @@ trap cleanup EXIT INT TERM
 START_LOG=$(mktemp /tmp/test-e2e-start-XXXXXX.log)
 # Test runs always get the known tone stimulus, never the owner's mp3, so
 # every run (CI or dev) measures the same signal (F-394 Q1-1).
-export LOCAL_DEMO_MIXXX_SOURCE=tone
+export LOCAL_DEMO_MIXXX_SOURCE=off  # THROWAWAY F-394 Q1-7(2): tone disabled, revert next commit
 log "Starting local-demo stack (PI_AUDIO_MOCK=0)..."
 "$BASH_BIN" "$LOCAL_DEMO" start >"$START_LOG" 2>&1 || {
     log_err "local-demo start failed"
