@@ -441,6 +441,13 @@ priority!"
   still pending. worker-4 is on a read-only F-262 diagnosis while #65
   waits (team-lead's suggestion; PO told, may redirect); no edits, no
   fence overlap.
+  UPDATE (CM, 2026-10-26, after v214): backlog v214 pushed as
+  9dba5b06. #65: all 7 verdicts posted at 13995e15, all depending on
+  CI run 40317165021; QE C2 is a body edit with worker-4 (head stays
+  13995e15). #63 review bundle published, tally 0/7, CI 40313123653
+  running. Mac disk 6.7 -> 4.9 GB free: the owner's own darwin-rebuild
+  of the Mac system config, not team work (team-lead informed); the
+  nix hold stands.
 
 ## Reserved IDs
 
@@ -4086,6 +4093,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   sentence is in the PR body). Checklist sha1 now bdef865d (AE
   condition (2) added; supersedes 53daaa70). QE OK on the 9b1aa8a1
   self-test; QE C1 waits for CI at the final head.
+  UPDATE (CM, 2026-10-26): #63 review bundle published at
+  /tmp/pr63-review-9b1aa8a1/ (pr63.diff sha256 46357791..., 34 files,
+  +3806/-27, merge-base 5f3af36a). 24 commits behind main; the only
+  overlap is stories-index.md, so a main merge plus a diff-only
+  re-check comes later. Tally 0/7; CI run 40313123653 still running.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -6584,6 +6596,32 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   pw_config_generator's /etc/pi4audio/coeffs, with tests. PM cross-ref
   only: F-372 asks for the same commonpath fix at a different site
   (filter_routes.py).
+  CORRECTION (CM, 2026-10-26): #65 has all 7 verdicts posted at
+  13995e15 (v214 counted 3/7): UX 6415192205, SecSpec 6415203689, AE
+  6415204084, Architect 6415204565, AD 6415205055, QE 6415226025
+  (C1/C2), TW 6415226482 (with notes N1-N3). All depend on CI run
+  40317165021 going green. QE C2 is with worker-4: back the mutation
+  claim with a list or drop it from the body; a body edit, so the head
+  stays 13995e15.
+  SecSpec INFO (operator docs): publishing deletes stale
+  combined_*.wav files in the chosen --output-dir. Intended, and
+  stated in the module docstring.
+  US-174d CONDITIONS from the #65 review (CM relays them to worker-4
+  once #65 merges and 174d picks them up):
+  - (1) Architect, BINDING: the F-399 guard
+    _refuse_simulated_into_coeffs refuses an output dir EQUAL to OR
+    INSIDE either coeffs root (PRODUCTION_COEFFS_DIR and
+    DEFAULT_COEFFS_DIR, including sets/), using the same list as
+    deploy.py:191; add a test for a simulated run targeted at
+    coeffs/sets/<x>. The same finding came from SecSpec LOW
+    (commonpath containment) and AD L1 (prefix check, tests for
+    coeffs/sets/x and coeffs/current). AD and AE N2: compare against
+    both the env-overridable DEFAULT_COEFFS_DIR and the literal
+    /etc/pi4audio/coeffs (hard-coded at pw_config_generator.py:52). PM
+    cross-ref: same point as the AD US-174d AC above.
+  - (2) AE N1: before a real run publishes into the live coeffs dir,
+    174d needs (a) an atomic swap and (b) a check that every WAV the
+    filter-chain references still exists after the stale-file sweep.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
