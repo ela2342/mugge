@@ -319,6 +319,7 @@ export class App {
     text("port-warning", vm.setup.portWarning);
     $("port-confirm-row").hidden = !vm.setup.portWarning;
     $("port-confirm").checked = vm.setup.portConfirmed;
+    $("port-confirm-text").textContent = vm.setup.portConfirmText;
 
     text("cal-status", vm.setup.calStatus);
     $("cal-unbound").hidden = !vm.setup.calUnbound;
@@ -332,8 +333,10 @@ export class App {
 
     // 4a
     $("ack-title").textContent = vm.ack.title;
-    $("ack-items").replaceChildren(...vm.ack.items.map((p) => this._li(p)));
+    $("ack-intro").textContent = vm.ack.intro;
+    this._ackItems(vm.ack.items, vm.ack.ticked);
     $("ack").textContent = vm.ack.button;
+    $("ack").disabled = !vm.ack.canAcknowledge;
 
     // level check
     $("uncal-banner").hidden = !vm.level.banner;
@@ -342,6 +345,8 @@ export class App {
     $("band-label").textContent = vm.level.bandLabel;
     $("mic-level").textContent = vm.level.micLevel;
     $("cap").textContent = vm.level.cap;
+    $("safety-limit").textContent = vm.level.safetyLimit;
+    $("plus").textContent = vm.level.plusLabel;
     $("start").disabled = !vm.level.canStart;
     $("again").disabled = !vm.level.canStart;
     $("plus").disabled = !vm.level.canStepUp;
@@ -379,6 +384,30 @@ export class App {
   _label(kind, id) {
     const d = this.devices.find((x) => x.kind === kind && x.deviceId === id);
     return d ? d.label : "";
+  }
+
+  /** One checkbox per 4a item; rebuilt only when the texts change. */
+  _ackItems(items, ticked) {
+    const ul = this.$("ack-items");
+    const have = [...ul.querySelectorAll("span")].map((s) => s.textContent);
+    if (have.join("\n") !== items.join("\n")) {
+      ul.replaceChildren(...items.map((t, i) => {
+        const li = this.doc.createElement("li");
+        const label = this.doc.createElement("label");
+        const box = this.doc.createElement("input");
+        box.type = "checkbox";
+        box.id = "ack-item-" + i;
+        box.addEventListener("change", () => {
+          this.apply(this.flow.tickAck(i, box.checked));
+        });
+        const span = this.doc.createElement("span");
+        span.textContent = t;
+        label.append(box, " ", span);
+        li.append(label);
+        return li;
+      }));
+    }
+    ul.querySelectorAll("input").forEach((box, i) => { box.checked = ticked[i]; });
   }
 
   _li(t) {

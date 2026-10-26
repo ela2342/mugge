@@ -52,7 +52,7 @@
       <label id="tuning-row" hidden>Port tuning (Hz) <input id="tuning" type="text" inputmode="decimal" size="5"></label>
       <p id="port-warning" class="webrc-warning" hidden></p>
       <label id="port-confirm-row" hidden><input id="port-confirm" type="checkbox">
-        I want to measure below the port tuning.</label>
+        <span id="port-confirm-text"></span></label>
     </fieldset>
 
     <fieldset id="cal">
@@ -75,7 +75,8 @@
   <!-- safety acknowledgement (4a) -->
   <section id="step-ack" class="webrc-step" hidden>
     <h2 id="ack-title"></h2>
-    <ul id="ack-items"></ul>
+    <p id="ack-intro"></p>
+    <ul id="ack-items" class="webrc-plain"></ul>
     <button id="ack" type="button"></button>
     <button class="back" type="button">Back to setup</button>
   </section>
@@ -90,9 +91,10 @@
     <p id="band-label"></p>
     <p>Microphone: <output id="mic-level" class="webrc-meter"></output></p>
     <p id="cap"></p>
+    <p id="safety-limit"></p>
     <div class="webrc-row">
       <button id="start" type="button">Start level check</button>
-      <button id="plus" type="button">+6 dB</button>
+      <button id="plus" type="button"></button>
       <button id="measure" type="button">Measure</button>
     </div>
     <p id="target-text" hidden></p>

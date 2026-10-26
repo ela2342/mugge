@@ -46,6 +46,7 @@ export const FLOW = Object.freeze({
   PRE_ROLL_S: 0.5,              // AC7 silent pre-capture before the sweep
   SWEEP_S: LIMITS.SWEEP_MAX_S,  // AC4g, at most 10 s per capture
   CAPTURES: 2,                  // AC8a, capture 1 = filter, 2 = hold-out
+  ACK_ITEMS: 4,                 // 4a checkboxes (UX 64c83e3e), output last
 });
 
 /** The stop texts the flow adds to safety.js's. */
@@ -83,6 +84,7 @@ export class Flow {
     this.channel = null;
     this.decl = emptyDeclaration();
     this.ack = false;
+    this.ackTicks = new Set();   // ticked 4a items, 0 .. ACK_ITEMS - 1
     this.cal = null;             // { fileName, parsed } (calibration.js)
     this.calBoundMicId = null;
     this.filters = new Map();    // channel -> finished, AC6c-passed result
@@ -216,9 +218,25 @@ export class Flow {
     return [];
   }
 
+  /** Tick or untick one 4a item (UX 64c83e3e: one checkbox per item). */
+  tickAck(item, ticked) {
+    if (this.step !== STEP.ACK || !Number.isInteger(item) || item < 0 ||
+        item >= FLOW.ACK_ITEMS) {
+      return [];
+    }
+    if (ticked) this.ackTicks.add(item);
+    else this.ackTicks.delete(item);
+    return [];
+  }
+
+  /** The 4a button is enabled only when every item is ticked. */
+  get canAcknowledge() {
+    return this.step === STEP.ACK && this.ackTicks.size === FLOW.ACK_ITEMS;
+  }
+
   /** 4a, once per session (until a device change, E5b D1). */
   acknowledge() {
-    if (this.step !== STEP.ACK) return [];
+    if (!this.canAcknowledge) return [];
     this.ack = true;
     this.step = STEP.LEVEL;
     return [];
@@ -361,6 +379,7 @@ export class Flow {
       this.held.delete(STOP.AUDIO_ERROR);
     }
     this.ack = false;                   // D1
+    this.ackTicks.clear();              // D1: every tick again
     this.channel = null;                // D2
     this.decl = emptyDeclaration();     // D2
     this.calBoundMicId = null;          // D3

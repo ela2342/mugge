@@ -1,7 +1,7 @@
 // The page's view model (view.js): texts and enabled states per flow state.
 
 import { assert, eq } from "./assert.js";
-import { Flow, STEP } from "../../../static/js/flow.js";
+import { FLOW, Flow, STEP } from "../../../static/js/flow.js";
 import {
   CAL_GAIN_NOTE, UNCAL_BANNER, UNCAL_RESULT, parseCalibration,
 } from "../../../static/js/calibration.js";
@@ -10,7 +10,7 @@ import {
   ROLE, changeRole, levelNoiseBand, levelNoiseBandLabel,
 } from "../../../static/js/safety.js";
 import {
-  TEXT, ackOutputText, capText, micLevelText, predictionText,
+  TEXT, ackOutputText, capText, micLevelText, portConfirmText, predictionText,
   targetNotReachedText, viewModel,
 } from "../../../static/js/view.js";
 
@@ -30,6 +30,12 @@ function ready({ cal = false } = {}) {
     limitHz: 40, capabilityConfirmed: true });
   if (cal) f.loadCalibration("7161942.txt", UMIK);
   return f;
+}
+
+/** Tick every 4a item, then acknowledge (UX 64c83e3e). */
+function ackAll(f) {
+  for (let i = 0; i < FLOW.ACK_ITEMS; i++) f.tickAck(i, true);
+  return f.acknowledge();
 }
 
 export async function test_header_and_first_load() {
@@ -76,20 +82,56 @@ export async function test_setup_calibration_states() {
   eq(vm.setup.calGainNote, "");
 }
 
-export async function test_ack_names_the_output() {
+/** 4a, UX 64c83e3e verbatim (AE release 17e5fef8). */
+export async function test_ack_texts_and_checkboxes() {
   const f = ready();
   f.confirmSetup();
-  const vm = viewModel(f, { sinkLabel: "USBStreamer" });
+  let vm = viewModel(f, { sinkLabel: "USBStreamer" });
   eq(vm.step, STEP.ACK);
-  eq(vm.ack.items.length, 4);
-  eq(vm.ack.items[3], ackOutputText("USBStreamer"));
-  assert(ackOutputText("").includes("the browser's default output device"));
+  eq(vm.ack.title, "Before any sound plays");
+  eq(vm.ack.intro, "This page plays test signals through your amplifier. " +
+    "It can't see your amplifier, volume settings or speakers, so check " +
+    "each point:");
+  eq(vm.ack.items.join("\n"), [
+    "No headphones or in-ear monitors are connected to this output, and " +
+      "nobody is wearing any.",
+    "The output is not a Bluetooth device.",
+    "The amplifier and every volume control after this computer are " +
+      "turned down low.",
+    'Sound plays on "USBStreamer". It is connected to the speaker I want ' +
+      "to measure.",
+  ].join("\n"));
+  eq(vm.ack.items.length, FLOW.ACK_ITEMS);
+  eq(ackOutputText(""), "Sound plays on this browser's default output " +
+    "device. I have checked that it is connected to the speaker I want to " +
+    "measure.");
+  eq(vm.ack.button, "I have checked all of this");
+  eq(vm.ack.ticked.join(), "false,false,false,false");
+  eq(vm.ack.canAcknowledge, false);
+  for (let i = 0; i < FLOW.ACK_ITEMS; i++) f.tickAck(i, true);
+  vm = viewModel(f);
+  eq(vm.ack.ticked.join(), "true,true,true,true");
+  eq(vm.ack.canAcknowledge, true);
+}
+
+/** 3c, UX 64c83e3e: the label names the values it confirms. */
+export async function test_port_confirm_names_the_values() {
+  const f = ready();
+  f.setDeclaration({ ...f.decl, enclosure: "ported", portTuningHz: 45 });
+  const vm = viewModel(f);
+  assert(vm.setup.portWarning, "40 Hz is below the 45 Hz port");
+  eq(vm.setup.portConfirmText, "I understand the risk: measure down to 40 " +
+    "Hz, below the port tuning of 45 Hz.");
+  eq(portConfirmText(30, 35.5), "I understand the risk: measure down to 30 " +
+    "Hz, below the port tuning of 35.5 Hz.");
+  f.setDeclaration({ ...f.decl, enclosure: "closed" });
+  eq(viewModel(f).setup.portConfirmText, "", "no port warning, no label");
 }
 
 export async function test_level_uncalibrated_banner_and_dbfs() {
   const f = ready();
   f.confirmSetup();
-  f.acknowledge();
+  ackAll(f);
   let vm = viewModel(f);
   eq(vm.level.banner, UNCAL_BANNER);
   eq(vm.level.bannerReason, "No calibration file loaded.");
@@ -110,6 +152,20 @@ export async function test_level_uncalibrated_banner_and_dbfs() {
   eq(vm.level.canMeasure, false, "no reading yet");
   const top = topStepDbfs(levelNoiseBand(ROLE.SUBWOOFER, 40));
   eq(vm.level.cap, capText(-60, top));
+  eq(vm.level.cap, "Test level: -60 dBFS (highest step " + top + " dBFS)");
+  eq(vm.level.safetyLimit, "Safety limit: the output never goes above -20 " +
+    "dBFS peak.");
+  eq(capText(null, top), "Test level: off");
+  eq(vm.level.plusLabel, "+6 dB");
+  while (f.canStepUp()) f.stepUp(0);
+  eq(viewModel(f).level.canStepUp, false);
+  eq(viewModel(f).level.plusLabel, "Highest step reached.");
+  eq(viewModel(f).level.cap, "Test level: " + top + " dBFS (highest step " +
+    top + " dBFS)");
+  f.userStop();
+  eq(viewModel(f).level.plusLabel, "+6 dB", "not running");
+  f.startLevel(0);
+  vm = viewModel(f);
   f.meter(0, { peakDbfs: -40, rmsDbfs: -47.2 });
   vm = viewModel(f);
   eq(vm.level.micLevel, "-47.2 dBFS");
@@ -124,7 +180,7 @@ export async function test_level_uncalibrated_banner_and_dbfs() {
 export async function test_level_calibrated_spl() {
   const f = ready({ cal: true });
   f.confirmSetup();
-  f.acknowledge();
+  ackAll(f);
   f.startLevel(0);
   f.meter(0, { peakDbfs: -40, rmsDbfs: -46.778 }); // 74.6 dB SPL
   const vm = viewModel(f);
@@ -144,7 +200,7 @@ export async function test_target_text_rounds_down() {
 export async function test_measure_progress_and_result() {
   const f = ready();
   f.confirmSetup();
-  f.acknowledge();
+  ackAll(f);
   f.startLevel(0);
   f.meter(0, { peakDbfs: -40, rmsDbfs: -50 });
   const m = f.measure();
@@ -179,7 +235,7 @@ export async function test_measure_progress_and_result() {
 export async function test_notice_detail_after_capture_2_stop() {
   const f = ready();
   f.confirmSetup();
-  f.acknowledge();
+  ackAll(f);
   f.startLevel(0);
   f.meter(0, { peakDbfs: -40, rmsDbfs: -50 });
   const m = f.measure();

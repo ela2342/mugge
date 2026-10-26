@@ -33,9 +33,15 @@ function atLevel({ cal = false } = {}) {
   f.setDeclaration(sub40());
   if (cal) f.loadCalibration("7161942.txt", UMIK);
   f.confirmSetup();
-  f.acknowledge();
+  ackAll(f);
   eq(f.step, STEP.LEVEL);
   return f;
+}
+
+/** Tick every 4a item, then acknowledge (UX 64c83e3e). */
+function ackAll(f) {
+  for (let i = 0; i < FLOW.ACK_ITEMS; i++) f.tickAck(i, true);
+  return f.acknowledge();
 }
 
 const types = (cmds) => cmds.map((c) => c.type).join(",");
@@ -85,7 +91,7 @@ export async function test_setup_blocks_until_everything_is_valid() {
   f.step = STEP.LEVEL;
   eq(f.startLevel(0).length, 0, "no sound without the ack at any step");
   f.step = STEP.ACK;
-  f.acknowledge();
+  ackAll(f);
   eq(f.step, STEP.LEVEL);
 }
 
@@ -186,7 +192,7 @@ export async function test_calibrated_target_and_meter_message() {
   f.setChannel(2);
   f.setDeclaration(sub40());
   f.confirmSetup();
-  f.acknowledge();
+  ackAll(f);
   f.startLevel(0);
   f.meter(0, { peakDbfs: -40, rmsDbfs: -46.5 }); // 74.9 dB SPL
   eq(f.canStepUp(), true, "75 dB SPL not yet reached");
@@ -282,7 +288,7 @@ export async function test_held_causes_and_device_change() {
   f.setChannel(2);
   f.setDeclaration(sub40());
   f.confirmSetup();
-  f.acknowledge();
+  ackAll(f);
   eq(f.held.has(STOP.AUDIO_ERROR), false, "the devices were opened again");
   eq(f.canStart, false, "still hidden");
   eq(f.startLevel(0).length, 0);
@@ -307,6 +313,41 @@ export async function test_c6_sweep_needs_a_new_passed_level_check() {
   f.startLevel(2000);
   f.meter(2000, { peakDbfs: -40, rmsDbfs: -50 });
   eq(types(f.measure()), "output-stop,make-sweep", "a new passed check");
+}
+
+/** UX 64c83e3e: one checkbox per item; all ticked, or no acknowledgement. */
+export async function test_ack_needs_every_tick() {
+  const f = new Flow();
+  f.setAudio(AUDIO);
+  f.setChannel(2);
+  f.setDeclaration(sub40());
+  eq(f.tickAck(0, true).length, 0);
+  eq(f.ackTicks.size, 0, "no ticks outside the 4a step");
+  f.confirmSetup();
+  eq(f.step, STEP.ACK);
+  for (let i = 0; i < FLOW.ACK_ITEMS - 1; i++) f.tickAck(i, true);
+  eq(f.canAcknowledge, false, "one item unticked");
+  f.acknowledge();
+  eq(f.step, STEP.ACK, "refused");
+  f.tickAck(FLOW.ACK_ITEMS, true);
+  f.tickAck(-1, true);
+  eq(f.canAcknowledge, false, "no such item");
+  f.tickAck(FLOW.ACK_ITEMS - 1, true);
+  f.tickAck(0, false);
+  eq(f.canAcknowledge, false, "unticked again");
+  f.tickAck(0, true);
+  eq(f.canAcknowledge, true);
+  f.acknowledge();
+  eq(f.step, STEP.LEVEL);
+  eq(f.canAcknowledge, false, "only in the 4a step");
+  // E5 D1: a device change clears every tick.
+  f.deviceChange({ ...AUDIO });
+  eq(f.ackTicks.size, 0);
+  f.setChannel(2);
+  f.setDeclaration(sub40());
+  f.confirmSetup();
+  eq(f.step, STEP.ACK);
+  eq(f.canAcknowledge, false, "ticks again after a device change");
 }
 
 export async function test_mic_clip_text_follows_calibration() {
@@ -567,7 +608,7 @@ export async function test_device_change_resets_and_marks() {
   f.confirmSetup();
   eq(f.step, STEP.ACK, "ack again");
   eq(f.startLevel(0).length, 0);
-  f.acknowledge();
+  ackAll(f);
   f.startLevel(0);
   f.meter(0, { peakDbfs: -20, rmsDbfs: -30 }); // 91 dB SPL if calibrated
   eq(f.notice, null, "uncalibrated until rebound");
@@ -606,7 +647,7 @@ export async function test_mixed_download_marks_only_pre_change() {
   f.setChannel(3);
   f.setDeclaration(sub40());
   f.confirmSetup();
-  f.acknowledge();
+  ackAll(f);
   finishedFilter(f, "b_ch3.wav");
   const names = f.downloads().map((d) => d.name).sort();
   eq(names.join(), "a_ch2-measured-before-device-change.wav,b_ch3.wav");

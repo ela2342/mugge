@@ -86,6 +86,23 @@ def test_open_devices_then_declarations_gate_continue(fake_page, page_url):
     page.check("input[name=enclosure][value=ported]")
     page.fill("#tuning", "35")
     expect(page.locator("#port-warning")).to_be_visible()
+    # 3c (UX 64c83e3e): the label names the values; ANY change of the
+    # limit or the tuning clears the tick.
+    expect(page.locator("#port-confirm-text")).to_have_text(
+        "I understand the risk: measure down to 30 Hz, below the port "
+        "tuning of 35 Hz.")
+    page.check("#port-confirm")
+    page.fill("#limit", "25")
+    expect(page.locator("#port-confirm")).not_to_be_checked()
+    expect(page.locator("#port-confirm-text")).to_have_text(
+        "I understand the risk: measure down to 25 Hz, below the port "
+        "tuning of 35 Hz.")
+    page.check("#port-confirm")
+    page.fill("#tuning", "36")
+    expect(page.locator("#port-confirm")).not_to_be_checked()
+    page.fill("#tuning", "35")
+    page.fill("#limit", "30")
+    page.check("#capability")
     page.check("#port-confirm")
     page.select_option("#channel", "0")
     # Everything declared; the rate alone still blocks.
@@ -120,4 +137,58 @@ def test_hidden_holds_start_until_visible_again(fake_page, page_url):
     assert page.evaluate(held) == ["hidden"]
     page.evaluate("window.dispatchEvent(new Event('pageshow'))")
     assert page.evaluate(held) == []
+    assert errors == []
+
+
+def test_ack_checkboxes_gate_the_button(fake_page, page_url):
+    """4a (UX 64c83e3e): one checkbox per item; the button needs them all."""
+    page, errors = fake_page
+    page.goto(page_url)
+    page.wait_for_function("window.__webrcApp !== undefined")
+    # Stand-in devices at 48 kHz (the fake mic runs at 44.1 kHz).
+    page.evaluate("""() => {
+        const app = window.__webrcApp, f = app.flow;
+        const off = { echoCancellation: false, noiseSuppression: false,
+            autoGainControl: false };
+        f.setAudio({ outputRate: 48000, inputRate: 48000, outputChannels: 2,
+            dspSettings: off, micId: "m", micLabel: "UMIK-1" });
+        f.setChannel(0);
+        f.setDeclaration({ ...f.decl, role: "fullrange", limitHz: 80,
+            capabilityConfirmed: true, enclosure: "closed" });
+        f.confirmSetup();
+        app.render();
+    }""")
+    expect(page.locator("#step-ack")).to_be_visible()
+    expect(page.locator("#ack-title")).to_have_text("Before any sound plays")
+    boxes = page.locator("#ack-items input[type=checkbox]")
+    expect(boxes).to_have_count(4)
+    expect(page.locator("#ack-items li").nth(3)).to_have_text(
+        "Sound plays on this browser's default output device. I have "
+        "checked that it is connected to the speaker I want to measure.")
+    expect(page.locator("#ack")).to_be_disabled()
+    for i in range(3):
+        boxes.nth(i).check()
+    expect(page.locator("#ack")).to_be_disabled()
+    boxes.nth(3).check()
+    expect(page.locator("#ack")).to_be_enabled()
+    boxes.nth(1).uncheck()
+    expect(page.locator("#ack")).to_be_disabled()
+    boxes.nth(1).check()
+    page.click("#ack")
+    expect(page.locator("#step-level")).to_be_visible()
+    expect(page.locator("#plus")).to_have_text("+6 dB")
+    # E5 D1: after a device change every box shows unticked again.
+    page.evaluate("""() => {
+        const app = window.__webrcApp, f = app.flow;
+        f.deviceChange({ ...f.audio });
+        f.setChannel(0);
+        f.setDeclaration({ ...f.decl, role: "fullrange", limitHz: 80,
+            capabilityConfirmed: true, enclosure: "closed" });
+        f.confirmSetup();
+        app.render();
+    }""")
+    expect(page.locator("#step-ack")).to_be_visible()
+    for i in range(4):
+        expect(boxes.nth(i)).not_to_be_checked()
+    expect(page.locator("#ack")).to_be_disabled()
     assert errors == []

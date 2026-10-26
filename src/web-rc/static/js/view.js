@@ -2,9 +2,7 @@
 //
 // Pure: no DOM. app.js copies these texts and flags into the page; the
 // tests check them without a browser page. Texts are from the story and
-// the UX/AE files named at each one; the 4a acknowledgement wording and the
-// level-check "cap shown" line are worker drafts from the r8 4a/4b bullets
-// (no UX text yet).
+// the UX/AE files named at each one.
 
 import { topStepDbfs } from "./crest.js";
 import { MAX_CHANNELS } from "./crest-plan.js";
@@ -12,7 +10,7 @@ import {
   CAL_GAIN_NOTE, UNCAL_BANNER, UNCAL_RESULT, unboundText,
   uncalibratedFieldText, uncalibratedReason,
 } from "./calibration.js";
-import { STEP } from "./flow.js";
+import { FLOW, STEP } from "./flow.js";
 import {
   LIMITS, ROLE, capabilityText, checkDeclaration, checkSampleRates,
   levelNoiseBandLabel,
@@ -22,14 +20,23 @@ export const TEXT = Object.freeze({
   HEADER: "Standalone — not connected to a mugge Pi",          // AC11
   DEEP_BASS_HINT: "Deep-bass correction needs a measurement mic " +  // AE N1
     "with a calibration file.",
-  // 4a (worker draft from the r8 bullets; UX wording pending).
-  ACK_TITLE: "Before the first sound",
+  // 4a, UX 64c83e3e (AE release 17e5fef8). The output item is last.
+  ACK_TITLE: "Before any sound plays",
+  ACK_INTRO: "This page plays test signals through your amplifier. It can't " +
+    "see your amplifier, volume settings or speakers, so check each point:",
   ACK_ITEMS: Object.freeze([
-    "No headphones or in-ear monitors are connected to this output.",
-    "No Bluetooth output is in use.",
-    "The amplifiers are at a low setting.",
+    "No headphones or in-ear monitors are connected to this output, and " +
+      "nobody is wearing any.",
+    "The output is not a Bluetooth device.",
+    "The amplifier and every volume control after this computer are " +
+      "turned down low.",
   ]),
   ACK_BUTTON: "I have checked all of this",
+  // 4b, UX 64c83e3e.
+  SAFETY_LIMIT: "Safety limit: the output never goes above " +
+    LIMITS.OUTPUT_PEAK_CAP_DBFS + " dBFS peak.",
+  PLUS: "+6 dB",
+  TOP_STEP: "Highest step reached.",
   // AC11 end state, AC10 report text, AC8c label.
   READY: "Filters ready — download",
   PI_NOTE: "Filters for the mugge Pi (48 kHz). Loading onto the Pi is not " +
@@ -46,11 +53,22 @@ export const TEXT = Object.freeze({
   PRE_DEVICE_CHANGE: "measured before a device change",              // E5b D4
 });
 
-/** The output the browser drives, for the 4a item (setSinkId where supported). */
+/**
+ * The 4a output item (UX 64c83e3e): the device chosen with setSinkId, by
+ * its label, or the browser's default output device.
+ */
 export function ackOutputText(sinkLabel) {
-  return "Sound plays on " + (sinkLabel ? "the output device “" +
-    sinkLabel + "”" : "the browser's default output device") +
-    ", shown in the setup step.";
+  return sinkLabel
+    ? "Sound plays on \"" + sinkLabel + "\". It is connected to the " +
+      "speaker I want to measure."
+    : "Sound plays on this browser's default output device. I have " +
+      "checked that it is connected to the speaker I want to measure.";
+}
+
+/** The 3c second confirmation, with the values it confirms (UX 64c83e3e). */
+export function portConfirmText(limitHz, portTuningHz) {
+  return "I understand the risk: measure down to " + limitHz + " Hz, below " +
+    "the port tuning of " + portTuningHz + " Hz.";
 }
 
 /**
@@ -77,11 +95,10 @@ export function targetNotReachedText(rmsDbfs, splOffsetDb) {
     unit + "). " + TEXT.MAY_BE_REJECTED;
 }
 
-/** 4b "cap shown": test level, highest "+" step and the output cap. */
+/** 4b "cap shown", first line (UX 64c83e3e); TEXT.SAFETY_LIMIT follows. */
 export function capText(levelDbfs, topDbfs) {
-  return "Test level " + (levelDbfs === null ? "off" : levelDbfs + " dBFS") +
-    " · highest step " + topDbfs + " dBFS · output cap " +
-    LIMITS.OUTPUT_PEAK_CAP_DBFS + " dBFS peak";
+  return levelDbfs === null ? "Test level: off"
+    : "Test level: " + levelDbfs + " dBFS (highest step " + topDbfs + " dBFS)";
 }
 
 export function rateLines(audio) {
@@ -147,6 +164,8 @@ export function viewModel(flow, extras = {}) {
       portTuningHz: decl.portTuningHz,
       portWarning: decision.portWarning,
       portConfirmed: decl.portConfirmed,
+      portConfirmText: decision.portWarning
+        ? portConfirmText(decl.limitHz, decl.portTuningHz) : "",
       calFile: flow.cal ? flow.cal.fileName : "",
       calUnbound: unbound ? unboundText(flow.cal.fileName,
         audio ? audio.micLabel : "") : "",
@@ -159,8 +178,11 @@ export function viewModel(flow, extras = {}) {
     },
     ack: {
       title: TEXT.ACK_TITLE,
+      intro: TEXT.ACK_INTRO,
       items: [...TEXT.ACK_ITEMS, ackOutputText(extras.sinkLabel || "")],
+      ticked: Array.from({ length: FLOW.ACK_ITEMS }, (_, i) => flow.ackTicks.has(i)),
       button: TEXT.ACK_BUTTON,
+      canAcknowledge: flow.canAcknowledge,
     },
     level: {
       banner: calibrated ? "" : UNCAL_BANNER,
@@ -169,6 +191,8 @@ export function viewModel(flow, extras = {}) {
         ? levelNoiseBandLabel(decl.role, decl.limitHz) : "",
       micLevel: micLevelText(rms, flow.splOffsetDb),
       cap: run.band ? capText(level, topStepDbfs(run.band)) : "",
+      safetyLimit: run.band ? TEXT.SAFETY_LIMIT : "",
+      plusLabel: lc && lc.running && !lc.canStepUp() ? TEXT.TOP_STEP : TEXT.PLUS,
       canStart: flow.canStart,
       canStepUp: flow.canStepUp(),
       canMeasure: flow.step === STEP.LEVEL && !!lc && lc.running && rms !== null,
