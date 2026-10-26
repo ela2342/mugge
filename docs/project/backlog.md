@@ -804,6 +804,16 @@ priority!"
   abfd33d7 (CI dispatch runs count as the R5 runs; the F-403 minimum
   content). F-403.md writer: PM-allocated, not worker-4 (AE R4, QE Q2;
   CM accepted); PM proposes the TW, TW answer pending.
+  UPDATE (CM, Architect, AE, QE, TW, 2026-10-26, after v275): backlog
+  v275 pushed as 7e82ef6f. US-172 run 4 CLOSED (Architect ruling r4
+  1816176e, decision (c)); next is a v8 bisect kit (run 5). F-262:
+  fence r3 48133641 makes verify.py gate_summary OWNED under Architect
+  C1 (a627ca97) and AE C1-C3 (f277e402); QE R5 ledger rules r2
+  ebd890d0. F-403.md writer: the TW, single writer, allocated by the
+  PM and CM (QE released; AE fine with the TW; supersedes "TW answer
+  pending" above); TW batch v1 371f0f13; worker-4's fe80d4fa is not
+  pushed and is frozen as TW input. AE R6 backlog line filed under
+  F-262.
 
 ## Reserved IDs
 
@@ -3919,6 +3929,46 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      line. A later kit could word it "no labwc-up result"." The AD
      notes the same wording: "When relaying, the CM should quote the
      OBSERVATION line as well."
+  - UPDATE (Architect via CM, 2026-10-26): run 4 CLOSED. Ruling r4
+    /tmp/cm-relay/US-172/frozen-rulings/run4-B1-ruling-r4-1816176e.txt
+    (sha256 1816176e, verified at PM read), applying the r3 decision
+    rule (a40a97e0). Verbatim: "DECISION: (c). Run 4 is closed. Next
+    comes a v8 kit that bisects the boot (run 5), through the normal
+    pin and review. No tryboot reboot of any kind before that."
+     Findings (PM summary): F1 the tryboot request path is intact
+     (kernel symbols present; GET_REBOOT_FLAGS answered; systemd 258.3
+     issued "systemctl reboot --reboot-argument=0 tryboot" and nothing
+     rejected it). F2 a plain reboot is down 6.2 s (bounded 12.9 s),
+     run 4 was down 26.4 s (bounded 33.4 s). F3 rsts = 0x420 on the
+     plain reboot too, so it is dropped as evidence. Conclusion,
+     verbatim: "(strong inference, not proof): the bootloader DID
+     start a tryboot pass in run 4. That boot failed within roughly
+     15-25 s and the Pi reset, and the next pass (tryboot is one-shot)
+     booted config.txt." Not yet separable: (K) the kernel panicked
+     early and panic=10 reset it, or (F) the bootloader failed in the
+     tryboot pass.
+     Run 5 design (worker-2 drafts v8, the Architect reviews; G-1..G-8
+     carry over unless the review says otherwise; one change per
+     tryboot reboot, each with a new run id and gated on the previous
+     step's file): R5a "null tryboot" (tryboot.txt = config.txt except
+     cmdline=cmdline-r5a.txt, which adds "us172r5=a panic=60"; if R5a
+     fails, stop and rule before any overlay step); R5b only after R5a
+     is TRYBOOT (R5a + overlay_prefix=o/ plus the run-4 blacklist and
+     panic tokens, with panic=60); R5c/R5d only if R5b fails (one
+     overlay each). panic=60 makes the signature readable: (K) about
+     75-85 s down, (F) about D_plain + 15-25 s, a hang beyond the
+     kit's 300 s DECISION. Owner brief (G-6, at HDMI), verbatim: "If
+     the screen goes dark for about a minute and then the Pi logo
+     comes back, that is expected for a failure. Tell us whether it
+     happened."
+     Kit points for v8 (Architect): the tb-reboot classifier reports
+     the measured down window in its file (r3 method), so a
+     NOT-TRYBOOT carries its K/F/plain signature; per-step expected
+     cmdline and tryboot.txt diffs are pinned by sha. Optional
+     (worker-2, read-only, no installs): a Pi 5 ramoops dtbo in the
+     base closure's overlays dir, proposed for R5b so a panic log
+     survives in /sys/fs/pstore; if none, skip it. Architect: "No
+     owner decision needed."
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -7043,6 +7093,78 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      the Architect (API shape) and the AE (R5 fit). FENCED: everything
      else, including docs/project/defects/**. worker-4 may supply the
      R4 data as a frozen file via the CM, for the F-403 writer.
+  - UPDATE (CM, Architect, AE, 2026-10-26, after v275): fence r3
+    /tmp/cm-relay/F-262-fence-r3.txt (sha256 48133641, verified at PM
+    read; supersedes r2 084ad898). verify.py moves to OWNED for the
+    gate_summary change ONLY (the two keys closed_loop_max_db and
+    closed_loop_band_hz; no other verify.py edits).
+    test_shared_correction.py is ADD-only, for the C1 early-FAIL test.
+    docs/project/defects/** stays FENCED (the TW writes F-403.md).
+    OWNED otherwise: the two test_measurement.py files. The CM sets
+    the R5 streak head at the first head with the verify.py change
+    plus the test changes, after its CI.
+     Architect ruling, frozen arch-gate-summary-keys-a627ca97.txt in
+     /tmp/cm-relay/F-262/frozen/ (sha256 a627ca97, verified at PM
+     read): API shape ACCEPTED (additive keys; neither consumer has a
+     pydantic response_model; filter-gen.js reads only named keys). C1
+     (blocking), verbatim: "don't index details with [] -- use a
+     guarded read." verify_closed_loop's two early FAIL returns have
+     no details, so [] raises KeyError and turns a reported FAIL into
+     a crash (HTTP 500 from /generate). Test in the same commit: an
+     early-FAIL channel gives closed_loop_pass false, both keys null,
+     all_pass false, no exception. No log_* values in the payload
+     (they can be NaN, and Starlette's JSONResponse refuses NaN).
+     AE answers, frozen ae-R4-R5-answers-f277e402.txt in
+     /tmp/cm-relay/F-262/frozen/ (sha256 f277e402, verified at PM
+     read): (1) R5 keys YES with C1 (details.get -> None; None is a
+     run FAIL, never a skip), C2 (the R5 assert uses the UNROUNDED
+     value, or closed_loop_pass AND the value; the payload may stay
+     rounded), C3 (all 10 runs <= 3.0 dB AND worst <= 2.5 dB;
+     per-channel min/max/spread at the end, for the QE). (2) R4
+     reading, verbatim: "the PM is right." The owner line means the
+     residual investigation (the R4 data), not the defect file;
+     worker-4 writing F-403.md "does not conflict with R4".
+  - F-403.md writer (PM and CM allocation, 2026-10-26; supersedes "TW
+    answer pending" above): the TW, as the single writer. Per
+    team-lead (2026-10-26): the QE released ("TW: release"), and the
+    AE says their R4 does not require worker-4 and is fine with the TW
+    (AE f277e402: worker-4 "does not conflict with R4"). Correction
+    (team-lead, 2026-10-26): this was not a team-lead ruling; fence r3
+    (CM file) says "team-lead ruling", which team-lead corrects. TW
+    batch v1 on e7afdb36: /tmp/tw-f403-e7afdb36.patch (sha1 371f0f13,
+    verified at PM read). Pending for v2 (CM): the severity (AE), the
+    R4 data (worker-4), the AE's R4 branch, and the xfail reason at
+    the merging head. worker-4's fe80d4fa (F-403.md under fence r1) is
+    NOT pushed and is dropped from the branch; its content is frozen
+    as TW input, w4-F403-draft-input-fe80d4fa.md in
+    /tmp/cm-relay/F-262/frozen/ (sha256 f39151a0, verified at PM
+    read).
+  - QE R5 ledger rules r2, frozen qe-R5-ledger-rules-r2-ebd890d0.md in
+    /tmp/cm-relay/F-262/frozen/ (sha256 ebd890d0, verified at PM read;
+    adds to abfd33d7, changes nothing there). A: the dispatch checks
+    out the branch head; A1, the CM checks once before the first
+    dispatch that origin/main is an ancestor of the streak head (git
+    merge-base --is-ancestor); carry-over after an update-branch only
+    if the diff from main touches none of src/, tests/, conftest*,
+    pytest/pyproject config, nix/, flake.*, configs/, scripts/,
+    .github/, else a new series of 10; the Rule 13 PR CI at the final
+    head is still required. B, per-run classes: PASS (API test PASSED
+    with every AC line; counts), RED (FAILED/ERROR, any max > 3.0 dB,
+    or an E2E crash after the stack started; ends the series, R2
+    applies), VOID (the API test never ran; logged, neither counts nor
+    breaks the streak). T1 failures: each is its own PM one-liner
+    (test name, run id); the same T1 test failing in 2 dispatches at
+    one head stops the series; more than 3 VOID runs in a series means
+    stop and send the ledger to the QE. Other E2E failures in a PASS
+    run are separate PM findings. Dispatch one at a time; a run
+    cancelled by a later dispatch is VOID.
+  - Backlog line (AE, 2026-10-26, from R6 of f8a014c7: no F-262 test
+    change; no P-level given), verbatim: "Q4 lag/noise table: state
+    that its rows cover align_capture only, and that the pipeline's 30
+    dB SNR gate (27fc548d) rejects a -40 dBFS room capture. Add a
+    pipeline-level test that a -40 dBFS capture is rejected (SNR) if
+    none exists." Supersedes the "not yet known which" in the R6 line
+    above.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -7133,6 +7255,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the browser test); a deterministic test that fails today and proves
   the IR reference is the played sweep; reproduction; a matching
   defects-index row.
+  WRITER (PM and CM allocation, 2026-10-26; QE released, AE fine with
+  the TW; supersedes "TW answer pending" above): the TW, single
+  writer. TW batch v1 /tmp/tw-f403-e7afdb36.patch (sha1 371f0f13) on
+  e7afdb36; v2 follows with the AE severity, the R4 data, the AE's R4
+  branch and the xfail reason at the merging head (see F-262, c8). The
+  AE (f277e402): the R4 owner line means the residual investigation,
+  not the defect file.
   S4 condition AMENDED (Architect, 2026-10-26; supersedes the S4 brief
   condition above; verbatim in
   /tmp/cm-relay/F-262/findings-rulings-arch-ae.txt, sha1 6b9584ae):
