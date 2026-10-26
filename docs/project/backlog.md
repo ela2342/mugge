@@ -311,6 +311,15 @@ priority!"
   does not block. OBSERVE-AE-sink-1 released (see US-173).
   CHANGE-US172r3-diag granted (see US-172 run 3). Mac disk: 1.90 GB
   free; no nix for anyone.
+  UPDATE (CM, 2026-10-26, after v188): backlog v188 pushed as
+  80ee6421. #57: the AC7 fix is ACCEPTED (Architect, AE): an injected
+  +6 dB Q4 380 Hz feature in the right path, premise asserts, the 1.0
+  dB margin and band kept; the AE's ±1/6-oct idea is withdrawn, the
+  joint fix is the Architect's plus 3 refinements; with worker-4. The
+  QE reviews the test change and the new head needs a fresh 7/7.
+  US-174d pushed at 1601c4dd; US-173 at 2a180966. US-172 tryboot is
+  ARMED, waiting for the owner at HDMI. Mac disk: 1.7 GB free and
+  falling; no nix for anyone.
 
 ## Reserved IDs
 
@@ -2176,6 +2185,28 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      US-173). AE options: (A) an implementation requirement, or a
      reword. PM note: the Architect's addenda 3 and 4 already put this
      in US-174d (see US-174d), so (A) needs no new backlog item.
+     AMENDED (AE ruling model (1), Architect confirmed, via the TW and
+     the CM as Addendum 5, 2026-10-26): US-173's F-318 hook
+     (mugge-no-bypass.lua) wins. WirePlumber never auto-links
+     playback, and neither the USBStreamer nor the convolver is ever
+     eligible as the default sink. Two AE-verbatim replacements in the
+     FINAL text above, the rest unchanged: (c) becomes "(c) the F-318
+     WirePlumber hook denies every playback auto-link, and neither the
+     USBStreamer nor the convolver is eligible as default.audio.sink;"
+     and the last sentence "With the filter-chain present, the
+     convolver is the default sink." becomes "With or without the
+     filter-chain, default.audio.sink never names the USBStreamer or
+     the convolver." Row 18 depends on US-173 being on main; the OPEN
+     footnote covers that. PENDING: a JACK self-connect case the
+     Architect and the AE added to the JACK clause; the verbatim text
+     is with the CM and the TW, mirrored in the next version.
+     SUPERSEDES the HELD line and the PM note above (both moot): the
+     TW's Section 5 pre-flight line for the 174d batch, verbatim:
+     "Before switching amps on: `pw-metadata -n default 0` must not
+     name the USBStreamer or the convolver as default.audio.sink, and
+     `pw-link -l` must show no link into a USBStreamer playback port
+     that does not come from the convolver output. If either check
+     fails, amps stay off."
   NEXT safety.md TOUCH (#51 reviews, non-blocking, fail safe; TW
   drafts, AE owns the wording, this list follows per the mirror
   rule): (1) AD L1 = UX (a): the lead-in "holds" (closed and
@@ -2834,6 +2865,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   is wrong for this Pi, and the drm-reads checks "quiet absent" and
   "tty1 present" do not tell tryboot from base; only c3
   (ignore_loglevel) does. Note it in the run-3 report.
+  UPDATE (CM, 2026-10-26): under CHANGE-US172r3-diag (worker-2),
+  tb-pre e5533d74 and tb-diag ea3cf033 were all ok. Tryboot is ARMED,
+  NOT triggered; the reboot waits for the owner to say they are at the
+  HDMI screen.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -3713,6 +3748,30 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   amps-on row 18 FINAL covers the convolver-absent case. worker-3
   fast-forwarded to 1c2d4bef (confirmed) and has started the M2 fence
   work.
+  SUPERSEDED (2026-10-26): "US-174d sets the convolver to 2100" above
+  is dropped; under the AE's model (1) the F-318 hook keeps both the
+  USBStreamer and the convolver out of the default sink (see amps-on
+  row 18 AMENDED, US-174d Addendum 5).
+  New verify AC (AE, via CM, 2026-10-26): the default sink is not a
+  protected node, and the F-318 hook shows in the journal; a violation
+  is P1.
+  UX condition (2026-10-26) MET: the F-318 operator note (expected
+  message, how to make sound, never link by hand) and the signal-gen
+  as the sanctioned speaker check are already on the branch at
+  1c2d4bef (SETUP-MANUAL.md l.1936-1965, safety.md F-318 rule
+  l.67-90); no new batch. UX also asked the AE to check in the session
+  evidence that Mixxx and Reaper show no error dialog when JACK
+  self-connect is refused; if they do, the operator note gets one
+  "expected at startup" line. The UX wording gaps (a) and (b) went to
+  the AE and land in TW batch v19, not US-173 (see F-318).
+  UPDATE (CM, 2026-10-26): pushed at 2a180966 = e7ab322f (M2: zero.wav
+  sha256 97b9d9db, .gitignore negation), 2e65e58d (profile AUX3
+  comment), 2a180966 (.gitignore comment). worker-3's M2 test
+  implements the AE's A/B/C in full with local helpers; the AE ruled
+  verify_mandatory_hpf NOT equivalent (average vs max reference, point
+  vs band). Finding: configs/venues/markaudio-ultimax-200hz.yml ch4 is
+  still dirac.wav; fence granted to worker-3 (ch4 plus comment only),
+  AE delta look.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -4169,6 +4228,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   QE reviews any test change. Gate teeth fine: the real +0.94 dB sits
   2.06 dB under the 3.0 dB gate, so the QE's <1.0 dB rule is not
   triggered. ARM wall time 548 s: F-380, not a blocker.
+  UPDATE (CM, Architect, AE, 2026-10-26): cause is the #55 merge (LR4
+  interaction); no loosening. The CM's earlier "<1.0 dB margin"
+  reading of the teeth was wrong: the teeth are fine (+0.94 dB
+  deviation, 2.06 dB margin to the gate). Fix ACCEPTED: an injected +6
+  dB Q4 380 Hz feature in the right path, premise asserts, the 1.0 dB
+  margin and band kept (the Architect's fix plus 3 AE refinements);
+  with worker-4. The QE reviews the test change; a fresh 7/7 at the
+  new head.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -4387,6 +4454,23 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   pi4audio-convolver; the PR text names the ungated fallback, with the
   WP stream-target hook as amps-on row 18 (now FINAL). The hook itself
   is NOT in 174d.
+  ADDENDUM 5 (Architect and AE, via the CM and the TW, 2026-10-26;
+  SUPERSEDES the 2100 and "= pi4audio-convolver" parts of addenda 3
+  and 4 above): default-sink model (1), F-318 option A as in US-173's
+  mugge-no-bypass.lua. The convolver priority.session 2100, its
+  relation test and the "default = convolver" check are DROPPED, not
+  held. The verify check becomes "default.audio.sink is neither the
+  USBStreamer nor the convolver (unset passes)"; it fails truthfully
+  until US-173 is on main.
+  UPDATE (CM, 2026-10-26): pushed at story/US-174d-deploy-gate =
+  1601c4dd (Q4 measured gate plus Q3 check_deployable_set, 1419 passed
+  locally). Fence extended to the convolver conf, pw_config_generator
+  (plus its test) and pipewire.nix. The conf design waits for the
+  Architect's ruling on combined_sub2_lp.wav missing from the venue
+  set.
+  AE one-liner (US-174 measurement, 2026-10-26): measurement capture
+  must always target the UMIK-1 node explicitly, never the default
+  source.
   US-174c (measurement on the Pi, web-ui measurement/session.py)
   starts only after F-390/F-391 and builds on them, because it is the
   same file (L-046). Its Pi run is also gated by US-173 H, F-341 AC3,
@@ -5767,6 +5851,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   carries the same rule (#45 entry). H2 closes (AD) when F-318 batch
   v19 merges with items 1, 3-5 as worded, the planned Row 14 text and
   item 16. The AD's #60 verdict rested only on H1 and is now APPROVE.
+  v19 SCOPE ADDITIONS (AE rulings via the TW, 2026-10-26; from UX gaps
+  on US-173; NOT in US-173; v19 stays PRE-PROD and PAUSED per the PO):
+  (1) F-315 ramp wording in five places in safety.md: row 13, the
+  F-373 rule, §8 "Opening the gate ramps" and the WirePlumber restart
+  text (two places), all to AE-verbatim "instant step to the venue
+  gain (F-315)" wording; the TW holds the exact texts. AE:
+  safety-relevant, because an operator would expect a fade that
+  doesn't happen. Amps-on row 13 here follows when v19 merges (mirror
+  rule). (2) The F-318 "How to make sound" bullet gets a
+  half-sentence: amps stay off until the AMPS-ON list holds, and the
+  test signal proves only the digital path. AE ruling: a test signal
+  with amps off is NOT "signal-gen measurement use" under the Pi 5
+  header.
   UPDATE (AE, 2026-10-26; AC (c)): the cold-boot gains read is done
   (pre-prod one-liner 7 CLOSED). OBSERVE-US172c-4 PASS, boot 60f384a1
   (fresh boot after power loss or hard reset), T+04:58: both nodes
@@ -6522,6 +6619,37 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   PA during a gig, gain-staged and D-031-protected. Decide whether the
   row-18 WirePlumber hook should refuse auto-targets for ALL Stream/*
   nodes, leaving only GM-made links.
+  WITHDRAWN (AE, 2026-10-26): US-173's F-318 hook
+  (mugge-no-bypass.lua) already denies every playback auto-link and
+  the convolver is never the default sink, so the premise is gone.
+- **F-318 blocked-stream notice** (UX, 2026-10-26; P3, owner UX;
+  non-blocking for US-173 and US-174d; from the Architect/AE/UX
+  default-output ruling, F-318 option A), verbatim: "**F-318
+  blocked-stream notice:** the web UI shows a neutral info line,
+  'Audio from <app> blocked (not routed to PA)', deduplicated per app
+  with a count and the last time seen, and dismissable. Clicking it
+  opens a short explanation: use Mixxx/Reaper, use the signal-gen for
+  a speaker test, never link by hand. There is no allow button, no
+  modal and no red styling. The source is the existing 'F-318: denied
+  auto-link' journal line, surfaced via GM or the web UI. It is
+  distinct from the red routing-audit indicator, which is already in
+  the backlog and fires only for an actual non-convolver link to
+  USBStreamer playback."
+  Amendment (UX, after Architect input, 2026-10-26): the notice needs
+  a source for BOTH block paths: (a) WirePlumber auto-link denials,
+  from the existing "F-318: denied auto-link" journal line; (b) JACK
+  self-connect refusals (US-173 jack.self-connect-mode), which have no
+  GM-visible event yet, so a source has to be defined (Architect).
+  Until (b) has a source, the notice covers (a) only, and its
+  explanation must not claim to cover every blocked stream.
+- **deploy.sh puts the JACK fragment in the wrong directory**
+  (Architect, 2026-10-26; P3): scripts/deploy/deploy.sh:80 copies
+  80-jack-no-autoconnect.conf into
+  ~/.config/pipewire/pipewire.conf.d/, but it is a jack.conf.d
+  fragment; Nix (pipewire.nix:42) installs it correctly. If deploy.sh
+  is still used anywhere, it silently drops rt.prio 70,
+  autoconnect=false and US-173's new self-connect-mode. Fix: correct
+  the path or retire the legacy script.
 - development.md, ONE docs item (TW offers to write it; merges UX,
   QE, Arch N2, AD L2, TW F1-F3): run `nix build
   .#checks.<system>.app-source-paths` locally (test-all no longer
