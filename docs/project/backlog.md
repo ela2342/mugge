@@ -814,6 +814,21 @@ priority!"
   pending" above); TW batch v1 371f0f13; worker-4's fe80d4fa is not
   pushed and is frozen as TW input. AE R6 backlog line filed under
   F-262.
+  UPDATE (CM, PO, AE, QE, Architect, 2026-10-26, after v277): backlog
+  v277 pushed as bd206f32 (blob c7fc3433). The PM's v278 (121380ad)
+  and v279 (d5e8fb09) were never pushed (stale base 7e82ef6f; messages
+  crossed). F-403.md writer settled: the TW (QE and AE released,
+  record (f) 7f3a057b); F-262 fence r4 865f5117 (wording only). AE R4
+  branch ruling 2218daf5: B1 fixture fix, B2 filed as F-411 (Medium).
+  eb178a19 (6c7fe986) released by the Architect and the AE (stricter
+  line, new head follows). US-179 r8 (978c3e1b) FILED in P3, released
+  by the AE, the Architect and UX (PO); assigned to worker-6; US-180,
+  US-181 and US-182 filed as follow-ups; D-071 allocated for the
+  seeded test-noise design.
+  Addendum (CM, 2026-10-26, same version): release record (g) ba281200
+  (eb178a19 is not the streak head; a new head with the set-equality
+  line needs AE + Architect releases); TW F-403 batch v2 86ab5ba2
+  supersedes v1, held until that head.
 
 ## Reserved IDs
 
@@ -936,6 +951,13 @@ not governing text; r4 brings its own Later items) and US-180 (PO, for
 the US-179 later item "re-measure after the filters are loaded
 elsewhere"; the PO asked for it to be allocated when r4 is filed).
 Next free (supersedes the line above): F-411, US-181, D-071, T66.
+Filed 2026-10-26 (PM, for the PO, from US-179 r8 978c3e1b; checked
+free across main, all origin/* and local branches, and worktree
+docs/src, where only Next-free lines mention them): US-179 (filed,
+P3), US-180 (filed), US-181 (browser Smaart-style view), US-182 (live
+impulse-response view; confirmed free), D-071 (seeded per-channel
+test-noise design, US-179 AC5). Next free (supersedes the line above):
+F-412, US-183, D-072, T66 (F-411 filed in this version, see F-403).
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -7165,6 +7187,45 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     pipeline-level test that a -40 dBFS capture is rejected (SNR) if
     none exists." Supersedes the "not yet known which" in the R6 line
     above.
+  - UPDATE (CM, 2026-10-26): fence r4 /tmp/cm-relay/F-262-fence-r4.txt
+    (sha256 865f5117, verified at PM read; supersedes r3 48133641).
+    Wording and record only; the OWNED and FENCED file sets are
+    unchanged. It records the TW as the F-403.md writer (release
+    record (f) 7f3a057b) and corrects r3's "team-lead ruling"
+    attribution; the AE's B1 fixture fix and B2 (F-411) are NOT in the
+    fence; the browser xfail stays.
+  - UPDATE (CM, 2026-10-26): F-262 head eb178a19, R5 logging under
+    fence r3/r4 (fe80d4fa dropped, the branch went back to 65af5ee2).
+    Review diff
+    /tmp/cm-relay/F-262/review-eb178a19/65af5ee2..eb178a19.diff
+    (sha256 6c7fe986, verified at PM read). Architect, verbatim:
+    "release 6c7fe986"; the stricter line is optional, written as "set
+    of corrected channels == requested channels". AE, verbatim:
+    "release with the stricter line". So (CM) worker-4 adds the
+    stricter line in the Architect's form as a new head, and both
+    release again; that head becomes the R5 streak candidate.
+    worker-4's C1 scope point (corrected entries only) went with the
+    6c7fe986 release. PM cross-ref: origin/fix/F-262-shared-correction
+    is still e7afdb36 at PM read; CI 40392568920 still running (CM),
+    65af5ee2 goes up after it.
+     Release record (g) (CM, 2026-10-26; supersedes the PM paraphrase
+     of the two releases above):
+     /tmp/cm-relay/release-record-20261026-g-6c7fe986.txt (sha256
+     ba281200, verified at PM read). Architect, verbatim: "release
+     6c7fe986 (eb178a19, parent 65af5ee2). C1 is implemented as ruled:
+     guarded .get gives None, no log_* values are in the payload, and
+     the early-FAIL test asserts details == {}, both keys None and
+     all_pass False. The service test asserts the unrounded pass flag
+     together with the rounded value, which is consistent. No points."
+     On the C1 scope, verbatim: "If worker-4 wants it, write it as
+     "the set of corrected channels equals the channels the test
+     requested", not as a hard-coded "Left". That would be a new head
+     and needs a new release from me. Otherwise release 6c7fe986
+     stands as is." AE, verbatim: "release with the stricter line. The
+     corrected-entries scope is right, but the one line also
+     guarantees that the measured channel (Left) is the one checked."
+     Net (CM), verbatim: "eb178a19 is NOT the streak head. A new head
+     with the set-equality line needs AE + Architect releases."
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -7262,6 +7323,62 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   branch and the xfail reason at the merging head (see F-262, c8). The
   AE (f277e402): the R4 owner line means the residual investigation,
   not the defect file.
+  WRITER SETTLED (CM release record (f), 2026-10-26; supersedes "AE
+  fine with the TW" above): the TW, single writer, allocated by CM +
+  PM; worker-4 supplies input data only.
+  /tmp/cm-relay/release-record-20261026-f-F403-writer.txt (sha256
+  7f3a057b, verified at PM read). QE, verbatim: "F-403 writer: TW:
+  release." AE, verbatim: "(1) TW: release. One writer settles it, and
+  the TW batch already exists. worker-4 supplies only the input data."
+  Not a team-lead ruling (team-lead); fence r3's "team-lead ruling"
+  wording is fixed in fence r4.
+  SEVERITY (AE, 2026-10-26, for the TW;
+  /tmp/cm-relay/F-262/frozen/ae-F403-severity-b74d437e.txt, sha256
+  b74d437e, verified at PM read), verbatim: "High (audio correctness,
+  core room-correction path; fails closed, no speaker or ear hazard)".
+  Reasons (PM summary): production code, session.py:829-834 builds the
+  IR against the session's own sweep array, not the one signal-gen
+  plays (a code fact; only the size of the effect is a hypothesis); it
+  blocks the core priority; not Critical because the F-262 closed-loop
+  gate refuses the filter and the correction is cut-only and
+  D-009-trimmed. Re-rating, verbatim: "if S2 (played-sweep reference)
+  shows the mismatch changes no result beyond 0.5 dB on real hardware,
+  the AE drops it to Medium." The near-limit residual (R4 data) is
+  separate (see R4 BRANCH below).
+  R4 DATA (worker-4 via CM, 2026-10-26; offline model only, system
+  python3 + numpy at 65af5ee2, no PipeWire, CI or Pi;
+  /tmp/cm-relay/F-262/frozen/w4-F403-R4-data-41c33bbb.txt, sha256
+  41c33bbb, verified at PM read; S2 played-sweep reference): Sub1 (2 s
+  / 5 s, local-demo model) max deviation +2.99 / +2.97 dB at 42.4 Hz,
+  uncorrected +20.98 / +20.96 dB there, FIR gain -18.03 dB capped /
+  about -21.2 dB uncapped, 18 dB cap REACHED; mock-room Left +2.97 dB
+  at 272.6 Hz, uncorrected +3.95 dB, FIR gain -0.71 dB, cap NOT
+  reached (minimum FIR gain in 250-500 Hz -1.52 dB). Onset equals
+  played_onset in every case.
+  R4 BRANCH (AE ruling, 2026-10-26, single writer;
+  /tmp/cm-relay/F-262/frozen/ae-F403-R4-branch-ruling-2218daf5.txt,
+  sha256 2218daf5, verified at PM read). Alignment, verbatim: "no
+  defect. Onset = played_onset in every case, and SNR is 48-65 dB." B1
+  Sub1, verbatim: "CAP BRANCH, a test fixture issue." Fix in the
+  local-demo room sim (scripts/generate-room-sim-ir.py), never in
+  MAX_CUT_DB or MAX_POSITIVE_DEVIATION_DB; verbatim: "The deepest mode
+  inside the gated band must be at most 15 dB over target, so the cap
+  is not reached and a fully corrected mode leaves room for the R5 0.5
+  dB margin." Not in the F-262 fence (fence r4); no owner or P-level
+  given. B2 mock-room Left: "NO-CAP BRANCH, a correction defect
+  suspected"; filed as F-411 (Medium). Effect on F-262 (AE): the
+  browser xfail stays (f8a014c7 R3); verbatim: "Its removal later
+  needs S2 + B1 fixture fix + B2 resolved, and then the R5 10-run AC."
+  The API test (Left, session sweep, +1.92 dB) is not affected.
+  Product note (AE, for the PM backlog, not F-262; no P-level given),
+  verbatim: "a real room with a mode more than 21 dB over target fails
+  the closed-loop gate, so the channel gets no filter. That is the
+  fail-safe direction and correct for now. A future "partial
+  correction" verdict is a design question, not a defect."
+  TW BATCH v2 (CM, 2026-10-26; supersedes v1 371f0f13):
+  /tmp/tw-f403-v2-e7afdb36.patch (sha1 86ab5ba2, verified at PM read),
+  held until the new F-262 head (set-equality line) is released. The
+  CM passes the B2 number F-411 to the TW.
   S4 condition AMENDED (Architect, 2026-10-26; supersedes the S4 brief
   condition above; verbatim in
   /tmp/cm-relay/F-262/findings-rulings-arch-ae.txt, sha1 6b9584ae):
@@ -7569,6 +7686,26 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   PM cross-ref: src/graph-manager/src/main.rs at e050fe90, l.824-834
   (CloseGate sets each Mult to 0.0) and l.575-582 (Standby closes the
   gate the same way), match the AE's reading.
+- **F-411** Correction under-corrects near the closed-loop band edge
+  (mock-room Left, 272.6 Hz: room +3.95 dB, FIR -0.71 dB) (AE,
+  2026-10-26; title verbatim from the AE; severity Medium, AE; no
+  P-level given; from F-403 R4 branch B2) Source:
+  /tmp/cm-relay/F-262/frozen/ae-F403-R4-branch-ruling-2218daf5.txt
+  (sha256 2218daf5, verified at PM read), on worker-4's R4 data
+  41c33bbb (offline model, S2 reference). AE, verbatim: "The room is
+  +3.95 dB over target at 272.6 Hz (1/6-oct, the gate's view), but the
+  FIR cuts only 0.71 dB there. The cap is far away and alignment is
+  clean, so the correction under-corrects a 4 dB peak and lands 0.03
+  dB inside the gate limit." Severity, verbatim: "Medium (audio
+  correctness; fails closed, no hazard)."
+  Investigation (AE, verbatim): "The investigation compares the
+  correction's own smoothing and windowing view with the closed-loop
+  1/6-oct view at 250-300 Hz. If the two disagree by design, the AE
+  rules which view is right before any code change." Fixed, verbatim:
+  "the 3.0 dB limit, the 18 dB cap and the 1/6-oct gate smoothing are
+  not changed to make this pass." Not in the F-262 fence (fence r4).
+  No owner or worker assigned yet. Links: F-403, F-262 (its browser
+  xfail removal needs F-411 resolved, see F-403).
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -10160,6 +10297,320 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   anyway; if it merges first, check whether the line is already gone.
 ## P3
 
+- **US-179** Web-only standalone room correction (side quest) (PO,
+  2026-10-26; P3 side quest, below US-172, US-173/#63, US-174/F-262
+  and US-178; idle worker only, no Pi session of any tier). FILED from
+  r8 /tmp/po-drafts/web-rc-story-draft-r8.md (sha256 978c3e1b,
+  verified at PM read; PM frozen copy
+  /tmp/pm-backlog/US-179-final-r8-978c3e1b.md, same sha256). Released
+  by the AE, the Architect and UX, all naming 978c3e1b (PO). r1-r7 are
+  void (PO); the PM's frozen r3 copy is history only. Text below is r8
+  verbatim, reflowed, without its title and status lines.
+  **Owner, verbatim (2026-10-26, via team-lead):**
+  - "Here's a side quest while we try to get that sorted. A web only
+    standalone version of the room correction. Just using the audio
+    hardware in the browser, piggybacking on the UI elements we
+    already built."
+  - "Or rather, the computation of the correction file, room
+    correction itself need not go through the browser. Just the
+    measurement and computation."
+  - "Yeah, no, we need to support deep bass in the web too. 20Hz is
+    fine. ALso, didn't we already settle on a pink noise design? Using
+    a predictable RNG per channel?"
+  - "We also had the Smaart-alike display off coherence, realtime
+    impulse response calculation, etc."
+  - On the Architect's noise reconstruction (636a00ec Q2): "I think
+    architect assembled those ideas correctly."
+  **Priority:** side quest, P3. Below US-172, US-173/#63, US-174/F-262
+  and US-178. Idle worker only. No Pi session of any tier.
+  **User story:** As the owner, I want to measure a speaker or sub in
+  a browser on any computer, with that computer's audio interface and
+  a measurement mic, and get correction filter files for the mugge Pi,
+  without the Pi, re-using the UI I already know.
+  **Use case (PO + AE, settled):** full-range speakers and subs, home
+  and PA, one channel at a time, down to 20 Hz.
+  **Context (AE):** the browser has none of the Pi's protections (no
+  D-063 gate, no D-031 driver HPFs, no D-009 gain staging, no known
+  amp or speaker). It can't know the OS volume, interface or amp gain,
+  or the speaker's sensitivity and power handling. A digital level is
+  not an SPL. Protection comes from the mic, the user's per-channel
+  declarations and conservative level limits.
+  **Scope (in):**
+  - Static web app, no server logic, works offline after loading. No
+    dependency on the Pi, GraphManager, signal-gen, pcm-bridge or the
+    Pi web UI backend.
+  - Audio I/O only via browser APIs: Web Audio output (test noise in
+    an AudioWorklet), getUserMedia mic.
+  - Computation: the existing Python room-correction code runs in
+    Pyodide in a Web Worker (plus a soundfile shim). Shared files are
+    byte-identical SOURCE copies of src/room-correction; the build
+    copies them and CI checks the hashes. Numbers match the native
+    pipeline within tolerance, not bit for bit.
+  - Prediction and verdict use room_correction.closed_loop unchanged
+    (system_response, passes_residual_gate).
+  - UI: reuse unchanged spectrum-renderer.js, pcm-worklet.js, CSS and
+    fonts; new thin page and flow controller. The backend-coupled
+    wizard/measure/transfer-function scripts are not reused in this
+    story.
+  - MVP: one channel at a time, one mic position, one output WAV per
+    channel (48 kHz, 16384 taps, Pi pipeline WAV format), plus a
+    measurement report.
+  - Mic calibration file upload (e.g. UMIK-1 .txt).
+  **Scope (out, follow-ups below):** the live Smaart-style view and
+  the live impulse-response view (US-181, US-182); applying the
+  correction in the browser; any audio through the correction (no
+  ConvolverNode); loading onto the Pi; multi-way crossovers; several
+  positions; time alignment; resampling or other formats; any change
+  to src/web-ui, src/room-correction or src/signal-gen; security
+  hardening (postponed per owner).
+  **Code location and fences (Architect):**
+  - New code in src/web-rc/ only; `nix run .#web-rc`.
+  - No edits to src/room-correction/**, src/web-ui/** or
+    src/signal-gen/**.
+  - flake.nix and CI last, in a separate small commit, rebased on
+    then-current origin/main.
+  - Fresh branch from origin/main; file set disjoint from #63, #66,
+    #68.
+  - Pyodide vendored for offline use (~20-30 MB).
+  - Estimate ~5 worker-days (4 + 1 for the static result views); main
+    risk Pyodide packaging.
+  **Acceptance criteria:**
+  1. **No backend:** opened from static files, the app measures,
+  computes and offers the download with the network disconnected after
+  loading.
+  2. **Audio setup, fail closed (blocking states, no "continue
+  anyway"):**
+    - 2a The setup step shows "Sample rate: <actual> Hz" for output
+      (AudioContext.sampleRate) and input (mic track
+      getSettings().sampleRate). If either is not 48000: the step
+      stays red, "Start level check" is disabled, text: "Can't
+      measure: this audio device runs at <rate> Hz. mugge filters need
+      48 kHz. Set the device to 48 kHz in your system's audio
+      settings, then reload this page." No resampling.
+    - 2b A rate change between captures or on devicechange triggers
+      auto-STOP and returns to 2a.
+    - 2c echoCancellation, noiseSuppression and autoGainControl must
+      read back OFF; otherwise measuring is blocked with a named
+      reason.
+    - 2d Capture window >= sweep length + 1 s.
+  3. **Per-channel speaker declarations (AE R1-R3):**
+    - 3a Before any sound on a channel, the user declares its low
+      limit: default 20 Hz, range 20-500 Hz, never below 20 Hz.
+    - 3b Capability confirmation per channel, e.g. "This speaker can
+      safely play down to <limit> Hz at moderate level. I have checked
+      its spec sheet or it is a subwoofer." Not ticked = no sound on
+      that channel.
+    - 3c "Ported (bass reflex) or closed?" If ported and the limit is
+      below the port tuning the user enters: a warning and a second,
+      separate confirmation. Reason shown in plain words: below its
+      tuning a port stops holding the cone back, so the cone moves
+      much further and can be damaged.
+  4. **Level safety (AE R6; the AE's wording governs):**
+    - 4a One-time safety acknowledgement before the first sound: no
+      headphones or IEMs; no Bluetooth outputs; amps at a low setting;
+      the browser drives the shown output device (setSinkId where
+      supported).
+    - 4b Level check before every sweep: test noise (AC5) from -60
+      dBFS, +6 dB per explicit click only, up to 75 dB SPL at the mic
+      (with calibration file) or a fixed mic dBFS target (without;
+      visible "uncalibrated" warning). Cap shown. A plain RMS/peak
+      meter on the mic input via pcm-worklet.js unchanged (no live TF
+      view in this story).
+    - 4c Hard digital cap -20 dBFS peak on the actual output, a code
+      constant; no UI can raise it.
+    - 4d Auto-STOP: mic > 90 dB SPL (calibrated) or mic clip (peak >=
+      -1 dBFS); sweep mic level > 6 dB above the level check;
+      level-check noise runs 30 s without a user action;
+      visibilitychange/pagehide, devicechange, any audio error.
+    - 4e STOP button and Esc during the level check and the sweep:
+      ramp to 0 in ~10 ms, then the AudioContext is suspended.
+    - 4f Mono to ONE selected channel; every other output channel of
+      the device is digital zero.
+    - 4g Sweep: starts at the declared limit, through a subsonic HPF
+      of >= 4th order at 0.8 x the limit (16 Hz for 20 Hz), fade-in
+      and fade-out, upper limit 20 kHz, sweep length at most 10 s per
+      capture.
+    - 4h Output gain starts at 0 and ramps in over about 10 ms. Each
+      +6 dB level-check step ramps over about 10 ms; none jumps.
+    - 4i After an auto-STOP by the 30 s timeout (4d) or the clamp
+      (5d), the level-check step stays open and names the cause, e.g.
+      "Level check stopped after 30 s without input. Press Start level
+      check to continue." / "Stopped: level cap reached. Lower the amp
+      or interface gain, then restart." A restart always begins at -60
+      dBFS, never at the last level, and ramps in from 0 per 4h: a
+      fresh start, not a resume. Any "+" click counts as user action
+      for the 30 s timer (UX note 4de84fe8).
+  5. **Test noise (owner-confirmed design, Architect 636a00ec Q2):**
+    - 5a Seed per channel: seed = base_seed XOR channel_index (US-121
+      scheme); base_seed recorded in the report; channel_index = the
+      0-based output channel the noise goes to (0 = left, 1 = right),
+      recorded in the report next to base_seed (Architect N1); the
+      same noise on every run for a given channel.
+    - 5b Generator: the signal-gen generator as reference
+      (xoshiro256++, seed_from_u64, pink = Voss-McCartney with 16
+      rows), ported to JS in the AudioWorklet. generator.rs operation
+      order is kept exactly, including the level step per generator:
+      white = f32 cast, then f32 multiply by the level; pink = f64
+      multiply by the level, then f32 cast.
+    - 5c Golden vectors: the first 4096 samples, white and pink, seeds
+      0, 1 and 174, at levels 1.0 and 0.1, produced by the Rust
+      generator (generator.rs compiled unchanged) and compared bit for
+      bit (f32 bit patterns). Goldens in src/web-rc/fixtures/; no edit
+      to src/signal-gen/**. Route (Architect N2): a small Rust tool
+      under src/web-rc/golden/ compiles generator.rs unchanged via
+      #[path], with rand_xoshiro pinned to signal-gen's lockfile
+      version; CI rebuilds the goldens and compares them with the
+      committed fixtures.
+    - 5d Level-check use (AE R7, O1): pink, band-limited 100 Hz-10 kHz
+      (4th-order Butterworth, after the generator), level set from the
+      filtered noise's crest factor, measured once over at least 10 s
+      of the deterministic stream for the seeds in use, plus a 3 dB
+      margin, so its peak stays below the 4c cap. A hard clamp at -20
+      dBFS peak is the last stage in the worklet. Any sample that
+      reaches it triggers auto-STOP (4e ramp) and the message 'level
+      cap reached'. The clamp is a backstop and never runs as a
+      distorting limiter. Deep bass is played only by the sweep.
+  6. **Filter is cut-only and safe (D-009, AE R5; gates per Architect
+  A13):**
+    - 6a Correction gain <= 0 dB at every bin; final filter peak <=
+      -0.5 dB after trim.
+    - 6b The filter contains a subsonic HPF of >= 4th order (the
+      shared generate_subsonic_filter, slope >= 24 dB/oct) with its
+      corner at 0.8 x the channel's declared limit (16 Hz for 20 Hz),
+      and passes verify_mandatory_hpf with that corner (>= 18 dB at
+      corner/2 vs passband peak, H1), the same as the Pi, which passes
+      mandatory_hpf_hz as the corner.
+    - 6c Before any download the bundle runs verify_d009,
+      verify_format (16384 taps, 48 kHz), verify_minimum_phase,
+      verify_wav_subtype, verify_mandatory_hpf, plus whatever
+      F-262/#66 gates are on main at build time, on the downloaded WAV
+      bytes (re-read and re-parsed). Any fail = no download, named
+      error.
+  7. **Captures fail closed (F-262 lessons):** alignment by
+  correlation/deconvolution, not timing; a silent pre-capture with an
+  SNR check; a mic clip rejects the capture; all thresholds are the
+  Python pipeline's constants. A bad capture gives a clear error,
+  never "ready".
+  8. **Hold-out capture and prediction (AE, REQUIRED):**
+    - 8a Two captures at the same position; the filter is built from
+      capture 1; the prediction is computed on capture 2; reject if
+      the two captures differ by more than 1.0 dB over the correction
+      band.
+    - 8b The prediction uses the downloaded WAV bytes and closed_loop
+      unchanged; the 3 dB residual verdict comes from closed_loop.
+    - 8c Label: "Predicted residual within 3 dB: PASS/FAIL —
+      predicted, not measured, unverified until re-measured". The
+      before curve is labelled "Measured". No ConvolverNode.
+  9. **Equivalence with the Pi pipeline:** a CI test feeds the same
+  recorded IR through the browser build and the native pipeline;
+  filter magnitude within +-0.5 dB over the correction band; the
+  browser output also passes run_correction_gate. CI checks the shared
+  Python sources are byte-identical to src/room-correction.
+  10. **Browser-made files are marked:** "browser-generated" in
+  filename and report. Report text: "Filters for the mugge Pi (48
+  kHz). Loading onto the Pi is not supported yet. Correction not
+  applied or verified acoustically; re-measure after loading them."
+  Any later Pi use must pass the Pi's own run_correction_gate and
+  D-009 trim (docs).
+  11. **UI flow (UX, signed off):** header "Standalone — not connected
+  to a mugge Pi"; no deploy, gate or venue elements; steps: setup
+  (rates, 48 kHz refusal, speaker declarations) -> safety
+  acknowledgement -> level check (level meter, SNR, "+" steps, cap
+  shown) -> measure (progress only) -> result -> download. Result step
+  (Architect Q4 addendum): measured magnitude (smoothed,
+  spectrum-renderer.js), impulse response, delay, a repeatability
+  trace (capture 1 minus capture 2 in dB, green where within the AC8a
+  1.0 dB limit), and the predicted residual (AC8c). No phase and no
+  "coherence" label anywhere in this story (a single sweep can't give
+  a true coherence); end state "Filters ready — download";
+  beforeunload warning while a measurement or unsaved result exists.
+  Hint (AE N1): "Deep-bass correction needs a measurement mic with a
+  calibration file."
+  12. **Tests:** unit tests for the flow controller and safety logic
+  (cap, clamp auto-STOP, ramps, 30 s timeout, 10 s sweep bound,
+  auto-STOP triggers, rate refusal, blocked DSP flags, declarations);
+  the golden-vector test (5c); an E2E browser test with simulated
+  audio (room-simulator IRs, fake media stream); the equivalence test
+  (AC9); all in CI.
+  13. **Docs (TW):** a short how-to with the safety acknowledgement,
+  the per-channel declarations and port warning, and the AC10 Pi-use
+  rule.
+  **Follow-up stories (PM files with IDs; nothing dropped):**
+  - US-180: re-measure after the filters are loaded elsewhere
+    (reserved by PM).
+  - US-181: browser Smaart-style view: live transfer function, phase
+    and coherence during the level check (same AC5 noise, no new
+    excitation), plus phase display; transfer_function.py unchanged in
+    Pyodide; renderer/transport split of transfer-function.js (route
+    b), so it starts after #63/#66/#68 merge. ~3 worker-days. Includes
+    a 60 s real-device coherence/clock-drift AC (AE threshold).
+  - US-182: live impulse-response view (new feature; browser first, Pi
+    later), after US-181. ~1.5 worker-days.
+  **Backlog one-liners (PM):**
+  - Upload verified correction WAVs to the Pi via Venue: same
+    verify.py gates server-side before writing, then select; needs
+    SecSpec review (8080 has no auth, F-037).
+  - signal-gen and the Python measurement scripts
+    (gain_calibration.py, measure_nearfield.py) don't produce
+    reproducible noise; consider moving them to the AC5 scheme.
+  - D-071: record the per-channel seeded test-noise design (AC5).
+  - Other sample rates and export formats.
+  Worker-brief attachments (PO; frozen, no story text changes): UX
+  release note /tmp/po-drafts/ux-us179-r5-release-note-frozen.txt
+  (sha256 4de84fe8, verified at PM read; folded into 4i), and
+  Architect note
+  /tmp/po-drafts/architect-us179-r7-worker-note-frozen.txt (sha256
+  8d89173c, verified at PM read), verbatim: "One note for the worker
+  that changes no text: signal-gen's lockfile is the workspace
+  src/Cargo.lock, which pins rand_xoshiro 0.7.0." PM cross-ref:
+  origin/main src/Cargo.lock has rand_xoshiro version 0.7.0 at PM
+  read.
+  Brief (PO to the CM, 2026-10-26): an IDLE worker only, on a fresh
+  branch from origin/main. Fences: new code only in src/web-rc/; no
+  edits to src/room-correction/**, src/web-ui/** or src/signal-gen/**;
+  flake.nix and CI last, in a separate commit; file set disjoint from
+  #63/#66/#68. No Pi session of any tier; it never pulls anyone off
+  US-172, US-173/#63, US-174/F-262 or US-178. Tooling via nix develop
+  / nix run, under the disk-hold rules while they are in force.
+  ASSIGNED (CM, 2026-10-26): worker-6, branch story/US-179-web-rc from
+  origin/main 498fa3e5, worktree .claude/worktrees/story-US-179-web-rc
+  (PM cross-ref: branch and worktree at 498fa3e5 at PM read). Fences:
+  src/web-rc/ only; flake/CI last, in a separate commit; no Pi. Nix
+  cleared for Mac-only builds (87 GiB free); no linux-builder, no GC.
+- **US-180** Re-measure after the US-179 filters are loaded elsewhere
+  (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
+  stories", verbatim: "re-measure after the filters are loaded
+  elsewhere (reserved by PM)"). Reserved in v275; filed now. No ACs
+  yet.
+- **US-181** Browser Smaart-style view (PO, 2026-10-26; P3, follow-up
+  of US-179; starts after #63/#66/#68 merge). r8, verbatim: "browser
+  Smaart-style view: live transfer function, phase and coherence
+  during the level check (same AC5 noise, no new excitation), plus
+  phase display; transfer_function.py unchanged in Pyodide;
+  renderer/transport split of transfer-function.js (route b), so it
+  starts after #63/#66/#68 merge. ~3 worker-days. Includes a 60 s
+  real-device coherence/clock-drift AC (AE threshold)." The AE
+  threshold is not yet given.
+- **US-182** Live impulse-response view (PO, 2026-10-26; P3, after
+  US-181). r8, verbatim: "live impulse-response view (new feature;
+  browser first, Pi later), after US-181. ~1.5 worker-days."
+- **Upload verified correction WAVs to the Pi via Venue** (PO
+  one-liner from US-179 r8, 2026-10-26; no P-level given), verbatim:
+  "Upload verified correction WAVs to the Pi via Venue: same verify.py
+  gates server-side before writing, then select; needs SecSpec review
+  (8080 has no auth, F-037)."
+- **Reproducible test noise in signal-gen and the Python measurement
+  scripts** (PO one-liner from US-179 r8, 2026-10-26; no P-level
+  given), verbatim: "signal-gen and the Python measurement scripts
+  (gain_calibration.py, measure_nearfield.py) don't produce
+  reproducible noise; consider moving them to the AC5 scheme."
+- **D-071: record the seeded test-noise design** (PO one-liner from
+  US-179 r8, 2026-10-26; no P-level given), verbatim: "D-071: record
+  the per-channel seeded test-noise design (AC5)." D-071 allocated by
+  the PM (see Reserved IDs); no writer named yet.
+- **Other sample rates and export formats for US-179** (PO one-liner
+  from US-179 r8, 2026-10-26; no P-level given), verbatim: "Other
+  sample rates and export formats."
 - **/protection status reads the wrong marker** (F-c; worker-5, AE
   ruling via team-lead, 2026-10-26; P3, owner UX; cross-ref F-390):
   thermal_routes reads active-profile.txt from the speakers dir, but
