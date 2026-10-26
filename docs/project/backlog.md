@@ -464,6 +464,10 @@ priority!"
   REQUESTED). worker-3 pushed 2a688a94 (UX C1 as AC12, plus N1); new
   head, so every approval needs a diff-only re-check at the final
   head. Consolidated rework with worker-3 (see US-173).
+  UPDATE (CM, 2026-10-26, after v218): backlog v218 pushed as
+  9632c15f; df 4.8 GB. #63 QE B3 build: worker-run, CM-cleared and
+  published (see US-173). #63 AC11(c): the Architect sent a FINAL
+  text; NOT settled until the AE confirms it. #57: QE item closed.
 
 ## Reserved IDs
 
@@ -4192,6 +4196,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     head. QE B3: a CM-published `nix build
     .#checks.aarch64-linux.wireplumber-no-bypass` at the final head;
     needs disk clearance under the hold.
+    UPDATE (CM, 2026-10-26): the B3 build (or the cache-hit read) is
+    worker-run, CM-cleared and published: a detached worker runs it,
+    the CM grants the disk clearance and publishes the output in the
+    review bundle.
   #63 backlog / non-blocking (no priority given): AE N1 and AD L1
   (HP/IEM ch 5-8 -> zero.wav); the Architect's wp-f318 case without
   the convolver stand-in; the TW's stale 80-jack conf header; SecSpec
@@ -4199,6 +4207,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Relay to worker-4 AFTER #63 merges (Architect, via CM): switch
   test_deploy_gate.py's in-test zero fixture to the committed
   configs/coeffs/zero.wav.
+  #63 AC11(c) (CM, 2026-10-26): the Architect sent a FINAL text that
+  withdraws "loaded notice absent = FAIL". PENDING: the CM relays it
+  only once the AE confirms the same text. Not settled.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -4717,6 +4728,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   above. #61 is update-branched to 781b638a (content identical to
   247478d5), approvals void, 7 re-approvals requested via team-lead;
   #62 follows.
+  QE (accounting, 2026-10-26): #57 is closed for the QE. C2 was met
+  before the merge: the body was edited at 11:31:40Z, the merge
+  (1e1495ab) was at 11:35:26Z. The QE's pending list was out of date.
   #61 re-approvals at 781b638a (record copies): QE APPROVE (pin
   e13a5e04 verified against git diff origin/main...781b638a; content
   identical to 247478d5; docs-only, CI-exempt, a failed job still
