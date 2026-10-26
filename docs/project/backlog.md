@@ -364,6 +364,9 @@ priority!"
   released, Pi lock free; the normal boot applies no dtoverlays
   (likely F-367 cause, see US-172). F-400 allocated (conf.d fragments
   hash-named; worker-3 on #63).
+  UPDATE (CM, 2026-10-26, after v196): backlog v196 pushed as
+  238ae9d4. US-172: the Architect's RUN-4 v2 supersedes R4-0-first;
+  worker-2 builds the kit off-Pi (see US-172).
 
 ## Reserved IDs
 
@@ -2964,6 +2967,26 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   on run 4.
   Close-out item (CM, 2026-10-26): remove ~/.us172-libpi on the Pi
   when US-172 closes.
+  Root cause, likely (Architect, 2026-10-26): the Pi 5 bootloader
+  hook's per-generation overlay path is 67 characters, so the firmware
+  silently applies NO dtoverlays on the base boot; vc4/v3d never load,
+  there is no /dev/dri, and greetd is skipped. The Architect confirms
+  the WiFi firmware error is unrelated noise and the ~/.us172-libpi
+  close-out item.
+  QE C4 for run 3 (via CM, 2026-10-26): restore VERIFIED, posted on
+  #52 (6414496681).
+  RUN-4 v2 (Architect via CM, 2026-10-26; SUPERSEDES R4-0-first): H1
+  is proven on the base boot (no dtoverlays applied, so vc4/v3d have
+  never probed). Run 4 is a tryboot with overlay_prefix=o/,
+  modprobe.blacklist=vc4,v3d and panic bounds; an OBSERVE session
+  checks that the overlays applied; then a live modprobe of v3d/vc4
+  under CHANGE, with the owner at HDMI and dmesg streamed off-Pi.
+  Outcomes: (i) a hang before SSH means the R4-0 fallback; (ii) the
+  vc4 probe hangs: that is the bug, with the log in hand; (iii)
+  /dev/dri appears: the base fix is a short overlay path in
+  boards/pi5/bootloader.nix, a build-time length assertion and a
+  post-deploy check that the overlays applied. worker-2 is building
+  the kit off-Pi.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -6876,9 +6899,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
 - **No fallback login on tty1 without DRM** (UX via CM, 2026-10-26;
   P3): greetd conflicts with getty@tty1, so when there is no /dev/dri
   (US-172 run 3) the console offers no login at all.
+  Merged (QE via CM, 2026-10-26), same issue, verbatim: "Provide a
+  tty1 getty fallback when greetd's /dev/dri condition is unmet (UX
+  and recovery)".
 - **Pi 5 WiFi firmware missing** (CM, 2026-10-26; P3, cosmetic unless
   WiFi is wanted): brcmfmac43455 firmware and regulatory.db are not
   installed, which gives an "HT Avail" timeout at boot.
+  Architect (2026-10-26): unrelated noise, low priority. CM note: the
+  photo shows the HT Avail timeout line, which is what "bcmrf" was.
+- **Bluetooth enabled on the Pi 5** (Architect, 2026-10-26; no
+  priority given; SecSpec informed): disable-bt-pi5 was never applied,
+  for the same reason as the US-172 overlays. It is fixed together
+  with the overlay fix.
 - development.md, ONE docs item (TW offers to write it; merges UX,
   QE, Arch N2, AD L2, TW F1-F3): run `nix build
   .#checks.<system>.app-source-paths` locally (test-all no longer
