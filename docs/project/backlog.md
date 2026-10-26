@@ -852,6 +852,13 @@ priority!"
   E2). F-411: worker-7 briefed for phase 1 (1e64f46b; git-archive
   scratch copy; fixture f5ca9040). F-403: TW batch v5 5abeed4f,
   applied after the R5 series.
+  UPDATE (CM, AE, QE, team-lead, 2026-10-26, after v285): backlog v285
+  pushed as 2225d2c8. F-411: phase 1 findings bf381fe4; AE ruling
+  5fe39778 (gate's 1/6-oct view is right; phase 2 changes the design
+  smoothing, P1-P3, E1-E4); AE E3 plan ruling 904f34c9 (A1-A4, no
+  simulator change); QE condition 2 r2 d0052503; AE follow-up
+  one-liner (real two-position UMIK-1 check). F-383 + F-384: owner
+  worker-7 (team-lead confirmed), phase 0 offline after F-411.
 
 ## Reserved IDs
 
@@ -7805,6 +7812,120 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   checkout). QE (b): fixture scripts/generate-room-sim-ir.py blob
   f5ca9040 at 4724e65d (PM read: f5ca9040). Phase 2 waits for the #66
   merge or a fence revision.
+  PHASE 1 FINDINGS r1 (worker-7 via CM, 2026-10-26):
+  /tmp/cm-relay/F-411/frozen/w7-F411-phase1-findings-r1-bf381fe4.md
+  (sha256 bf381fe4, 6999 bytes, verified at PM read), pin 4724e65d. PM
+  summary: the two views differ by design. psychoacoustic_smooth
+  designs at 1/3 oct over 250-750 Hz, while the gate uses 1/6 oct
+  everywhere, so the whole sat gate band 250-500 Hz is in the
+  correction's 1/3-oct region. Smoothing explains the gap; the
+  fd-window and the FIR synthesis do not (realized FIR within 0.04 dB
+  of design); not cap- or alignment-related. Counterfactual
+  (attribution only, gate unchanged): 1/6-oct design smoothing takes
+  mock-room Left from +2.97 to +1.39 dB (over_cut 0.85), local-demo
+  Left +0.85 to +0.28, Sub1 unchanged (+2.99, cap/B1). Mock-room Left
+  does not use the f5ca9040 fixture; its room is
+  src/room-correction/mock/room_simulator.py + room_config.yml (+
+  mock_audio.py). PM cross-ref at 4724e65d: blobs 8f8b74fc, 54113ea4,
+  f57c4011 match; #66 changes none of them vs origin/main. Side note
+  (worker-7): the psychoacoustic_smooth docstring says "1/3 octave
+  200Hz-1kHz", the code uses 250-750 Hz plus crossfades (absorbed by
+  AE P2 below).
+  AE RULING (AE single writer, via CM, 2026-10-26):
+  /tmp/cm-relay/F-411/frozen/ae-F411-phase1-ruling-5fe39778.txt
+  (sha256 5fe39778, 2991 bytes, verified at PM read; relayed to
+  worker-7). Verbatim: "A good diagnosis; I accept findings 1-5 as
+  stated." "RULING: in the sat band, the gate's 1/6-oct view is right.
+  The DESIGN smoothing changes; the gate does not." Phase 2 (after #66
+  merges or under a fence revision; worker-7), verbatim:
+  - "P1 psychoacoustic_smooth: 1/6 oct below 500 Hz; raised-cosine
+    crossfade 1/6 -> 1/3 oct over 500-750 Hz; from 750 Hz upward
+    unchanged (the existing crossfade to 1/2 oct). The old 150-250 Hz
+    crossfade and the 1/3-oct 250-750 Hz region are removed. Below 150
+    Hz nothing changes, so Sub1/B1 is unaffected."
+  - "P2 Fix the docstring to describe the real bands (finding 5) in
+    the same change."
+  - "P3 Unchanged: MAX_POSITIVE_DEVIATION_DB 3.0, MAX_CUT_DB 18, gate
+    smoothing 1/6 oct, over_cut limit 1.0 dB, the gate bands."
+  Evidence for the AE release, before merge (verbatim):
+  - "E1 mock-room Left, local-demo Left (2 s and 5 s) and Sub1: max
+    deviation and over_cut, old vs new, as in the counterfactual
+    table."
+  - "E2 Every US-174 venue_sim scenario and every profile in the
+    existing closed-loop tests: all gates pass, and the worst over_cut
+    is reported with its margin to 1.0 dB. If any over_cut is more
+    than 0.9 dB, stop and report before going further. The design must
+    not trade one gate for the other."
+  - "E3 Position robustness, the real risk of finer smoothing. Build
+    the filter at mic position A and apply it to position B's measured
+    IR, with the simulator's positions at least 0.5 m apart. In
+    250-500 Hz (1/6 oct), corrected-at-B must not exceed
+    uncorrected-at-B by more than 1.0 dB at any frequency, for old and
+    new smoothing. If the simulator has no second position, say so;
+    the AE then sets the substitute."
+  - "E4 The F-262 R5 10-run AC is NOT re-run for this. F-411 gets its
+    own PR, and the R5 rules apply there if it touches the
+    service-integration test."
+  AE, verbatim: "Severity stays Medium. The browser xfail removal
+  still needs S2 + B1 + this."
+  E3 PLAN RULING (AE single writer, via CM, 2026-10-26):
+  /tmp/cm-relay/F-411/frozen/ae-F411-E3-plan-ruling-904f34c9.txt
+  (sha256 904f34c9, 1692 bytes, verified at PM read; relayed to
+  worker-7). Verbatim: "RULING: the plan is ACCEPTED as E3 for the
+  merge gate, with the additions below. No simulator change is needed,
+  and none is wanted in this PR."
+  - "A1 Band: report two windows: 250-500 Hz and 500-750 Hz. The new
+    crossfade also changes 500-750 Hz. The 1.0 dB limit applies to
+    both windows."
+  - "A2 Positions: the 4 offsets of ±0.5 m (x and y), height
+    unchanged. Skip and list any B position within 0.3 m of a wall or
+    a speaker. Also report ±1.0 m (x and y) as INFORMATION ONLY, not
+    as a gate. It shows the trend as the move gets larger."
+  - "A3 Output per scenario and position: max(corrected-at-B minus
+    uncorrected-at-B) in each window at 1/6 oct, the frequency where
+    it peaks, and old vs new smoothing side by side. Report it as
+    numbers only; no plots needed."
+  - "A4 Stop rule: if new smoothing exceeds the limit anywhere, or is
+    more than 0.5 dB worse than old smoothing at the same point, stop
+    and report before going further."
+  Model limit (AE, verbatim): "So this E3 shows the change is not
+  worse IN THE MODEL; it does not prove robustness in a real venue. No
+  higher reflection order is required for this PR." Follow-up
+  one-liner (AE, verbatim; does not gate the F-411 merge; no P-level
+  given): "F-411 follow-up: a real two-position UMIK-1 check of the
+  sat-band correction at the first real room-correction session (needs
+  amps on, so the owner decides when)".
+  QE CONDITION 2 r2 (QE, 2026-10-26; replaces condition 2 of the
+  worker-7 release; (a), (b), 1 and 3 unchanged):
+  /tmp/f411-qe-condition2-r2.md (sha256 d0052503, 1758 bytes, verified
+  at PM read; CM frozen copy
+  /tmp/cm-relay/F-411/frozen/qe-F411-condition2-r2-d0052503.md; PM
+  frozen copy /tmp/pm-backlog/F-411-qe-condition2-r2-d0052503.md).
+  Mock blobs per QE at 4724e65d: room_simulator.py 8f8b74fc,
+  room_config.yml 54113ea4, mock_audio.py f57c4011. Verbatim:
+  - "2a. B1 and the F-411 fix are separate commits, each with its own
+    before/after numbers. (Unchanged.)"
+  - "2b. The mock-room inputs are pinned. The F-411 analysis and the
+    fix's test name the three mock blobs above as their room. "Left
+    unaffected by B1" is now a mechanical check: the B1 commit must
+    not touch any of the three mock files. The CM or QE checks this
+    with git diff --stat on the B1 commit. If B1 touches one of them,
+    the mock-room Left numbers are re-taken after B1."
+  - "2c. The fixture is not the fix. The F-411 fix must not touch
+    room_simulator.py, room_config.yml or mock_audio.py. Making the
+    272.6 Hz mock peak smaller would hide the under-correction, not
+    fix it; this is the same principle as 2218daf5 B2's fixed limits.
+    A change to those files needs its own AE ruling and its own
+    commit."
+  - "2d. The local-demo contrast rows (f5ca9040) follow B1 as before.
+    Their before/after numbers go with the B1 commit."
+  Note on condition 3 (QE, not a change), verbatim: "if the AE rules
+  that the 1/3-oct design view vs the 1/6-oct gate view (findings
+  headline) is the cause, the fix's deterministic test asserts the
+  AE's chosen behavior at 250-300 Hz on the pinned mock room, and it
+  must fail at 4724e65d." PM cross-ref: the AE has so ruled
+  (5fe39778), so the test asserts the 1/6-oct design view at 250-300
+  Hz; the E3 ruling needs no simulator change, consistent with 2c.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -9922,6 +10043,22 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   post-combine gate on at least one 80 Hz PA profile; today LR8 is
   ungated at 76/64 deg phase. No LR8 profile goes on amps before
   that gate exists.
+  OWNER (PM proposal, team-lead confirmed, 2026-10-26): worker-7 owns
+  F-383 + F-384 as the one dedicated worker of the team-lead staffing
+  ruling (2026-10-25). Team-lead, verbatim: "worker-7 counts as the
+  "new worker" for F-383 + F-384. The point of that ruling was that
+  one dedicated worker owns both items, with no second writer." PM
+  cross-ref: US-174 (#57) and F-374 (#55) are merged; #66 at 4724e65d
+  changes combine.py and correction.py, so all post-#66
+  correction/combine work (F-411 phase 2, B1, F-383, F-384) sits with
+  worker-7, in sequence. Conditions (team-lead): phase 0 is read-only
+  and offline (scratch copy; CM go for the scratch-copy use pending at
+  this version); F-411 comes first; no code commits until #66 merges
+  or the CM revises the fence; the phase-0 report goes to the AE and
+  the Architect as a frozen file. Phase 0 scope (PM proposal): the
+  F-383 calibration step (a dirac correction x LR4/LR8 x 80/200 Hz
+  through the output check, with the -46 dB fallback rule) and the
+  F-384 step-9 overshoot measured on the #66 code.
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
