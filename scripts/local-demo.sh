@@ -937,12 +937,20 @@ cmd_env() {
     # Otherwise fall back to PID-derived path — only correct when env is
     # called from the same process that ran start.
     local mf="${LOCAL_DEMO_MANIFEST:-$MANIFEST_FILE}"
+    # PW_RUNTIME_DIR / XDG_CONFIG_DIR are derived from this process's PID,
+    # but env usually runs in a different process than start. Take the
+    # running stack's paths from its manifest (F-394).
+    local runtime_dir="$PW_RUNTIME_DIR" config_dir="$XDG_CONFIG_DIR"
+    if [ -f "$mf" ]; then
+        runtime_dir=$("${PYTHON:-python3}" -c "import json, sys; print(json.load(open(sys.argv[1]))['pw_runtime_dir'])" "$mf")
+        config_dir=$("${PYTHON:-python3}" -c "import json, sys; print(json.load(open(sys.argv[1]))['xdg_config_dir'])" "$mf")
+    fi
     cat << ENVEOF
-export XDG_RUNTIME_DIR="$PW_RUNTIME_DIR"
+export XDG_RUNTIME_DIR="$runtime_dir"
 export SPA_PLUGIN_DIR="$PW_STORE/lib/spa-0.2"
 export PIPEWIRE_MODULE_DIR="$PW_STORE/lib/pipewire-0.3"
 export WIREPLUMBER_MODULE_DIR="$WP_STORE/lib/wireplumber-0.5"
-export XDG_CONFIG_HOME="$XDG_CONFIG_DIR"
+export XDG_CONFIG_HOME="$config_dir"
 export XDG_DATA_DIRS="$WP_STORE/share:$PW_STORE/share:\${XDG_DATA_DIRS:-/usr/share}"
 unset PIPEWIRE_CONFIG_DIR 2>/dev/null || true
 export PATH="$PW_STORE/bin:$WP_STORE/bin:\$PATH"
