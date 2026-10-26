@@ -868,6 +868,13 @@ priority!"
   task (8fb41306); worker-7 priority order. US-179: base stays on
   main; errata E3 8f508af1 and E4 r2 f692681c recorded with three
   notes for worker-6.
+  UPDATE (CM, team-lead, 2026-10-26, after v287): backlog v287 pushed
+  as 5543b591. F-383: the Architect released the AE subsonic ruling
+  935b4ee2 in full (S1-S3), so the CM's S1 hold is lifted; FINAL F-383
+  record (team-lead final stop rule) = A r3 89c3bb1b + B r1 349b585f +
+  935b4ee2 + AE diagnosis job c281701b; worker-7 runs phase 0b after
+  the current F-384 step. US-179: E3 8f508af1 and E4 r2 f692681c
+  relayed to worker-6 with the three notes.
 
 ## Reserved IDs
 
@@ -10200,6 +10207,40 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   diagnosis S1 (935b4ee2, once the Architect releases); (3) the F-384
   forced-input task. When a higher item opens, worker-7 finishes the
   current step, freezes and switches.
+  UPDATE (CM, team-lead, 2026-10-26, after v287; supersedes "NOT yet
+  released at this version", the S1-hold cross-ref and "once the
+  Architect releases" above): the Architect released the AE subsonic
+  ruling 935b4ee2 in full (S1-S3). Team-lead, verbatim: "The AE's
+  subsonic ruling 935b4ee2 is released by the Architect in full, so it
+  is no longer "not yet released". The CM's hold on worker-7's
+  diagnosis is lifted."
+  F-383 RECORD (CM, 2026-10-26; replaces the CM's earlier F-383 record
+  note and team-lead's earlier r4 version), verbatim: "F-383 record
+  (team-lead final stop rule, 2026-10-26): A r3 89c3bb1b + B r1
+  349b585f + AE 935b4ee2 (released by both, S1-S3) + AE diagnosis job
+  c281701b (Architect-released). A r4 10ae380a and B r2 3ac658cd are
+  equivalent, released by both co-authors, not governing. A4 is
+  identical in all versions. VOID: A r1 3e683d42, A r2 3d648255, AE
+  f8ad626d. worker-7 runs phase 0b on this record; no further A/B
+  revisions until worker-7 reports."
+  Files (all /tmp/cm-relay/F-383/frozen/, sha256 verified at PM read):
+  arch-F383-F384-ruling-A-r3-89c3bb1b.txt (10284 bytes),
+  arch-F383-F384-ruling-B-r1-349b585f.txt (3557 bytes),
+  ae-F383-item2-subsonic-ruling-935b4ee2.txt,
+  ae-F383-S1-diagnosis-job-c281701b.txt (2308 bytes); not governing:
+  arch-F383-F384-ruling-A-r4-10ae380a.txt (9360 bytes),
+  arch-F383-F384-ruling-B-r2-3ac658cd.txt (2823 bytes).
+  PM cross-ref: B r1 still carries the B4 subsonic floor proposal
+  (pass floor 1e-20; the AE decides; the F-383 combine waits); B r2
+  marks B4 VOID. As B r1 and B r2 are "equivalent", B4's status rests
+  on 935b4ee2 (the AE's decision); no P-level given. The PM's four
+  open questions to the CM (A r4 header citing f8ad626d, A r3 VOID vs
+  superseded, c281701b citing A r2's A4, no AE release file of A r4
+  seen) are closed by this record line ("released by both co-authors",
+  "A4 is identical in all versions").
+  worker-7 (CM, 2026-10-26): holds this set for phase 0b (A4 prototype
+  validation + diagnosis job c281701b) and switches after the current
+  F-384 forced-input step; priority order otherwise unchanged.
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
@@ -11219,6 +11260,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     MessagePort or a SharedArrayBuffer flag), which goes silent on the
     next quantum. The main thread is told in parallel, for the message
     and the flow.
+  UPDATE (CM, 2026-10-26, after v287): the CM relayed E3
+  /tmp/cm-relay/US-179/frozen/us179-r8-erratum-E3-FINAL-8f508af1.md
+  and E4 r2
+  /tmp/cm-relay/US-179/frozen/us179-r8-erratum-E4-r2-FINAL-f692681c.md
+  (sha256 8f508af1 / f692681c, verified at PM read) to worker-6 with
+  the three notes above. Base stays on main.
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
