@@ -616,6 +616,12 @@ priority!"
   main 29f5c61f. F-262 diag 40322886856 SUCCESS, v2 verdict CONFIRMED
   / jitter; validity with the AE and Architect; fix branch held.
   US-172: worker-2's v6 in progress (CM).
+  UPDATE (CM, 2026-10-26, after v241): backlog v241 pushed as
+  27becf25. #63 at 3f28b6c7: 6 of 7 APPROVE verdicts posted (QE with
+  C4 open, UX, Sec, Architect, AD, AE); TW pending. Two non-blocking
+  LOWs for US-174d (Sec, AD L1). F-262 joint validity ruling:
+  Architect released, AE release pending. US-172: worker-2 has the
+  final v6 scope again (CM).
 
 ## Reserved IDs
 
@@ -3440,6 +3446,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - FINAL v6 scope (CM, 2026-10-26; one consolidated message to
     worker-2): 919fcd36 D1-D3, gate dcec60fa, addendum 762f9035,
     G1-G11 with G10a/b/c, and C1. ONE v6 pin, not a v7.
+  - QE G1-G11 list file (QE, 2026-10-26): /tmp/us172-qe-v6-glist.md,
+    sha256 719fa398 (verified at PM read). worker-2 has the final
+    scope again (CM): all in v6, no v7.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -4720,6 +4729,24 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   given): pin the mugge.cachix signing key in CI.
   UPDATE (CM, 2026-10-26): CI 40323763997 GREEN at 3f28b6c7. The 7
   re-checks are requested.
+  Rule 13 tally at 3f28b6c7 (CM, 2026-10-26; verdicts posted verbatim
+  on the PR): 6 of 7 APPROVE.
+  - QE: APPROVED WITH CONDITION C4 (/tmp/pr63-qe-verdict-3f28b6c7.md,
+    sha256 68a46e7f, plus addendum
+    /tmp/pr63-qe-verdict-3f28b6c7-addendum.md, sha256 58c7c3db; both
+    verified at PM read). C1 MET (CI 40323763997 green;
+    room-correction 1364 collected, 1363 passed, 1 known skip). B3
+    MET. R1-x MET, so route 1 is fully MET. B4 MET (body c4cd9e75,
+    live per CM). C4 OPEN: the Pi P-step evidence (left out of
+    68a46e7f by mistake, per the QE). A new head needs another
+    diff-only re-check (QE).
+  - UX: APPROVE (diff-only vs 0dc2a40b, CI green, pins verified;
+    /tmp/pr63-ux-verdict-3f28b6c7.md, sha256 56030914, verified at PM
+    read).
+  - SecSpec, Architect, AD, AE: APPROVE, posted verbatim (CM).
+  - TW: PENDING. The file changed between the CM's hash check and the
+    copy; the CM deleted the wrongly posted comment and waits for a
+    sha from the TW.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -5538,6 +5565,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   folds into 174d, no separate PR; its blobs are identical on 174d.
   The branch is retired: not pushed, not deleted. The 174d PR body
   must name the shared D-031 helpers in its scope.
+  174d LOWs (2026-10-26; non-blocking, same theme; no F-ID, no P-level
+  given):
+  - SecSpec (via CM): deploy must create the convolver's file for
+    every zero.wav channel from the committed zero.wav, with a hash
+    check, and fail closed. A stale combined_sub2_lp.wav (e.g. a dirac
+    copy) must never stay in place.
+  - AD (#63 L1 at 3f28b6c7, US-174d input): deploy.deploy_filters
+    skips a missing source WAV with only a WARNING. A venue output
+    with ch 4 = zero.wav has no combined_sub2_lp.wav, so a deploy
+    would leave the previous sub2 filter live and ch 4 would not be
+    muted. US-174d sets must be complete (zero bytes for muted
+    channels), and a missing file must be refused, not skipped. Not
+    reachable today: the runner is sim-only and #65 refuses simulated
+    output into coeffs.
   US-174c (measurement on the Pi, web-ui measurement/session.py)
   starts only after F-390/F-391 and builds on them, because it is the
   same file (L-046). Its Pi run is also gated by US-173 H, F-341 AC3,
@@ -5774,6 +5815,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   UPDATE (CM, 2026-10-26): diagnostic run 40322886856 SUCCESS;
   decision rule v2 verdict CONFIRMED / jitter. Validity is with the AE
   and the Architect; the fix branch is held.
+  UPDATE (CM, 2026-10-26): the joint AE + Architect validity ruling is
+  drafted and released by the Architect; the AE's release is pending.
+  PM cross-ref: it is not a joint ruling until both have released the
+  same sha. worker-4 sent an analysis bearing on the S3 fix design
+  (raw xcorr vs whitened onset); the CM routed it to the AE and the
+  Architect.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
