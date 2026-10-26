@@ -844,6 +844,10 @@ def gate_summary(filename, results):
     d009 = [r for r in mine if r.name.startswith("D-009")]
     residual = [r for r in mine if r.name.startswith("Minimum Phase")
                 and "residual_db" in r.details]
+    closed = [r for r in mine if r.name.startswith("Closed Loop")]
+    # Architect C1 (a627ca97): the early FAIL returns carry no details.
+    cl_max = closed[0].details.get("corrected_max_db") if closed else None
+    cl_band = closed[0].details.get("band_hz") if closed else None
     return {
         "d009_pass": passed("D-009", default=False),
         "d009_peak_db": float(round(d009[0].details.get("max_gain_db", 0.0), 2))
@@ -854,5 +858,7 @@ def gate_summary(filename, results):
         "format_pass": passed("Format", default=False) and passed("WAV Subtype", default=False),
         "hpf_pass": passed("Mandatory HPF"),
         "closed_loop_pass": passed("Closed Loop"),
+        "closed_loop_max_db": float(round(cl_max, 2)) if cl_max is not None else None,
+        "closed_loop_band_hz": list(cl_band) if cl_band is not None else None,
         "all_pass": bool(mine) and all(r.passed for r in mine),
     }

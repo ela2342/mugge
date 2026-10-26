@@ -261,6 +261,31 @@ class TestClosedLoop:
                                ref_band_hz=reference_band(LP))
         assert not verify.verify_closed_loop(ir, bad, verify.closed_loop_band(LP)).passed
 
+    def test_gate_summary_closed_loop_fields(self, sim):
+        ir = sim.measured_irs["sub1"]
+        result = verify.verify_closed_loop(
+            ir, _correction(ir, LP), verify.closed_loop_band(LP))
+        result.name = f"{result.name} (x.wav)"
+        summary = verify.gate_summary("x.wav", [result])
+        assert summary["closed_loop_pass"] is result.passed is True
+        assert summary["closed_loop_max_db"] == round(result.details["corrected_max_db"], 2)
+        assert summary["closed_loop_band_hz"] == list(verify.closed_loop_band(LP))
+        assert not any(k.startswith("closed_loop_log") for k in summary)
+
+    def test_gate_summary_early_fail(self, sim):
+        """Architect C1: an early FAIL (no details) gives nulls, not a KeyError."""
+        bad = CorrectionFilter(fir=np.full(N_TAPS, np.nan), reference_level_db=0.0,
+                               ref_band_hz=reference_band(LP))
+        result = verify.verify_closed_loop(
+            sim.measured_irs["sub1"], bad, verify.closed_loop_band(LP))
+        assert not result.passed and result.details == {}
+        result.name = f"{result.name} (x.wav)"
+        summary = verify.gate_summary("x.wav", [result])
+        assert summary["closed_loop_pass"] is False
+        assert summary["closed_loop_max_db"] is None
+        assert summary["closed_loop_band_hz"] is None
+        assert summary["all_pass"] is False
+
     def test_gate_refuses_closed_loop_on_non_fir(self, tmp_path, sim):
         cf = _correction(sim.measured_irs["sub1"], LP)
         with pytest.raises(ValueError, match="not 'fir'"):

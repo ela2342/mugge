@@ -16,6 +16,7 @@ import socket
 import time
 import urllib.error
 import urllib.request
+import warnings
 
 import pytest
 
@@ -24,6 +25,8 @@ pytestmark = [pytest.mark.service_integration, pytest.mark.slow]
 
 PROFILE_NAME = "2way-80hz-sealed"
 VENUE_NAME = "local-demo"
+# room_correction.closed_loop.MAX_POSITIVE_DEVIATION_DB (f8a014c7 R1).
+CLOSED_LOOP_LIMIT_DB = 3.0
 
 
 # ---------------------------------------------------------------------------
@@ -173,7 +176,12 @@ class TestLocalDemoMeasurementAPI:
     def test_full_session_api(self, local_demo_url):
         """POST /measurement/start with 1 channel completes end-to-end.
 
-        F-262 c8 (ruling f8a014c7 R2): no xfail.
+        F-262 c8 (ruling f8a014c7 R2/R5): no xfail. Every corrected
+        channel's closed-loop max deviation is logged as an "F-262-AC"
+        warning (shown in the pytest summary) for the 10-run AC. A
+        missing value is a FAIL (AE f277e402 C1). The payload value is
+        rounded, so the pass also needs the gate's unrounded
+        closed_loop_pass (C2).
         """
         _wait_for_idle_or_abort(local_demo_url, timeout_s=30)
         _ensure_gate_open(local_demo_url)
@@ -200,9 +208,25 @@ class TestLocalDemoMeasurementAPI:
             f"Expected started, got {result}")
 
         data = _poll_session_done(local_demo_url, timeout_s=120)
+        verification = (data.get("filter_gen_result") or {}).get(
+            "verification") or []
+        # Corrected channels carry reference_level_db (session.py).
+        closed = [v for v in verification if "reference_level_db" in v]
+        for v in closed:
+            warnings.warn(
+                f"F-262-AC ch={v['channel']} "
+                f"max={v.get('closed_loop_max_db')}dB "
+                f"band={v.get('closed_loop_band_hz')} "
+                f"pass={v.get('closed_loop_pass')}")
         assert data["state"] == "complete", (
             f"Expected complete, got {data['state']}. "
-            f"Error: {data.get('error_message', 'none')}")
+            f"Error: {data.get('error_message', 'none')}. "
+            f"Verification: {verification}")
+        assert closed, f"No corrected channel in {verification}"
+        for v in closed:
+            assert v.get("closed_loop_max_db") is not None, v
+            assert v["closed_loop_pass"] is True, v
+            assert v["closed_loop_max_db"] <= CLOSED_LOOP_LIMIT_DB, v
 
     def test_session_api_confirms_complete(self, local_demo_url):
         """After a measurement session, API reports a terminal state.
