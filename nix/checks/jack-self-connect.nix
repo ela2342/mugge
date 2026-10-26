@@ -100,9 +100,11 @@ pkgs.runCommand "jack-self-connect" {
 
   {
     echo "F-318 jack-self-connect check"
-    echo "pipewire: ${pw.version}"
-    grep '^RESULT' $out/policy.txt
-    grep '^RESULT' $out/control.txt
+    echo "pipewire: ${pw.version} (${pw}, services.pipewire.package of mugge-pi5-deploy)"
+    echo "-- policy run (exit 0)"
+    grep -E '^(PASS|FAIL|RESULT)' $out/policy.txt
+    echo "-- positive control, self-connect-mode = allow (exit $rc)"
+    grep -E '^(PASS|FAIL|RESULT)' $out/control.txt
     echo "positive control: failed as expected (self_connect_external linked)"
   } > $out/summary.txt
   cat $out/summary.txt

@@ -20,7 +20,13 @@ the deployed ones there), then:
   native_link_gm_src     pw-link from the GM stand-in to playback_FL works
   disconnect_ignored     jack_disconnect(own out_0 -> playback_FR) returns
                          0 and the native link stays (judged after an
-                         internal disconnect has taken effect)
+                         internal disconnect has taken effect).
+                         Characterization of PipeWire 1.6.2 only, NOT a
+                         safety layer: never cite it as protection. The
+                         safety layers are the connect guard, the WP
+                         no-bypass hook and GraphManager's link audit.
+                         It is here to fail loudly if a PipeWire upgrade
+                         changes check_connect for disconnects.
 
 --mode policy   expects every case to pass.
 --mode control  the check passes fragments with the self-connect line set
@@ -302,6 +308,10 @@ class Cases:
         self.run("native_link_gm_src",
                  lambda: s.pw_link(self.p_gm, self.p_fl))
 
+        # Characterizes PipeWire 1.6.2 check_connect for disconnects.
+        # NOT a safety layer and must not be cited as protection (the
+        # layers are the connect guard, the WP hook and GM's audit). If a
+        # PipeWire upgrade changes this, the case fails loudly on purpose.
         def disconnect():
             if not s.link(self.p_out, self.p_fr):
                 raise CaseFailure("native link out_0 -> FR missing")

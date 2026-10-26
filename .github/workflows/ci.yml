@@ -173,6 +173,9 @@ jobs:
       - name: Check app source paths (F-335 guard)
         run: cachix watch-exec mugge -- nix build --no-link --print-build-logs .#checks.aarch64-linux.app-source-paths
 
+      - name: JACK self-connect policy check (F-318, US-173)
+        run: cachix watch-exec mugge -- nix build --no-link --print-build-logs .#checks.aarch64-linux.jack-self-connect
+
       - name: Run unit + Rust tests
         run: cachix watch-exec mugge -- nix run .#test-all
 
