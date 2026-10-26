@@ -397,3 +397,17 @@ export async function test_device_and_rate_stops_return_to_setup() {
   eq(stopReturnsToSetup(STOP.TIMEOUT), false);
   eq(stopReturnsToSetup(STOP.CAP), false);
 }
+
+/** AC4d: the 30 s timeout fires from the clock alone, without readings. */
+export async function test_level_check_tick_timeout() {
+  const lc = new LevelCheck({ maxLevelDbfs: -42 });
+  eq(lc.tick(0), null, "not running");
+  lc.start(1000);
+  eq(lc.tick(30999), null);
+  lc.stepUp(20000);
+  eq(lc.tick(49999), null, "a + click restarts the timer");
+  eq(lc.tick(50000), STOP.TIMEOUT);
+  eq(lc.running, false);
+  eq(lc.stopCause, STOP.TIMEOUT);
+  eq(lc.tick(90000), null, "once");
+}

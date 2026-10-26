@@ -428,6 +428,19 @@ export class LevelCheck {
     return null;
   }
 
+  /**
+   * The 30 s timer without a meter reading (AC4d): the timeout must not
+   * depend on the meter worklet still reporting. Returns a cause or null.
+   */
+  tick(nowMs) {
+    if (!this.running) return null;
+    if (nowMs - this.lastActionMs >= LIMITS.IDLE_TIMEOUT_MS) {
+      this.stop(STOP.TIMEOUT);
+      return STOP.TIMEOUT;
+    }
+    return null;
+  }
+
   stop(cause) {
     if (this.running) {
       this.running = false;
