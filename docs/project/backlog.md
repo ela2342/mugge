@@ -557,6 +557,13 @@ priority!"
   zero.wav option (A); the AE accepts it with three conditions;
   worker-3 building on 29f5c61f. F-262 diagnostic now aedf4a82 / run
   40322886856 (293cf822 run 40322683521 cancelled).
+  UPDATE (CM, 2026-10-26, after v230): backlog v230 pushed
+  (chore/backlog head f3334cbe). #63: zero.wav ruling FINAL as joint
+  AE + Architect v3 (sha256 f35f5b59; v2 and v1 VOID), relayed to
+  worker-3; the QE confirmed from CI 40321143579 that the spare-mute
+  zero checks run in T1. US-172: RUN-4 kit v5 ready (pins e62744a7,
+  CM-verified, built off the Pi), out for review with the Architect,
+  QE, AE and AD; no grant yet.
 
 ## Reserved IDs
 
@@ -3228,6 +3235,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   precondition; outcomes (i), (ii) and (iii); then a separate CHANGE
   for a live modprobe of v3d and then vc4; an optional greetd go. The
   QE's 5 points and the AE's 3 conditions apply.
+  UPDATE (CM, 2026-10-26): the RUN-4 kit v5 is ready (pins e62744a7,
+  CM-verified, built off the Pi). It is out for review with the
+  Architect, QE, AE and AD. No grant yet.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -4426,6 +4436,46 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     run in T1;
   - the closed-loop report lists ch 4 as "muted (zero.wav, not
     generated)".
+  FINAL (joint AE + Architect v3, 2026-10-26, released by the AE;
+  verbatim in /tmp/cm-relay/PR63/joint-zero-wav-ruling-v3.txt, sha256
+  f35f5b59; supersedes the FIX ROUTE and AE conditions above; v2
+  1ca0e260 and v1 1ef61a25 are VOID). Relayed to worker-3. The AE
+  withdrew their conditions 4 and 5 (generate zero.wav; a verify_zero
+  kind), because they contradicted the joint ruling recorded at
+  0dc2a40b (test_venue_spare_channel_mute.py:11, "no kind in
+  run_venue_checks"). Required for re-approval:
+  - (1) venue_pipeline.py: ZERO_FILENAME = "zero.wav" next to
+    DIRAC_FILENAME; build_channel_map lets a speakerless channel name
+    only DIRAC_FILENAME or ZERO_FILENAME (anything else is a
+    ValueError), and a channel with a speaker naming ZERO_FILENAME is
+    a ValueError (fail closed).
+  - (2) generate_venue_filters emits DIRAC_FILENAME only iff some
+    speakerless channel names it. Nothing is written for a zero.wav
+    channel (no file, no generation, no export_filter call);
+    ZERO_FILENAME is not in expected_files; verify.py and
+    run_venue_checks are untouched. Tests (v3 change): (a) real venues
+    (ch 4 = zero.wav, ch 5-8 = dirac.wav): nothing attributable to ch
+    4, and dirac.wav IS present, solely because ch 5-8 name it; (b) a
+    synthetic venue where only ch 4 is speakerless and names zero.wav:
+    no dirac.wav and nothing for ch 4.
+  - (3) the committed-bytes checks (configs/coeffs/zero.wav and the
+    venue set's combined_sub2_lp.wav exactly 0.0 and finite,
+    test_venue_spare_channel_mute.py:50/58) stay in a T1 suite.
+  - (4) the closed-loop / venue report lists ch 4 as "muted (zero.wav,
+    not generated)".
+  - (5) excluded: no revert to dirac.wav, no fake sub2 speaker in the
+    profile.
+  Tests: the QE decides the final set (minimum list in the v3 file).
+  The local run includes the room-correction suite. Build on main
+  after #65 (F-399). The v3 file's US-174d part matches the
+  single-writer condition (3) and the AE's all-zero check recorded
+  under F-399.
+  Process note (CM, 2026-10-26): the CM relayed v2 to worker-3 before
+  the AE had released it; fixed: the CM now holds joint texts until
+  both authors release them.
+  QE CONFIRMED (2026-10-26, from CI 40321143579): the spare-mute zero
+  checks run in T1. At the new head the QE checks those 3 tests and
+  the 9 test_committed_venue_coeffs tests by name.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
