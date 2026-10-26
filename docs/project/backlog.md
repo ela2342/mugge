@@ -922,6 +922,13 @@ priority!"
   stop texts, device-change reset 2e D1-D4, whole-Hz low limit,
   tests), released by the AE (c56fd763) and UX (by message); relayed
   to worker-6 with the AE's test note; worker-6's ack is pending.
+  UPDATE (CM, QE, team-lead, 2026-10-26, after v295): backlog v295
+  pushed as 0b1dc2d1. US-172 v8 kit c96afb79: QE APPROVE (38663487;
+  binding CM run conditions C1/C2, no re-pin), so all three reviewers
+  APPROVE; step-a grant CHANGE-US172r5a r1 (60369f8f) issued to
+  worker-2, Phase A1 pre-obs only. F-412 filed (P2, QE): the kit
+  decides TRYBOOT by absence. US-179 E5: UX release detail (by message
+  21:20:58Z, relayed by team-lead).
 
 ## Reserved IDs
 
@@ -1051,6 +1058,9 @@ P3), US-180 (filed), US-181 (browser Smaart-style view), US-182 (live
 impulse-response view; confirmed free), D-071 (seeded per-channel
 test-noise design, US-179 AC5). Next free (supersedes the line above):
 F-412, US-183, D-072, T66 (F-411 filed in this version, see F-403).
+Next free (v296; supersedes the line above; F-412 confirmed free on
+main and all origin/* branches at PM read, filed in this version, see
+P2): F-413, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -4203,6 +4213,139 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     tb-reboot STOP without GO) are fixed in 5100d29f. I checked the
     fixes in the code: the REFUSED checks come before the OUT file is
     created, and the STOP/GO check is in tb-normal.
+  QE VERDICT (QE, CM relay, 2026-10-26): APPROVE, with two binding CM
+  run conditions (C1, C2); no re-pin needed.
+  /tmp/cm-relay/US-172/frozen/qe-v8-verdict-38663487.md (sha256
+  38663487, 5895 bytes, verified at PM read; QE accounting copy
+  /tmp/us172-qe-v8-verdict-5100d29f.md, same sha). With AE 96cf081b
+  and Architect fafd59fc: 3/3 APPROVE on c96afb79 (CM). The
+  non-blocking code fix is filed as F-412 (P2). Verbatim, reflowed,
+  without its title line:
+  - Kit: /tmp/cm-relay/US-172/v8-c96afb79/, MANIFEST-v8.sha256
+    c96afb79. All 29 files verified at read time.
+  - Ruling: Architect r4 1816176e, decision (c).
+  - Code under review: us172.sh 5100d29f, us172-drm-reads.sh d23d752b.
+    Sims: setup 30f84dd9, flows ac416ce3, drm-sim ad09f683.
+  - Evidence: /tmp/us172-t8sim-out-r2-5100d29f/. All 12 files match
+    sim-out-r2-5100d29f.sha256 (eec2d7df).
+  - ## VERDICT: APPROVE, with two binding CM run conditions (C1, C2).
+    No re-pin needed.
+  - ## What I checked
+  - 1. **v7 to v8 diffs.** The v7 base equals the frozen 815d231e. The
+    v7->v8r1 and v8r1->v8 diffs match the files.
+  - 2. **Pins against the run-4 base.** I diffed these myself:
+    orig-config/restored-config ff08471f and cmdline.txt c28e6a4e,
+    from ~/mugge-pi5-prewipe-20261024/us172-run-20261026T134852Z. The
+    results match pins-vs-base.diff and r4 exactly:
+     - R5a: only cmdline=cmdline-r5a.txt, plus the tokens us172r5=a
+     and panic=60. There is no overlay_prefix, so it is a true null
+     tryboot.
+     - R5b: R5a plus overlay_prefix=o/, modprobe.blacklist=vc4,v3d,
+     softlockup_panic=1 and hung_task_panic=1.
+     - R5c: R5b minus dtoverlay=disable-bt-pi5. R5d: R5b minus
+     dtoverlay=vc4-kms-v3d-pi5,noaudio.
+     - All 8 pin shas match pins.sha256. In flow H, the sim pre-obs
+     renderings for r5a are equal to the pins.
+  - 3. **Gate chain (us172.sh:84-100)** matches r4:
+     - a needs the run-4 restore plus the anchor.
+     - b needs R5a TRYBOOT and "VERDICT [R5-R5] RESULT R5a".
+     - c is refused if R5b was TRYBOOT, and needs R5b NOT-TRYBOOT or
+     FAIL outcome (i).
+     - d needs any R5c result.
+     - Any STOP in the previous step's tb-reboot, tb-post, return-obs
+     or restored files blocks the next step.
+     - The flows confirm it: A (c refused after R5b TRYBOOT), B (b
+     K-like, then c, then d), D (R5a fail, so b refused), E/E2/I (FAIL
+     (i), then the next step), F/F2 (a STOP blocks the next step).
+  - 4. **r1->r2 fixes verified in the outputs:**
+     - A refused tb-diag no longer uses up the step-2 slot (flow C: no
+     CSHA and a wrong CSHA are refused, then the correct one proceeds,
+     then a repeat is refused).
+     - tb-normal after a STOP needs US172_CM_GO=1 (flows F and F2).
+  - 5. **Refusals (flow C).** All 17 cases refuse as intended: no or
+    bad STEP, out-of-order verbs, repeats, no go, return-obs without
+    kind.
+  - 6. **N1 disarm (flow G).** An extra FAT file and a failed mv both
+    remove tryboot.txt, and tb-reboot is then refused.
+  - 7. **pre-obs/tb-pre negatives (flow H).** All STOP/FAIL as
+    intended.
+  - 8. **drm-reads (17 cases).** All four expected results come out as
+    RESULT. Each single-fault case comes out as STOP or FAIL: o/ not
+    applied, wrong bt, wrong kms, a-overlays, flag 0, wrong cmdline,
+    vc4 loaded or /dev/dri present, a restored r5b cmdline, a bad
+    step. The pre oracle self-test is ok.
+  - 9. **MEASURE bands:** plain <= 16 s, F 16-45 s, K ~60-120 s. The
+    45-60 s range is unclassified, which is fine because the Architect
+    classifies. A down window after the DECISION line is correctly
+    reported as "not a signature" (E2).
+  - ## Binding run conditions (the CM checks these from the step
+    files; no code change)
+  - **Finding QE-v8-1: TRYBOOT is decided by absence.**
+     - In waitup (us172.sh:264-271), the second SSH probe `k` decides
+     the boot type. If that call returns nothing or only an ssh error
+     (it runs with 2>&1), then f1=0, any=0 and bl=0, and the boot is
+     classified "NOT-TRYBOOT (flag 0, base cmdline)".
+     - return-obs has the same pattern (us172.sh:443): if the cmdline
+     grep fails over SSH, it prints "ok normal boot".
+     - tb-restore does not require a return-obs run, and gate c
+     accepts R5b NOT-TRYBOOT on the tb-reboot line alone.
+     - Result: one transient SSH failure right after boot, in a real
+     R5b boot, would open R5c/R5d and give a false "R5b failed" bisect
+     result.
+     - No sim flow covers an empty probe.
+  - **C1.** Before acting on any tb-reboot `RESULT ... NOT-TRYBOOT`
+    line (and before relaying it as a result), the CM checks the raw
+    probe block printed right above it. It must contain all four of:
+     - `tryboot flag` followed by exactly 8 hex digits;
+     - a `marker:` line;
+     - a `blacklist:` line;
+     - a cmdline line containing `init=/nix/store/`.
+  - If any one is missing, the classification is INCONCLUSIVE: report
+    it to the Architect and do not run tb-restore yet. If the Pi is
+    still in the R5 boot, return-obs can establish the real state.
+  - **C2.** For every NOT-TRYBOOT or FAIL outcome (i), return-obs is
+    mandatory before tb-restore. It is read-only and can be repeated.
+     - The CM accepts its "ok normal boot" only if the same output
+     also shows the boot_id/uptime lines, a `tryboot flag` line with 8
+     hex digits, and a non-empty list-boots block.
+     - Otherwise the CM re-runs return-obs.
+     - A next step (c or d) may start only once a return-obs file
+     meeting this condition exists for the previous step.
+  - **Recommended code fix (non-blocking; fold it into any later
+    revision):**
+     - waitup should require the four positive lines (retry the probe
+     up to 3 times, then STOP inconclusive).
+     - return-obs should test a fetched, non-empty /proc/cmdline
+     rather than the grep exit code.
+     - gate c/d should require a return-obs file without a STOP
+     whenever the previous step was NOT-TRYBOOT or FAIL (i).
+     - Add a sim flow with an empty probe.
+  - ## Non-blocking cosmetic notes
+     - MEASURE prints "D=-0.0 s" (e.g. flow A tb-normal) and "bounded
+     nan s (last ping ok none)" (flow B b, flow E a) when the ping log
+     has no earlier ok sample. Neither affects classification.
+     - drm-sim case "a, but the r5b cmdline": T-R5 says "STOP
+     NOT-TRYBOOT" although flag=1. The STOP is correct; the label
+     should say wrong-step or inconsistent.
+     - drm-sim "b, bounds not active": the result is RESULT R5b PROVEN
+     plus a T-bounds FINDING. That is acceptable, because the bounds
+     affect recovery only and the FINDING is visible. The Architect
+     should note it if it ever happens on the Pi.
+  - G-1..G-8 carry over unchanged from v7 (my v7 verdict a8ba08b0).
+  STEP-a GRANT (CM, 2026-10-26): CHANGE-US172r5a r1 (exclusive) to
+  worker-2, /tmp/cm-relay/US-172/grant-CHANGE-US172r5a-r1.txt (sha256
+  60369f8f, 3727 bytes, verified at PM read). Basis: 3/3 APPROVE on
+  c96afb79. PM summary: step 0 is a one-line ack naming the grant sha
+  + 96cf081b + fafd59fc + 38663487 and confirming no earlier session
+  is open (CHANGE-US172r4 RELEASED 2026-10-26T20:12:50Z). Granted now:
+  Phase A1, "US172_STEP=a us172.sh pre-obs (OBSERVE)", then STOP and
+  report. A2 (tb-pre, tb-diag; the tryboot is ARMED, not triggered)
+  only after a CM go with the checked US172_CSHA. Phase B (tb-reboot
+  only after the owner says via team-lead that they are at the HDMI
+  screen; tb-post; NOT-TRYBOOT / FAIL (i) / hang per the kit and QE
+  C1/C2; tb-restore; tb-normal) needs a CM go per item. Step b is NOT
+  part of this grant. Binding: AE C1-C4, QE C1/C2, thermal WARN >= 75
+  C, STOP >= 80 C; complete output files only.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -10911,6 +11054,21 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   or point it at 8ef778e3/5fbd5f75, and mark the GM-12 lab note's
   Finding 10 ("Open") resolved. #45 rewrites that CLAUDE.md paragraph
   anyway; if it merges first, check whether the line is already gone.
+- **F-412** (P2; QE, 2026-10-26; from QE-v8-1 in the US-172 v8 verdict
+  38663487) The US-172 tryboot kit decides TRYBOOT by absence: in
+  waitup an empty or ssh-error probe classifies a boot "NOT-TRYBOOT
+  (flag 0, base cmdline)", and return-obs prints "ok normal boot" when
+  the cmdline grep fails over SSH; one transient SSH failure in a real
+  R5b boot would open R5c/R5d and give a false "R5b failed" bisect
+  result. QE P-level, verbatim: "please set P2, due in the next
+  revision of the tryboot kit or any reuse of waitup/return-obs. Until
+  then, C1/C2 cover it for run 5." Fix (QE recommended, non-blocking):
+  waitup requires the four positive lines (retry the probe up to 3
+  times, then STOP inconclusive); return-obs tests a fetched,
+  non-empty /proc/cmdline rather than the grep exit code; gate c/d
+  requires a return-obs file without a STOP whenever the previous step
+  was NOT-TRYBOOT or FAIL (i); add a sim flow with an empty probe. Run
+  5 cover: binding CM run conditions QE C1/C2 (see US-172).
 ## P3
 
 - **US-179** Web-only standalone room correction (side quest) (PO,
@@ -11784,6 +11942,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   with the ack request; worker-6 replaces the E4 r2 "other cause" text
   for rate and device changes. worker-6 has not yet acked the re-sent
   bundle at this version (ack-by-sha rule running).
+  UX RELEASE DETAIL (team-lead, 2026-10-26; refines "UX by message, no
+  file (per PO)" above): UX release by message 21:20:58Z, sha
+  df065993, relayed by team-lead. Team-lead: the message named the sha
+  as checked at read time and confirmed that every UX text matches
+  word for word.
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
