@@ -10671,6 +10671,36 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - A r3 / B r1: AE release of A r3 by message, verbatim: "AE RELEASE
     of A r3 89c3bb1b… OBJ-1 is fixed"; B r1 released in the AE review
     file c37634c5.
+  F-384 FORCED-INPUT REPORT r1 (worker-7 via CM, 2026-10-26):
+  /tmp/cm-relay/F-383/frozen/w7-F384-forced-input-r1-92b75b51.md
+  (sha256 92b75b51, 9423 bytes, verified at PM read). Read-only and
+  offline on scratch 4724e65d; "Facts only, no mechanism decisions."
+  With the AE and the Architect for a ruling (CM). Headline (CM): the
+  forced inputs reach step 9, but the gate passes, so they can't
+  discriminate.
+  - Forced inputs: case A (production n_taps 16384) +0.345 dB over
+    -0.5 dB on 58 bins, also via correction_from_measurement for
+    sat_left, sat_right, sub1; case B (n_taps 2048) +0.664 dB on 480
+    bins.
+  - Step 9 keeps the old phase (max 1.6e-14 deg), clips native bins to
+    -0.5000 dB, and the output still PASSES the F-384 gate (residual A
+    -99.4 / B -98.1 dB; tail A -91.0 / B -78.0 dB re peak). Verbatim:
+    "it does **not** separate the current step 9 from a fixed one at
+    -40/-60."
+  - Gate teeth: hard-edged old-phase-kept edits (-0.345 to -6 dB) pass
+    the residual (closest -43.6 dB) but fail the tail at every size;
+    step 9's real edits taper to zero at band edges and do not trip
+    the tail.
+  - Inter-bin peak not bounded: case A -0.120 to -0.102 dB; case B
+    +0.164 to +0.025 dB, above 0 dB (would fail
+    test_corrections_never_boost; n_taps 2048 is not a production
+    length). n_taps 512 (100, 18, 20): step 9 itself pushed the tail
+    from -60.1 to -59.7 dB.
+  - Polarity (AE P-b): the phase-0 check and
+    closed_loop.minimum_phase_residual_db score -h at +6.0 dB;
+    min(+-ref) scores h and -h the same. Verbatim: "which variant to
+    use is not my decision."
+  - PENDING: AE + Architect ruling on the report.
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
@@ -12085,6 +12115,74 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     as in UX 436f962f verbatim, with the two sentences held for the
     AE's confirmation; PM cross-ref: the AE confirmed both unchanged
     (c5bd03c0), so the UX text stands as written.
+  WORKER-6 OPEN QUESTIONS r2 (CM, 2026-10-26; head 77ea74e6): three
+  question files frozen in /tmp/cm-relay/US-179/frozen/ (shas verified
+  at PM read): w6-open-AE-2f5a24fc.md (2741 bytes),
+  w6-open-Arch-22ff06c7.md (2681 bytes), w6-open-UX-c7123b33.md (1076
+  bytes).
+  - AE: P1 AC8b verdict function: PASS =
+    verify.verify_closed_loop(...).passed (passes_residual_gate AND
+    corrected max <= uncorrected max, on capture 2), or the residual
+    gate alone? worker-6 would keep both. P2/P3 already answered by
+    cf32c0a6 / c5bd03c0 (CM). PM cross-ref: P3 also asks whether the
+    banner should name "the +6 dB sweep rule"; c5bd03c0 already
+    confirmed the sentence "true and complete" (sent to the AE via the
+    CM). P4 (information): DSP flags true or missing = BLOCKED (PO
+    e720d78c), so the K3 test becomes "Start level check disabled".
+    PENDING: AE P1.
+  - Architect: Q1 AC9 band; Q2 Arch-b stop mechanism (a shared
+    stop-latch.js module in the one AudioWorkletGlobalScope, no SAB,
+    no MessagePort; only the main thread re-arms); Q3 calling
+    verify_closed_loop directly for the AC8b prediction (reference
+    copy 4724e65d).
+  - UX: W1 text for "both captures discarded"; W2 progress texts; W3
+    the "<x> of <target>" format.
+  ARCHITECT ANSWERS r1
+  /tmp/cm-relay/US-179/frozen/arch-w6-open-answers-r1-62d25088.txt
+  (sha256 62d25088, 3475 bytes, verified at PM read), relayed (CM):
+  - Q1, verbatim: "(b) is ACCEPTED, with three precisions." Lower
+    edge, verbatim: "max(declared lower limit, 1.5 x the subsonic
+    corner)". Upper edge, verbatim: "20 kHz, or 0.95 x Nyquist if that
+    is lower." 1/6-oct smoothing on both magnitudes for PASS/FAIL,
+    plus the max unsmoothed difference and its frequency, report-only.
+    Verbatim: "Do NOT level-align the two filters before comparing."
+    The role does not change the band (parity check); a Subwoofer
+    filter is compared up to 20 kHz too.
+  - Q2, verbatim: "the shared-module latch is ACCEPTED, and no SAB."
+    Fail-closed conditions L1-L4: L1 meter heartbeat in the latch, the
+    output gives zeros unless it advanced within the last 4 render
+    quanta; L2 "rearm" only with a fresh heartbeat, else
+    {type:"rearm-refused", reason}; L3 latched = zeros until re-armed,
+    hard cut, verbatim: "The AE has the final word on stop behaviour
+    (audio safety) and may ask for a short fade."; L4
+    OfflineAudioContext tests (no meter node, meter disconnected
+    mid-run, rearm with a stale heartbeat refused). PENDING (CM): the
+    AE release of L1-L4.
+  - Q3: no objection, verbatim conditions: "Build the dict ONCE and
+    pass the same object to both. Do not build a second copy." and
+    "The direct call is a PREDICTION, report-only." "If the AE names a
+    different verdict function, theirs governs." Re-pin from 4724e65d
+    and re-run AC9/AC8b when F-383/F-384 land on #66, verbatim:
+    "web-rc must follow the merged version."
+  UX ANSWERS W1-W3 /tmp/cm-relay/US-179/frozen/ux-w6-W1-W3-82b5b616.md
+  (sha256 82b5b616, 1622 bytes, verified at PM read), relayed (CM).
+  Wording only, worker guidance.
+  - W1 (pending AE P2; PM cross-ref: P2 is already answered by AE
+    cf32c0a6, "discards both captures"), verbatim: "Both captures were
+    discarded: the two captures must be taken back to back. Press
+    Start level check to measure again." Shown below the E4 stop text,
+    in the same message box.
+  - W2, verbatim: "Capture 1 of 2: playing sweep…", "Capture 2 of 2:
+    playing sweep… Keep the microphone where it is.", "Computing the
+    filter… This can take up to a minute the first time." (time
+    adjusted to the measured value), "Checking the filter…" if visibly
+    separate. STOP/Esc stays visible during both captures (4e); during
+    computing and checking STOP can be hidden or replaced by "Cancel".
+  - W3 (changes the 436f962f (a) format above), verbatim: "Target
+    level not reached: -47 dBFS (target -40 dBFS)." / "Target level
+    not reached: 68 dB SPL (target 75 dB SPL)." Whole dB rounded DOWN
+    (floor) while the target isn't reached. The rest of the 436f962f
+    (a) text is unchanged.
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
