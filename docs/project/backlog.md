@@ -596,6 +596,9 @@ priority!"
   UPDATE (CM, 2026-10-26, after v235): backlog v235 pushed as
   9a59deda. QE PR #63 evidence accounting: route 2a MET, route 1 MET
   pending R1-x (QE).
+  UPDATE (CM, 2026-10-26, after v236): backlog v236 pushed as
+  66dd389a. #63: the QE and Architect evidence verdicts are posted on
+  the PR; the Architect's evidence check passes (CM).
 
 ## Reserved IDs
 
@@ -4655,6 +4658,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   AE/Architect domain; no F-ID, no P-level given): a WirePlumber
   restart drops the GM-style link; it also happens with the policy
   off, so the policy is not the cause.
+  UPDATE (CM, 2026-10-26): the QE evidence verdict (32ab3975) is
+  posted verbatim on #63:
+  https://github.com/ela2342/mugge/pull/63#issuecomment-6416265966.
+  Architect evidence check PASS (CM, 2026-10-26;
+  /tmp/pr63-evidence-architect-check-3f28b6c7.md, sha256 5c7f2837,
+  verified at PM read), posted verbatim:
+  https://github.com/ela2342/mugge/pull/63#issuecomment-6416283734.
+  Route 1b (substituted from cachix, signature evidence adequate) and
+  route 2a MET; cachix stayed read-only. It approves the evidence
+  only; the Architect's code re-review waits for CI 40323763997 and
+  the bundle.
+  Backlog one-liner (Architect, non-blocking; no F-ID, no P-level
+  given): pin the mugge.cachix signing key in CI.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
