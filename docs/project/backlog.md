@@ -420,6 +420,12 @@ priority!"
   update-branched to 62b55b29 (content identical to 20903a04); its
   approvals are void and 7 re-approvals are requested via team-lead.
   Next: the F-399 PR, then 174d.
+  UPDATE (CM, 2026-10-26, after v210): backlog v210 pushed as
+  8254349c. #62 MERGED at 62b55b29 with 7/7 (CI 40316612538 green);
+  main is 289f1a72. F-399 pushed at ec845553; worker-4 merges main and
+  drafts the PR body, then the PR opens. Open placement rulings: AE on
+  F-399 nit 2 (absolute vs difference premise); Architect on
+  w4/d031-shared at 83620c87 (own PR or folded into 174d).
 
 ## Reserved IDs
 
@@ -4595,6 +4601,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   QE APPROVE (pin a4636d06 verified against git diff
   origin/main...62b55b29; content identical to 20903a04; docs-only,
   CI-exempt, a failed job still blocks). Tally 2/7 (UX, QE).
+  CORRECTION (CM, 2026-10-26): the #62 tally is 7/7 at 62b55b29, not
+  2/7; all verdicts were posted verbatim, the Architect's last
+  (comment 6415130599). #62 MERGED, CI run 40316612538 green; main is
+  289f1a72.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -6502,6 +6512,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   PR opens once #57 merges (stacked branch, strict main). F-363 passed
   in that run with the cause unchecked: NOT fixed until the QE
   confirms (see F-363).
+  UPDATE (CM, 2026-10-26): F-399 pushed at ec845553. worker-4 is
+  merging main and drafting the PR body; the PR opens after that. Open
+  placement ruling: the AE on F-399 nit 2 (absolute vs difference
+  premise).
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
