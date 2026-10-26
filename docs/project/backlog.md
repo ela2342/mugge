@@ -599,6 +599,10 @@ priority!"
   UPDATE (CM, 2026-10-26, after v236): backlog v236 pushed as
   66dd389a. #63: the QE and Architect evidence verdicts are posted on
   the PR; the Architect's evidence check passes (CM).
+  UPDATE (CM, 2026-10-26, after v237): backlog v237 pushed as
+  1d19e534. US-172: QE C2 MET by dcec60fa, C1 still open; QE v6 gate
+  sim flows G1-G11 relayed to worker-2; tb-greetd addendum file from
+  the Architect pending (CM).
 
 ## Reserved IDs
 
@@ -3393,6 +3397,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     (and no STOP/ABORT/FAIL). The re-read/OBSERVE-verb half of the
     earlier D3 note is dropped (dcec60fa's tb-gains-reread wording
     covers it).
+  - QE C2 MET by dcec60fa (CM, 2026-10-26): the QE checked the sha
+    against both copies and has no objection. C1 still OPEN.
+  - QE v6 gate sim flows G1-G11 (required; CM relayed to worker-2,
+    2026-10-26): gains FAIL; NOT VERIFIABLE with or without reread or
+    release; gate not ok with no release; a missing line; a stray
+    STOP/ABORT/FAIL; a reread later than 60 s; the 4 tb-greetd
+    preconditions; the happy path. Each flow records the script sha.
+  - Pending (CM, 2026-10-26): the Architect pins the tb-greetd
+    [MOD-gains]/[MOD-gate] ruling as a one-line addendum file with its
+    sha (CM request).
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
