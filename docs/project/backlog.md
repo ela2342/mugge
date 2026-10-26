@@ -5,6 +5,130 @@ bootstrap; was Raspbian .88, now NixOS at 192.168.178.89). Everything
 below is parked. Nobody works on a backlog item unless it blocks US-163.
 New findings go to the PM as one-liners and
 land here. Maintained by the PM; the CM commits changes.
+SUPERSEDED (2026-10-26): the US-163-only directive above is replaced
+by the owner's priority statements and the PO plan below. Owner,
+verbatim (via team-lead): "Getting the DJ set to work and the room
+correction is slightly higher prio than working out all the safety
+edges. For prod, we need all, but right now my feeling is that we're
+spending a lot of time chasing corner cases of safety before tackling
+the core technology issues." Owner, later the same day, verbatim (via
+PO): "I don't see any Wayland at all. HW accelerated UI is really top
+priority!"
+- TOP PRIORITY (PO, 2026-10-26, after the Wayland statement): US-172
+  (hardware V3D GL, labwc/Wayland on HDMI) is above everything else.
+  US-172c recovery counts only as the first step of US-172; US-173
+  follows afterwards. Plan B (llvmpipe, headless + wayvnc) is struck
+  as a plan: it does not meet the goal (one-line note under the DJ
+  item only). Capacity: anyone US-172 needs (diagnosis, Architect, CM
+  sessions, worker-2) is on it first; lane B continues only with
+  workers US-172 doesn't need, and with no Pi sessions while US-172
+  needs the Pi. US-172 DONE (PO): labwc running on HDMI with hardware
+  V3D (no llvmpipe, verified via the GL renderer string) + /dev/dri +
+  greetd after DRM + the stability run (Architect AC2 amendment, see
+  US-172); desktop with or without HDMI as in the ACs. Diagnosis
+  order: the Architect and worker-2 decide (tryboot/order theory, then
+  /proc/device-tree/chosen/log, then vclog); no PO round.
+- PRIORITY RE-PLAN (PO FINAL, 2026-10-26, with corrections; supersedes
+  the PO's earlier #45 ruling). A. Pi lane (sequential, one Pi session
+  at a time): 1. US-172c recovery (first step of US-172). 2. US-172
+  display/DRM (TOP PRIORITY above). 3. US-173 core: Mixxx -> GM ->
+  filter-chain -> gate -> USBStreamer, Hercules USB-MIDI, thermal
+  watch; without amps the goal is the correct ports and plausible
+  levels. B. Room correction lane (parallel, mostly simulator/Mac; see
+  capacity rule above): 1. #57. 2. #55 (F-374). 3. F-390 (the minimal
+  fallback, log path and hash, is enough to start). 4. F-391 (core).
+  5. F-399. 6. US-174c/d (with the AE HF-cut bound in 174d), then
+  US-174e. F-398 stays an AC on the step that writes coefficients to
+  the Pi.
+- PRE-PROD (new label, P2; not dropped, no new rounds until the core
+  is running): Gate-2 (r8 finishes and its result is recorded, nothing
+  after it: the e74a6e93 edit, P-a, F-396, F-397, US-176), F-386,
+  F-398 (except its AC above), the #45 revival, further safety.md
+  wording rounds, readback audit refinements. The US-172c cold read
+  stays in lane A.
+- PO CORRECTIONS (2026-10-26): #45 PARKED now; if the TW's resolution
+  is complete the CM may commit the merge on the branch to keep the
+  work, otherwise the TW saves a patch in the branch worktree; no
+  review round, no CI request; 8cba3522 stays. F-318: v18 (3f1a578f)
+  lands as is on the US-173 branch; v19 is pre-prod; the AE decides
+  whether item 16 is a real-hazard row and the PO accepts that without
+  another round (AE ruled: real hazard, minimal form only, see amps-on
+  row 16); the v19-onto-#45 order is moot.
+- WHO STOPS WHAT (PO, via the CM, verbatim): "workers on pre-prod
+  items stop at the next clean point (finish the current tool call,
+  commit WIP on their own branch, record the state in one line) and
+  move to lane A/B on the CM's assignment. A running build may finish,
+  but no follow-up starts. The TW parks the #45 conflict work with a
+  WIP commit."
+- STAYS IN FORCE: the owner's standing safety rules (warn before
+  reboots/USBStreamer interruptions, any gain increase needs the
+  owner's OK, nothing connected), the AE/SecSpec veto, Rule 13, and
+  the AMPS-ON PRECONDITION LIST (frozen at its current content; new
+  rows only for a real hazard) once amps get connected.
+- Lane status (CM, 2026-10-26): A: worker-2 holds CHG-US172c-1 (steps
+  1-6), granted after the owner's cold power cycle (verbatim: "Power
+  cycled, with about 10 seconds off.", ~08:43; no LED report needed);
+  then the OBSERVE gains read with node state, then steps 7-8, then
+  US-172. worker-3 stopped Gate-2 after r8 and is reassigned to US-173
+  core prep (Mac-side; sends a plan first). B: worker-4 has F-399 on
+  fix/F-399-venue-runner-cleanup at 6f4ae3d1; F-390/F-391 start when
+  #55 merges (team-lead to confirm worker-5 is alive). The TW's F-394
+  docs batch (/tmp/tw-f394-batch) is held until #55 and #57 merge, to
+  save reviewer time. Nothing needs the owner right now.
+- DJ PLAYBACK PATH (core item, PO, 2026-10-26): Mixxx on the Pi 5 ->
+  GM (DJ mode, quantum 1024) -> filter-chain convolver -> gate ->
+  USBStreamer, with the crossover-only FIRs from the US-155 venue
+  config; room correction is not a prerequisite. Blockers (PM, as sent
+  to the PO):
+  - US-172c and US-172 (F-367). Architect (2026-10-26): root cause
+    (config.txt order) unproven until the tryboot; about half a day to
+    Mixxx visible if confirmed, otherwise +1-2 days of vclog
+    diagnosis, open-ended. Risk (medium): v3d on BCM2712 (V3D 7.1)
+    under PREEMPT_RT is untested by us; US-172 AC2 counts only after a
+    stability run.
+  - GM DJ mode has never run on the Pi 5, and CI is blind to it: the
+    DJ-mode E2E group skips instead of failing (F-394). The backlog
+    has no filed record for the "two reconciler bugs" in CLAUDE.md (Pi
+    4, US-059 era); the Architect confirms whether they still apply.
+  - F-374 (#55): after #55 merges, regenerate the session WAVs from
+    the merge SHA, AE AC2 re-check, AC3a SHA256SUMS from the same run.
+  - F-318 layer (a), the WP rule (695f69af), lands with v18 as is.
+  - Link audit: F-361 is the real fix; under D-070 the manual `pw-link
+    -l` check before the gate opens replaces it (only convolver-out ->
+    USBStreamer AUX).
+  - GM routing defects in the backlog: F-361, F-373/G16, US-175,
+    F-394.
+  - Hercules USB-MIDI: unverified on Linux; if it fails, a separate
+    story and mouse/keyboard (US-173), so not blocking. Bluetooth off
+    is irrelevant for USB.
+  - Then the D-070 amps-on preconditions. Team: row 2 (F-341 AC3, one
+    CM session), the F-321 loaded-WAV sha check, D-070's own safety.md
+    text merged (TW v18 on the US-173 branch), the H safety.md text
+    (TW, mirror rule), row 16 in its minimal form as a session-plan
+    step (AE ruling, QE/CM session record), AE one-liner 7 below; rows
+    7 and 10 are checked at the session. Owner only: row 3 (HiFiBerry
+    HAT off or nothing on it), H with the oscilloscope (~30 min,
+    speakers disconnected), the amp/speaker wiring, row 1 at the
+    session, plugging in the Hercules.
+  - Thermal is the real limiter (AE + Architect): they expect the 80 C
+    STOP in a long set with passive cooling. "Fan/heatsink on the Pi 5
+    before the first longer set" is on the owner's batched physical
+    list (ask once, together with amps-on).
+  - Plan B note only (struck by the PO; not an option): llvmpipe on
+    HDMI or headless labwc + wayvnc; neither meets the goal.
+- AE pre-prod one-liners (2026-10-26): (1) #45 re-review on revival.
+  (2) F-318 v19 check. (3) F-395/F-396 T65 replug logging, F-396 AC4
+  on the Pi. (4) F-397/US-176 canary design, incl. the safety.md l.630
+  30 s pw-dump Mult>1.0 monitor, which can't see NaN/Inf. (5) r8
+  sandbox follow-ups. (6) US-159 hardening: F-373, AC18b/T49, F-341
+  AC3, G16/T65. (7) Post-US-172c cold cycle with a state-logged gains
+  read, before the first amps-on session.
+- AE core items (2026-10-26): #55 and #57 wait only on CI; the HF
+  bound; the CHN-50P mask after F-388; the SNR threshold; the 174c/d/e
+  reviews; the US-172c/172/173 reviews (US-173 AC2/AC3a); a thermal
+  soak under DJ load (no fan on the Pi 5 is a gig risk). While
+  "nothing connected" stands, nothing safety-related blocks lane A or
+  B.
 
 ## Reserved IDs
 
@@ -1467,6 +1591,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      US-159 T65)". G16 (US-159 l.71) and T65 (l.188) are both open and
      no G16 test record exists (QE, AE checked at ba5cc200). The row
      stays a requirement and is not on the F-395 AC (c) list.
+     QE note (#45 review, 2026-10-26; non-blocking, pre-prod):
+     "through the D-063 ramp" contradicts F-315 (the gate opens as a
+     step); the TW and AE fix it in #45 or v19, with the matching row
+     here (mirror rule).
   14. Gate-authority defects (AD M4). CURRENT (#51 commit 2d22aa7a,
      TW; AE N1 final, AD agrees; supersedes the 1472206a text
      below), verbatim: "F-338, F-339, F-320, F-314, F-325 and F-349
@@ -1723,6 +1851,29 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      before any amps-on session and before any D-070 use. Not a #60
      blocker; nothing waits on it while nothing is connected to the Pi
      outputs.
+     AE RULING (2026-10-26, cc PO; answers the PO's question under the
+     re-plan): row 16 is a real hazard and BLOCKS the first supervised
+     D-070 amps-on session, in MINIMAL FORM only; the v19 doc merge is
+     NOT needed first (pre-prod). Why: a suspended filter-chain node
+     reads 0 whatever the gain; profile activation (F-348), an unlatch
+     (F-320-D) or a GM restart (F-320-E) can leave real gains live
+     under a "0" reading, i.e. full scale into the 4x450 W amps.
+     Minimal form, a step in the first session's plan (QE/CM put it in
+     the session record), AE verbatim: "(a) Read the gains with
+     `pw-cli enum-params <pi4audio-convolver id> Props` only, never
+     pw-dump values. Pass = all 8 `gain_*:Mult` exactly 0.000000. (b)
+     Log `info.state` of `pi4audio-convolver` and
+     `pi4audio-convolver-out` (from pw-dump) immediately before and
+     after that read. Both must be idle or running. (c) If a state is
+     suspended, missing or not logged, the result is NOT VERIFIABLE.
+     Amps (including HP/IEM amps) stay off; nothing is worn. Hint:
+     with Mixxx started and linked but transport stopped, the nodes
+     should be running, and that is silent anyway with the gains at 0.
+     (d) Repeat (a)-(c) after any PW/GM/WP restart, gate close or mute
+     in the session, before amps go back on." Stays pre-prod: the
+     safety.md v19 wording, the T65 logging, F-396 AC4, the
+     F-397/US-176 validator and the canary. PM relayed it to the QE
+     (for the CM).
   NEXT safety.md TOUCH (#51 reviews, non-blocking, fail safe; TW
   drafts, AE owns the wording, this list follows per the mirror
   rule): (1) AD L1 = UX (a): the lead-in "holds" (closed and
@@ -2145,6 +2296,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   it. Architect RULING: BACKLOG, merged here (not a new item); later
   fix = the same module.rt.args override in a wireplumber.conf.d
   fragment. AC13 covers PipeWire only.
+  TOP PRIORITY (PO, 2026-10-26; see the top of this file). DONE =
+  labwc on HDMI with hardware V3D (GL renderer string, no llvmpipe) +
+  /dev/dri + greetd after DRM + the stability run. AC2 AMENDMENT
+  (Architect, via PO): AC2 counts only after a T3d-style stability
+  run, not after "visible"; the verbatim AC2 sentence (run length,
+  pass criteria) is requested from the Architect and lands in the next
+  version. Architect estimate and risks: see the DJ PLAYBACK PATH item
+  at the top. Status: US-172c recovery under CHG-US172c-1 (worker-2),
+  the owner's cold power cycle done (~08:43).
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -2745,6 +2905,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       F-396" until F-396 AC 3/4 is done. Process note (CM): worker-3
       declared an uncleared cached `nix run` (pyflakes); disk
       unchanged; logged.
+    - r8 RESULT (CM, 2026-10-26): selftest 18/18 PASS in both modes;
+      F-396 reproduced (suspended branch). Artifacts
+      /tmp/w3-gate2/selftest-r8-result (SUMS 16065f52). Gate-2 is
+      STOPPED here: PRE-PROD (P2, PO re-plan); the e74a6e93 edit, P-a
+      and the F-396 Pi observation are not started. worker-3 moved to
+      US-173 core prep.
   - a9addc52 evidence (worker-3, via CM, 2026-10-25):
     /tmp/w3-f318-evidence-a9addc52/ (SUMS 904ee759). Built from the
     pre-commit worktree; its provenance file explains why it is
@@ -3199,6 +3365,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   UPDATE (CM, 2026-10-26): #59 merged (main f01e6647); the CM is
   running update-branch on #57 now, so the 7/7 at 05d306bc lapses; the
   new head, the 7 diff-only re-checks and CI (F-363 passing) follow.
+  UPDATE (CM, 2026-10-26): #57 at 6f4ae3d1 is 7/7 (AE 6411960153,
+  SecSpec 6411960587, TW 6411961113, QE 6411961619, Arch 6411962178,
+  UX 6411962685, AD 6411963158); QE conditions:
+  test_sample_real_drivers_pass absent (deleted by #56),
+  test_all_real_drivers_pass passing, 0 failed, ARM wall-time
+  sign-off; AD: F-363 must PASS, not skip. Waits on CI 40294377693
+  (not yet checked by the CM). #55 and #57 both touch room-correction,
+  so the second to merge needs another update-branch, 7 diff-only
+  re-checks and CI.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -4161,6 +4336,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (strict xfail). Next: the TW's F-394 Status/index follow-up on main;
   #55 update-branch (its approvals lapse), the QE's diff-only
   re-check, new CI.
+  UPDATE (CM, 2026-10-26): #55 at 17144904 (update from main f01e6647)
+  is 7/7 (AE 6411956420, SecSpec 6411956836, TW 6411957507, QE
+  6411958118, Arch 6411958603, UX 6411959075, AD 6411959557; QE
+  conditional on CI). Waits on CI 40294373355 (not yet checked by the
+  CM). Then F-390/F-391 (worker-5, if alive; team-lead) and the US-173
+  WAV regeneration.
   AD L3 suggested text (via CM; TW/AE tidy): "designed so the two legs
   sum flat; the shipped LR4 profile is verified within ±1 dB, LR8
   after room correction is not yet verified (F-383)" (markaudio LR4
@@ -4583,6 +4764,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   WP restart explicitly as a transient event, citing F-396; the AE
   gives the wording and the TW applies it (F-396 AC4 in the AE's notes
   on the F-395 docs draft).
+  PRE-PROD (P2, PO re-plan 2026-10-26): F-396 waits until the core is
+  running; no new rounds.
 - **US-176** Canary node for the gains readback (AE + Architect;
   durable F-395 fix; joint r6b ruling section 3 + Addendum 1 A +
   Addendum 2 item 1, 2026-10-26): the production filter-chain gets one
@@ -4606,6 +4789,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     in pw-dump) (Addendum 2 item 1);
   - the conf change needs AE review and reaches the Pi as a normal
     DEPLOY.
+  PRE-PROD (P2, PO re-plan 2026-10-26): US-176 waits until the core is
+  running; no new rounds.
 - **F-397** Gain readback consumers show 0 on suspended or never-run
   nodes (P1, Addendum 1 C, raised from backlog: a safety display;
   owner the Architect; joint r6b ruling section 2, 2026-10-26): every
@@ -4621,6 +4806,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   suspended: gain unknown)". While the gate is open, that state goes
   in the U8 banner order next to GAIN NODES MISMATCH as "GAIN READBACK
   UNAVAILABLE". The UX specialist reviews the wording in the fix PR.
+  Scope addition (Architect, #45 review, 2026-10-26; same as AD L2):
+  src/graph-manager/src/gain_integrity.rs reads gain Mult via pw-dump
+  every 30 s and trips only on Mult > 1.0. pw-dump prints NaN, -Inf
+  and subnormal as 0.000000, NaN > 1.0 is false, and a suspended node
+  reads 0 (F-395), so the check cannot see a NaN/Inf Mult or any gain
+  on a suspended node. Added to the consumer list (AC audit).
+  PRE-PROD (P2, PO re-plan 2026-10-26): F-397 waits until the core is
+  running; no new rounds.
 - **F-398** Config-supplied names used as path components unchecked
   (SecSpec, LOW, #57 review at 05d306bc, via CM, 2026-10-26): profile
   `identity` -> identities_dir/{name}.yml and venue `coefficients` ->
@@ -4630,6 +4823,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   basename matching ^[A-Za-z0-9_.-]+\.wav$, identity must be a slug,
   and the resolved path must stay under its directory. Same class as
   F-372 and the #55 profile_name item. Not a #57 blocker.
+  PRE-PROD (P2, PO re-plan 2026-10-26), except the AC itself: it stays
+  an AC on the step that writes coefficients to the Pi (PO).
 - **F-399** Venue runner leaves deployable-named files on a gate
   failure (AD M1, #57 review at 05d306bc, 2026-10-26; fix before
   US-174c/d): run_venue_pipeline writes deployable-named
@@ -4642,6 +4837,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   failure keeps the previous filters". Source
   /tmp/pr57-ad-verdict-05d306bc.md (sha256 2d712b71). Not a #57
   blocker.
+  Status (CM, 2026-10-26): lane B; worker-4 on
+  fix/F-399-venue-runner-cleanup from 6f4ae3d1.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
@@ -5173,6 +5370,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   install-time recovery path and link pre-check are US-163 gates, not
   tracked here.
 
+- CLAUDE.md "Session 15 focus" list is stale (TW flag 3 on #45; AD M1,
+  Architect, UX agree; 2026-10-26): it ranks F-314 safety first, which
+  contradicts the owner's 2026-10-26 priority (DJ set and room
+  correction first). Drop the list or point to status.md, at the next
+  CLAUDE.md touch (the owner's file). TW flag 4 (optional,
+  non-blocking): an F-395 pointer on the Pi 5 gains bullet.
+- CLAUDE.md "two reconciler bugs" (US-059, Pi 4 era) have no backlog
+  record; the Architect confirms whether GM DJ mode on the Pi 5 still
+  hits them (see DJ PLAYBACK PATH). Owner of the check: Architect.
 ## P3
 
 - development.md, ONE docs item (TW offers to write it; merges UX,
@@ -5803,6 +6009,34 @@ merge needs update-branch and 7 reconfirmations at the new head.
   publishes the Rule 13 bundle. CLAUDE.md is the owner's file: the
   standing merge consent covers PR changes to it (team-lead ruling,
   #50); the post-merge report names the change.
+  UPDATE (CM, PO, 2026-10-26): PARKED (PRE-PROD, PO re-plan). The CM
+  had already made and pushed the merge commit at 08:46, before the
+  re-plan arrived: b7be7ea1 = merge of main f01e6647 with the TW
+  resolution d7fc49a4 (branch commit only, nothing on main). The PO's
+  "no merge commit unless the resolution is complete" came too late
+  for that step; the work is preserved. The Rule 13 round (bundle
+  /tmp/pr45-review-b7be7ea1/, SUMS ea46b36d) is PAUSED; the CM does
+  not post #45 verdicts. Verdicts that arrived before the pause
+  (record only, not a merge tally; #45 is re-reviewed on revival, AE
+  one-liner 1): QE APPROVE (conditional on CI 40294670076), UX
+  APPROVE, AD APPROVE (/tmp/pr45-ad-verdict-b7be7ea1.md, sha256
+  28729188...). CI 40294670076 is not acted on.
+  #45 review one-liners (2026-10-26; non-blocking, pre-prod, for the
+  revival or the next safety.md batch): UX N1: venue-setup step 6 /
+  safety.md Rule 8 say "restrict port 8080 to that device" with no
+  procedure; give only the isolated-network option until a documented
+  procedure exists (F-037). UX N2: after Rule 5-7 recovery the MUTE
+  indicator stays active with stale pre-mute gains and UNMUTE is
+  forbidden, so the operator can't clear it; document the expected
+  status-bar state now and clear the pre-mute state on gate close
+  (F-320-F / US-159). UX N3: move the check #10 procedure out of its
+  table cell into a numbered block below the table, like commands
+  #3-#8 (TW, wording unchanged). AD L1: check #10 "all Add values the
+  same" becomes "each Add exactly 0.000000" (a non-zero Add is a DC
+  offset into the amps). AD L3 (code comment, low):
+  nix/nixos/rt-tuning.nix:24 "hardware watchdog provides a backstop"
+  contradicts options.nix "stays disabled (O-24)". QE: see amps-on row
+  13.
 - #45 dangling citations (TW, 2026-10-25): AC14, F-320, F-338,
   F-339 and F-347 cite "pre-flight #10 (PR #45)". #45
   (docs/safety-d063-gate,
@@ -5844,6 +6078,8 @@ merge needs update-branch and 7 reconfirmations at the new head.
   enum-params nor pw-dump; the joint AE + Architect ruling and the r4
   T1/T2 matrix are under US-173 (Gate-2). Until T2 shows H2 false and
   the Pi -0.0 check passes, no reader counts as live proof.
+  PRE-PROD (P2, PO re-plan 2026-10-26): F-386 waits until the core is
+  running; no new rounds.
 - Pi -0.0 gain readback check (joint AE + Architect ruling, point 3,
   2026-10-25): a small separate CHANGE session, nothing connected,
   after the sandbox (r4 T2) result, with the Pi back up first. Set ONE
