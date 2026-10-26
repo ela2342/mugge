@@ -661,6 +661,12 @@ priority!"
   (03288857; C1-C7 carry over, new A1-A3; carry-over SETTLED). P17 and
   the Q1 conflict are RESOLVED by the joint ruling 5e123a6b (Architect
   wrote, QE released). worker-3 is writing plan v3 (CM).
+  UPDATE (CM, 2026-10-26, after v249): backlog v249 pushed as
+  9dff179b. #63 plan v3 (df8e1614) crossed with the later rulings;
+  worker-3 is writing v4. Open [ARCH-CHECK] on C7 (F-249 standby).
+  F-262 set A: six worker-4 impl findings (e3900cbf); the AE's F1-F5
+  ruling a8386f4b awaits the Architect's release; F6 is with the
+  Architect; nothing has gone to worker-4 yet (CM).
 
 ## Reserved IDs
 
@@ -4944,6 +4950,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      routing evidence still counts.
   - The conditional US-173 item above still applies. worker-3 is
     writing plan v3 (CM). The deploy still comes after US-172 v6.
+  - UPDATE (CM, 2026-10-26, after v249): plan v3 is frozen as
+    /tmp/cm-relay/PR63/pi-plan-3f28b6c7-v3-df8e1614.txt (sha256
+    df8e1614, verified at PM read). It crossed with the later rulings.
+    worker-3 is writing v4 to fold in QE v2 c1e573fe, Architect v2
+    03288857 and the joint 5e123a6b (DISP becomes the HW-path
+    PRE-DISPLAY gate).
+  - OPEN [ARCH-CHECK] (Architect, via CM): does C7 pass when GM's
+    F-249 standby sets force-quantum to 256 instead of clearing it?
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -6041,6 +6055,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - VOID: 430b07a4, 064175e6, f7a4fc20, bbf4587b.
   - worker-4 is BRIEFED and the fix branch is authorised. 174d stays
     frozen until F-262 merges.
+  - UPDATE (CM, 2026-10-26, after v249): worker-4 raised six
+    implementation findings on set A, frozen as
+    /tmp/cm-relay/F-262/frozen/: w4-setA-impl-questions-e3900cbf.txt
+    (sha256 e3900cbf, verified at PM read).
+     F1-F5: the AE wrote the ruling, frozen as
+     /tmp/cm-relay/F-262/frozen/: ae-setA-F1-F5-ruling-a8386f4b.txt
+     (sha256 a8386f4b, verified at PM read); awaiting the Architect's
+     release.
+     F6: with the Architect.
+     Nothing has gone to worker-4 yet (CM).
   Before the first amps-on measurement (non-blocking one-liners; no
   F-ID, no P-level given):
   - AE, verbatim: "F-262 item 7 Architect note: before the first
