@@ -472,6 +472,11 @@ priority!"
   3aa96bff; df 4.7 GB. #63 AC11(c) SETTLED (AE confirmed the
   Architect's FINAL text; relayed verbatim to worker-3); this
   supersedes the "NOT settled" above. B3 is a team-lead ruling.
+  UPDATE (CM, 2026-10-26, after v220): backlog v220 pushed as
+  7b13cd2b; df 4.7 GB. #63 pushed at a66576eb (AC11(c) final text; PR
+  body replaced with worker-3's full-scope draft). Next: worker-3's
+  WAVs + SHA256SUMS, AC5 wording, TW Q1-Q4 answers; then the TW batch,
+  main merge, bundle and re-checks.
 
 ## Reserved IDs
 
@@ -4223,6 +4228,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   before amps on. Removing / final guard / error-after-deny / any
   other warn+error = FAIL. After (e), only the pw-play deny lines. The
   "loaded" notice is extra evidence only.
+  UPDATE (CM, 2026-10-26): #63 pushed at a66576eb (parents 317c6910,
+  91943f58, 2a688a94). AC11(c) carries the final text; the PR body is
+  replaced with worker-3's full-scope draft. Next from worker-3: the
+  WAVs and SHA256SUMS, under one cached `nix develop` the CM cleared
+  with a dry-run guard; the AC5 "worker runs, CM publishes" wording
+  (team-lead); answers to TW Q1-Q4. After that: the TW G1/G2/N2 batch
+  (safety.md, SETUP-MANUAL, F-318.md, new F-400.md, defects-index),
+  then the main merge, the bundle and the re-checks.
+  CORRECTION (worker-3 via CM, 2026-10-26): the thermal suite count is
+  23, not 25 (QE B2 above); the QE confirms it at the final head.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -6765,6 +6780,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - (2) AE N1: before a real run publishes into the live coeffs dir,
     174d needs (a) an atomic swap and (b) a check that every WAV the
     filter-chain references still exists after the stale-file sweep.
+  TW side finding (backlog one-liner, via CM, 2026-10-26; TW docs
+  queue; no priority given): F-398 and F-399 have only backlog entries
+  and no defect records.
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
