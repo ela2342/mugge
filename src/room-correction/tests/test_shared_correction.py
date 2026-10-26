@@ -17,9 +17,11 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import scipy.signal
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+import config_generator
 from mock import venue_sim
 from room_correction import closed_loop, combine, verify
 from room_correction import venue_pipeline as vp
@@ -32,6 +34,7 @@ from room_correction.correction import (
     normalize_ir_level,
     reference_band,
 )
+from room_correction.export import export_filter
 from room_correction.generate_profile_filters import generate_profile_filters
 
 SR = 48000
@@ -264,6 +267,170 @@ class TestClosedLoop:
             verify.run_correction_gate(
                 str(tmp_path), {"dirac.wav": "dirac"},
                 closed_loop_inputs={"dirac.wav": (sim.measured_irs["sub1"], cf, LP)})
+
+
+# -- min-phase gate controls (AE gate ruling v2, 91eca61e) -------------------
+
+PROFILES_DIR = REPO_ROOT / "configs" / "speakers" / "profiles"
+# Profiles that cannot be built (test_unbuildable_profiles_raise): the
+# identity file is missing (F-239), or filter_type 'fullrange' is unknown.
+XO_UNBUILDABLE = {"2way-80hz-ported": FileNotFoundError,
+                  "workshop-xrk10f-fullrange": ValueError}
+XO_PROFILES = sorted(p.stem for p in PROFILES_DIR.glob("*.yml")
+                     if p.stem not in XO_UNBUILDABLE)
+
+
+def _iir_impulse(*sos_list):
+    """Impulse response of cascaded IIR sections: minimum phase by construction."""
+    h = np.zeros(N_TAPS)
+    h[0] = 1.0
+    for sos in sos_list:
+        h = scipy.signal.sosfilt(sos, h)
+    return h
+
+
+def _butter(order, hz, btype):
+    return scipy.signal.butter(order, hz, btype, fs=SR, output="sos")
+
+
+def _p1():
+    """BW8 LP80 + BW8 HP20."""
+    return _iir_impulse(_butter(8, 80, "low"), _butter(8, 20, "high"))
+
+
+def _p2():
+    """LR8 LP80 + BW8 HP42."""
+    lr8 = np.vstack([_butter(4, 80, "low"), _butter(4, 80, "low")])
+    return _iir_impulse(lr8, _butter(8, 42, "high"))
+
+
+def _gate(tmp_path, fir, name="x.wav"):
+    """verify_minimum_phase_residual() on a float32 WAV round-trip."""
+    path = str(tmp_path / name)
+    export_filter(fir, path, n_taps=N_TAPS)
+    return verify.verify_minimum_phase_residual(path)
+
+
+def _sat_24db():
+    """The 24 dB/oct satellite filter of the 2-way Markaudio profile."""
+    profile, identities = config_generator.load_profile_with_identities(PROFILE.stem)
+    filters = generate_profile_filters(profile, identities, n_taps=N_TAPS, sr=SR)
+    return filters["sat_left"]
+
+
+class TestMinPhaseGateControls:
+    """G1 residual <= -3 dB (gross errors), G2 tail <= -45 dB and decaying."""
+
+    def test_thresholds(self):
+        assert verify.MIN_PHASE_MAX_RESIDUAL_DB == -3.0
+        assert verify.MIN_PHASE_MAX_TAIL_DB == -45.0
+        assert verify.MIN_PHASE_TAIL_DECAY_FLOOR_DB == -100.0
+
+    @pytest.mark.parametrize("control", [_p1, _p2], ids=["P1", "P2"])
+    def test_iir_minimum_phase_passes(self, tmp_path, control):
+        result = _gate(tmp_path, control())
+        assert result.passed, result.message
+
+    @pytest.mark.parametrize("profile_name", XO_PROFILES)
+    def test_crossover_only_profiles_pass(self, tmp_path, profile_name):
+        """P3: every channel of every real profile, crossover only."""
+        profile, identities = config_generator.load_profile_with_identities(profile_name)
+        filters, _ = combine.uniform_d009_trim(
+            generate_profile_filters(profile, identities, n_taps=N_TAPS, sr=SR))
+        for spk, fir in filters.items():
+            result = _gate(tmp_path, fir, f"{spk}.wav")
+            assert result.passed, f"{profile_name} {spk}: {result.message}"
+
+    @pytest.mark.parametrize("profile_name", sorted(XO_UNBUILDABLE))
+    def test_unbuildable_profiles_raise(self, profile_name):
+        with pytest.raises(XO_UNBUILDABLE[profile_name]):
+            profile, identities = config_generator.load_profile_with_identities(profile_name)
+            generate_profile_filters(profile, identities, n_taps=N_TAPS, sr=SR)
+
+    @pytest.mark.parametrize("base", [_p1, _sat_24db], ids=["P1", "sat24"])
+    def test_noisy_tail_never_flips(self, tmp_path, base):
+        """P4: last 10% replaced by float32-level noise (-145 dB re total)."""
+        h = base()
+        n_noise = N_TAPS // 10
+        for seed in range(20):
+            noise = np.random.default_rng(seed).standard_normal(n_noise)
+            noise *= np.sqrt(np.sum(h ** 2) * 10 ** (-145.0 / 10) / np.sum(noise ** 2))
+            noisy = h.copy()
+            noisy[-n_noise:] = noise
+            result = _gate(tmp_path, noisy)
+            assert result.passed, f"seed {seed}: {result.message}"
+
+    @pytest.mark.parametrize("mutant", [
+        lambda h: np.roll(np.fft.irfft(np.abs(np.fft.rfft(h)), n=N_TAPS), N_TAPS // 2),
+        lambda h: h[::-1].copy(),
+        lambda h: np.roll(h, N_TAPS // 2),
+        lambda h: np.concatenate([np.zeros(200), h[:-200]]),
+    ], ids=["N1-linear-phase", "N2-time-reversed", "N3-shift-n/2", "N5-delay-200"])
+    def test_gross_errors_fail(self, tmp_path, mutant):
+        result = _gate(tmp_path, mutant(_p1()))
+        assert not result.passed, result.message
+        assert result.details["residual_db"] > verify.MIN_PHASE_MAX_RESIDUAL_DB
+
+    def test_rising_tail_fails(self, tmp_path):
+        """G2(b): energy in the last 5% above the floor and above taps 90-95%."""
+        h = _p1()
+        n_tail = N_TAPS // 20
+        h[-n_tail:] += np.sqrt(np.sum(h ** 2) * 10 ** (-60.0 / 10) / n_tail)
+        result = _gate(tmp_path, h)
+        assert -100.0 < result.details["tail_db"] <= verify.MIN_PHASE_MAX_TAIL_DB
+        assert not result.details["tail_decaying"]
+        assert not result.passed
+
+    def test_raw_ir_mutant_fails_gate(self, tmp_path, bundle, sim, monkeypatch):
+        """N4: bug A (the measured IR used as the correction) fails the gate."""
+        def raw(ir, speaker, **kwargs):
+            real = correction_from_measurement(ir, speaker, **kwargs)
+            return CorrectionFilter(fir=np.asarray(ir[:N_TAPS], dtype=np.float64).copy(),
+                                    reference_level_db=real.reference_level_db,
+                                    ref_band_hz=real.ref_band_hz)
+
+        monkeypatch.setattr(vp, "correction_from_measurement", raw)
+        result = vp.generate_venue_filters(bundle, sim.measured_irs)
+        vp.write_venue_filters(result, str(tmp_path))
+        passed, results = verify.run_correction_gate(
+            str(tmp_path), bundle.expected_files(),
+            closed_loop_inputs=result.closed_loop_inputs,
+            mandatory_hpf_hz=bundle.mandatory_hpf_by_file())
+        assert not passed
+        for r in results:
+            if r.name.startswith(("Minimum Phase", "Closed Loop")):
+                print(f"N4 {r.name}: {'PASS' if r.passed else 'FAIL'} {r.message}")
+        assert not all(r.passed for r in results if r.name.startswith("Closed Loop"))
+
+
+class TestMandatoryHpfInGate:
+    """G2: an identity with mandatory_hpf_hz and an export without the HPF fail."""
+
+    @staticmethod
+    def _sub(tmp_path, identity):
+        profile = {
+            "crossover": {"frequency_hz": 200, "slope_db_per_oct": 48},
+            "speakers": {"sub1": {"identity": "sub-id", "channel": 2,
+                                  "filter_type": "lowpass"}},
+        }
+        fir = generate_profile_filters(profile, {"sub-id": identity},
+                                       n_taps=N_TAPS, sr=SR)["sub1"]
+        export_filter(fir, str(tmp_path / "sub1.wav"), n_taps=N_TAPS)
+        return verify.run_correction_gate(
+            str(tmp_path), {"sub1.wav": "fir"},
+            mandatory_hpf_hz=verify.mandatory_hpf_by_file(
+                {"speakers": {"sub1": {"identity": "sub-id"}}},
+                {"sub-id": {"mandatory_hpf_hz": 30}}, {"sub1": "sub1.wav"}))
+
+    def test_hpf_present_passes(self, tmp_path):
+        passed, results = self._sub(tmp_path, {"mandatory_hpf_hz": 30})
+        assert passed, [r.message for r in results if not r.passed]
+
+    def test_export_without_hpf_fails(self, tmp_path):
+        passed, results = self._sub(tmp_path, {})
+        assert not passed
+        hpf = [r for r in results if r.name.startswith("Mandatory HPF")]
+        assert hpf and not hpf[0].passed
 
 
 # -- venue pipeline parity ---------------------------------------------------

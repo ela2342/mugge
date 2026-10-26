@@ -539,23 +539,41 @@ def print_report(all_passed, results):
 # functions below check whatever WAV set a venue config expects, with the
 # AE's 2026-10-25 gates. run_all_checks() is unchanged.
 
-MIN_PHASE_MAX_RESIDUAL_DB = -40.0
-MIN_PHASE_MAX_TAIL_DB = -60.0
+# AE gate ruling v2 (F-262, 91eca61e). The cepstral residual does not
+# converge for filters with high-order unit-circle zeros (subsonic HPF,
+# steep LP stopbands): correct 48 dB/oct filters score -5 to -37 dB. It is a
+# gross-error gate only (linear phase, time reversal, wrap-around, delay all
+# score >= +2 dB) until F-408 replaces the metric.
+MIN_PHASE_MAX_RESIDUAL_DB = -3.0
+# Tail: wrap-around / truncation, not subsonic decay (verify_mandatory_hpf).
+MIN_PHASE_MAX_TAIL_DB = -45.0
+# Below this the last 5% is float32 noise; the decay comparison is skipped.
+MIN_PHASE_TAIL_DECAY_FLOOR_DB = -100.0
 VENUE_D009_MARGIN_DB = -0.5
+
+
+def _window_energy_db(h, start, stop):
+    """Energy of h[start:stop] in dB relative to the energy of h."""
+    h = np.asarray(h, dtype=np.float64)
+    return float(10.0 * np.log10(max(np.sum(h[start:stop] ** 2) / np.sum(h ** 2), 1e-30)))
 
 
 def verify_minimum_phase_residual(filter_path,
                                   max_residual_db=MIN_PHASE_MAX_RESIDUAL_DB,
-                                  max_tail_db=MIN_PHASE_MAX_TAIL_DB):
+                                  max_tail_db=MIN_PHASE_MAX_TAIL_DB,
+                                  decay_floor_db=MIN_PHASE_TAIL_DECAY_FLOOR_DB):
     """
-    Minimum-phase gate (AE, 2026-10-25).
+    Minimum-phase gate (AE ruling v2, F-262).
 
-    Passes if the energy of (h - minphase(|H|)) is at most max_residual_db
-    relative to the energy of h, AND the energy in the last 5% of taps is
-    at most max_tail_db (causality / no wrap-around). Unlike
-    verify_minimum_phase(), this does not use "energy before the peak": a
-    correct minimum-phase lowpass can have much of its energy before its
-    peak.
+    Passes if all hold:
+    - the energy of (h - minphase(|H|)) is at most max_residual_db relative
+      to the energy of h (gross-error gate, see MIN_PHASE_MAX_RESIDUAL_DB);
+    - the energy in the last 5% of taps is at most max_tail_db;
+    - the tail is decaying: unless the last 5% is at or below
+      decay_floor_db, its energy is at most that of taps 90-95%.
+    Unlike verify_minimum_phase(), this does not use "energy before the
+    peak": a correct minimum-phase lowpass can have much of its energy
+    before its peak.
     """
     from . import closed_loop
 
@@ -565,14 +583,20 @@ def verify_minimum_phase_residual(filter_path,
             "Minimum Phase (residual)", False, "Filter is all zeros", {})
     residual_db = closed_loop.minimum_phase_residual_db(data)
     tail_db = closed_loop.tail_energy_db(data)
-    passed = residual_db <= max_residual_db and tail_db <= max_tail_db
+    n_tail = max(1, int(round(len(data) * 0.05)))
+    prev_db = _window_energy_db(data, len(data) - 2 * n_tail, len(data) - n_tail)
+    decaying = tail_db <= decay_floor_db or tail_db <= prev_db
+    passed = residual_db <= max_residual_db and tail_db <= max_tail_db and decaying
     message = (
         f"Residual vs min-phase: {residual_db:.1f}dB (limit {max_residual_db}dB), "
-        f"last 5% energy: {tail_db:.1f}dB (limit {max_tail_db}dB)"
+        f"last 5% energy: {tail_db:.1f}dB (limit {max_tail_db}dB), "
+        f"90-95%: {prev_db:.1f}dB ({'decaying' if decaying else 'RISING'}, "
+        f"floor {decay_floor_db}dB)"
     )
     return VerificationResult(
         "Minimum Phase (residual)", passed, message,
-        {"residual_db": residual_db, "tail_db": tail_db},
+        {"residual_db": residual_db, "tail_db": tail_db,
+         "tail_prev_db": prev_db, "tail_decaying": decaying},
     )
 
 
@@ -647,6 +671,8 @@ def run_venue_checks(output_dir, expected_files, mandatory_hpf_hz=None,
 
         for result in checks:
             result.name = f"{result.name} ({filename})"
+            if result.name.startswith("Minimum Phase"):
+                log.info("%s: %s", result.name, result.message)
             results.append(result)
 
     all_passed = bool(results) and all(r.passed for r in results)
@@ -812,11 +838,15 @@ def gate_summary(filename, results):
         return all(found) if found else default
 
     d009 = [r for r in mine if r.name.startswith("D-009")]
+    residual = [r for r in mine if r.name.startswith("Minimum Phase")
+                and "residual_db" in r.details]
     return {
         "d009_pass": passed("D-009", default=False),
         "d009_peak_db": float(round(d009[0].details.get("max_gain_db", 0.0), 2))
         if d009 else None,
         "min_phase_pass": passed("Minimum Phase", default=False),
+        "min_phase_residual_db": float(round(residual[0].details["residual_db"], 1))
+        if residual else None,
         "format_pass": passed("Format", default=False) and passed("WAV Subtype", default=False),
         "hpf_pass": passed("Mandatory HPF"),
         "closed_loop_pass": passed("Closed Loop"),
