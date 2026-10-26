@@ -468,6 +468,10 @@ priority!"
   9632c15f; df 4.8 GB. #63 QE B3 build: worker-run, CM-cleared and
   published (see US-173). #63 AC11(c): the Architect sent a FINAL
   text; NOT settled until the AE confirms it. #57: QE item closed.
+  UPDATE (CM, 2026-10-26, after v219): backlog v219 pushed as
+  3aa96bff; df 4.7 GB. #63 AC11(c) SETTLED (AE confirmed the
+  Architect's FINAL text; relayed verbatim to worker-3); this
+  supersedes the "NOT settled" above. B3 is a team-lead ruling.
 
 ## Reserved IDs
 
@@ -4200,6 +4204,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     worker-run, CM-cleared and published: a detached worker runs it,
     the CM grants the disk clearance and publishes the output in the
     review bundle.
+    ATTRIBUTION (CM, 2026-10-26): B3 is a team-lead ruling: a worker
+    runs it detached once the disk hold allows; the CM clears it and
+    publishes the result.
   #63 backlog / non-blocking (no priority given): AE N1 and AD L1
   (HP/IEM ch 5-8 -> zero.wav); the Architect's wp-f318 case without
   the convolver stand-in; the TW's stale 80-jack conf header; SecSpec
@@ -4210,6 +4217,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   #63 AC11(c) (CM, 2026-10-26): the Architect sent a FINAL text that
   withdraws "loaded notice absent = FAIL". PENDING: the CM relays it
   only once the AE confirms the same text. Not settled.
+  SETTLED (CM, 2026-10-26; supersedes the PENDING line above): AC11(c)
+  FINAL, agreed by the Architect and the AE, relayed verbatim to
+  worker-3. Deny lines before (e) are recorded and are an AE finding
+  before amps on. Removing / final guard / error-after-deny / any
+  other warn+error = FAIL. After (e), only the pw-play deny lines. The
+  "loaded" notice is extra evidence only.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -4731,6 +4744,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   QE (accounting, 2026-10-26): #57 is closed for the QE. C2 was met
   before the merge: the body was edited at 11:31:40Z, the merge
   (1e1495ab) was at 11:35:26Z. The QE's pending list was out of date.
+  #57 QE row CLOSED (CM, 2026-10-26): body edit 11:31:40Z, then the
+  QE's FINAL approval 11:34:59Z, then the merge 11:35:26Z (1e1495ab).
   #61 re-approvals at 781b638a (record copies): QE APPROVE (pin
   e13a5e04 verified against git diff origin/main...781b638a; content
   identical to 247478d5; docs-only, CI-exempt, a failed job still
