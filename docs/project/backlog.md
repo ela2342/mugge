@@ -396,6 +396,10 @@ priority!"
   bd642dc5. PO FINAL: option (C), US-178 = 174e slice 1 (supersedes
   option (A)). F-362 is PR #64 (draft, AC4 mutation head 03b2ec0f).
   174d: deploy_filters and deploy_pw_config REMOVED (Architect).
+  UPDATE (CM, 2026-10-26, after v204): backlog v204 pushed as
+  6b66902d. F-362 / PR #64 final head 0d9e52e7 pushed, CI run
+  40314977506 (CM report, relayed by team-lead). US-172: run-4 kit
+  delivered, under Architect + QE review, no grant yet.
 
 ## Reserved IDs
 
@@ -3005,6 +3009,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   on run 4.
   Close-out item (CM, 2026-10-26): remove ~/.us172-libpi on the Pi
   when US-172 closes.
+  Same item (worker-2 via CM, 2026-10-26): "remove
+  /home/ela/.us172-libpi and the LIBPI GC root" is ONE action; per the
+  run-2 record, ~/.us172-libpi IS the GC root (-> frspf350,
+  libraspberrypi).
   Root cause, likely (Architect, 2026-10-26): the Pi 5 bootloader
   hook's per-generation overlay path is 67 characters, so the firmware
   silently applies NO dtoverlays on the base boot; vc4/v3d never load,
@@ -3041,6 +3049,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   SSH reachability plus tryboot flag 1 plus modprobe.blacklist in the
   cmdline. Read-only fb/simplefb reads are added. A black screen with
   /dev/dri present is a separate finding, not a hang.
+  STATUS (CM, 2026-10-26): the run-4 kit is delivered (worker-2) and
+  under Architect + QE review; no grant yet. Open question: whether
+  the kit matches RUN-4 v2.
+  One-liner (worker-2 via CM, 2026-10-26): the v3 recovery script has
+  a missing-newline bug; it is not carried into kit v4.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -4888,6 +4901,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   currently at the AC4 throwaway mutation head 03b2ec0f, whose CI run
   is expected to fail; the revert comes next. worker-1 adds AC5 to
   F-362.md in the PR.
+  UPDATE (CM, 2026-10-26): final head 0d9e52e7 (revert 03c0237c plus
+  F-362.md AC5 and status), held until mutation run 40314266261
+  finished, then pushed; CI run 40314977506 (CM report, relayed by
+  team-lead).
 - **F-373** (AE; availability HIGH, safety-relevant; amps-on item
   13; linked US-159 G16): the USBStreamer sink does not recover after
   USB re-enumeration. AC17-B step (a), CM-CHG-.89-5: authorized 0->1
@@ -7086,6 +7103,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Merged (Architect via CM, 2026-10-26; a US-172 fix design point),
   same issue: if greetd's /dev/dri condition fails, tty1 falls back to
   a getty.
+  Also reported by worker-2 (via CM, 2026-10-26): with no /dev/dri,
+  greetd is skipped and getty@tty1 conflicts with it, so tty1 has no
+  login. Same item.
 - **Pi 5 WiFi firmware missing** (CM, 2026-10-26; P3, cosmetic unless
   WiFi is wanted): brcmfmac43455 firmware and regulatory.db are not
   installed, which gives an "HT Avail" timeout at boot.
@@ -7128,6 +7148,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   says "/deploy returns 200". The TW is deciding where to fix it.
   UPDATE (TW via CM, 2026-10-26): goes in the TW's 174d batch, written
   against worker-4's code; nothing for the PM to mirror.
+- **Rust tests recompile on every CI run** (Architect, 2026-10-26; P3,
+  CI speed; the owner asked about the build cache, and cachix works):
+  test-all runs cargo test outside Nix with CARGO_TARGET_DIR in $HOME,
+  so the Rust workspace and GM recompile on every CI run (6-11 min).
+  Make them Nix checks (cachix-cached) or add actions/cache for the
+  cargo target. Cross-ref: P3 AD L3 (`cachix watch-exec` pushes the
+  full tracked tree into mugge.cachix); F-380 (ARM wall time of one
+  test file) is separate.
+- **E2E local-demo step takes about 22 min every run** (Architect,
+  2026-10-26; P3, CI speed): profile it and shard it into parallel CI
+  jobs.
 - development.md, ONE docs item (TW offers to write it; merges UX,
   QE, Arch N2, AD L2, TW F1-F3): run `nix build
   .#checks.<system>.app-source-paths` locally (test-all no longer
