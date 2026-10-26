@@ -370,6 +370,10 @@ priority!"
   UPDATE (CM, 2026-10-26, after v197): backlog v197 pushed as
   f5ee0097. US-172: run-4 fallback corrected to R4-1b (see US-172).
   #63: F-400 pushed at ff4d6c7e, CI pending.
+  UPDATE (CM, 2026-10-26, after v198): backlog v198 pushed as
+  b0fc8025. #63 CI run 40312806198 at ff4d6c7e in progress; QE F-400
+  conditions C1-C3 (see US-173). US-172: Architect's run-4 HDMI
+  expectation (see US-172).
 
 ## Reserved IDs
 
@@ -3001,6 +3005,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   QE C4 amendment (via CM, 2026-10-26): bcmrf = the brcmfmac HT Avail
   timeout; posted on #52 (6414529491). The QE's five run-4 kit
   pre-review points went to worker-2.
+  Run-4 HDMI expectation (Architect via CM, 2026-10-26): a black
+  screen before vc4 loads is legitimate. The outcome (i) control is
+  SSH reachability plus tryboot flag 1 plus modprobe.blacklist in the
+  cmdline. Read-only fb/simplefb reads are added. A black screen with
+  /dev/dri present is a separate finding, not a hang.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -3966,6 +3975,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   UPDATE (CM, 2026-10-26): F-400 pushed on #63 at ff4d6c7e (parent
   0b614d1b), CI pending. P-step checklist item 15 added (checklist
   sha1 1c677f9e). Rule 13 tally still 0/7.
+  QE on F-400 (via CM, 2026-10-26): no objection, with conditions: C1
+  CI green for conf-fragment-names and jack-self-connect at the final
+  head; C2 P-step 15 lists the user ~ela/.config conf.d dirs (expected
+  empty); C3 the post-deploy standard checks run first, because the
+  load order changes. AE and Architect informed. CI run 40312806198 at
+  ff4d6c7e in progress.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -6935,6 +6950,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Merged (AE via CM, 2026-10-26; pre-prod): apply disable-bt-pi5 or
   turn off WirePlumber's bluez monitor, so that no BT audio sink can
   ever appear.
+  SecSpec (via team-lead, 2026-10-26; held back during quiet mode):
+  Bluetooth must be confirmed off before gigs, because at a venue it
+  is a radio open to anyone in range. SecSpec will check at the US-172
+  PR review that the post-deploy check confirms disable-bt-pi5
+  actually applied.
 - development.md, ONE docs item (TW offers to write it; merges UX,
   QE, Arch N2, AD L2, TW F1-F3): run `nix build
   .#checks.<system>.app-source-paths` locally (test-all no longer
