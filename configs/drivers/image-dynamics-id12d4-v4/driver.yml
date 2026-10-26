@@ -21,7 +21,8 @@ metadata:
   datasheet_file: null
   ts_parameter_source: manufacturer
   ts_measurement_date: null
-  ts_measurement_notes: ''
+  ts_measurement_notes: 'F-363: datasheet-inconsistent. https://www.loudspeakerdatabase.com/ImageDynamics/ID12D4_V4/ImageDynamics_ID12D4_V4.pdf (ID Series V4 manual, (c) 2023), ID12D4 column: Qts 0.787, Qes 0.698, Qms 5.582 (Qes identical to the ID12D2 column), retrieved 2026-10-25. Values stored exactly as printed (were 2-decimal roundings). Our hypothesis, not data: the dual-voice-coil Q values may mix per-coil and both-coils (series) measurements.'
+  ts_consistency: datasheet-inconsistent
   notes: Scraped from loudspeakerdatabase.com on 2026-03-12
   quantity_owned: null
   serial_numbers: []
@@ -31,9 +32,9 @@ thiele_small:
   fs_hz: 45.0
   re_ohm: 7.6
   z_nom_ohm: 2.0
-  qts: 0.79
-  qes: 0.7
-  qms: 5.58
+  qts: 0.787
+  qes: 0.698
+  qms: 5.582
   vas_liters: 24.9
   cms_m_per_n: 6.409999999999999e-05
   xmax_mm: 14.0
