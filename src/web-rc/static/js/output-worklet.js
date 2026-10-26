@@ -9,13 +9,17 @@
 //                         | { kind: "buffer", samples } }        (sweep)
 // In:  { type: "gain", gain }   level-check step, ramped (4h)
 //      { type: "stop" }         STOP / Esc / auto-STOP, ramped (4e)
+// A meter auto-STOP (stop-latch.js) starts the same STOP ramp from the next
+// process() call, without the main thread (Architect note b).
+//
 // Out: { type: "clamped", frame }   the cap was reached (5d)
-//      { type: "stopped", frame, clamped }
+//      { type: "stopped", frame, clamped, cause }   cause: the meter's, or null
 //      { type: "ended", frame }      buffer source finished
 //      { type: "error", message }    nothing is played
 
 import { LevelNoise } from "./dsp.js";
 import { BufferSource, OutputChain } from "./output-core.js";
+import { stopLatch } from "./stop-latch.js";
 
 class OutputProcessor extends AudioWorkletProcessor {
   constructor(options) {
@@ -24,6 +28,8 @@ class OutputProcessor extends AudioWorkletProcessor {
     this.channel = o.channel;
     this.chain = null;
     this.endedSent = false;
+    this.epoch = stopLatch.arm();
+    this.meterCause = null;
     try {
       const src = o.source || {};
       let source;
@@ -66,6 +72,10 @@ class OutputProcessor extends AudioWorkletProcessor {
       this.port.postMessage({ type: "error", message: "no such output channel" });
       return false;
     }
+    if (this.meterCause === null && stopLatch.tripped(this.epoch)) {
+      this.meterCause = stopLatch.cause;
+      this.chain.stop();
+    }
     const ev = this.chain.render(target);
     const frame = currentFrame;
     if (ev.clampedAt >= 0) {
@@ -78,6 +88,7 @@ class OutputProcessor extends AudioWorkletProcessor {
     if (ev.stopped) {
       this.port.postMessage({
         type: "stopped", frame: frame + target.length, clamped: this.chain.clamped,
+        cause: this.meterCause,
       });
     }
     return true;

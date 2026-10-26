@@ -8,11 +8,15 @@
 // In:  { type: "calibration", splOffsetDb }
 //      { type: "record", id, frames }   start at the next quantum
 //      { type: "record-cancel" }
+// A report with a stop cause also trips stop-latch.js, which stops the output
+// worklet without the main thread (Architect note b).
+//
 // Out: { type: "meter", frame, peakDbfs, rmsDbfs, rmsLastDbfs, quanta, cause }
 //      frame = currentFrame at the end of the reported quanta.
 //      { type: "recorded", id, startFrame, samples }   (samples transferred)
 
 import { MeterStream, Recorder } from "./meter-core.js";
+import { stopLatch } from "./stop-latch.js";
 
 class MicMeterProcessor extends AudioWorkletProcessor {
   constructor(options) {
@@ -53,6 +57,7 @@ class MicMeterProcessor extends AudioWorkletProcessor {
     }
     const report = this.stream.process(block);
     if (report) {
+      if (report.cause) stopLatch.trip(report.cause);
       this.port.postMessage({
         type: "meter", frame: currentFrame + block.length, ...report,
       });
