@@ -1086,6 +1086,9 @@ version, see P3): F-418, US-183, D-072, T66.
 Next free (v304; supersedes the line above; F-418 confirmed free on
 main, all origin/* and local branches at PM read, filed in this
 version, see P3): F-419, US-183, D-072, T66.
+Next free (v310; supersedes the line above; F-419 to F-428 confirmed
+free on main, all origin/* and local branches at PM read, filed in
+this version, see P3): F-429, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -8175,6 +8178,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   PM cross-ref: src/graph-manager/src/main.rs at e050fe90, l.824-834
   (CloseGate sets each Mult to 0.0) and l.575-582 (Standby closes the
   gate the same way), match the AE's reading.
+  UPDATE (#68 Rule 13 verdicts, 2026-10-26; Architect N4 = AE N1;
+  /tmp/cm-relay/PR68/frozen/ae-verdict-c4a9e8a6.txt and
+  arch-verdict-e7963504.txt, shas verified at PM read). AE, verbatim:
+  "AE severity: HIGH once anything is connected, nil while "nothing
+  connected" stands. It needs an F-number and a fix before amps-on, in
+  the same pre-amps-on group as F-405/F-407." (PM cross-ref: the
+  F-number is this one, F-410, P2 (AE) since v266; no new ID.) AE fix
+  direction (Architect's mechanism), verbatim: "unmute while the gate
+  is closed restores the stored values only into the "pending" state,
+  so the gate open applies them, or unmute is refused with a clear
+  message." Architect, verbatim: "unmute should be a no-op on the
+  gains (state only) while the gate is closed, and the gate open
+  should apply the unmuted values. Not in this PR's scope."
 - **F-411** Correction under-corrects near the closed-loop band edge
   (mock-room Left, 272.6 Hz: room +3.95 dB, FIR -0.71 dB) (AE,
   2026-10-26; title verbatim from the AE; severity Medium, AE; no
@@ -9925,6 +9941,81 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - PM note (v309): v308 adds 21 lines; the PM report of 22 was a
     stale pre-reflow count (CM caught it at the fence check; content
     complete).
+  - #68 RULE 13 VERDICTS at 3b190d6a (frozen in
+    /tmp/cm-relay/PR68/frozen/, shas verified at PM read; CM posts
+    verbatim on the PR). Each is conditional on CI 40413648491 at this
+    head going green.
+     Architect arch-verdict-e7963504.txt (sha256 e7963504, 3251
+     bytes), verbatim: "VERDICT: APPROVE. No BLOCKING findings." and
+     "It is void if the head changes."
+     AE ae-verdict-c4a9e8a6.txt (sha256 c4a9e8a6, 3131 bytes),
+     verbatim: "VERDICT: APPROVE. Nothing BLOCKING in the audio-safety
+     domain."
+     SecSpec secspec-verdict-5be60727.md (sha256 5be60727), verbatim:
+     "**Verdict: APPROVE** at head
+     3b190d6a7ea7ec46a84b2e8e6e9d8de27ab33a84, conditional on CI run
+     40413648491 at this head being green". (PM cross-ref: found in
+     frozen/ at PM read; the CM's message counted 2 of 7.)
+     UX ux-verdict-72bf2b0c.md (sha256 72bf2b0c, 1318 bytes; record
+     copy /tmp/pr68-ux-verdict-3b190d6a.md, same sha), verbatim:
+     "**APPROVE — no concerns in my domain.**"
+     AD /tmp/pr68-ad-verdict-3b190d6a.md (sha256 8208bb32, verified at
+     PM read; accounting copy, not yet in frozen/ at PM read),
+     verbatim: "**Verdict: APPROVE** at head
+     3b190d6a7ea7ec46a84b2e8e6e9d8de27ab33a84. **Nothing BLOCKING.**"
+     and "This approval does NOT cover CI."
+     QE /tmp/pr68-qe-rule13-verdict-3b190d6a-r1.md (sha256 cc0be56e,
+     verified at PM read; accounting copy), verbatim: "## Verdict:
+     APPROVE, conditional on the new-head CI (CM verifies
+     mechanically)". The approval takes effect once CI 40413648491 at
+     3b190d6a is green and its log shows V-a to V-f (V-a stimulus
+     line; V-b the 3 tests PASSED, no setup/teardown ERROR; V-c no -rs
+     skip; V-d test_mute_e2e after test_measurement; V-e the
+     pi-loopback refusal test PASSED; V-f test-and-build and ci-gate
+     succeeded). Verbatim: "If any of these is missing, the approval
+     does not take effect and the log goes back to me."
+     TW tw-verdict-46baae9d.md (frozen; sha256 46baae9d, verified at
+     PM read), verbatim: "**Verdict: CHANGES REQUESTED.** There is one
+     BLOCKING item, B1: the PR body." B1: the body describes the first
+     draft commit, not this head; the fix is a body matching the head:
+     (a) the changes, (b) the F-394 ACs claimed and still open, (c)
+     the virtual-only gate opening and its guard in plain language,
+     (d) the rulings, (e) the CI evidence. Verbatim: "Once the body is
+     updated, I re-check it and issue an APPROVED verdict for this
+     same head in a new file."
+     Tally at PM read: 6 of 7 APPROVE (Architect, AE, SecSpec, UX, QE,
+     AD), all conditional on CI 40413648491 (QE: V-a to V-f); TW
+     CHANGES REQUESTED (B1, PR body; the body edit does not change the
+     head). CI (b) open. (PM cross-ref: the CM message counted 4/7
+     with TW, QE, AD open; the QE and AD files are accounting copies
+     to the PM.)
+  - #68 pre-merge item, BLOCKING per TW B1 (also UX, AD L1; the CM
+    asks the TW for a refreshed body). UX, verbatim: "PR-BODY.md still
+    says "Draft, first commit… Open consultations (QE/AE)…", which no
+    longer describes the head at review time. Suggest refreshing the
+    body before merge."
+  - #68 non-blocking notes, no ID: Architect N2 = AE N2 (numpy
+    allocates in the substitute's JACK callback), Architect verbatim:
+    "That is fine for a test substitute in local-demo; never copy this
+    pattern into an RT client that ships." AE: "No action." SecSpec 3
+    (INFO), verbatim: "Keep it that way: no tokens or keys in
+    local-demo service logs." SecSpec 4 (INFO): `local-demo.sh env`
+    eval, not a trust-boundary issue. Architect N4 = AE N1 = AD L3:
+    see F-410 UPDATE; Architect N1/N3 and SecSpec 1/2 filed as F-419
+    to F-422; AD L2/L4, QE N1-N3 filed as F-423 to F-427. QE N4
+    (BACKEND_TYPE defaults to "local-demo", backend.py:33; FYI for
+    SecSpec/AE): see F-421. AD nits (no ID): tone() resolves scripts/
+    via parents[4]; modulo by a 0 sample rate (theoretical); a missing
+    manifest key gives an empty XDG_RUNTIME_DIR (caught by the PW
+    socket check). QE/TW carried: test_production _ensure_standby
+    ignores the return value (already recorded, F-394 block).
+  - #68 TW post-merge docs items (TW, no ID; TW docs batch after the
+    merge): N1 F-394/F-270 records go stale on merge (F-394.md status
+    line, AC (vi)(2) tap wording, F-270.md l.48-52, the F-394 index
+    row); N2 development.md: document LOCAL_DEMO_MIXXX_SOURCE=tone /
+    mixxx-substitute.py --tone and that local-demo env reads the paths
+    from the manifest (added to the TW development.md docs-queue
+    item).
 - **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
   per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
   2026-10-26): on a suspended node, the gain readers in the r6b matrix
@@ -11016,6 +11107,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - Architect r5 check (CM, 2026-10-26; message only, no file),
     verbatim: "Fence r5 76b8a79f (sha verified) matches S1-S3 and D2d'
     as released. No r6 needed."
+  - F-384 STATUS (CM, 2026-10-26): worker-7 report r1
+    /tmp/cm-relay/F-383/frozen/w7-F384-report-r1-9474559d.txt (sha256
+    9474559d, verified at PM read). Commit 1 (A2 helper) 51657eeb,
+    parent 4724e65d, local only: min_phase.py + test_min_phase.py (17
+    passed). Commit 2 (F-384 A5) ready, not committed: written before
+    the q3 answer; it now awaits the fence r5 work and the D2d' report
+    (CM). Suite on the commit-2 tree (pre-r5): verbatim "1 failed,
+    1541 passed, 1 skipped, 3 warnings" (the q3 home_lab sat_left
+    far-field case). Next after commit 2: worker-7 asks the CM before
+    the phase 0b r2 data run (R6d).
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
@@ -13368,6 +13469,75 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   alignment); if it persists, either the sat delay study (0.4/0.8/1.2
   ms) or a lower sat subsonic within the CHN-50P excursion limit
   (AE)." Related: F-385 (D-031 subsonic vs crossover phase), US-174.
+- **F-419** tone() pulls in the soundfile import (Architect, #68
+  verdict e7963504 N1, via CM, 2026-10-26; non-blocking; no P-level
+  given), verbatim: "tone() and test_mixxx_substitute_tone exec
+  scripts/mixxx-substitute.py, whose top level does `import soundfile`
+  and sys.exit(1) if it is missing. So "does not need soundfile"
+  (backend.py tone() docstring) is only true until first use, and a
+  missing soundfile would surface as SystemExit in a fixture."
+  Suggestion, verbatim: "Cleaner: move TONE_* and tone_block into a
+  small import-free module that both the script and the tests import."
+- **F-420** _rpc_call does not catch AttributeError (Architect, #68
+  verdict e7963504 N3, via CM, 2026-10-26; non-blocking; no P-level
+  given), verbatim: "_rpc_call: a JSON line that is not an object
+  (e.g. a list) raises AttributeError, which is not in the except
+  tuple. The GM never sends that today; adding AttributeError to the
+  tuple keeps the "returns {} on bad replies" contract."
+- **F-421** Virtual-gate guard is not bound to the target (SecSpec,
+  #68 verdict 5be60727 point 1, LOW (SecSpec); before any amps-on or a
+  shared test host; no P-level given), verbatim:
+  "virtual_stack_refusal inspects the PipeWire that pw-dump reaches
+  (the local XDG_RUNTIME_DIR), but the gate is opened at
+  LOCAL_DEMO_URL. PI_AUDIO_BACKEND also defaults to "local-demo" when
+  unset." Suggestion, verbatim: "also refuse unless LOCAL_DEMO_URL's
+  host is loopback (or it matches the manifest's web-UI port), and
+  require PI_AUDIO_BACKEND to be set explicitly."
+- **F-422** Virtual-gate guard is a denylist (ALSA only) (SecSpec, #68
+  verdict 5be60727 point 2, LOW (SecSpec); before any amps-on or a
+  shared test host; no P-level given), verbatim: "the guard only
+  rejects ALSA. Other real-output APIs (e.g. api.bluez5, and Bluetooth
+  is currently enabled on the Pi 5) would pass. Suggest an allowlist
+  of the factories local-demo actually uses (support.null-audio-sink,
+  filter-chain, client nodes), refusing anything else with a
+  device.api."
+- **F-423** virtual_gate_open teardown leaves venue "local-demo"
+  selected (AD, #68 verdict 8208bb32 L2, 2026-10-26; non-blocking; no
+  P-level given), verbatim: "The virtual_gate_open teardown restores
+  gate and mute but leaves venue "local-demo" selected. C3 doesn't
+  require restoring it, but later tests inherit a selected venue."
+- **F-424** test-e2e.sh [stack] log window only for
+  service-integration (AD, #68 verdict 8208bb32 L4, 2026-10-26;
+  non-blocking; no P-level given), verbatim: "test-e2e.sh prints the
+  `[stack]` window only for service-integration. A browser-E2E failure
+  gets no stack log window."
+- **F-425** mixxx-substitute tone print never reaches the CI log (QE,
+  #68 verdict cc0be56e N1, 2026-10-26; non-blocking; no P-level
+  given), verbatim: "mixxx-substitute.py prints `[mixxx-substitute]
+  Audio source: tone 1000 Hz -20.0 dBFS`, but that line never reaches
+  the CI log (0 hits in 40406988590)." Fix, verbatim: "use flush=True,
+  or put the Hz/dBFS in the local-demo line."
+- **F-426** local-demo.sh banner says "plays mp3" in tone mode (QE,
+  #68 verdict cc0be56e N2, 2026-10-26; non-blocking; no P-level
+  given), verbatim: "local-demo.sh:755 still prints `Audio: Mixxx
+  substitute plays mp3 …` in tone mode (CI log line 7499, right after
+  the correct line 7440). It should reflect the actual source."
+- **F-427** test_unmute_restores_levels does not re-check the subs
+  after unmute (QE, #68 verdict cc0be56e N3, 2026-10-26; non-blocking;
+  AE to rule; no P-level given), verbatim: "The subs (ch 3-4) are
+  checked for presence before mute but not after unmute. Under AE V3
+  (subs: presence only) this is in scope for the AE to decide. A
+  presence re-check on the subs after unmute would be cheap."
+- **F-428** New PytestUnraisableExceptionWarning in web-ui
+  test_f262_shared_correction (worker-7, F-384 report r1 9474559d
+  warning 3, via CM, 2026-10-26; looks unrelated to F-384 (CM); no
+  P-level given), verbatim: "NEW vs the earlier unit run:
+  PytestUnraisableExceptionWarning in web-ui" (test:
+  tests/unit/test_f262_shared_correction.py,
+  TestSessionClosedLoop::test_all_pass), verbatim: "asyncio
+  _SelectorTransport.__del__ -> base_events._wakeup "TypeError:
+  'NoneType' object is not iterable" at GC." worker-7: probably a
+  flaky loop-close ordering; not chased (fence).
 
 ## Open PRs (2026-10-24, per CM)
 
