@@ -13,16 +13,8 @@ import webrc_pipeline as wp
 
 CALLS = {
     "make_sweep": wp.make_sweep,
-    "check_capture": wp.check_capture,
-    "ir_from_capture": wp.ir_from_capture,
-    "build_filter": wp.build_filter,
-    "filter_filename": wp.filter_filename,
-    "filter_wav_bytes": wp.filter_wav_bytes,
-    "verify_wav_bytes": wp.verify_wav_bytes,
-    "repeatability": wp.repeatability,
-    "predict": wp.predict,
+    "analyze": wp.analyze,
     "report_text": wp.report_text,
-    "subsonic_corner_hz": wp.subsonic_corner_hz,
 }
 
 
@@ -54,7 +46,7 @@ def _result(value):
 
 def call(name, args):
     """Run CALLS[name](*args). Returns {ok, result} or {ok: False, kind,
-    message}; kind is "rejected" for CaptureRejected (a user-facing fail
+    message}; kind is "rejected" for wp.Rejected (a user-facing fail
     closed), "error" otherwise."""
     if hasattr(args, "to_py"):  # JsProxy of a JS array
         args = args.to_py()
@@ -63,7 +55,7 @@ def call(name, args):
         return {"ok": False, "kind": "error", "message": f"unknown call {name!r}"}
     try:
         return {"ok": True, "result": _result(fn(*_arg(list(args))))}
-    except wp.CaptureRejected as exc:
+    except wp.Rejected as exc:
         return {"ok": False, "kind": "rejected", "message": str(exc)}
     except Exception as exc:  # noqa: BLE001 - reported to the UI, never swallowed
         return {"ok": False, "kind": "error",

@@ -89,7 +89,7 @@ export class Flow {
     this.decl = emptyDeclaration();
     this.ack = false;
     this.ackTicks = new Set();   // ticked 4a items, 0 .. ACK_ITEMS - 1
-    this.cal = null;             // { fileName, parsed } (calibration.js)
+    this.cal = null;             // { fileName, parsed, text } (calibration.js)
     this.calBoundMicId = null;
     this.filters = new Map();    // channel -> finished, AC6c-passed result
     this.held = new Set();       // main-thread stop causes still held (r2 A3)
@@ -194,10 +194,13 @@ export class Flow {
     return [];
   }
 
-  /** Choosing a file binds it to the selected mic (E5b D3). */
-  loadCalibration(fileName, parsed) {
+  /**
+   * Choosing a file binds it to the selected mic (E5b D3). text is the
+   * file itself: a calibrated analysis applies its curve (K2).
+   */
+  loadCalibration(fileName, parsed, text = null) {
     if (!this._editable()) return [];
-    this.cal = { fileName, parsed };
+    this.cal = { fileName, parsed, text };
     this.calBoundMicId = this.audio ? this.audio.micId : null;
     return this._meterCal();
   }
@@ -517,6 +520,8 @@ export class Flow {
         calibrated: this.run.confirmed.splOffsetDb !== null,
         calibrationFile: this.run.confirmed.splOffsetDb !== null
           ? this.cal.fileName : null,
+        calibrationText: this.run.confirmed.splOffsetDb !== null
+          ? this.cal.text : null,
       },
     }];
   }

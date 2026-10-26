@@ -2,25 +2,25 @@
 
 import ast
 import hashlib
-import importlib.util
 import json
 from pathlib import Path
 
 import pytest
 
-WEB_RC = Path(__file__).resolve().parents[2]
-REPO = WEB_RC.parents[1]
+from .. import conftest
 
 # Modules Pyodide provides (stdlib + vendored wheels) or the bundle ships.
 PROVIDED = {"numpy", "scipy", "soundfile"}
 
 
 @pytest.fixture(scope="module")
-def bs():
-    spec = importlib.util.spec_from_file_location("build_site", WEB_RC / "build_site.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+def built(tmp_path_factory):
+    return conftest.build_site_module(tmp_path_factory)
+
+
+@pytest.fixture(scope="module")
+def bs(built):
+    return built[0]
 
 
 @pytest.fixture(scope="module")
@@ -41,12 +41,13 @@ def test_shared_files_byte_identical(bs, site):
         assert (site / site_path).read_bytes() == src.read_bytes(), site_path
 
 
-def test_manifest_matches_repo(site):
+def test_manifest_matches_repo(built, site):
+    repo = built[1]
     manifest = json.loads((site / "py" / "manifest.json").read_text())
     entries = manifest["files"] + manifest["shared_web"]
     assert entries
     for e in entries:
-        assert _sha(REPO / e["source"]) == e["sha256"], e["source"]
+        assert _sha(repo / e["source"]) == e["sha256"], e["source"]
     for e in manifest["files"]:
         assert _sha(site / "py" / e["path"]) == e["sha256"], e["path"]
 

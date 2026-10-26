@@ -3,33 +3,27 @@
 Builds the site with build_site.py around the vendored runtime
 (WEB_RC_PYODIDE, the nix/pyodide.nix output), serves it on localhost and
 aborts every request to any other host. The page drives rc-client.js:
-sweep -> simulated capture -> IR -> filter -> WAV bytes -> gates ->
-prediction, plus a clipped capture that must fail closed.
+two simulated captures -> analyze (IRs, repeatability, filter, WAV
+bytes, gates, prediction), plus a clipped capture that must fail closed.
 """
 
 import contextlib
 import functools
 import http.server
-import importlib.util
 import os
 import threading
-from pathlib import Path
 from urllib.parse import urlparse
 
 import pytest
 
 from .. import conftest
 
-WEB_RC = Path(__file__).resolve().parents[2]
-
 
 def _build(tmp_path_factory):
     pyodide = os.environ.get("WEB_RC_PYODIDE")
     if not pyodide:
         pytest.fail("WEB_RC_PYODIDE must point at the nix/pyodide.nix output")
-    spec = importlib.util.spec_from_file_location("build_site", WEB_RC / "build_site.py")
-    bs = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(bs)
+    bs, _ = conftest.build_site_module(tmp_path_factory)
     return bs.build(pyodide, tmp_path_factory.mktemp("site") / "out", link_pyodide=True)
 
 
@@ -58,44 +52,58 @@ async () => {
   const t0 = performance.now();
   await rc.ready;
   const loadMs = performance.now() - t0;
-  const SR = 48000, LIMIT = 40, PRE = 24000, LAT = 1200;
+  const SR = 48000, LIMIT = 40, PRE = 24000, LAT = 1200, ONSET = 128;
   const sweep = await rc.call("make_sweep", LIMIT, 3);
+  const played = new Float32Array(PRE + sweep.length);
+  played.set(sweep, PRE);
   // Direct sound at -20 dB after LAT samples plus one reflection, and a
-  // deterministic noise floor near -75 dBFS.
-  const cap = new Float64Array(PRE + sweep.length + SR);
-  let s = 12345;
-  for (let i = 0; i < cap.length; i++) {
-    s = (s * 1103515245 + 12345) >>> 0;
-    cap[i] = ((s / 4294967296) - 0.5) * 6e-4;
+  // deterministic noise floor near -75 dBFS, different per capture.
+  // Capture 2's output started one quantum late (onset 128).
+  function capture(seed, onset) {
+    const cap = new Float32Array(PRE + sweep.length + SR);
+    let s = seed;
+    for (let i = 0; i < cap.length; i++) {
+      s = (s * 1103515245 + 12345) >>> 0;
+      cap[i] = ((s / 4294967296) - 0.5) * 6e-4;
+    }
+    for (let i = 0; i < sweep.length; i++) {
+      cap[PRE + onset + LAT + i] += 0.1 * sweep[i];
+      cap[PRE + onset + LAT + 480 + i] += 0.04 * sweep[i];
+    }
+    return cap;
   }
-  for (let i = 0; i < sweep.length; i++) {
-    cap[PRE + LAT + i] += 0.1 * sweep[i];
-    cap[PRE + LAT + 480 + i] += 0.04 * sweep[i];
-  }
-  const [ir, delay] = await rc.call("ir_from_capture", cap, sweep, PRE);
-  const [fir, level] = await rc.call("build_filter", ir, LIMIT);
-  const wav = await rc.call("filter_wav_bytes", fir);
-  const name = await rc.call("filter_filename", "left");
-  const gates = await rc.call("verify_wav_bytes", wav, name, LIMIT);
-  const pred = await rc.call("predict", wav, ir, LIMIT);
-  const clipped = Float64Array.from(cap);
-  clipped[PRE + 5000] = 1.0;
+  const request = {
+    channel: 2, decl: { role: "subwoofer", limitHz: LIMIT },
+    played, preRollS: PRE / SR, captures: [capture(12345, 0), capture(777, ONSET)],
+    onsets: [0, ONSET], calibrated: false, calibrationText: null,
+  };
+  const r = await rc.call("analyze", request);
+  const clipped = { ...request, captures: [Float32Array.from(request.captures[0]),
+    request.captures[1]] };
+  clipped.captures[0][PRE + 5000] = 1.0;
   let rejected = null;
   try {
-    await rc.call("ir_from_capture", clipped, sweep, PRE);
+    await rc.call("analyze", clipped);
   } catch (e) {
     rejected = { kind: e.kind, message: e.message };
   }
+  let noRole = null;
+  try {
+    await rc.call("analyze", { ...request, decl: { limitHz: LIMIT } });
+  } catch (e) {
+    noRole = { kind: e.kind, message: e.message };
+  }
   let unknown = null;
-  try { await rc.call("__import__", "os"); } catch (e) { unknown = e.kind; }
+  try { await rc.call("build_filter", sweep, LIMIT); } catch (e) { unknown = e.kind; }
   rc.terminate();
   return {
     loadMs, sweepType: sweep.constructor.name, sweepLen: sweep.length,
-    irType: ir.constructor.name, delay, firLen: fir.length,
-    wavType: wav.constructor.name, wavLen: wav.length, name,
-    gatesOk: gates.ok, gates: gates.results,
-    predLabel: pred.label, predFreqs: pred.freqs.length,
-    rejected, unknown,
+    fileName: r.fileName, wavType: r.wavBytes.constructor.name,
+    wavLen: r.wavBytes.length, delay: r.delayS, irType: r.ir.constructor.name,
+    gatesOk: r.gates.ok, gates: r.gates.results, repOk: r.repeatability.ok,
+    repBand: r.repeatability.band_hz, pred: { ...r.prediction,
+      freqs: r.prediction.freqs.length },
+    measuredLen: r.measured.freqs.length, rejected, noRole, unknown,
   };
 }
 """
@@ -124,16 +132,22 @@ def test_pipeline_runs_offline(page, site_url):
         assert needed in paths, (needed, sorted(paths))
     assert any(p.startswith("/pyodide/scipy-") for p in paths), sorted(paths)
     assert out["sweepType"] == "Float64Array" and out["sweepLen"] == 3 * 48000
+    assert out["fileName"] == "combined_ch3-sub-browser-generated.wav"
+    assert out["wavType"] == "Uint8Array" and out["wavLen"] > 16384 * 4
     assert out["irType"] == "Float64Array"
     assert out["delay"] == pytest.approx(1200 / 48000, abs=2 / 48000)
-    assert out["firLen"] == 16384
-    assert out["wavType"] == "Uint8Array" and out["wavLen"] > 16384 * 4
-    assert out["name"] == "combined_left_browser-generated.wav"
     assert out["gatesOk"], [g for g in out["gates"] if not g["passed"]]
-    assert out["predLabel"].startswith("Predicted residual within 3 dB: ")
-    assert out["predFreqs"] > 0
+    assert any(g["name"].startswith("Closed Loop") for g in out["gates"])
+    assert out["repOk"] and out["repBand"] == [30, 200]
+    pred = out["pred"]
+    assert pred["label"].startswith("Predicted residual within 3 dB: ")
+    assert pred["band_hz"] == [30, 200] and pred["freqs"] > 0, pred["reason"]
+    assert pred["corrected_max_db"] is not None, pred["reason"]
+    assert out["measuredLen"] > 0
     assert out["rejected"]["kind"] == "rejected"
     assert "clipped" in out["rejected"]["message"]
+    assert "measurement 1 of 2" in out["rejected"]["message"]
+    assert out["noRole"]["kind"] == "error" and "role" in out["noRole"]["message"]
     assert out["unknown"] == "error"
     print(f"Pyodide load {out['loadMs']:.0f} ms")
 

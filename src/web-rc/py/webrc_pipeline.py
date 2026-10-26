@@ -4,17 +4,23 @@ Runs inside Pyodide on top of the unchanged shared room_correction
 modules (copied byte-identical by build_site.py). This module only wires
 them together for the standalone flow:
 
-    make_sweep -> (browser plays and captures) -> check_capture
-    -> ir_from_capture -> build_filter -> filter_wav_bytes
-    -> verify_wav_bytes -> repeatability / predict -> report_text
+    make_sweep -> (browser plays and captures) -> analyze:
+    ir_from_capture x 2 -> repeatability -> build_filter -> filter_wav_bytes
+    -> verify_wav_bytes -> predict;  report_text
 
 Every array goes in and out as plain sequences or numpy arrays; the worker
 converts. Nothing here touches the network or a Pi.
 
-Constants that live in modules the browser can't import (venue_pipeline
-needs yaml + deploy, measure_nearfield needs the venue tooling) are
-mirrored below. tests/unit/test_webrc_pipeline.py reads the native values
-with ast and asserts they are equal, so a change upstream fails CI.
+One speaker dict per channel ({"filter_type": "highpass"} for a full-range
+speaker, "lowpass" for a subwoofer, E2e) picks every band: the level
+reference (correction.reference_band), the repeatability and prediction
+band (verify.closed_loop_band). analyze builds it once and passes the same
+object to every call.
+
+Constants that live in a module the browser can't import
+(measure_nearfield needs the venue tooling) are mirrored below.
+tests/unit/test_webrc_pipeline.py reads the native values with ast and
+asserts they are equal, so a change upstream fails CI.
 """
 
 import io
@@ -29,8 +35,11 @@ import soundfile as sf
 from room_correction import closed_loop, dsp_utils, verify
 from room_correction.combine import combine_filters
 from room_correction.correction import (
-    generate_correction_filter,
+    MAX_CUT_DB,
+    CorrectionFilter,
+    correction_from_measurement,
     normalize_ir_level,
+    reference_band,
 )
 from room_correction.crossover import generate_subsonic_filter
 from room_correction.deconvolution import deconvolve
@@ -42,16 +51,10 @@ from room_correction.generate_profile_filters import (
 )
 from room_correction.recording import apply_umik1_calibration
 from room_correction.sweep import generate_log_sweep
+from room_correction.target_curves import get_target_curve
 
 SAMPLE_RATE = dsp_utils.SAMPLE_RATE
 N_TAPS = DEFAULT_N_TAPS
-
-# Mirrors of venue_pipeline.REFERENCE_BANDS_HZ / MAX_CUT_DB (AE 2026-10-25).
-REFERENCE_BANDS_HZ = {
-    "highpass": (400.0, 4000.0),
-    "lowpass": (30.0, 150.0),
-}
-MAX_CUT_DB = 18.0
 
 # Mirrors of measure_nearfield's recording integrity thresholds (AC7).
 REC_MIN_PEAK_DBFS = -40.0
@@ -59,23 +62,13 @@ REC_MAX_PEAK_DBFS = -1.0
 REC_MIN_SNR_DB = 20.0
 REC_MAX_DC_OFFSET = 0.01
 
-# A standalone channel is one speaker played full range from its declared
-# limit up (AC4g). Its level reference is the sat band.
-# TODO(US-179): AE to confirm the band choice for a sub-only channel.
-CHANNEL_FILTER_TYPE = "highpass"
+# The role the user declares (safety.js ROLE) -> the shared code's
+# filter_type key (E2e) and the filename tag (E2h). Never shown in the UI.
+ROLE_FILTER_TYPES = {"fullrange": "highpass", "subwoofer": "lowpass"}
+ROLE_FILE_TAGS = {"fullrange": "fullrange", "subwoofer": "sub"}
 
 HPF_RATIO = 0.8               # AC4g/6b, same as safety.js LIMITS.HPF_RATIO
 SWEEP_F_END_HZ = 20000.0      # AC4g
-# Top of the evaluation band: the 1/6-octave window must stay clear of the
-# sweep end, where only noise is left.
-# TODO(US-179): AE to confirm the correction band (AC8a).
-EVAL_F_HIGH_HZ = 16000.0
-# Top of the prediction band. Above 500 Hz the frequency-dependent window
-# leaves reflections uncorrected on purpose (F-262: gated band 250-500 Hz
-# for sats, 500-4000 Hz logged only), so the unwindowed hold-out IR would
-# fail there in any reflective room.
-# TODO(US-179): AE to confirm the prediction band (AC8b).
-PREDICT_F_HIGH_HZ = 500.0
 SWEEP_MAX_S = 10.0            # AC4g
 SWEEP_HPF_ORDER = 4           # AC4g, >= 4th order
 REPEATABILITY_MAX_DB = 1.0    # AC8a
@@ -95,8 +88,17 @@ PREDICTION_LABEL = (
 )
 
 
-class CaptureRejected(ValueError):
-    """A capture failed closed (AC7). The message names the reason."""
+class Rejected(ValueError):
+    """A measurement failed closed. The message names the reason and is
+    shown to the user as it is."""
+
+
+class CaptureRejected(Rejected):
+    """A capture failed closed (AC7, AC8a)."""
+
+
+class GateFailed(Rejected):
+    """The filter failed an AC6c gate: no download."""
 
 
 def _f64(x):
@@ -110,14 +112,17 @@ def subsonic_corner_hz(limit_hz):
     return HPF_RATIO * float(limit_hz)
 
 
-def correction_band_hz(limit_hz):
-    """Band the repeatability check (AC8a) is evaluated over."""
-    return (float(limit_hz), EVAL_F_HIGH_HZ)
+def speaker_dict(role):
+    """The channel's speaker dict (E2e). A missing or unknown role raises:
+    the shared code's default to "highpass" is never relied on."""
+    if role not in ROLE_FILTER_TYPES:
+        raise ValueError(f"no speaker role for this channel ({role!r})")
+    return {"filter_type": ROLE_FILTER_TYPES[role]}
 
 
-def prediction_band_hz(limit_hz):
-    """Band the predicted residual verdict (AC8b) is evaluated over."""
-    return (float(limit_hz), max(PREDICT_F_HIGH_HZ, 2.0 * float(limit_hz)))
+def view_band_hz(limit_hz, sr=SAMPLE_RATE):
+    """Band the measured magnitude is shown over: limit .. 20 kHz."""
+    return (float(limit_hz), min(SWEEP_F_END_HZ, 0.95 * sr / 2))
 
 
 # -- sweep (AC4g) -----------------------------------------------------------
@@ -236,19 +241,17 @@ def apply_calibration_text(ir, calibration_text, sr=SAMPLE_RATE):
 
 # -- filter (AC6) -----------------------------------------------------------
 
-def build_filter(ir, limit_hz, sr=SAMPLE_RATE):
-    """Combined FIR for one channel, the venue pipeline's chain.
+def build_filter(ir, limit_hz, speaker, sr=SAMPLE_RATE):
+    """Combined FIR for one channel: generate_profile_filters steps 2-4,
+    without the crossover (E2e, E2j).
 
-    normalize_ir_level -> generate_correction_filter (flat, cut <= 18 dB)
-    -> combine_filters with a dirac crossover and the subsonic HPF at
-    0.8 x limit (generate_profile_filters' margin and slope rule).
-    Returns (fir, reference_level_db).
+    correction_from_measurement (the speaker's reference band, flat,
+    cut <= 18 dB) -> combine_filters with a dirac crossover and the
+    subsonic HPF at 0.8 x limit (generate_profile_filters' margin and
+    slope rule). Returns (fir, CorrectionFilter).
     """
-    ir = _f64(ir)
-    normalized, level_db = normalize_ir_level(
-        ir, REFERENCE_BANDS_HZ[CHANNEL_FILTER_TYPE], sr=sr)
-    correction = generate_correction_filter(
-        normalized, target_curve_name="flat", n_taps=N_TAPS, sr=sr,
+    correction = correction_from_measurement(
+        _f64(ir), speaker, target_curve="flat", n_taps=N_TAPS, sr=sr,
         max_cut_db=MAX_CUT_DB)
     subsonic = generate_subsonic_filter(
         hpf_freq=subsonic_corner_hz(limit_hz),
@@ -257,13 +260,17 @@ def build_filter(ir, limit_hz, sr=SAMPLE_RATE):
     dirac = np.zeros(N_TAPS)
     dirac[0] = 1.0
     fir = combine_filters(
-        correction_filter=correction, crossover_filter=dirac, n_taps=N_TAPS,
+        correction_filter=correction.fir, crossover_filter=dirac, n_taps=N_TAPS,
         margin_db=COMBINE_MARGIN_DB, subsonic_filter=subsonic)
-    return fir, float(level_db)
+    return fir, correction
 
 
-def filter_filename(channel_name):
-    return f"combined_{channel_name}_{BROWSER_TAG}.wav"
+def filter_filename(channel_index, role):
+    """E2h: the 1-based output channel, the role tag, then BROWSER_TAG."""
+    channel_index = int(channel_index)
+    if channel_index < 0 or role not in ROLE_FILE_TAGS:
+        raise ValueError(f"no filename for channel {channel_index}, role {role!r}")
+    return f"combined_ch{channel_index + 1}-{ROLE_FILE_TAGS[role]}-{BROWSER_TAG}.wav"
 
 
 def filter_wav_bytes(fir, sr=SAMPLE_RATE):
@@ -275,21 +282,39 @@ def filter_wav_bytes(fir, sr=SAMPLE_RATE):
             return fh.read()
 
 
-def verify_wav_bytes(wav_bytes, filename, limit_hz):
+def decode_filter(wav_bytes, sr=SAMPLE_RATE):
+    """The download bytes as the float64 FIR that runs (AE b0d0c499 V1).
+    Anything but N_TAPS finite taps at sr raises ValueError."""
+    fir, file_sr = sf.read(io.BytesIO(bytes(wav_bytes)), dtype="float64")
+    fir = np.asarray(fir, dtype=np.float64)
+    if file_sr != sr:
+        raise ValueError(f"filter sample rate {file_sr}, expected {sr}")
+    if fir.ndim != 1 or len(fir) != N_TAPS:
+        raise ValueError(f"filter has shape {fir.shape}, expected {N_TAPS} taps")
+    if not np.all(np.isfinite(fir)):
+        raise ValueError("filter has non-finite taps")
+    return fir
+
+
+def verify_wav_bytes(wav_bytes, filename, limit_hz, closed_loop_input,
+                     sr=SAMPLE_RATE):
     """AC6c gates on the exact download bytes, written out and re-parsed.
 
-    run_venue_checks (format, subtype, D-009, minimum-phase residual,
-    mandatory HPF at 0.8 x limit) plus verify_minimum_phase. Returns
-    {ok, results: [{name, passed, message}]}; any fail means no download.
+    run_correction_gate (format, subtype, D-009, minimum-phase residual,
+    mandatory HPF at 0.8 x limit, closed loop on capture 1) plus
+    verify_minimum_phase. closed_loop_input is (capture-1 IR,
+    CorrectionFilter, speaker dict). Returns {ok, results: [{name, passed,
+    message}]}; any fail means no download.
     """
     with tempfile.TemporaryDirectory() as tmp:
         path = os.path.join(tmp, filename)
         with open(path, "wb") as fh:
             fh.write(bytes(wav_bytes))
-        _, results = verify.run_venue_checks(
+        _, results = verify.run_correction_gate(
             tmp, {filename: "fir"},
+            closed_loop_inputs={filename: closed_loop_input},
             mandatory_hpf_hz={filename: subsonic_corner_hz(limit_hz)},
-            expected_taps=N_TAPS, expected_sr=SAMPLE_RATE)
+            expected_taps=N_TAPS, expected_sr=sr)
         mp = verify.verify_minimum_phase(path)
         mp.name = f"{mp.name} ({filename})"
         results.append(mp)
@@ -300,49 +325,167 @@ def verify_wav_bytes(wav_bytes, filename, limit_hz):
 
 # -- hold-out capture and prediction (AC8) ----------------------------------
 
-def repeatability(ir1, ir2, limit_hz, sr=SAMPLE_RATE):
-    """Capture 1 minus capture 2, 1/6-octave smoothed, over the correction
-    band (AC8a). Returns {ok, freqs, diff_db, max_abs_db, limit_db}."""
-    lo, hi = correction_band_hz(limit_hz)
-    freqs, a = closed_loop.smoothed_response_db(_f64(ir1), lo, hi, sr=sr)
-    _, b = closed_loop.smoothed_response_db(_f64(ir2), lo, hi, sr=sr)
-    diff = a - b
-    worst = float(np.max(np.abs(diff)))
+def repeatability(ir1, ir2, speaker, limit_hz, sr=SAMPLE_RATE):
+    """Capture 1 minus capture 2, 1/6-octave smoothed (AC8a, E2f).
+
+    The verdict is the max abs difference over the speaker's closed-loop
+    band. The trace for the result view covers view_band_hz; only its
+    points inside band_hz are gated (AE 6d63a2e3).
+    Returns {ok, band_hz, max_abs_db, limit_db, freqs, diff_db}.
+    """
+    ir1, ir2 = _f64(ir1), _f64(ir2)
+    lo, hi = verify.closed_loop_band(speaker)
+    _, a = closed_loop.smoothed_response_db(ir1, lo, hi, sr=sr)
+    _, b = closed_loop.smoothed_response_db(ir2, lo, hi, sr=sr)
+    gated = a - b
+    worst = float(np.max(np.abs(gated)))
+    vlo, vhi = view_band_hz(limit_hz, sr=sr)
+    freqs, ta = closed_loop.smoothed_response_db(ir1, vlo, vhi, sr=sr)
+    _, tb = closed_loop.smoothed_response_db(ir2, vlo, vhi, sr=sr)
     return {
-        "ok": bool(np.all(np.isfinite(diff)) and worst <= REPEATABILITY_MAX_DB),
-        "freqs": freqs, "diff_db": diff, "max_abs_db": worst,
-        "limit_db": REPEATABILITY_MAX_DB,
+        "ok": bool(np.all(np.isfinite(gated)) and worst <= REPEATABILITY_MAX_DB),
+        "band_hz": [float(lo), float(hi)], "max_abs_db": worst,
+        "limit_db": REPEATABILITY_MAX_DB, "freqs": freqs, "diff_db": ta - tb,
     }
 
 
-def predict(wav_bytes, holdout_ir, limit_hz, sr=SAMPLE_RATE):
-    """Predicted corrected response on the hold-out capture (AC8b).
+def predict(wav_bytes, holdout_ir, speaker, sr=SAMPLE_RATE):
+    """Predicted residual on the hold-out capture (AC8b, AE b0d0c499 P1).
 
-    The FIR comes from the download bytes; the verdict is
-    closed_loop.passes_residual_gate on the response relative to the
-    hold-out IR's reference level, against the flat target.
-    Returns {passed, label, freqs, measured_db, predicted_db, target_db}.
+    verify.verify_closed_loop on capture 2 with the FIR decoded from the
+    download bytes, its uniform level removed over the speaker's reference
+    band (V1), and capture 2's own reference level (V2). Report-only: it
+    never gates the download. Fails closed: any error or non-finite value
+    is FAIL with the reason.
+
+    Returns {passed, label, reason, band_hz, corrected_max_db,
+    uncorrected_max_db, freqs, measured_db, predicted_db, target_db}; the
+    curves are for the result view.
     """
-    fir, file_sr = sf.read(io.BytesIO(bytes(wav_bytes)), dtype="float64")
-    if file_sr != sr:
-        raise ValueError(f"filter sample rate {file_sr}, expected {sr}")
-    ir = _f64(holdout_ir)
-    _, level_db = normalize_ir_level(
-        ir, REFERENCE_BANDS_HZ[CHANNEL_FILTER_TYPE], sr=sr)
-    lo, hi = prediction_band_hz(limit_hz)
-    freqs, measured = closed_loop.smoothed_response_db(ir, lo, hi, sr=sr)
-    _, predicted = closed_loop.smoothed_response_db(
-        closed_loop.system_response(ir, fir), lo, hi, sr=sr)
-    measured = measured - level_db
-    predicted = predicted - level_db
-    target = closed_loop.channel_target_db(
-        freqs, "fullrange", 1.0, DEFAULT_SLOPE_DB_PER_OCT, "flat")
-    passed = bool(closed_loop.passes_residual_gate(predicted, target))
+    band = verify.closed_loop_band(speaker)
+    out = {"passed": False, "reason": "", "band_hz": [float(band[0]), float(band[1])],
+           "corrected_max_db": None, "uncorrected_max_db": None,
+           "freqs": np.zeros(0), "measured_db": np.zeros(0),
+           "predicted_db": np.zeros(0), "target_db": np.zeros(0)}
+    try:
+        fir = decode_filter(wav_bytes, sr=sr)
+        ref_band = reference_band(speaker)
+        fir_eval, _ = normalize_ir_level(fir, ref_band, sr=sr)
+        ir = _f64(holdout_ir)
+        _, level_db = normalize_ir_level(ir, ref_band, sr=sr)
+        cf = CorrectionFilter(fir=fir_eval, reference_level_db=level_db,
+                              ref_band_hz=ref_band)
+        result = verify.verify_closed_loop(ir, cf, band, sr=sr)
+        corrected = result.details.get("corrected_max_db")
+        uncorrected = result.details.get("uncorrected_max_db")
+        if corrected is None or uncorrected is None or not (
+                np.isfinite(corrected) and np.isfinite(uncorrected)):
+            out["reason"] = result.message
+            return _labelled(out)
+        out["corrected_max_db"] = float(corrected)
+        out["uncorrected_max_db"] = float(uncorrected)
+        out["passed"] = bool(result.passed)
+        out["reason"] = result.message
+        lo, hi = band
+        freqs, measured = closed_loop.smoothed_response_db(ir, lo, hi, sr=sr)
+        _, predicted = closed_loop.smoothed_response_db(
+            closed_loop.system_response(ir, fir_eval), lo, hi, sr=sr)
+        out.update(freqs=freqs, measured_db=measured - level_db,
+                   predicted_db=predicted - level_db,
+                   target_db=get_target_curve("flat", freqs))
+    except Exception as exc:  # noqa: BLE001 - a FAIL with the reason, never PASS
+        out["passed"] = False
+        out["reason"] = f"{type(exc).__name__}: {exc}"
+    return _labelled(out)
+
+
+def _labelled(prediction):
+    prediction["label"] = PREDICTION_LABEL.format(
+        verdict="PASS" if prediction["passed"] else "FAIL")
+    return prediction
+
+
+# -- one channel, end to end (the page's "analyze") --------------------------
+
+def analyze(request, sr=SAMPLE_RATE):
+    """Both captures of one channel -> the verified download (flow.js).
+
+    request: {channel, decl: {role, limitHz, ...}, played, preRollS,
+    captures: [c1, c2], onsets: [o1, o2], calibrated, calibrationText, ...}.
+    played is the buffer the output played: the silent pre-roll, then the
+    sweep, which is the deconvolution reference. onsets[i] is capture i's
+    measured output onset in samples (AE a1736914).
+
+    The speaker dict is built once and the same object goes to the
+    correction, the gate and the prediction (E2e, Architect Q3).
+
+    Raises CaptureRejected (a capture, or the two differ, AC7/AC8a) or
+    GateFailed (AC6c); the flow shows the message and starts over.
+    Returns {fileName, wavBytes, role, limitHz, channel, delayS, gates,
+    repeatability, prediction, measured: {freqs, db}, ir, irStartS}.
+    """
+    decl = request["decl"]
+    role = decl.get("role")
+    speaker = speaker_dict(role)
+    limit_hz = float(decl["limitHz"])
+    channel = int(request["channel"])
+    captures, onsets = list(request["captures"]), list(request["onsets"])
+    if len(captures) != 2 or len(onsets) != 2:
+        raise ValueError("expected two captures, each with its onset")
+    for onset in onsets:
+        if not float(onset).is_integer():
+            raise ValueError(f"onset {onset!r} is not a whole sample")
+    pre = int(round(float(request["preRollS"]) * sr))
+    played = _f64(request["played"])
+    if not 0 < pre < len(played) or np.any(played[:pre]):
+        raise ValueError("played buffer has no silent pre-roll")
+    sweep = played[pre:]
+    calibration_text = None
+    if request.get("calibrated"):
+        calibration_text = request.get("calibrationText")
+        if not calibration_text:
+            raise ValueError("calibrated session without the calibration file")
+
+    irs, delays = [], []
+    for i, (capture, onset) in enumerate(zip(captures, onsets)):
+        try:
+            ir, delay = ir_from_capture(capture, sweep, pre, calibration_text,
+                                        sr=sr, onset_samples=int(onset))
+        except CaptureRejected as exc:
+            raise CaptureRejected(f"{exc} (measurement {i + 1} of 2)") from exc
+        irs.append(ir)
+        delays.append(delay)
+
+    rep = repeatability(irs[0], irs[1], speaker, limit_hz, sr=sr)
+    if not rep["ok"]:
+        lo, hi = rep["band_hz"]
+        raise CaptureRejected(
+            f"Capture rejected: the two measurements differ by "
+            f"{rep['max_abs_db']:.1f} dB over {lo:g}-{hi:g} Hz (limit "
+            f"{REPEATABILITY_MAX_DB:g} dB). Keep the microphone still and the "
+            f"room quiet, then measure again.")
+
+    fir, correction = build_filter(irs[0], limit_hz, speaker, sr=sr)
+    wav = filter_wav_bytes(fir, sr=sr)
+    name = filter_filename(channel, role)
+    gates = verify_wav_bytes(wav, name, limit_hz, (irs[0], correction, speaker),
+                             sr=sr)
+    if not gates["ok"]:
+        failed = [f"{r['name']}: {r['message']}" for r in gates["results"]
+                  if not r["passed"]]
+        raise GateFailed("Filter not offered for download, a check failed: "
+                         + "; ".join(failed))
+
+    vlo, vhi = view_band_hz(limit_hz, sr=sr)
+    freqs, measured = closed_loop.smoothed_response_db(irs[0], vlo, vhi, sr=sr)
     return {
-        "passed": passed,
-        "label": PREDICTION_LABEL.format(verdict="PASS" if passed else "FAIL"),
-        "freqs": freqs, "measured_db": measured,
-        "predicted_db": predicted, "target_db": target,
+        "fileName": name, "wavBytes": wav, "role": role, "limitHz": limit_hz,
+        "channel": channel, "delayS": delays[0], "gates": gates,
+        "repeatability": rep,
+        "prediction": predict(wav, irs[1], speaker, sr=sr),
+        "measured": {"freqs": freqs,
+                     "db": measured - correction.reference_level_db},
+        "ir": irs[0], "irStartS": -ALIGN_MARGIN_S,
     }
 
 

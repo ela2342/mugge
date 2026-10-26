@@ -16,8 +16,9 @@ const OFF = { echoCancellation: false, noiseSuppression: false,
   autoGainControl: false };
 const AUDIO = { outputRate: SR, inputRate: SR, outputChannels: 8,
   dspSettings: OFF, micId: "mic-A", micLabel: "UMIK-1" };
-const UMIK = parseCalibration('"Sens Factor =-1.378dB, SERNO: 7161942"\n' +
-  "20.000\t-0.13\n");
+const UMIK_TEXT = '"Sens Factor =-1.378dB, SERNO: 7161942"\n' +
+  "20.000\t-0.13\n";
+const UMIK = parseCalibration(UMIK_TEXT);
 const QUIET = { peakDbfs: -60, rmsDbfs: -70 };
 
 function sub40() {
@@ -31,7 +32,7 @@ function atLevel({ cal = false } = {}) {
   f.setAudio(AUDIO);
   f.setChannel(2);
   f.setDeclaration(sub40());
-  if (cal) f.loadCalibration("7161942.txt", UMIK);
+  if (cal) f.loadCalibration("7161942.txt", UMIK, UMIK_TEXT);
   f.confirmSetup();
   ackAll(f);
   eq(f.step, STEP.LEVEL);
@@ -460,6 +461,7 @@ export async function test_measure_two_captures_then_analyze() {
   eq(r.decl.role, ROLE.SUBWOOFER);
   eq(r.calibrated, false);
   eq(r.calibrationFile, null);
+  eq(r.calibrationText, null, "no curve without a calibrated session");
   eq(f.step, STEP.MEASURE);
   assert(f.hasUnsavedWork());
 
@@ -650,6 +652,27 @@ export async function test_analyze_request_records_calibration() {
   const r = rec(f, s2[0].token, new Float32Array(1))[1].request;
   eq(r.calibrated, true);
   eq(r.calibrationFile, "7161942.txt");
+  eq(r.calibrationText, UMIK_TEXT, "the curve goes to the analysis (K2)");
+}
+
+/** E5b D3: a file not bound to the mic is uncalibrated, its curve stays out. */
+export async function test_unbound_calibration_sends_no_curve() {
+  const f = new Flow();
+  f.loadCalibration("7161942.txt", UMIK, UMIK_TEXT);  // no mic yet: unbound
+  f.setAudio(AUDIO);
+  f.setChannel(2);
+  f.setDeclaration(sub40());
+  f.confirmSetup();
+  ackAll(f);
+  assert(f.calibrationUnbound);
+  f.startLevel(0);
+  f.meter(0, { peakDbfs: -40, rmsDbfs: -50 });
+  const m = f.measure();
+  const s = f.sweepReady(m[1].token, unitSweep());
+  const s2 = rec(f, s[0].token, new Float32Array(1));
+  const r = rec(f, s2[0].token, new Float32Array(1))[1].request;
+  eq(r.calibrated, false);
+  eq(r.calibrationText, null);
 }
 
 // -- E5: device and rate changes --------------------------------------------

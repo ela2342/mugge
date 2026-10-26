@@ -207,8 +207,8 @@ export class App {
     on("cal-file", "change", async (e) => {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
-      const parsed = parseCalibration(await file.text());
-      this.apply(this.flow.loadCalibration(file.name, parsed));
+      const text = await file.text();
+      this.apply(this.flow.loadCalibration(file.name, parseCalibration(text), text));
     });
     on("cal-bind", "click", () => this.apply(this.flow.bindCalibration()));
     on("cal-other", "click", () => {
