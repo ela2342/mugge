@@ -12036,6 +12036,55 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   df065993, relayed by team-lead. Team-lead: the message named the sha
   as checked at read time and confirmed that every UX text matches
   word for word.
+  WORKER-6 OPEN POINTS (a), (b), (c) CLOSED (CM, 2026-10-26):
+  story/US-179-web-rc pushed at 77ea74e6 (PM read: ls-remote matches).
+  worker-6 has acked the governing set by sha (supersedes "has not yet
+  acked" above). All four texts below are relayed to worker-6; ack
+  pending at this version. Frozen copies in
+  /tmp/cm-relay/US-179/frozen/, shas verified at PM read.
+  - AE /tmp/cm-relay/US-179/frozen/ae-w6-a-b-cf32c0a6.txt (sha256
+    cf32c0a6, 698 bytes), verbatim: "(a) YES, with one condition: the
+    capture plays at the last level the check actually reached and
+    confirmed, never higher (crest handling as in K1-K5), and every
+    stop (90 dB SPL 100 ms RMS, -1 dBFS clip, 105 dB SPL peak
+    backstop) stays armed during the capture. A level below target is
+    safe; the SNR check failing closed covers quality. (b) YES. Any
+    auto-STOP during capture 2 discards both captures; the next
+    attempt starts again with a fresh level check (-60 dBFS start,
+    4i). FYI on the crest cascade: noted, 1e-9 relative is fine
+    (tighter than 0.05 dB)."
+  - UX /tmp/cm-relay/US-179/frozen/ux-w6-uncal-measure-436f962f.md
+    (sha256 436f962f, 2631 bytes): (c) uncalibrated warning (amber
+    banner above the level meter, short form at the calibration field,
+    one line in the result step and report; shown whenever
+    uncalibrated, not dismissable; meter in dBFS, never "dB SPL") and
+    (a) "Measure" stays enabled below the target. Banner, verbatim:
+    "UNCALIBRATED — levels are shown in dBFS, not dB SPL. The 90 dB
+    and 105 dB SPL safety stops are off; only the clip stop and the
+    level cap apply. Keep the amp at a low setting." Result/report,
+    verbatim: "Measured uncalibrated: levels in dBFS; the microphone's
+    own frequency response is not compensated." (a), verbatim: "Target
+    level not reached (<x> of <target>). The measurement may be
+    rejected as too noisy." Reason lines and the SNR rejection text:
+    verbatim in the file.
+  - AE /tmp/cm-relay/US-179/frozen/ae-ux-436f962f-confirm-c5bd03c0.txt
+    (sha256 c5bd03c0, 803 bytes; names 436f962f as verified at read):
+    "1. CONFIRMED, true and complete." (the banner's safety-stops
+    sentence); "2. CONFIRMED." (the not-compensated sentence); "(a) UX
+    texts: no objection; consistent with AE cf32c0a6."
+  - PO FINAL
+    /tmp/cm-relay/US-179/frozen/po-w6-ac-c-ruling-769a5495.txt (sha256
+    769a5495, 1925 bytes), verbatim: "No E6. This is worker guidance
+    within the story text." Governing chain unchanged (r8 978c3e1b +
+    E1 v2 6a78af9f + E2 bca0d86b + E3 8f508af1 + E4 r2 f692681c + E5
+    df065993; K3 e720d78c). Binding guidance: (a) as in UX 436f962f
+    with the AE cf32c0a6 conditions; "every stop that is active in the
+    session stays armed during the capture. Calibrated: all three
+    stops. Uncalibrated: the -1 dBFS clip stop, the cap and the clamp.
+    The SPL stops don't exist there (E3)." (b) as in AE cf32c0a6. (c)
+    as in UX 436f962f verbatim, with the two sentences held for the
+    AE's confirmation; PM cross-ref: the AE confirmed both unchanged
+    (c5bd03c0), so the UX text stands as written.
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
