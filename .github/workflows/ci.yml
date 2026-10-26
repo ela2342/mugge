@@ -176,6 +176,9 @@ jobs:
       - name: JACK self-connect policy check (F-318, US-173)
         run: cachix watch-exec mugge -- nix build --no-link --print-build-logs .#checks.aarch64-linux.jack-self-connect
 
+      - name: conf.d fragment names check (F-400, US-173)
+        run: cachix watch-exec mugge -- nix build --no-link --print-build-logs .#checks.aarch64-linux.conf-fragment-names
+
       - name: Run unit + Rust tests
         run: cachix watch-exec mugge -- nix run .#test-all
 

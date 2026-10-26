@@ -398,6 +398,7 @@
           };
           wireplumber-no-bypass = import ./nix/checks/wireplumber-no-bypass.nix { nixos = self.nixosConfigurations.mugge-pi5-deploy; };  # F-318
           jack-self-connect = import ./nix/checks/jack-self-connect.nix { nixos = self.nixosConfigurations.mugge-pi5-deploy; };  # F-318, US-173
+          conf-fragment-names = import ./nix/checks/conf-fragment-names.nix { nixos = self.nixosConfigurations.mugge-pi5-deploy; };  # F-400, US-173
 
           app-source-paths = appSourceCheck;
 
