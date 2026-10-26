@@ -840,6 +840,11 @@ priority!"
   worker-7, two phases (QE release; worker-4 release withdrawn). QE:
   no R5 rule change at 4724e65d. TW F-403 v3 (F-411 swap, QE AC 6
   citation) held until after the R5 series.
+  UPDATE (PO, PM, 2026-10-26, after v283): backlog v283 pushed as
+  d8c365d6. US-179 r8 erratum E1 v2 (6a78af9f) applied to the US-179
+  entry (E1a/E1b/E1c verbatim; E1 732847a4 VOID): pcm-worklet.js is a
+  Pi playback feeder, so the mic meter is a new worklet in src/web-rc
+  computing true sample peaks.
 
 ## Reserved IDs
 
@@ -10653,6 +10658,36 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (PM cross-ref: branch and worktree at 498fa3e5 at PM read). Fences:
   src/web-rc/ only; flake/CI last, in a separate commit; no Pi. Nix
   cleared for Mac-only builds (87 GiB free); no linux-builder, no GC.
+  ERRATUM E1 v2 (PO, 2026-10-26; released by the Architect, UX and the
+  AE, per PO): /tmp/po-drafts/us179-r8-erratum-E1-v2.md (sha256
+  6a78af9f, verified at PM read; PM frozen copy
+  /tmp/pm-backlog/US-179-r8-erratum-E1-v2-6a78af9f.md). E1 732847a4 is
+  VOID, and any release of it does not count (PO). r8 (978c3e1b) stays
+  the governing text with E1 v2 applied; scope and estimate unchanged
+  (PO). Reason, verbatim: "Factual error, found by worker-6 and
+  verified by UX and the PO on origin/main:
+  src/web-ui/static/js/pcm-worklet.js is a 3-channel PLAYBACK feeder
+  (PcmFeeder: a ring buffer fed by postMessage, writing to outputs).
+  It does not read the mic and has no RMS/peak code."
+  - E1a (AC4b), verbatim: replace the sentence "A plain RMS/peak meter
+    on the mic input via pcm-worklet.js unchanged (no live TF view in
+    this story)." with: "A plain RMS/peak meter on the mic input: a
+    new capture/meter worklet in src/web-rc, styled with the web-ui
+    meter CSS unchanged (no live TF view in this story)."
+  - E1b (Scope (in), UI bullet), verbatim: replace "reuse unchanged
+    spectrum-renderer.js, pcm-worklet.js, CSS and fonts" with: "reuse
+    unchanged spectrum-renderer.js, CSS and fonts (pcm-worklet.js is a
+    Pi playback feeder and is not reused)"
+  - E1c (AC4b, AE wording), verbatim, appended directly after the E1a
+    sentence: "The meter computes the true sample peak over every
+    sample of every render quantum (no decimation or skipped blocks);
+    the 4d mic-clip and 90 dB SPL auto-STOPs are decided on these
+    values; AC12 unit-tests both triggers on the meter worklet with
+    synthetic input."
+  - Architect note (per PO): E1c leaves open whether the STOP decision
+    runs in the worklet or on the main thread, as long as it uses the
+    worklet's per-quantum true-peak values. The CM freezes a copy and
+    relays it to worker-6 (PO).
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
