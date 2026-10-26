@@ -458,6 +458,12 @@ priority!"
   REQUESTED (B1-B4; see US-173). Two CI findings with the QE for a
   ruling. worker-3 has the conditions; requests OBSERVE for the
   screenshot and merges main later.
+  UPDATE (CM, 2026-10-26, after v217): backlog v217 pushed as
+  6394e034; df 4.8 GB. #63: all 7 verdicts posted at 9b1aa8a1 (4
+  APPROVE with conditions, AD REQUEST CHANGES, AE NOT YET, QE CHANGES
+  REQUESTED). worker-3 pushed 2a688a94 (UX C1 as AC12, plus N1); new
+  head, so every approval needs a diff-only re-check at the final
+  head. Consolidated rework with worker-3 (see US-173).
 
 ## Reserved IDs
 
@@ -4150,6 +4156,49 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   exists or is used. Either wire venue coefficients into the deploy,
   or drop/rename the field so configs cannot claim a mute that is not
   applied.
+  CORRECTION (CM, 2026-10-26): all 7 #63 verdicts are posted verbatim
+  at 9b1aa8a1; this supersedes the tally line above. SecSpec APPROVE
+  (6415267477). UX APPROVE with C1/C2 (6415275779). Architect v2
+  APPROVE with conditions 1-4 (6415312425; v1 never posted). AD
+  REQUEST CHANGES M1 (6415312939). AE NOT YET C1-C3 (6415313355). QE
+  CHANGES REQUESTED B1-B4 plus carried C1-C3, P-steps, M2, WAVs +
+  SHA256SUMS (6415313950). TW APPROVE with G1-G4 (6415314354).
+  QE ruling on the CI findings (after CI 40313123653):
+  conf-fragment-names C1 MET. jack-self-connect: the cachix hit counts
+  as a pass, but its $out files (policy/control/fragments) must be
+  quoted at the final head through a remote-cache read.
+  wireplumber-no-bypass stays B3: one published run at the final head
+  before merge; the CI wiring is F-380, which gates gig use.
+  UPDATE (CM, 2026-10-26): worker-3 pushed 2a688a94 (UX C1 as AC12,
+  plus N1). New head: every approval needs a diff-only re-check at the
+  final head. N3 (AC11(c) deny-warning exclusion) is with the AE and
+  the Architect for a ruling.
+  #63 consolidated rework (worker-3, via CM):
+  - home-lab ch 4 -> zero.wav; the mute test parametrized over both
+    venues.
+  - the venue `coefficients:` field is metadata only (AE confirmed),
+    so the test and AC3b pin combined_sub2_lp.wav all-zero (sha
+    97b9d9db), and the zero.wav comment is reworded (NaN, AD L2).
+  - the thermal suite wired into CI; SHA256SUMS plus a test for it;
+    the F-380 note.
+  - the thermal STOP procedure, AE-confirmed with amendments: skip the
+    fade if it takes over about 5 s; start a second watch run after
+    the STOP; the session is over, and resuming needs a pre-flight,
+    the owner's OK, under 70 C and no INVALID samples.
+  - the first-DJ-session evidence AC; the AC11 runtime evidence;
+    AC11(c) excluding the deny WARNING; the pw-dump vs F-395 fix;
+    DoD/AC5; the full PR body plus a Tests section.
+  - TW batches G1/G2 and UX N2 (v19), applied after worker-3's next
+    head. QE B3: a CM-published `nix build
+    .#checks.aarch64-linux.wireplumber-no-bypass` at the final head;
+    needs disk clearance under the hold.
+  #63 backlog / non-blocking (no priority given): AE N1 and AD L1
+  (HP/IEM ch 5-8 -> zero.wav); the Architect's wp-f318 case without
+  the convolver stand-in; the TW's stale 80-jack conf header; SecSpec
+  INFO (1)-(4).
+  Relay to worker-4 AFTER #63 merges (Architect, via CM): switch
+  test_deploy_gate.py's in-test zero fixture to the committed
+  configs/coeffs/zero.wav.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
