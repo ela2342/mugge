@@ -761,6 +761,10 @@ priority!"
   the P3 table and finding H1 (AE ruling pending). New: F-409 (UI does
   not show the min-phase residual) and F-410 (unmute restores gains
   behind a closed gate).
+  UPDATE (CM, AE, Architect, 2026-10-26, after v266): backlog v266
+  pushed as 2f58d759. F-410 set to P2 (AE). F-262 H1 RELEASED (AE
+  cfe9bf66, Architect record (i) e6ba4317) and relayed to worker-4
+  with F-409. F-410 goes to worker-1 with the CM's next relay.
 
 ## Reserved IDs
 
@@ -6726,6 +6730,27 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     over the window (or over the channel's own passband), threshold 18
     dB unchanged." Ruling: the AE writes it, the Architect releases it
     (CM). PENDING.
+  - UPDATE (CM, AE, Architect, 2026-10-26, after v266; supersedes
+    "PENDING" above): H1 RELEASED. AE ruling
+    /tmp/cm-relay/F-262/frozen/ae-H1-hpf-ref-ruling-cfe9bf66.txt
+    (sha256 cfe9bf66, verified at PM read); Architect release record
+    (i) /tmp/cm-relay/release-record-20261026-i.txt (sha256 e6ba4317,
+    verified at PM read). Relayed to worker-4 together with F-409
+    (CM).
+     H1-1, verbatim: "reference = MAX gain (dB) over
+     [mandatory_hpf_hz, min(20 kHz, 0.95*Nyquist)]"; PASS if
+     attenuation >= 18.0 dB, check frequency and threshold unchanged.
+     The AE rejects the max over the old 2x-10x window. The details
+     key passband_level_db becomes passband_peak_db.
+     H1-3 (T1, hermetic, fail never skip): five must-pass and four
+     must-fail synthetic filters, plus the 2way-80hz-sealed sub
+     regression (attenuation >= 40 dB). H1-4: re-run P3 at the new
+     head; AE, verbatim: "If any REAL profile channel fails at the new
+     reference, do NOT relax the 18 dB." FilterGenSync 4Way is
+     expected to pass. H1-5: v2 G1-G5 and the F-408 addendum 165ae71a
+     unchanged; N4 stays asserted on the closed loop.
+     Architect, verbatim: "release cfe9bf66. I checked the sha at read
+     time against verify.py:293-338 at 7011419d."
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -7090,6 +7115,23 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   teardown avoids it by unmuting before closing the gate. Worker-1
   suggests a backlog one-liner under the owner's current priority,
   "unless the AE says otherwise".
+  UPDATE (CM, AE, 2026-10-26, after v266; supersedes "severity: AE
+  asked, pending; no P-level given" above): P2 (AE). Per CM: it blocks
+  amps-on but not current work, the same tier as F-405. AE, verbatim
+  (relayed by the CM without summary): "I read e050fe90
+  main.rs:824-834. The GM's gate is the gains themselves; CloseGate
+  sets every Mult to 0. So unmute() after a close turns the output
+  fully back on at venue gain while the GM reports gate_open=false.
+  Unlike OpenGate's 30-step ramp, it jumps the gain in a single step,
+  and it also undoes automatic closes (Standby, main.rs:575-582)."
+  AE fix direction, verbatim: "the GM stays the only writer of the
+  Mults. unmute() must not raise any Mult while the gate is closed: it
+  either refuses, or clears the mute and leaves the gains at 0, with a
+  log line. Plus a T1 test of mute → close → unmute that checks the
+  Mults stay at 0. Nothing is connected, so there's no action now."
+  PM cross-ref: src/graph-manager/src/main.rs at e050fe90, l.824-834
+  (CloseGate sets each Mult to 0.0) and l.575-582 (Standby closes the
+  gate the same way), match the AE's reading.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
