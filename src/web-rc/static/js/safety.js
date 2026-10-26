@@ -6,7 +6,7 @@
 // unit-testable without sound.
 //
 // AC references are to US-179 r8 (978c3e1b) with errata E1 v2 (6a78af9f),
-// E2 (bca0d86b), E3 (8f508af1) and E4 r2 (f692681c).
+// E2 (bca0d86b), E3 (8f508af1), E4 r2 (f692681c) and E5 (df065993).
 
 /** Code constants. No UI can change them (AC4c). */
 export const LIMITS = Object.freeze({
@@ -99,6 +99,30 @@ export const SUB_LIMIT_REFUSAL =
   "A subwoofer limit above 50 Hz is not supported here. Check the " +
   "setting, or choose Full-range speaker.";
 
+/** E5c: the inline whole-Hz refusal for a role's range. */
+export function limitRangeText(role) {
+  const range = ROLE_LIMITS[role];
+  return "Enter the low limit as a whole number of Hz between " +
+    range.minHz + " and " + range.maxHz + " (e.g. 40).";
+}
+
+/**
+ * E5c: the low-limit field's text as a number, or NaN. Only plain digits
+ * count; "40.5" is refused, never rounded.
+ */
+export function parseLimitHz(text) {
+  const t = String(text ?? "").trim();
+  return /^[0-9]+$/.test(t) ? Number(t) : NaN;
+}
+
+/** E5b D2: a declaration as on first load (no role, nothing confirmed). */
+export function emptyDeclaration() {
+  return {
+    role: null, limitHz: null, capabilityConfirmed: false,
+    enclosure: null, portTuningHz: null, portConfirmed: false,
+  };
+}
+
 export function isRole(role) {
   return role === ROLE.FULLRANGE || role === ROLE.SUBWOOFER;
 }
@@ -186,12 +210,10 @@ export function checkDeclaration(decl) {
   const limit = decl.limitHz;
   if (typeof limit !== "number" || !Number.isInteger(limit) ||
       limit < range.minHz) {
-    errors.push("Low limit must be a whole number of Hz between " +
-      range.minHz + " and " + range.maxHz + " Hz.");
+    errors.push(limitRangeText(decl.role));
   } else if (limit > range.maxHz) {
     errors.push(decl.role === ROLE.SUBWOOFER ? SUB_LIMIT_REFUSAL
-      : "Low limit must be a whole number of Hz between " + range.minHz +
-        " and " + range.maxHz + " Hz.");
+      : limitRangeText(decl.role));
   }
   if (decl.capabilityConfirmed !== true) {
     errors.push("Confirm that this speaker can safely play down to the limit.");
@@ -259,8 +281,11 @@ const STOP_MESSAGES = Object.freeze({
   [STOP.SWEEP_RISE]: "Stopped: the sweep was more than 6 dB louder at the " +
     "microphone than the level check. Restart when ready.",
   [STOP.HIDDEN]: "Stopped: the page was hidden. Restart when ready.",
-  [STOP.DEVICE]: "Stopped: an audio device changed. Restart when ready.",
-  [STOP.RATE]: "Stopped: the sample rate changed. Restart when ready.",
+  // E5a: shown at the top of the setup step.
+  [STOP.DEVICE]: "Stopped: the audio devices changed. Check that the right " +
+    "output and microphone are selected. Then confirm the safety check, the " +
+    "speaker settings and the microphone calibration again. Unfinished " +
+    "measurements were discarded; finished filters can still be downloaded.",
   [STOP.AUDIO_ERROR]: "Stopped: an audio error occurred. Restart when ready.",
 });
 
@@ -273,9 +298,19 @@ const MIC_CLIP_UNCALIBRATED = "Stopped: the microphone input clipped. " +
   "Lower the amp or interface output gain, or the microphone input gain, " +
   "then restart.";
 
-export function stopMessage(cause, { calibrated = false } = {}) {
+/**
+ * The text for an auto-STOP. calibrated: a calibration file is in use at
+ * the moment of the stop (E4a). rate: the device's new rate, for
+ * STOP.RATE (E5a).
+ */
+export function stopMessage(cause, { calibrated = false, rate } = {}) {
   if (cause === STOP.MIC_CLIP) {
     return calibrated ? MIC_CLIP_CALIBRATED : MIC_CLIP_UNCALIBRATED;
+  }
+  if (cause === STOP.RATE) {
+    return "Stopped: the audio device now runs at " + rate + " Hz. mugge " +
+      "filters need 48 kHz. Set the device back to 48 kHz in your system's " +
+      "audio settings, then reload this page.";
   }
   return STOP_MESSAGES[cause] || STOP_MESSAGES[STOP.AUDIO_ERROR];
 }

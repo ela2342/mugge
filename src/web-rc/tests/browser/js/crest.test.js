@@ -6,7 +6,8 @@ import {
   BASE_SEED, MAX_CHANNELS, bandKey, computeCrestTable, crestBands, crestSeed,
 } from "../../../static/js/crest-plan.js";
 import {
-  CREST_MARGIN_DB, crestEntry, levelCeilingDbfs, unitGain,
+  CREST_MARGIN_DB, bandCeilingDbfs, crestEntry, levelCeilingDbfs, topStepDbfs,
+  unitGain,
 } from "../../../static/js/crest.js";
 import { LevelNoise, LEVEL_NOISE } from "../../../static/js/dsp.js";
 import { LIMITS, ROLE, levelNoiseBand } from "../../../static/js/safety.js";
@@ -97,4 +98,27 @@ export async function test_unit_gain_refuses_above_ceiling() {
     try { unitGain(e, lvl); } catch (err) { threw = true; }
     assert(threw, "level " + lvl + " refused");
   }
+}
+
+/** AE K5: one top step per band, from the band's largest crest. */
+export async function test_top_step_uniform_per_band() {
+  for (const band of crestBands()) {
+    const perSeed = CREST_TABLE[bandKey(band)];
+    const maxCrest = Math.max(...Object.values(perSeed).map((e) => e.crestDb));
+    eq(bandCeilingDbfs(band), -20 - maxCrest - 3, bandKey(band));
+    const top = topStepDbfs(band);
+    eq((top - LIMITS.START_DBFS) % LIMITS.STEP_DB, 0, "on the step grid");
+    assert(top <= bandCeilingDbfs(band), "at or below the band ceiling");
+    assert(top + LIMITS.STEP_DB > bandCeilingDbfs(band), "highest such step");
+    for (let ch = 0; ch < MAX_CHANNELS; ch++) {
+      const e = crestEntry(band, ch);
+      assert(top <= levelCeilingDbfs(e), "never above the per-seed ceiling");
+      unitGain(e, top); // does not throw
+    }
+  }
+  // With the current table (crest 10.77..13.23 dB) the full-range band
+  // tops at -42.
+  eq(topStepDbfs(FULLRANGE), -42);
+  eq(bandCeilingDbfs({ lowHz: 1, highHz: 2 }), null, "unknown band");
+  eq(topStepDbfs({ lowHz: 1, highHz: 2 }), null, "unknown band");
 }

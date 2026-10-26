@@ -5,7 +5,8 @@ import {
   LIMITS, LevelCheck, ROLE, ROLE_LIMITS, STOP, SUB_LIMIT_REFUSAL,
   capabilityText, changeRole, checkDeclaration, checkDspFlags,
   checkSampleRates, levelNoiseBand, levelNoiseBandLabel, micStopCause,
-  roleFileTag, speakerDict, stopMessage, stopReturnsToSetup, sweepPlan,
+  roleFileTag, speakerDict, stopMessage, limitRangeText, parseLimitHz,
+  emptyDeclaration, stopReturnsToSetup, sweepPlan,
   sweepStopCause,
 } from "../../../static/js/safety.js";
 
@@ -74,6 +75,39 @@ export async function test_declaration_limit_range_fullrange() {
   eq(checkDeclaration(decl({ limitHz: NaN })).ok, false, "NaN");
   eq(checkDeclaration(decl({ limitHz: "20" })).ok, false, "string");
   eq(LIMITS.LIMIT_MIN_HZ, 20);
+  eq(checkDeclaration(decl({ limitHz: 40.5 })).errors[0],
+    "Enter the low limit as a whole number of Hz between 20 and 500 (e.g. 40).");
+  eq(checkDeclaration(decl({ limitHz: 501 })).errors[0],
+    limitRangeText(ROLE.FULLRANGE));
+}
+
+/** E5c: 40.5 is refused, never rounded; 40 is accepted. */
+export async function test_limit_field_whole_hz_only() {
+  eq(parseLimitHz("40"), 40);
+  eq(parseLimitHz(" 40 "), 40);
+  for (const t of ["40.5", "40.0", "4e1", "-40", "", "forty", null, "0x28"]) {
+    assert(Number.isNaN(parseLimitHz(t)), "refused: " + t);
+  }
+  for (const role of Object.values(ROLE)) {
+    const d = (t) => checkDeclaration(decl({ role, limitHz: parseLimitHz(t) }));
+    eq(d("40.5").ok, false, role + " 40.5");
+    eq(d("40.5").errors[0], limitRangeText(role));
+  }
+  eq(checkDeclaration(decl({ limitHz: parseLimitHz("40") })).ok, true);
+  eq(limitRangeText(ROLE.SUBWOOFER),
+    "Enter the low limit as a whole number of Hz between 20 and 50 (e.g. 40).");
+  eq(checkDeclaration(decl({ role: ROLE.SUBWOOFER, limitHz: 50.5 })).errors[0],
+    limitRangeText(ROLE.SUBWOOFER), "non-integer sub value: whole-Hz text");
+}
+
+/** E5b D2: a cleared declaration blocks sound like a fresh one. */
+export async function test_empty_declaration_blocks() {
+  const e = emptyDeclaration();
+  eq(e.role, null);
+  eq(e.capabilityConfirmed, false);
+  eq(e.portConfirmed, false);
+  eq(checkDeclaration(e).ok, false);
+  eq(checkDeclaration(e).errors[0], "Choose what is connected to this output.");
 }
 
 export async function test_declaration_limit_range_subwoofer() {
@@ -296,10 +330,14 @@ export async function test_stop_messages_per_cause() {
     "louder at the microphone than the level check. Restart when ready.");
   eq(stopMessage(STOP.HIDDEN),
     "Stopped: the page was hidden. Restart when ready.");
-  eq(stopMessage(STOP.DEVICE),
-    "Stopped: an audio device changed. Restart when ready.");
-  eq(stopMessage(STOP.RATE),
-    "Stopped: the sample rate changed. Restart when ready.");
+  eq(stopMessage(STOP.DEVICE), "Stopped: the audio devices changed. Check " +
+    "that the right output and microphone are selected. Then confirm the " +
+    "safety check, the speaker settings and the microphone calibration " +
+    "again. Unfinished measurements were discarded; finished filters can " +
+    "still be downloaded.");
+  eq(stopMessage(STOP.RATE, { rate: 44100 }), "Stopped: the audio device " +
+    "now runs at 44100 Hz. mugge filters need 48 kHz. Set the device back " +
+    "to 48 kHz in your system's audio settings, then reload this page.");
   eq(stopMessage(STOP.AUDIO_ERROR),
     "Stopped: an audio error occurred. Restart when ready.");
   eq(stopMessage("no-such-cause"), stopMessage(STOP.AUDIO_ERROR));
