@@ -1080,6 +1080,9 @@ filed in this version, see P3): F-416, US-183, D-072, T66.
 Next free (v301; supersedes the line above; F-416 confirmed free on
 main, all origin/* and local branches at PM read, filed in this
 version, see P3): F-417, US-183, D-072, T66.
+Next free (v303; supersedes the line above; F-417 confirmed free on
+main, all origin/* and local branches at PM read, filed in this
+version, see P3): F-418, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -7699,6 +7702,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   2026-10-26T21:19:15Z; conclusion pending at this version). Rules: QE
   abfd33d7 + ebd890d0; one run at a time. Ledger:
   /tmp/cm-relay/F-262/R5/ledger.txt (CM-owned, live).
+  PM cross-ref (QE F-394 ruling 8251397b, 2026-10-26): run 40398705324
+  (F-394 throwaway 999abd11) shows an XPASS of
+  test_measurement.py::TestLocalDemoMeasurementAPI::test_full_session_api
+  (non-strict xfail). The QE, verbatim: "This is the F-262 API test,
+  not F-394. It belongs to the F-262/#66 accounting, not to this
+  gate."
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -9860,6 +9869,25 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     ERROR-vs-FAIL satisfies Q1-7(2). Revert e06d6296 is pushed (PM
     read: on origin/defect/F-394-dj-mode-e2e-fail); CI 40406988590
     running at this version.
+  - UPDATE (CM, QE, 2026-10-26, after v302): the control excerpt
+    /tmp/cm-relay/F-394/frozen/ci-40398705324-999abd11-control-excerpt.txt
+    (sha256 77b2231a, 1624 bytes) is now PM-verified (supersedes "not
+    PM-verified; path asked of the CM" above; the earlier miss was a
+    PM search error: /tmp is a symlink to /private/tmp). QE ruling
+    /tmp/cm-relay/F-394/frozen/qe-Q1-7-2-ruling-r1-8251397b.md (sha256
+    8251397b, 2210 bytes, verified at PM read; the QE copy
+    /tmp/f394-qe-Q1-7-2-negative-control-ruling-r1.md has the same
+    sha), verbatim: "Ruling: MET. A setup ERROR satisfies "must FAIL
+    (not skip)"." The ERRORs come from the guard's own pytest.fail in
+    the tone_on_sw_tap fixture
+    (src/web-ui/tests/fixtures/backend.py:619-641 at e06d6296); all
+    three dependents (test_level_bridge_sw_has_signal,
+    test_mute_silences_hw_out, test_unmute_restores_levels) ERRORed
+    and nothing stimulus-related was skipped. Full log 54551e61
+    (QE-verified). Still open: Q1-7(1), the final-head CI log from
+    40406988590 (running at this version). Not part of this gate (QE):
+    the combined_*.wav warnings (filed as F-417) and the XPASS of
+    test_full_session_api (F-262 accounting, see F-262).
 - **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
   per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
   2026-10-26): on a suspended node, the gain readers in the r6b matrix
@@ -13008,6 +13036,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   verbatim: "Its polarity dependence goes to the PM backlog as a P3
   one-liner, not into F-383/F-384." Related: sub2 is inverted on
   purpose for the isobaric pair (R5).
+- **F-417** (QE via CM, 2026-10-26; P3, PM-set as the CM delegated;
+  not a #68 blocker) The local-demo stack in CI logs 20 "[stack]
+  WARNING …/filters/2way-80hz-sealed/combined_*.wav not found,
+  skipping" lines. Pre-existing: the same count appears in run
+  40356547804 at 51fae218 and in 40398705324. The F-394 hw-out window
+  does not depend on them, because local_demo_venue_gain_db FAILs
+  unless the mains use dirac.wav (QE 8251397b). Fix (QE): the
+  local-demo stack references a filter set that is missing on the CI
+  runner; "Either ship it or stop referencing it."
 
 ## Open PRs (2026-10-24, per CM)
 
