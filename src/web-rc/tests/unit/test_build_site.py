@@ -59,6 +59,18 @@ def test_style_css_next_to_fonts(site):
     assert (site / "fonts" / "LICENSE-JetBrainsMono.txt").is_file()
 
 
+def test_no_web_ui_pcm_worklet(site):
+    # E1: the mic meter is web-rc's own worklet; nothing ships web-ui's.
+    assert not list(site.rglob("pcm-worklet.js"))
+    manifest = json.loads((site / "py" / "manifest.json").read_text())
+    assert not [e for e in manifest["shared_web"] if "pcm-worklet" in e["source"]]
+
+
+def test_crest_modules_shipped(site):
+    for name in ("crest.js", "crest-plan.js", "crest-table.js"):
+        assert (site / "js" / name).is_file(), name
+
+
 def test_refuses_existing_output(bs, site, tmp_path):
     with pytest.raises(SystemExit):
         bs.build(tmp_path, site, link_pyodide=True)

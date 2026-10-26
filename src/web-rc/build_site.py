@@ -51,10 +51,10 @@ SHARED_PY_MODULES = (
     "verify.py",
 )
 
-# web-ui assets reused unchanged (site path -> source path).
+# web-ui assets reused unchanged (site path -> source path). The mic meter
+# is web-rc's own worklet; web-ui's pcm-worklet.js is not reused (E1).
 SHARED_WEB_ASSETS = {
     "js/spectrum-renderer.js": "web-ui/static/js/spectrum-renderer.js",
-    "js/pcm-worklet.js": "web-ui/static/js/pcm-worklet.js",
     "style.css": "web-ui/static/style.css",
     "fonts/JetBrainsMono-Regular.woff2": "web-ui/static/fonts/JetBrainsMono-Regular.woff2",
     "fonts/JetBrainsMono-Bold.woff2": "web-ui/static/fonts/JetBrainsMono-Bold.woff2",
