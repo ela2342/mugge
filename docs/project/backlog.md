@@ -392,6 +392,10 @@ priority!"
   defect/F-362-skip-guards from origin/main 5f3af36a. US-178 vs
   US-174e: PO option (A), US-178 = flow/plumbing, 174e = venue
   workflow UI on top.
+  UPDATE (CM, 2026-10-26, after v203): backlog v203 pushed as
+  bd642dc5. PO FINAL: option (C), US-178 = 174e slice 1 (supersedes
+  option (A)). F-362 is PR #64 (draft, AC4 mutation head 03b2ec0f).
+  174d: deploy_filters and deploy_pw_config REMOVED (Architect).
 
 ## Reserved IDs
 
@@ -4046,6 +4050,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   174e scope otherwise unchanged (the full one-button venue workflow:
   UI flow, UX N2, US-090/097 constraints); priority unchanged (after
   174d/US-178).
+  SUPERSEDED (PO FINAL, 2026-10-26, option (C), replaces option (A)
+  above): "US-178 is 174e slice 1 (PO 2026-10-26): the deploy/verify
+  step is defined only in US-178." 174e does NOT re-design that step;
+  it builds the end-to-end venue workflow (UI, UX N2, US-090/097
+  constraints) on top of it.
   c) and d) wait strictly for US-173's H, F-341 AC3 (no signal-gen
   measurement session before it) and D-070 / the amps-on list.
   Pending: the Architect and AE define the first slice and the file
@@ -4766,6 +4775,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   reason (see F-362).
   PM correction (2026-10-26): "F-401" above is F-362 (duplicate ID,
   see F-362 and the P3 F-401 entry).
+  RULING (Architect via CM, 2026-10-26): deploy_filters and
+  deploy_pw_config are REMOVED in 174d, after a whole-repo caller
+  grep; any non-app caller is reported and disabled. The live
+  verification sweep (session._run_verify and its PASS/FAIL display)
+  is removed in 174d too; US-178 restores it against the new set.
   US-174c (measurement on the Pi, web-ui measurement/session.py)
   starts only after F-390/F-391 and builds on them, because it is the
   same file (L-046). Its Pi run is also gated by US-173 H, F-341 AC3,
@@ -4792,6 +4806,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   No new venue UI, no UX N2 work, no US-090/097 constraints. If the
   Architect says 174e was meant to include the deploy-from-session
   step, this split still applies; no PO round needed.
+  SUPERSEDED (PO FINAL, 2026-10-26, option (C), replaces option (A)
+  above): "US-178 is 174e slice 1 (PO 2026-10-26): the deploy/verify
+  step is defined only in US-178." US-178 keeps its ID and P1; entry
+  condition: the AE's activation design. The scope split stays: US-178
+  owns the measure -> safe deploy -> verify-against-live step.
+  Scope addition (Architect, 2026-10-26; 174d removes the measurement
+  session's live verification sweep, session._run_verify and its
+  PASS/FAIL display, because it would have measured the old filters),
+  verbatim: "restore live verification (_run_verify, from git history
+  before 174d) against the newly activated set". (The CM relay of the
+  same text omits "from".)
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -4859,6 +4884,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   defect/F-362-skip-guards, from origin/main 5f3af36a. (c), a check
   that fails on any module-level skip without an allowlist entry,
   stays an optional backlog-sized item.
+  UPDATE (CM, 2026-10-26): F-362 is PR #64 (draft, worker-1),
+  currently at the AC4 throwaway mutation head 03b2ec0f, whose CI run
+  is expected to fail; the revert comes next. worker-1 adds AC5 to
+  F-362.md in the PR.
 - **F-373** (AE; availability HIGH, safety-relevant; amps-on item
   13; linked US-159 G16): the USBStreamer sink does not recover after
   USB re-enumeration. AC17-B step (a), CM-CHG-.89-5: authorized 0->1
