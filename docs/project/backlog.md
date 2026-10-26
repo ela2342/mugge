@@ -622,6 +622,14 @@ priority!"
   LOWs for US-174d (Sec, AD L1). F-262 joint validity ruling:
   Architect released, AE release pending. US-172: worker-2 has the
   final v6 scope again (CM).
+  UPDATE (CM, 2026-10-26, after v242): backlog v242 pushed as
+  6e20e110. #63: all 7 verdicts posted at 3f28b6c7 (QE APPROVED WITH
+  CONDITION C4); #63 stays a DRAFT, NOT merge-ready (team-lead STOP).
+  F-262: no sha released by both authors yet; the Architect is the
+  single writer. US-172: the AE lists the Architect's dcec60fa
+  re-release as pending; no v6 grant until settled. #64: head
+  f715538e, CI 40333713247 running. New F-405 (QE, test-only, #64 skip
+  rulings) (CM, QE).
 
 ## Reserved IDs
 
@@ -713,6 +721,10 @@ local branches, and worktrees): F-404 (AE: measurement session leaves
 the gate as found; re-links production with the gate open after error
 or abort). Next free (supersedes the line above): F-405, US-179,
 D-071, T66.
+Allocated 2026-10-26 (PM, checked free across main, all origin/* and
+local branches, and worktrees): F-405 (QE: test_gate_closed_e2e.py:137
+bare except turns a gate-open result into SKIPPED). Next free
+(supersedes the line above): F-406, US-179, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -3449,6 +3461,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - QE G1-G11 list file (QE, 2026-10-26): /tmp/us172-qe-v6-glist.md,
     sha256 719fa398 (verified at PM read). worker-2 has the final
     scope again (CM): all in v6, no v7.
+  - OPEN (CM, 2026-10-26): the AE lists the Architect's re-release of
+    the dcec60fa gate as pending; the CM's record says both released
+    it. The CM has asked the AE. No v6 grant until that is settled.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -4747,6 +4762,24 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - TW: PENDING. The file changed between the CM's hash check and the
     copy; the CM deleted the wrongly posted comment and waits for a
     sha from the TW.
+  UPDATE (CM, 2026-10-26; supersedes "TW: PENDING" and "SecSpec,
+  Architect, AD, AE: APPROVE, posted verbatim (CM)" above): all 7
+  verdicts are posted verbatim at 3f28b6c7; read-only copies in
+  /tmp/cm-relay/PR63/ (all 8 sha256 verified at PM read).
+  - QE APPROVED 68a46e7f (comment 6417534204); QE addendum APPROVED
+    WITH CONDITION C4 58c7c3db (6417597419).
+  - UX APPROVE 56030914 (6417551235).
+  - SecSpec APPROVE + LOW for 174d 004577be (6417552681).
+  - Architect APPROVE a2d9e374 (6417553324).
+  - AD APPROVE + L1 for 174d 09e1dd4c (6417554086).
+  - AE APPROVE db7f102b (6417555356).
+  - TW APPROVED 155c49f0 (6417596798); the TW's earlier 0031f405 is
+    withdrawn. A comment the CM posted by mistake was deleted.
+  C4 OPEN (QE addendum): Pi P-step evidence for AC3 b-e, AC4, AC7,
+  AC11 a-e, AC12, plus the conf.d names before and after deploy. #63
+  stays a DRAFT and is NOT merge-ready (team-lead STOP): it merges
+  only after the Pi-side DJ-session evidence is in (after US-172) and
+  the QE clears C4 at the final head (CM).
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -5821,6 +5854,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   same sha. worker-4 sent an analysis bearing on the S3 fix design
   (raw xcorr vs whitened onset); the CM routed it to the AE and the
   Architect.
+  UPDATE (CM, 2026-10-26; supersedes the line above): there is still
+  no sha released by both authors. The AE voided its release of
+  b64aad93 + 9833ce7c + 27f46624; the Architect released that same set
+  and voided v2. The CM sent one message to both: the Architect is the
+  single writer; the ruling splits into (a) diag validity (one new
+  file) and (b) the S3 onset/misalignment method; new filenames only.
+  Frozen copies: /tmp/cm-relay/F-262/frozen/. worker-4's analysis:
+  /tmp/w4-proto/F-262/diag-40322886856-analysis.txt (sha256 3932d0ba,
+  verified at PM read). worker-4 holds.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -5982,6 +6024,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   error returns 409 until the GM restore finishes; the UI should
   disable Start until mode=standby." PM cross-ref: the same
   error-to-restore window as F-404.
+- **F-405** test_gate_closed_e2e.py:137 reports a gate-open result as
+  SKIPPED instead of FAILED (QE, 2026-10-26, #64 skip rulings
+  dea15e43; ID allocated by the PM, checked free across main, all
+  origin/* and local branches, and worktrees; no P-level given: the QE
+  says the PM and the AE set it, and the PM has asked the AE). A bare
+  `except Exception` wraps the D-063 gate-closed assert, so
+  "gate_open=True" at load shows up as SKIPPED. Test-only fix: narrow
+  the except to request and JSON errors and move the assert out of the
+  try. It must be fixed before this test counts as gate-closed
+  evidence (QE). Does not block #64.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -6081,6 +6133,23 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   UPDATE (CM, 2026-10-26): CI 40320048783 GREEN at 15bd74eb. worker-1
   is merging main 29f5c61f. PM cross-ref: the merge moves the head, so
   the re-checks follow.
+  UPDATE (CM, 2026-10-26): head f715538e (merges main 29f5c61f); CI
+  40333713247 running.
+  QE skip rulings at f715538e (/tmp/pr64-qe-skip-rulings-f715538e.md,
+  sha256 dea15e43, verified at PM read). None blocks #64.
+  - One-liner (worker-1 proposal, QE): in CI, a failed GM DJ-mode
+    switch in ensure_dj_mode is masked as a skip of 7
+    service-integration tests; intermittent (the 7 tests flip between
+    runs). Same kind as F-402. No F-ID, no P-level given.
+  - One-liner (QE): test_filter_deploy_e2e.py:315 skips when the
+    versions listing shows no active entry after a successful deploy,
+    so rollback goes untested; it should assert. No F-ID, no P-level
+    given.
+  - F-405 (QE; see F-405): test_gate_closed_e2e.py:137.
+  - One-liner (QE): test_venue_gate_e2e.py:165 and :180 skip on
+    gate-open or indicator-update failure, which is exactly what the
+    test checks; they should fail, or xfail with an F-ID. No F-ID, no
+    P-level given.
 - **F-402** Integration test turns a 500 from POST /filters/generate
   into a skip, hiding a real server error
   (test_full_user_journey.py:179-183) (QE, 2026-10-26; option (b), ID
