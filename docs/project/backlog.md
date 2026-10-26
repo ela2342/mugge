@@ -3363,6 +3363,28 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   hook (labwc is in display.nix, the US-172 lane), including the
   Before= ordering. The drift-guard test still lands in the same
   commit as the captured soundconfig.xml.
+  RULED (Architect, via CM, 2026-10-26; supersedes "The Architect is
+  ruling" above): the fix is a separate user oneshot,
+  systemd.user.services.mixxx-soundconfig in applications.nix, NOT a
+  labwc hook. Type=oneshot, RemainAfterExit, wantedBy default.target;
+  runs `install -D -m 0644 <store file> %h/.mixxx/soundconfig.xml`;
+  Before=labwc.service (ordering only, display.nix untouched); no
+  ExecReload. Settings changed in Mixxx persist only until the next
+  boot, by design. worker-3 must also confirm in the 258.3 source that
+  L+ replaces existing files. The drift-guard test still applies,
+  against the store file. worker-3 is implementing it.
+  P-step checklist REPLACED (worker-3, via CM, 2026-10-26): frozen
+  copy /tmp/pm-backlog/us173-p-step-checklist-585801d2.txt (sha1
+  585801d2) supersedes 63cfa7f9. Only item 4 changed: before M3,
+  /proc/asound/cards plus /proc/asound/seq/clients; after M3
+  (alsa-utils), aconnect -l; the functional check either way is that
+  Mixxx's controller list shows the Hercules. Open to the Architect:
+  add usbutils with M3, or check via sysfs `grep -H .
+  /sys/bus/usb/devices/*/product` (the interim choice). PM notes (sent
+  to worker-3 via CM): item 4's first line still lists lsusb, and item
+  12 still says "the C+/z rules"; per the ruling, item 12 commits the
+  soundconfig with test_mixxx_soundconfig.py and the mixxx-soundconfig
+  oneshot.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -5300,6 +5322,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   unparsable, unless explicitly overridden. It copies only the
   top-level expected files and never recurses into output_dir
   (F-399)."
+  UPDATE (CM, 2026-10-26): committed as 64d32f3e (worker-4) and pushed
+  to fix/F-399-venue-runner-cleanup; parent 6f4ae3d1 (the #57 head);
+  the runner.py hunks are within the cleared fence. 1323 passed / 0
+  failed / 1 skipped of 1324; 18 new tests; 13/13 mutations red. The
+  PR opens once #57 merges (stacked branch, strict main). F-363 passed
+  in that run with the cause unchecked: NOT fixed until the QE
+  confirms (see F-363).
 - **US-175** F-318 layer 2: GraphManager removes any link to the
   USBStreamer that it did not make itself (SecSpec's second
   required layer; team-lead, 2026-10-25). Its own item and its own
@@ -5744,6 +5773,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     CM): the exemption test still asserts the exact error string,
     and mutation (e) flips unverifiable to datasheet-inconsistent
     and must go red.
+  - Status (CM, 2026-10-26): F-363 PASSED in the F-399 run at
+    64d32f3e, cause unchecked. NOT fixed until the QE confirms.
 - **F-379** (worker-4, Architect ruling; 2026-10-25) Web-UI
   correction level defect: src/web-ui/app/filter_routes.py:231 calls
   correction.generate_correction_filter directly, with no IR level
