@@ -903,6 +903,14 @@ priority!"
   CM re-sends once and tells team-lead. Trigger (CM): worker-6 missed
   the E3/E4 r2, base ruling, 1318b25c and K3 relays; the CM re-sent
   them all.
+  UPDATE (CM, AE, 2026-10-26, after v292): backlog v292 pushed as
+  0b435258. US-179: AE device-change ruling 20a9bc76 (D1-D4: clear the
+  4a ack, every AC3 declaration and the mic-calibration binding;
+  discard earlier captures and levels); the PO drafts it as erratum E5
+  after the final UX text; worker-6 keeps E4 r2 until E5 is final.
+  F-262/#66: PR CI 40395927172 at 4724e65d SUCCESS; R5 series started
+  (A1 OK), run 1 = 40403348924. US-172: v8 kit c96afb79 in review
+  (Architect, AE, QE); worker-2 acked c96afb79.
 
 ## Reserved IDs
 
@@ -4065,6 +4073,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      base closure's overlays dir, proposed for R5b so a panic log
      survives in /sys/fs/pstore; if none, skip it. Architect: "No
      owner decision needed."
+  UPDATE (CM, 2026-10-26, after v292): v8 kit c96afb79
+  (/tmp/cm-relay/US-172/v8-c96afb79) is in review with the Architect,
+  the AE and the QE; worker-2 acked c96afb79 (per the PROCESS RULE).
+  Verdicts: not yet relayed to the PM at this version.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -7318,6 +7330,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      4724e65d; the series goes once CI 40395927172 is green. The TW's
      F-411 swap and the QE's AC 6 citation point (ebd890d0) are held
      as a post-series TW v3, so the streak head does not move.
+  UPDATE (CM, 2026-10-26, after v292): PR CI 40395927172 at 4724e65d
+  is SUCCESS. R5 series STARTED: A1 OK (origin/main 498fa3e5 is an
+  ancestor of the streak head 4724e65d; PM read: merge-base check
+  confirms). R5 run 1 = 40403348924 (workflow_dispatch run_e2e=true,
+  ref fix/F-262-shared-correction, headSha 4724e65d, dispatched
+  2026-10-26T21:19:15Z; conclusion pending at this version). Rules: QE
+  abfd33d7 + ebd890d0; one run at a time. Ledger:
+  /tmp/cm-relay/F-262/R5/ledger.txt (CM-owned, live).
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -11514,6 +11534,43 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      - Show the message inline at the field. Never round silently
      (40.5 must not become 40 or 41 without the user entering it). No
      sound until the value is valid.
+  AE DEVICE-CHANGE RULING (AE, CM relay, 2026-10-26; answers the UX
+  section 1 question above):
+  /tmp/cm-relay/US-179/frozen/ae-device-change-reconfirm-20a9bc76.txt
+  (sha256 20a9bc76, 1647 bytes, verified at PM read). Status (CM): the
+  PO is drafting it as erratum E5, after the final UX text; worker-6
+  keeps the E4 r2 text until E5 is final. Verbatim, reflowed, without
+  its title line ("US-179 AE ruling on UX 5eb9829c §1 (verified at
+  read): what to clear after a device change, 2026-10-26."):
+  - YES. After any device change (connected, removed or switched;
+    input or output), before any sound:
+  - D1 Clear the 4a safety acknowledgement. It must be confirmed
+    again.
+  - D2 Clear every AC3 channel declaration (role, low limit, channel
+    mapping). They must be confirmed again. The new output could be
+    headphones or a different speaker, and a stale role or limit would
+    apply the wrong HPF and level band.
+  - D3 Also: clear the mic calibration binding. A loaded calibration
+    file belongs to one microphone. After a device change, the session
+    is UNCALIBRATED (A1 rules, visible warning) until the user
+    confirms that the file belongs to the selected mic. Re-selecting
+    the same file counts. Otherwise a cal file meant for another mic
+    would give wrong SPL stops. The input side of the change matters
+    just as much as the output side.
+  - D4 Discard every level and capture result from before the change.
+    The 4i fresh start at -60 dBFS already covers the level check. It
+    also covers any sweep level or capture held for the analysis.
+  - The UX text line "Confirm the safety check and the speaker
+    settings again." is accepted. UX may add the mic-calibration point
+    (D3) in its own words.
+  - Tests (AC12):
+     - after a simulated devicechange, the ack and the declarations
+     are empty, and no output is possible until both are confirmed
+     again;
+     - after a devicechange with a cal file loaded, the session
+     reports uncalibrated until it is re-confirmed;
+     - an old capture can't be used for the analysis.
+  - No safety limit changes. The PO decides on the erratum.
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
