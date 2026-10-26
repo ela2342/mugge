@@ -127,6 +127,8 @@ priority!"
   UPDATE (CM, 2026-10-26): Mac disk 2.84 GiB. No nix. The CM fixed the
   evidence dir modes (observe3/4/4b were 0600 dirs, unreadable to
   advisors).
+  UPDATE (CM, 2026-10-26): Mac disk about 2.90 GB free after two new
+  worktrees (~32 MB each). The hold stays: no nix for anyone.
   Steps 7-8 DONE (CM, team-lead, 2026-10-26; corrects "SUSPENDED
   before use" in US-172c): worker-2 had already run step 7 when the
   suspension came; the Architect confirmed the cleanup and the plain
@@ -3423,6 +3425,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   asked the Architect whether worker-4 (US-174c/d from 64d32f3e) and
   worker-5 (F-390 from #55 head 17144904) can start now under the
   parallel-work rule.
+  ANSWERED (Architect, assigned by the CM, 2026-10-26): worker-4
+  starts US-174d now (see US-174); US-174c waits for F-390/F-391;
+  worker-5 starts F-390 then F-391 now (see F-390).
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -3941,6 +3946,21 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   TW one-liner (PO, no hurry): CLAUDE.md says the room correction
   pipeline is "NOT YET WRITTEN", but src/room-correction/ (incl.
   mock/room_simulator.py) exists on main; the text is stale.
+  SPLIT (Architect parallel-start ruling, assigned by the CM,
+  2026-10-26): US-174c and US-174d proceed separately.
+  US-174d (deploy refuses SIMULATED; deferred dir swap; a measured
+  gate MEASURED_MAX_POSITIVE_DEVIATION_DB separate from the simulated
+  constant; SNR-invalid = repeat; a failed gate keeps the previous
+  filters; the AE HF-cut bound) is worker-4's from now. Branch
+  story/US-174d-deploy-gate, cut from 64d32f3e (worktree
+  .claude/worktrees/story-US-174d-deploy-gate). Fence: deploy.py,
+  closed_loop.py, venue_pipeline.py, runner.py and their tests; if
+  crossover.py or generate_profile_filters.py are needed, stop and get
+  an Architect ruling. The PR opens only after #57 and F-399 merge.
+  US-174c (measurement on the Pi, web-ui measurement/session.py)
+  starts only after F-390/F-391 and builds on them, because it is the
+  same file (L-046). Its Pi run is also gated by US-173 H, F-341 AC3,
+  D-070 and the amps-on list.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -4259,6 +4279,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     covers a gig.
   Linked (AD N1 on #58, 2026-10-25): F-388 AC-f(ii), the driver-record
   refusal at session start, depends on F-390; F-390 goes first.
+  ASSIGNED (CM, Architect parallel-start ruling, 2026-10-26): the
+  F-390 then F-391 lane is worker-5's. Branch
+  fix/F-390-speaker-resolver, cut from #55's head 17144904 (worktree
+  .claude/worktrees/fix-F-390-speaker-resolver). CM reading of R7: #55
+  is not widened, so branching from #55's head is within "after #55
+  merges (or rebases)". Conditions: no edits to #55's own changes
+  (anything wrong there is a finding against #55); merge #55's new
+  head if it moves; the PR only after #55 merges; the Architect
+  reviews design and diff before the PR, and the AE confirms the
+  gate/AC2 wording. Authoritative F-391 set: R1-R7, then the FINAL
+  ADDENDUM 7e467465, then PART B 60095f5d, then PART C b91ac082, plus
+  the AE review; A1/A2 are superseded. US-174c builds on this lane
+  (see US-174).
 - **F-391** Measurement sweep ignores mandatory_hpf_hz (P1; AE,
   2026-10-25). Gates the same sessions as F-390. /measurement/start
   accepts ChannelConfig.mandatory_hpf_hz (session.py:193), but
