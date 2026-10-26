@@ -10903,6 +10903,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - Next for worker-7 after F-384 (CM): the phase 0b r2 data run; the
     CM sets its order against F-411. (PM cross-ref: the CM message
     calls it R6b; in 3100a728 the data run is R6d, R6b is the fix F1.)
+  F-383 PHASE 0b R6d CORRECTION (CM, 2026-10-26): the CM sent worker-7
+  a one-line correction: the phase 0b r2 data run is R6d; R6b is the
+  F1 fix; nothing else changed. (Closes the PM cross-ref above.)
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
@@ -12470,6 +12473,55 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   "Safety limit: the output never goes above -20 dBFS peak." AE: the
   line is display only; the constant stays in code. Branch
   story/US-179-web-rc at f204e497 (PM read: ls-remote matches).
+  US-179 ERRATUM E6 (PO, released by AE and UX; CM, 2026-10-26; files
+  in /tmp/cm-relay/US-179/frozen/, shas verified at PM read; relayed
+  to worker-6): po-us179-r8-erratum-E6-f4cb8a41.md (sha256 f4cb8a41,
+  1427 bytes), title verbatim: "held stop causes name the step that
+  releases the hold". Governing chain: r8 978c3e1b + E1 v2 6a78af9f +
+  E2 bca0d86b + E3 8f508af1 + E4 r2 f692681c + E5 df065993, with E6
+  applied. Verbatim: "No flow or safety-limit change; the stop shape
+  stays r8 4e (ramp ~10 ms)".
+  - E6a (amends E4a): remove "audio error" from the E4a example line;
+    verbatim: "A cause that holds Start until the devices are opened
+    again (audio error, monitor heartbeat stop) does not say "Restart
+    when ready"." Its text names the release step: back to setup, "Use
+    these devices", then start the level check again. E6b (AC4i),
+    verbatim: "Whenever "Start level check" is disabled by such a
+    hold, the same cause text shows next to it, including when the
+    hold arrived while nothing was sounding. A page-hidden hold needs
+    no text." E6c: the audio-error and heartbeat texts are UX a62af4b1
+    (AE wording governs without a new PO round). Tests: one per held
+    cause (names "Use these devices", not "Restart when ready"); one
+    for a hold arriving while nothing sounds.
+  - Releases: AE ae-E6-release-8d8aeca2.txt (sha256 8d8aeca2),
+    verbatim: "RELEASE f4cb8a41. No objections." UX
+    ux-E6-release-1d515f31.txt (sha256 1d515f31), verbatim: "release
+    f4cb8a41 (UX)." and "No objections."
+  - UX heartbeat/AUDIO_ERROR texts ux-w6-heartbeat-a62af4b1.md (sha256
+    a62af4b1, 1841 bytes), on worker-6 latch r2 head 4082560f.
+    Heartbeat (new safety.js STOP_MESSAGES cause), verbatim: 'Stopped
+    for safety: the microphone level monitor stopped responding, so
+    the sound was stopped. This can happen when the computer is busy.
+    Go back to setup, press Use these devices, then start the level
+    check again.' Audio error (replaces the current text), verbatim:
+    'Stopped: an audio error occurred. Go back to setup, press Use
+    these devices, then start the level check again.' AE release
+    ae-ux-heartbeat-release-dcef298b.txt (sha256 dcef298b), verbatim:
+    "RELEASE a62af4b1. No objections."
+  - AE onset condition ae-US179-onset-a1736914.txt (sha256 a1736914,
+    1305 bytes) on latch r2 implementation 4082560f. 1: stop ramp in
+    the trip quantum or the next ACCEPTED (within B1). 2: output onset
+    one quantum late, verbatim: "ACCEPTED as plain delay ONLY if the
+    onset is known per capture." Required: verbatim "the output
+    processor records the frame at which the sweep's first sample was
+    actually rendered, for every capture." The delay estimate removes
+    that offset (or prove it is always exactly one quantum). Test: two
+    captures with forced onsets 0 and 1 quantum give the same IR peak
+    and delay within 1 sample; if the delay already comes from a
+    loopback/reference channel in the same stream, only the test is
+    needed. 3: B4 100 ms fallback matches AE 6f220842.
+  - Branch story/US-179-web-rc at 4082560f (PM read: ls-remote,
+    2026-10-26; latch r2 implementation head).
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
