@@ -611,11 +611,16 @@ start_services() {
     # JACK client named "Mixxx" with 8 output ports (out_0..out_7) matching
     # GM's routing table. Plays stereo mp3/wav on ch 1-2, silence on ch 3-8.
     # Must run under pw-jack for JACK-style port naming.
+    # LOCAL_DEMO_MIXXX_SOURCE=tone (set by test-e2e.sh) plays the fixed test
+    # tone instead, whether or not the mp3 exists (F-394 Q1-1).
     MP3_FILE="$HOME/Claudia singt Cole Porter - I love Paris.mp3"
     echo ""
     echo "[local-demo] Starting Mixxx substitute (pw-jack JACK client, 8ch)..."
     MIXXX_ARGS=(--channels 8 --client-name Mixxx)
-    if [ -f "$MP3_FILE" ]; then
+    if [ "${LOCAL_DEMO_MIXXX_SOURCE:-}" = "tone" ]; then
+        echo "[local-demo]   Audio source: test tone (--tone)"
+        MIXXX_ARGS+=(--tone)
+    elif [ -f "$MP3_FILE" ]; then
         echo "[local-demo]   Audio source: $(basename "$MP3_FILE")"
         MIXXX_ARGS+=(--file "$MP3_FILE")
     else
