@@ -859,6 +859,15 @@ priority!"
   simulator change); QE condition 2 r2 d0052503; AE follow-up
   one-liner (real two-position UMIK-1 check). F-383 + F-384: owner
   worker-7 (team-lead confirmed), phase 0 offline after F-411.
+  UPDATE (CM, AE, PO, team-lead, 2026-10-26, after v286): backlog v286
+  pushed as 882c962a. F-411: CM confirms E3 by call argument, no
+  mock-file edits (2c holds). F-383 + F-384: phase 0 GO (b74a78a0);
+  report dadab0bf (LR8 LP fallback triggers; subsonic factor open;
+  F-384 overshoot from steps 7-8); AE item (2) subsonic ruling
+  935b4ee2 recorded, Architect release pending; F-384 forced-input
+  task (8fb41306); worker-7 priority order. US-179: base stays on
+  main; errata E3 8f508af1 and E4 r2 f692681c recorded with three
+  notes for worker-6.
 
 ## Reserved IDs
 
@@ -7926,6 +7935,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   must fail at 4724e65d." PM cross-ref: the AE has so ruled
   (5fe39778), so the test asserts the 1/6-oct design view at 250-300
   Hz; the E3 ruling needs no simulator change, consistent with 2c.
+  CM on E3 vs 2c (CM, 2026-10-26; closes the PM cross-ref above): no
+  conflict. worker-7's AE-accepted E3 plan (904f34c9) gets the second
+  position by passing mic_pos to simulate_measurement() as a call
+  argument (instrumentation), with no edit to room_simulator.py,
+  room_config.yml or mock_audio.py. The phase 2 brief will state both:
+  no edits to the three mock files, and E3 by argument only. The CM
+  froze QE r2 at
+  /tmp/cm-relay/F-411/frozen/qe-F411-condition2-r2-d0052503.md and
+  holds it for the phase 2 brief (not relayed while phase 2 is gated).
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -10059,6 +10077,129 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   F-383 calibration step (a dirac correction x LR4/LR8 x 80/200 Hz
   through the output check, with the -46 dB fallback rule) and the
   F-384 step-9 overshoot measured on the #66 code.
+  PHASE 0 GO (CM, 2026-10-26; supersedes "CM go for the scratch-copy
+  use pending at this version" above): brief
+  /tmp/cm-relay/F-383/w7-F383-F384-phase0-brief-r1.txt (sha256
+  b74a78a0, verified at PM read). Fresh git-archive scratch copy
+  /tmp/w7-F383-scratch-4724e65d (PM read: .SOURCE-SHA 4724e65d;
+  correction.py 203cd320, combine.py 5e935128); the F-411 scratch copy
+  stays separate. Read-only, offline, no commits until #66 merges or a
+  CM fence revision.
+  PHASE 0 REPORT r1 (worker-7 via CM, 2026-10-26):
+  /tmp/cm-relay/F-383/frozen/w7-F383-F384-phase0-r1-dadab0bf.md
+  (sha256 dadab0bf, 15262 bytes, verified at PM read), source 4724e65d
+  (crossover.py 30efb7c9 as well). Relayed by the CM to the Architect
+  (single writer of the joint ruling) and the AE (releases). PM
+  summary:
+  - (1) F-383 calibration: the -46 dB fallback TRIGGERS. Dirac x LR8
+    LP fails the output check at -38.8 dB (80 Hz) and -37.7 dB (200
+    Hz), limit -40; every LR4 leg and both LR8 HP legs pass with >=
+    10.5 dB margin; all tails pass by > 160 dB. worker-7's diagnosis:
+    a check artefact (float64 rounding floor of |H| in the LR8 LP
+    stopband; no floor 1e-30..1e-6 and no padding 4x-16x gets under
+    -38.9 dB; against the LR design magnitude the same legs are -84
+    dB).
+  - (2) Extra finding, undiagnosed: dirac x LR HP x
+    generate_subsonic_filter gives -15.8 to -30.4 dB, including the
+    first-DJ-session markaudio sat (CHN-50P mandatory_hpf_hz 80 x LR4
+    200 Hz HP) at -27.8 dB; the subsonic FIR alone -23.1 to -44.0 dB.
+    Deployed files are not affected today (combine re-synthesizes; -74
+    to -101 dB).
+  - (3) F-384 on the #66 code: the overshoot is inter-bin from steps
+    7-8, not step 9; worst +0.165 dB over the -0.5 dB margin (home_lab
+    sat_right), never above 0 dB; step 9 does not measurably break
+    min-phase (res4x <= -162 dB, tail <= -102.9 dB). These scenarios
+    do not exercise the F-384 defect; the AC test needs a forced
+    input. Worker-4's a3bc538c figures (-0.35 / -0.41 dB) reproduced
+    exactly at 4724e65d.
+  - (4) Info: a polarity-inverted output scores +6 dB in any check of
+    this form. PM cross-ref (sent to the Architect): Sub2 is
+    phase-inverted for isobaric loading (CLAUDE.md design decision 1).
+  ITEM (2) SUBSONIC RULING (AE writer, Architect to release; NOT yet
+  released at this version):
+  /tmp/cm-relay/F-383/frozen/ae-F383-item2-subsonic-ruling-935b4ee2.txt
+  (sha256 935b4ee2, 3310 bytes, verified at PM read). Verbatim,
+  reflowed, without its title line:
+  - Input:
+    /tmp/cm-relay/F-383/frozen/w7-F383-F384-phase0-r1-dadab0bf.md,
+    sha256
+    dadab0bf7caa20dd67b0dae4f1c31033777492e60dc8eb35c973f323a16cfb6b
+    (verified at read). Source pin 4724e65d.
+  - Why it is audio-side: the subsonic FIR is the driver-protection
+    HPF (D-031, US-179 AC6b pick (a)). If it is not minimum-phase, it
+    puts pre-ringing at the HPF corner into every sat that has a
+    mandatory HPF, which goes against the transient requirement. Today
+    nothing audible is affected: combine re-synthesizes the product,
+    and the deployed files measure -74 to -101 dB. Once the FINAL
+    mechanism stops re-synthesizing, the factor's own phase reaches
+    the speaker. So this must be settled before the F-383 FINAL
+    mechanism merges. It does not block the first DJ session on the
+    current files.
+  - S1 Diagnosis (worker-7, read-only, offline, may start now). Run it
+    for generate_subsonic_filter at each of 80/24, 40/24, 40/48 and
+    25/24:
+     a) Build the reference from the DESIGN magnitude (the power-law
+     knee itself, not |rfft(h)|), with a cepstral FFT of at least 64·n
+     and an absolute floor of 1e-20. Truncate it to n. Report the
+     residual of h against this reference.
+     b) Report the energy before the main peak re total energy, and
+     the time of the peak in samples. This is a direct pre-ringing
+     measure.
+     c) Repeat a) with the production design's FFT size and the 1e-10
+     floor, to show which of the two causes the aliasing.
+  - S2 Decision rule:
+     - If a) is ≤ -60 dB for every case, it is a CHECK ARTEFACT. The
+     fallback's "report-only" scope then extends to LR × subsonic
+     products. The gate becomes the subsonic-alone design-reference
+     check at -40 dB plus the existing correction-input check.
+     - If a) is > -40 dB for any case, it is a REAL DEFECT and the
+     subsonic FIR is fixed in the F-383 PR.
+     - Anything in between goes back to the AE before any decision.
+  - S3 Constraints on any fix (the Architect designs it, the AE
+    releases the magnitude):
+     - Keep the corner at mandatory_hpf_hz = 0.8 × the declared limit.
+     - Keep ≥ 18 dB attenuation at corner/2 (AC6b pick (a)).
+     - Passband above 1.5 × corner: within 0.1 dB of today's filter.
+     - No gain above 0 dB anywhere.
+     - Design-reference residual ≤ -60 dB and tail ≤ -60 dB re peak.
+     An analytic min-phase HPF (for example a Butterworth impulse
+     response with order = slope/6) would meet this by construction.
+     It is acceptable to the AE if the magnitude constraints above
+     hold.
+  - Review points for the Architect's joint ruling on (1), (3), (4)
+    and (5). These are points, not text for that ruling:
+  - P-a (1): I agree with the artefact reading of LR8 LP (-84 dB
+    against the design reference). The fallback is acceptable to me
+    provided the LR legs are checked against their DESIGN magnitude,
+    not left unchecked.
+  - P-b (4): the check must not depend on polarity. Score against
+    min(ref, -ref), or normalize the sign of h first. Sub2 may be
+    polarity-inverted for isobaric loading; a +6 dB false fail there
+    is not acceptable.
+  - P-c (5): an overshoot of +0.165 dB above the -0.5 dB margin, still
+    ≤ 0 dB, is harmless in audio terms; D-009 holds. A fix may go in
+    F-384, but it is not a safety item. The F-384 AC needs the
+    forced-input case from phase 1.
+  PM cross-ref: S1 reads "(worker-7, read-only, offline, may start
+  now)", while the CM holds S1 until the Architect releases 935b4ee2
+  (joint-text rule); the CM's hold governs until that release.
+  F-384 FORCED-INPUT TASK (PM pick, team-lead GO, 2026-10-26):
+  worker-7, read-only and offline on /tmp/w7-F383-scratch-4724e65d, no
+  #66 files: find and document an input IR with a clear native-bin
+  excess before step 9 and measure step 9's effect on the min-phase
+  residual and tail, for the F-384 AC "with a test that forces the
+  overshoot branch" (Architect, 2026-10-25). Brief (CM):
+  /tmp/cm-relay/F-383/w7-F384-forced-input-brief-r1.txt (sha256
+  8fb41306, verified at PM read). Team-lead conditions, verbatim: "No
+  commits." "No mechanism decisions." "Results go as a frozen file to
+  the CM." "If the joint Architect+AE ruling lands first, worker-7
+  freezes the work and follows the ruling." "F-411 phase 2 still takes
+  priority once it opens." F-370 stays the fallback (team-lead).
+  worker-7 PRIORITY ORDER (CM, 2026-10-26): (1) F-411 phase 2 (after
+  #66 merges or a fence revision); (2) the F-383 item-2 subsonic
+  diagnosis S1 (935b4ee2, once the Architect releases); (3) the F-384
+  forced-input task. When a higher item opens, worker-7 finishes the
+  current step, freezes and switches.
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
@@ -10968,6 +11109,116 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   because web-rc has no profile; already covered by "the same calls"
   in E2g. The CM freezes a copy and relays E2 plus the note to
   worker-6; the role placeholder can now be replaced (PO).
+  US-179 BASE (CM, 2026-10-26; PO informed): the branch stays on main
+  and rebases after #66 merges.
+  ERRATUM E3 (PO, 2026-10-26; released by the AE, UX and the
+  Architect, per PO): /tmp/po-drafts/us179-r8-erratum-E3.md (sha256
+  8f508af1, 2186 bytes, verified at PM read; PM frozen copy
+  /tmp/pm-backlog/US-179-r8-erratum-E3-8f508af1.md). Verbatim,
+  reflowed, without its title line:
+  - Source: AE bac898a0 (answer to worker-6's question which value the
+    90 dB SPL stop compares against). E1c read as "both stops on true
+    peak", but the AE meant "on values the meter itself measured". A
+    true-peak 90 dB stop would fire at the 75 dB RMS target on pink
+    noise. No safety limit changes (75 dB target, 90 dB value, -1 dBFS
+    clip, -20 dBFS cap/clamp unchanged); one backstop is added. r8 +
+    E1 v2 + E2 stay governing, with E3 applied. 6a78af9f is not
+    edited; E3 replaces its E1c sentence.
+  - E3a (AC4b, replace the E1c sentence "The meter computes the true
+    sample peak over every sample of every render quantum (no
+    decimation or skipped blocks); the 4d mic-clip and 90 dB SPL
+    auto-STOPs are decided on these values; AC12 unit-tests both
+    triggers on the meter worklet with synthetic input." with):
+  - "The meter computes, from every sample of every render quantum (no
+    decimation or skipped blocks): the per-quantum true sample peak,
+    and a 100 ms sliding RMS over contiguous samples, updated at least
+    every quantum. The 4d auto-STOPs are decided on these meter
+    values, never on a decimated or display value: mic clip on the
+    per-quantum true peak (>= -1 dBFS); 90 dB SPL on the 100 ms RMS
+    SPL (the same value the 4b 75 dB target uses); and a backstop at
+    per-quantum true-peak SPL > 105 dB SPL. The two SPL stops apply
+    only with a calibration file; without one the uncalibrated rules
+    (AE A1, -40 dBFS RMS target) apply unchanged."
+  - E3b (AC4d, replace "Auto-STOP: mic > 90 dB SPL (calibrated) or mic
+    clip (peak >= -1 dBFS);" with):
+  - "Auto-STOP: mic > 90 dB SPL as 100 ms RMS, or > 105 dB SPL true
+    peak (both calibrated only), or mic clip (true peak >= -1 dBFS);"
+  - E3c (AC12, add): "meter tests on the worklet with synthetic input:
+    RMS below 90 dB while the peak crosses 90 dB = no stop; RMS
+    crossing 90 dB = stop; a single click above 105 dB SPL peak =
+    stop; peak >= -1 dBFS = stop."
+  - Releases needed, each naming this file's sha: AE (safety text),
+    Architect (meter/worklet design), UX (what the user sees on stop;
+    no new message text is added, the existing 4i/4d stop texts
+    apply).
+  ERRATUM E4 r2 (PO, 2026-10-26; released by the AE and UX; the
+  Architect has no objection, per PO; E4 7bc8ea34 VOID):
+  /tmp/po-drafts/us179-r8-erratum-E4-r2.md (sha256 f692681c, 2737
+  bytes, verified at PM read; PM frozen copy
+  /tmp/pm-backlog/US-179-r8-erratum-E4-r2-f692681c.md). Verbatim,
+  reflowed, without its title line:
+  - Replaces E4 7bc8ea34, which is VOID (AE objection 89534d1a).
+    Changed from 7bc8ea34: only the mic-clip and 105 dB texts (UX
+    f8afd031), the clip-text selection rule, and the clip assertion in
+    both modes in E4b. The flow, the 90 dB text and the 'other cause'
+    text are unchanged.
+  - Source: UX objection 7b3e3849 to E3. r8 4i names texts only for
+    the 30 s timeout and the clamp, and 4d names none, so the meter
+    stops (mic clip, 90 dB SPL RMS, 105 dB SPL peak) would stop the
+    noise with no cause shown. Wording and flow only: no safety limit
+    or trigger changes. E4 supersedes E3's closing remark "no new
+    message text is added, the existing 4i/4d stop texts apply";
+    E3a-E3c are unchanged. 8f508af1 is not edited.
+  - E4a (AC4i, replace "After an auto-STOP by the 30 s timeout (4d) or
+    the clamp (5d)," with "After any auto-STOP (4d, 5d),"), and add
+    after the two existing example texts:
+  - "Further example texts per cause:
+     - Mic clip, calibration file loaded: 'Stopped: the microphone
+     input clipped. Lower the amp or interface output gain, then
+     restart. Leave the microphone input gain as it is: the SPL
+     calibration depends on it.'
+     - Mic clip, no calibration file: 'Stopped: the microphone input
+     clipped. Lower the amp or interface output gain, or the
+     microphone input gain, then restart.'
+     (The mic-clip text is chosen by whether a calibration file is
+     loaded at the moment of the stop.)
+     - 90 dB SPL (RMS): 'Stopped: too loud at the microphone (over 90
+     dB SPL). Lower the amp or interface output gain, then restart.'
+     - 105 dB SPL (peak; calibrated only, per E3): 'Stopped: a very
+     loud peak at the microphone (over 105 dB SPL). Check that nothing
+     touched the mic. Lower the amp or interface output gain, then
+     restart.'
+     - Any other 4d cause (sweep level rule, page hidden, device
+     change, audio error): 'Stopped: <cause in plain words>. Restart
+     when ready.'
+  - The rest of 4i applies to every cause unchanged: the step stays
+    open and names the cause; a restart begins at -60 dBFS and ramps
+    in from 0 per 4h (a fresh start). An auto-STOP during the sweep
+    returns to the level-check step with the same message, and that
+    capture is discarded (AC7: never 'ready')."
+  - E4b (AC12, add): "each auto-STOP cause shows its own message (one
+    assertion per text; the mic-clip message is asserted both with and
+    without a calibration file), and an auto-STOP during the sweep
+    returns to the level-check step and discards the capture."
+  - Releases needed, each naming this file's sha: UX (wording), AE
+    (the stop texts advise gain changes: safety text). Architect:
+    no-objection to 7bc8ea34 carries over (flow unchanged); object if
+    needed.
+  Governing text (PO): r8 978c3e1b + E1 v2 6a78af9f + E2 bca0d86b + E3
+  8f508af1 + E4 r2 f692681c. No safety limit changes; scope and
+  estimate unchanged (PO). Non-blocking notes for worker-6 (per PO;
+  the CM relays them with E3/E4 r2):
+  - (UX) On a device or rate change, AC2b ("return to 2a") takes
+    precedence over E4's "return to the level-check step". The E4
+    "other cause" text is shown.
+  - (Architect a) The 100 ms RMS is 4800 samples: use a per-sample
+    circular buffer of squares with a running sum and a periodic
+    re-sum, and the actual block length, never a hard-coded 128.
+  - (Architect b) A meter stop must not depend on the main thread. The
+    meter worklet signals the noise-gen worklet directly (a dedicated
+    MessagePort or a SharedArrayBuffer flag), which goes silent on the
+    next quantum. The main thread is told in parallel, for the message
+    and the flow.
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
