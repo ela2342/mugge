@@ -2,7 +2,7 @@
 #
 # Mixxx (DJ software) and Reaper (DAW) for the two operational modes.
 # Both run under PipeWire's JACK bridge via pw-jack.
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, pi4audio-packages, ... }:
 
 let
   mixxxHome = "${config.users.users.ela.home}/.mixxx";
@@ -68,6 +68,17 @@ in
     (reaper.override {
       vlc = pkgs.runCommand "vlc-stub" {} "mkdir -p $out/lib";
     })
+
+    # ── Gig-day diagnosis (US-173, Architect) ──────────────────
+    # Packages only, no services or listeners. alsa-utils: aplay/arecord
+    # -l, amixer, aconnect, alsactl. usbutils: lsusb -t.
+    alsa-utils
+    usbutils
+
+    # ── Thermal watch (US-173 AC9, D-069) ──────────────────────
+    # Runs via: sudo pi5-thermal-watch --duration <s>
+    # Source: scripts/stability/pi5_thermal_watch.py
+    pi4audio-packages.pi5-thermal-watch
 
     # ── pw-jack wrapper ────────────────────────────────────────
     # Provided by the PipeWire JACK bridge (services.pipewire.jack.enable

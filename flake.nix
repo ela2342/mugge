@@ -883,6 +883,17 @@
                 cargoLock.lockFile = ./src/Cargo.lock;
                 buildAndTestSubdir = "signal-gen";
               });
+              # US-173 AC9: D-069 thermal watch for Pi 5 load runs (stdlib
+              # only; run with sudo). The writer adds its own "#!" line and
+              # runs flake8 on the result, so the script's shebang is
+              # dropped here; a second "#!" on line 2 fails E265.
+              pi5-thermal-watch = let
+                lines = pkgs.lib.splitString "\n"
+                  (builtins.readFile ./scripts/stability/pi5_thermal_watch.py);
+              in
+                assert pkgs.lib.hasPrefix "#!" (builtins.head lines);
+                pkgs.writers.writePython3Bin "pi5-thermal-watch" { }
+                  (builtins.concatStringsSep "\n" (builtins.tail lines));
             };
           };
 
