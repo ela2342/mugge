@@ -374,6 +374,10 @@ priority!"
   b0fc8025. #63 CI run 40312806198 at ff4d6c7e in progress; QE F-400
   conditions C1-C3 (see US-173). US-172: Architect's run-4 HDMI
   expectation (see US-172).
+  UPDATE (CM, 2026-10-26, after v199): backlog v199 pushed as
+  34530467. #63 head 9b1aa8a1, CI restarted (see US-173). #57 CI
+  40310308638 still in test-and-build (started 10:49:50Z, about 22 min
+  at the CM's check, within normal range).
 
 ## Reserved IDs
 
@@ -3981,6 +3985,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   empty); C3 the post-deploy standard checks run first, because the
   load order changes. AE and Architect informed. CI run 40312806198 at
   ff4d6c7e in progress.
+  UPDATE (CM, 2026-10-26): #63 head is now 9b1aa8a1 (F-400 self-test,
+  parent ff4d6c7e) and CI restarted; this supersedes the CI run
+  40312806198 above. P-step checklist sha1 53daaa70 (C2/C3 added;
+  supersedes 1c677f9e).
+  AE conditions on #63 (via CM, 2026-10-26): (1) the PR body shows
+  that 05-rt-direct does not overlap the 10-audio-settings keys; (2)
+  C3 is extended with the pw-metadata clock/quantum values, the
+  USBStreamer node props unchanged, and a pre-deploy listing of the
+  user conf.d.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -6955,6 +6968,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   is a radio open to anyone in range. SecSpec will check at the US-172
   PR review that the post-deploy check confirms disable-bt-pi5
   actually applied.
+- **PW main-thread latency under DJ load** (Architect, from the AE,
+  2026-10-26; not a gate, no priority given; cross-ref F-358): measure
+  GM link-change and gate-param latency under full DJ load on the Pi
+  5. PW's main thread runs SCHED_OTHER at nice 0 (F-358 skips the nice
+  step because RLIMIT_NICE is 0), so it competes with Mixxx's non-RT
+  threads. If it is too slow, the option is LimitNICE for user@1000,
+  so PW's stock nice -11 applies; that needs a separate ruling.
 - development.md, ONE docs item (TW offers to write it; merges UX,
   QE, Arch N2, AD L2, TW F1-F3): run `nix build
   .#checks.<system>.app-source-paths` locally (test-all no longer
