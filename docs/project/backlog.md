@@ -1454,6 +1454,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      (by GraphManager or WirePlumber) comes up gated: gains 0, gate
      closed, and audio returns only when the operator re-opens it
      through the D-063 ramp. Tested (AE)".
+     PENDING (AE ruling v4 item 5, TW batch v19; this list follows on
+     merge, mirror rule): "Tested (AE)" becomes "To be tested (AE;
+     US-159 T65)". G16 (US-159 l.71) and T65 (l.188) are both open and
+     no G16 test record exists (QE, AE checked at ba5cc200). The row
+     stays a requirement and is not on the F-395 AC (c) list.
   14. Gate-authority defects (AD M4). CURRENT (#51 commit 2d22aa7a,
      TW; AE N1 final, AD agrees; supersedes the 1472206a text
      below), verbatim: "F-338, F-339, F-320, F-314, F-325 and F-349
@@ -1677,6 +1682,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      from v17 is "(F-396)" after "USBStreamer interruption (Section
      1)" in the safety.md WirePlumber-restart paragraph (the F-396
      cite, AE ruling). Still waits only for the merged US-173 head.
+     UPDATE (TW, AE, PM, 2026-10-26): v19 will carry AE ruling v4
+     (/tmp/pm-backlog/ae-ruling-f395-safetymd-gap-v4.md, sha256
+     0090761e; v3 a719ed5a, v2 ca8eed3e, v1 554c097a; AD H2, see
+     F-395) items 1, 3, 4 and 5: row 8 (l.39), l.64, the "Gains at
+     boot" last sentence (FAIL or NOT VERIFIABLE: amps stay off or go
+     off now, incl. HP/IEM amps), row 13 (above). Item 2 (row 14
+     substrings) is SUPERSEDED (AE v4, answering the PM, 2026-10-26:
+     option (A)): row 14 gets the planned v160/v161 Row 14 text above
+     at the US-173 rebase, word for word D-070 row 14 in v18; it
+     already carries the F-395 rule and removes both pw-dump phrases.
+     Plus item 16 (below), lead-in "16 rows", rows 1-3 and 5-16, Gate
+     rule "1-3, 5-16". Still waits for the merged US-173 head. The TW
+     sends the PM the v19 sha1.
      Earlier note, superseded by the final text: the AE has since ruled that
      "unchanged" is a FAIL, so "gains unchanged or 0" above is
      superseded; the TW asked the AE for corrected text. Do not act
@@ -1686,6 +1704,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      entry and a Section 5 pre-flight check #11 (F-318 routing).
      Applied once the CM gives the TW the US-173 head with main/#51
      merged (before that the branch has no row 14).
+  16. F-395 readback rule (AE, verbatim, 2026-10-26; AD H2 on #60;
+     number allocated by the PM; PENDING the matching safety.md text
+     in TW batch v19, mirror rule): "F-395 readback rule merged:
+     safety.md (Gains at boot, rows 8 and 14, F-373 rule) and D-070
+     rows 14-15 count a gains reading only with the filter-chain node
+     and its output node idle or running before and after it." Applies
+     before any amps-on session and before any D-070 use. Not a #60
+     blocker; nothing waits on it while nothing is connected to the Pi
+     outputs.
   NEXT safety.md TOUCH (#51 reviews, non-blocking, fail safe; TW
   drafts, AE owns the wording, this list follows per the mirror
   rule): (1) AD L1 = UX (a): the lead-in "holds" (closed and
@@ -3062,6 +3089,30 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   update are held until then; B6n still applies to base 32260961 (CM
   checked). 47b88da9 lacks #56, so its F-363 failure comes from its
   base.
+  UPDATE (CM, PM, 2026-10-26; supersedes "a successor head is
+  expected" and "B6n and the body update are held" above): worker-4's
+  successor head is 6a6264e9 ("metric raises on non-finite, gate never
+  raises (final ruling)"), the joint line: closed_loop.py:128-129
+  raises ValueError on NaN/+inf/-inf, the gates return False at
+  :156-160, tests at :465-498 (PM checked). B6n (bddbe5c8) is
+  SUPERSEDED, never applied (its gate-API paragraph still said NaN in,
+  NaN out). B6o replaces it: /tmp/pm-b6o, MANIFEST sha1 3a638fb6,
+  US-174.md sha256 6df31289, base 32260961 (= 6a6264e9's copy); B6n
+  with the gate-API paragraph per the joint line, AE boundary line
+  kept. The CM applies B6o as a separate commit. PR body (db299ac5)
+  points sent via the CM to worker-4: the docs line names B6o; the "70
+  tests" vs 95 count; the test results date from bcc353ed (QE/CM).
+  Rule 13 for #57 opens at the head with B6o, so all review one head.
+  UPDATE (CM, 2026-10-26): B6o applied as a separate commit; #57 head
+  05d306bc3fc2d564be37299333557fdca8afa01f on 6a6264e9, remote
+  matches; US-174.md blob 71ba839a = the PM file; base and MANIFEST
+  checked; the two removed lines are supersessions (174d "After 174c."
+  extended in place; the 8 -> 3 dB line kept as "was:"). worker-4 has
+  the three body points; the CM opens Rule 13 at 05d306bc once the
+  body arrives. #57 is 20 commits behind main (the cause of the F-363
+  CI failure); the CM updates it from main after #59 and #60 merge,
+  which moves the head: all 7 then re-check diff-only and CI re-runs.
+  Rule 13 head for now 05d306bc; the final head follows the update.
   F-390 GATE (PO, 2026-10-25) applies to every US-174c/d session
   that loads speaker or crossover configs. See F-390. F-391 gates
   the same sessions.
@@ -4322,6 +4373,42 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   idle-or-running rule (safety.md, D-070 rows 14 and 15); the PM asked
   the AD whether v18 covers H2 or what delta is missing (wording to
   the AE, application to the TW).
+  UPDATE (TW, QE, UX, AD, CM, 2026-10-26; supersedes the 6/7 at
+  39dd0dea and "The corrected count goes here" above): #60 head
+  bc923cc7bd7f3e2e6f5d3df0ac94577877e116d4 (TW batch v2, one docs
+  commit on 39dd0dea, 10 files): US-163.md AC14, AC16b, AC17 and AC19
+  each get one dated, append-only "NOT VERIFIABLE under F-395" line
+  (PASS kept as history, checkboxes unchanged); F-395.md AC (c) count
+  13 = 8 lab-note entries, the 4 US-163.md ACs and the F-373 interim
+  procedure. AD H1 RESOLVED (AD). 6/7 APPROVE at bc923cc7: Architect
+  6405155445, AD 6405155653, QE 6405158563 (replaces the approval H1
+  voided), TW 6405158800 (author, COI declared), UX 6405161429;
+  SecSpec 6405090180 from 39dd0dea, counted by the CM. AE pending. CI
+  run 40246808944: changes, nixos-eval and ci-gate pass,
+  test-and-build skipped (docs-only); no failed job. AD condition:
+  when #40 lands (it also touches US-163.md) the four added lines must
+  survive. Whichever of #59 and #60 merges second is updated against
+  main, which voids its approvals and needs fresh re-checks.
+  QE (2026-10-26; the AE agrees): safety.md amps-on row 13 (US-159
+  G16, "Tested (AE)") is NOT on the AC (c) list, which stays at 13. It
+  states a requirement (added in 28dcba6e without evidence; no G16
+  test record in docs/). The only Pi reading with a re-adopted sink,
+  AC17-B step (c), is already on the list; the step (a) re-enumeration
+  never re-adopted the sink (F-373) and the cold cycles enumerate the
+  USBStreamer before PipeWire starts.
+  UPDATE AD H2 (AD, AE, PM, 2026-10-26; supersedes "the PM asked the
+  AD whether v18 covers H2" above): covered. TW batch v18 covers
+  "Gains at boot" and D-070 rows 14 and 15 (the AD withdrew those
+  parts). AE ruling v4 (sha256 0090761e, frozen
+  /tmp/pm-backlog/ae-ruling-f395-safetymd-gap-v4.md; v3 a719ed5a, v2
+  ca8eed3e, v1 554c097a) gives the rest for TW batch v19: items 1, 3
+  and 4 (row 8, l.64, the "Gains at boot" FAIL or NOT VERIFIABLE
+  sentence), item 5 (row 13 "To be tested (AE; US-159 T65)"), and row
+  14 via the planned v160/v161 Row 14 text (item 2 superseded, AE v4).
+  New amps-on item 16 (AMPS-ON PRECONDITION LIST); PR #45 check 10
+  carries the same rule (#45 entry). H2 closes (AD) when F-318 batch
+  v19 merges with items 1, 3-5 as worded, the planned Row 14 text and
+  item 16. The AD's #60 verdict rested only on H1 and is now APPROVE.
 - **F-396** Production must never suspend the filter-chain or the
   USBStreamer node (P1 unless the Architect rules otherwise; AE,
   2026-10-26, from the r6b ruling draft section 4): a suspend of the
@@ -4901,6 +4988,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
 - US-159 G16 with AE amendments a-e and architect additions 1-3; test
   T65 (not T62). Medium; re-rate on (i) volume after replug, (ii) relink
   with gate_open true. Match by node and direction.
+  T65 criterion (QE, T65 owner; AE endorses, 2026-10-26), verbatim:
+  "every gains read in T65 follows the F-395 rule: values from pw-cli
+  enum-params only, the fc and fc-out node state logged immediately
+  before and after each read and idle or running; NOT VERIFIABLE is
+  never a pass." AE addition (via QE): T65 case (3), where a
+  USBStreamer replug leaves the gate Closed, also logs the fc, fc-out
+  and USBStreamer node states before, across and after the replug
+  (F-396 evidence). Until T65 passes, safety.md amps-on row 13 reads
+  "To be tested (AE; US-159 T65)" (AE ruling v4 item 5).
 - US-159: G13 event-driven detection, pinned identity, re-adoption; T46
   "second -out node appears while Open"; Nix `managed = true` assertion
   and audit design note; G5a clarification; pinning scope note.
@@ -5549,6 +5645,13 @@ merge needs update-branch and 7 reconfirmations at the new head.
   contradiction was on the main/F-318 side and is fixed in the F-318
   batch ("Gains at boot", C2, amps-on row 14, D-070 row 14 entry;
   AE ADDENDUM 4/5). Follow-ups: F-386.
+  UPDATE (AE ruling v4, AD H2, 2026-10-26; reopens the CLOSED above
+  for one point): before #45 merges, its check 10 carries the F-395
+  rule: gains read via `pw-cli enum-params`, exactly 0.000000; the fc
+  and fc-out node states logged before and after the read and idle or
+  running; NOT VERIFIABLE means not muted, amps stay off; no "gains
+  read 0" or "pw-dump" wording. TW and CM align #45; the TW raises it
+  once #60 is done.
 - **F-386** Gain values read from pw-dump (AE, P2, AE-owned review;
   2026-10-25). AE ruling: gain VALUES are read only with `pw-cli
   enum-params <pi4audio-convolver id> Props`; pw-dump is for
