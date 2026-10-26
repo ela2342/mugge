@@ -571,6 +571,14 @@ priority!"
   (v6 if any is ruled in). #63: worker-3's caa63d9e HELD, not pushed
   (differs from ruling v3); worker-3 conforming in a follow-up commit.
   Disk 4.2 GiB, below the 4.5 line; holds stay (CM).
+  UPDATE (CM, 2026-10-26, after v232): backlog v232 pushed as
+  c28fa793. #63: 3f28b6c7 (conforms to ruling v3) pushed, CI
+  40323763997 running; the "caa63d9e HELD" line is superseded. US-172
+  kit v5: Architect CHANGES REQUESTED R1-R3, AD REQUEST CHANGES M1, AE
+  APPROVE, QE APPROVE WITH CONDITIONS (C1 open); Architect delta
+  rulings D1 NO, D2 YES, D3 YES; worker-2 building v6 off the Pi. The
+  tb-modprobe gate is NOT settled (joint AE + Architect ruling
+  requested); no grant yet. Disk 4.4 GiB; holds stay (CM).
 
 ## Reserved IDs
 
@@ -3264,6 +3272,66 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   relayed v2 spec (dtdebug=1; a 30 s vs 60 s wait; a step-4b greetd
   verb), routed to the Architect for a ruling. If any is ruled in, kit
   v6 follows.
+  UPDATE (CM, 2026-10-26): remaining kit v5 verdicts and the
+  Architect's delta rulings:
+  - Architect: CHANGES REQUESTED, R1-R3
+    (/tmp/us172-r4v5-architect-verdict.md, sha256 20de4f1f, verified
+    at PM read). The design is approved; the Architect re-approves a
+    v6 pin that has R1-R3 with no other change. R1: in tb-modprobe's
+    vc4 rc path, split rc 1 (modprobe returned non-zero, Pi alive:
+    "FINDING [tb-modprobe] modprobe vc4 failed (<mp-vc4 out>), Pi
+    alive", then quick and the MOD reads, no 300 s wait) from rc 2
+    (did not return: current path); print the rc. R2: the tb-modprobe
+    gate also refuses on any '^(VERDICT \[[^]]*\] )?FAIL' in tb-post;
+    whether it also needs '[R4-gains] ok' (vs NOT VERIFIABLE) is the
+    AE's call. R3: add 'pidead && hang "after MOD reads (greetd/labwc
+    start)" vc4' after the MOD reads and before stream_off. worker-2's
+    open points 1-4 all ACCEPTED (overlay_prefix after the dtoverlay
+    lines; ignore_loglevel omitted; greetd -> labwc as an observation;
+    the hung-task bound).
+  - AD: REQUEST CHANGES, M1 medium
+    (/tmp/us172-r4-v5-ad-verdict-e62744a7.md, sha256 5a15d301,
+    verified at PM read): a short SSH stall during modprobe that
+    recovers with the same boot id is classified as outcome (ii), and
+    the owner is told to power-pull a live Pi, losing the MOD reads
+    and the tryboot. Fix: hang() prints "RESULT [tb-modprobe]
+    RECOVERED stall of N s (same boot id), not a hang" with no
+    DECISION or power-pull text, then quick(), classifying from
+    /sys/module/vc4 and /dev/dri; add sandbox flow L (SSH down ~30 s
+    during modprobe vc4, back with the same boot id). L1 low, no
+    change required: the R4 boot is blind on HDMI before vc4 (evidence
+    only on a UART); the CM asks once whether a UART adapter is on
+    hand; the go-text "it should restart by itself" holds only for a
+    hung-task or soft-lockup panic (no hard-lockup detector or runtime
+    watchdog, O-24). The AD re-reviews only M1 + flow L at the new
+    pin.
+  - Architect delta rulings (/tmp/us172-r4v5-architect-deltas.md,
+    sha256 919fcd36, verified at PM read): D1 dtdebug=1 NOT added
+    (tryboot.txt stays config.txt + exactly the 2 declared lines,
+    TB4SHA 030489f3; fallback: if tb-post hits "STOP FINDING o/
+    overlays NOT applied", the follow-up run adds dtdebug=1 with a way
+    to read the log). D2 60 s waits after BOTH modprobes (v2 stands).
+    D3 step 4b ADDED as its own verb tb-greetd, run only on a separate
+    CM go (announced, owner at HDMI, AE (a)); it refuses unless
+    tb-modprobe has outcome (iii) with no STOP/ABORT/FAIL, the same R4
+    boot id, greetd not active, one run per run id; "greetd already
+    active" (started by the udev rule) is the expected path and needs
+    no 4b.
+  - QE accounting (2026-10-26): C1 OPEN (the off-Pi gains() parser
+    test, ok / FAIL / NOT VERIFIABLE, script sha recorded; before
+    CHANGE 1; with v6 it runs on the v6 script, and the QE re-checks
+    diff-only). C2: the QE accepts the AE's note as the AE ruling,
+    holding only while nothing is connected to any Pi output (reverts
+    to the gating form if something is connected).
+  - GATE NOT SETTLED (CM, 2026-10-26): the QE reads the AE's note as
+    satisfying C2; the Architect says R2 (refuse on any FAIL, a gains
+    FAIL included) covers it; the two contradict each other. A joint
+    AE + Architect ruling is requested. Whether a NOT VERIFIABLE gains
+    reading also blocks is the AE's call (Architect).
+  - Next (CM): worker-2 builds v6 off the Pi with R1, R3, M1 + flow L,
+    QE C1 (on the v6 script), the QE's n1-n3, D2 and D3. PM cross-ref:
+    R2 is not in the CM's v6 list (gate ruling pending). No grant yet.
+    AD L1 goes into the go-text.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -4506,6 +4574,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   merges main 29f5c61f) is not pushed. It differs from ruling v3 on
   the ZERO_FILENAME naming, the item-4 report wording and test (a).
   worker-3 is conforming in a follow-up commit.
+  UPDATE (CM, 2026-10-26; supersedes HELD above): 3f28b6c7 is pushed
+  (chain e1813e16 main merge -> caa63d9e -> 3f28b6c7) and follows
+  ruling v3 literally. CI 40323763997 is running; pass condition 0
+  failed / 0 errors of 1364 collected. The caa63d9e points are moot:
+  the AE accepted its wording and the Architect waived the constant
+  name.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
