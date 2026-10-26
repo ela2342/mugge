@@ -60,6 +60,15 @@ jobs:
         run: |
           test -f f262-diag-out/summary.json
           cat f262-diag-out/summary.json
+          # Red job unless all 20 runs produced captures (the diag step is
+          # continue-on-error so the summary and artifacts always come out).
+          python3 - <<'PY'
+          import json, sys
+          s = json.load(open("f262-diag-out/summary.json"))
+          n = s.get("n_runs_with_captures", 0)
+          print("runs with captures:", n, "of", s["n_runs"], "states:", s["states"])
+          sys.exit(0 if n == s["n_runs"] == 20 else 1)
+          PY
 
       - name: Upload diag artifacts
         if: always()
