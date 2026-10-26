@@ -383,6 +383,10 @@ priority!"
   module silently skipped). 174d: web-UI fallback at 2ec2b004 HELD;
   `_deploy_sync` ruling pending with the Architect. #63: AE condition
   (1) MET, checklist bdef865d.
+  UPDATE (CM, 2026-10-26, after v201): backlog v201 pushed as
+  20f92e4d. US-178 allocated (measurement flow deploys via 174d sets;
+  PO: P1, after US-174d, above US-177). 174d: `_deploy_sync` DISABLED
+  (see US-174). F-401 WITHDRAWN as a duplicate of F-362 (PM).
 
 ## Reserved IDs
 
@@ -459,6 +463,11 @@ Allocated 2026-10-26 (PM, checked free across main, origin and all
 worktrees): F-401 (worker-4: test module skipped by an ImportError
 guard). Next free (supersedes the line above): F-402, US-178, D-071,
 T66.
+PM correction 2026-10-26: F-401 WITHDRAWN as a duplicate of F-362
+(retired, not reused). Allocated 2026-10-26 (PM, checked free across
+main, origin and all worktrees): US-178 (Architect: measurement flow
+deploys via 174d sets). Next free (supersedes the line above): F-402,
+US-179, D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -4732,10 +4741,40 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   measurement session `_deploy_sync` (web-ui measurement/session.py)
   auto-deploys on every run, a 3rd F-348 writer; worker-4 recommends
   disabling it. F-401 found and fixed on this branch (see P3).
+  RULING (Architect via CM, 2026-10-26; resolves the pending line
+  above): the measurement `_deploy_sync` is DISABLED (option a), with
+  3 conditions: (1) a non-error terminal state "Filters ready, not
+  deployed"; (2) post-deploy steps skipped and marked, with no PASS
+  against old filters; (3) tests: a mock full run writes nothing, a
+  browser E2E, and POST /measurement/deploy returns 409.
+  deploy_pw_config and reload_convolver are removed if unused.
+  worker-4 has the fence. PO (2026-10-26): this interim state (plus
+  manual Venue deploy, no post-deploy verify) is accepted as a known
+  deviation of 174d until US-178.
+  QE condition (2026-10-26): the revived test_filter_routes tests must
+  not be re-skipped; failures get fixed, or the test is deleted with a
+  reason (see F-362).
+  PM correction (2026-10-26): "F-401" above is F-362 (duplicate ID,
+  see F-362 and the P3 F-401 entry).
   US-174c (measurement on the Pi, web-ui measurement/session.py)
   starts only after F-390/F-391 and builds on them, because it is the
   same file (L-046). Its Pi run is also gated by US-173 H, F-341 AC3,
   D-070 and the amps-on list.
+- **US-178** Measurement flow deploys via 174d sets (Architect,
+  2026-10-26; P1, PO ruling 2026-10-26: directly after US-174d, ranked
+  ABOVE US-177, design principle 6, one button per venue; PO wording:
+  "one-button measure -> deploy -> verify via the safe 174d path").
+  Scope (Architect): deploy_set from the measurement session;
+  activation semantics designed by the AE (PW restart vs reload, owner
+  warning, gate state; CM relay: under the AE's safety rules, announce
+  or skip a PW restart, gate state across activation); post-deploy
+  verification against the new set; status. Entry (PO): the AE's
+  design for activating filters mid-flow. Inherits SecSpec's
+  single-validated-writer AC (see "Coefficient sets: single validated
+  writer"). Interim (174d, Architect): the measurement DEPLOY step is
+  disabled, the session ends at "Filters ready, not deployed", and
+  post-deploy verification is skipped and marked; the PO accepts this
+  as a known deviation of 174d until US-178 (see US-174 RULING).
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
@@ -4770,6 +4809,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   stays High (QE, SecSpec). One item (PM ruling): QE's "1 skipped"
   is this guard. AD (#50 review): keep F-362 high on the
   post-US-163 list, because it hides the S-001 and D-009 tests.
+  Rediscovered (worker-4 via CM, 2026-10-26, briefly filed as F-401):
+  fixed on US-174d by removing the test_filter_routes.py guard. QE
+  condition: the revived tests must not be re-skipped; failures get
+  fixed, or the test is deleted with a reason.
+  QE sweep (2026-10-26): five web-ui unit test files use the
+  module-level "skip the whole file on ImportError" guard. Only
+  test_filter_routes.py is actually hidden today (CI's unexplained "1
+  skipped" in the unit step); the other four run normally. Proposed
+  fix, a small separate PR: replace the 4 remaining guards with plain
+  imports, and add -rs to the nix pytest test apps so skip reasons
+  show in CI. Optional (QE): a lint check against new unlisted
+  module-level skips.
 - **F-373** (AE; availability HIGH, safety-relevant; amps-on item
   13; linked US-159 G16): the USBStreamer sink does not recover after
   USB re-enumeration. AC17-B step (a), CM-CHG-.89-5: authorized 0->1
@@ -7000,8 +7051,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   import of a name that no longer exists. Fixed on US-174d by removing
   the guard. Other modules may use the same skip pattern; unchecked.
   Suggested: a QE sweep.
+  WITHDRAWN (PM, 2026-10-26): duplicate of F-362 (same guard, same
+  module, same `_PROFILES_DIR` cause). The ID F-401 is retired, not
+  reused; all F-401 content and the QE sweep are recorded under F-362.
 - **testing-process.md:324 stale** (TW via CM, 2026-10-26): it still
   says "/deploy returns 200". The TW is deciding where to fix it.
+  UPDATE (TW via CM, 2026-10-26): goes in the TW's 174d batch, written
+  against worker-4's code; nothing for the PM to mirror.
 - development.md, ONE docs item (TW offers to write it; merges UX,
   QE, Arch N2, AD L2, TW F1-F3): run `nix build
   .#checks.<system>.app-source-paths` locally (test-all no longer
