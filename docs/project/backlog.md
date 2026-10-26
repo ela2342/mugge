@@ -526,6 +526,17 @@ priority!"
   cancelled), bundle /tmp/pr63-review-0dc2a40b/ out to all 7; verdicts
   recorded so far: UX, QE. Disk dipped to 4.52 GiB (now 4.6): all nix
   clearances withdrawn until there is more headroom (CM).
+  UPDATE (CM, 2026-10-26, after v227): backlog v227 pushed as
+  36892930. #63 at 0dc2a40b: 6 of 7 verdicts posted on the PR (AE,
+  Architect, UX, SecSpec, TW CI-conditional; AD diff-only); the QE's
+  APPROVED WITH CONDITIONS C1-C4 waits for its file before posting.
+  New defect F-404 (AE: measurement session leaves the gate as found;
+  after error or abort it re-links production with the gate open);
+  blocks US-178 and any amps-on measurement. F-262: driver fix
+  2676be53 pushed, diagnostic rerun triggered; decision rule v2
+  replaces the joint-diag-final.txt Decision block. Disk:
+  /System/Volumes/Data at 2.7 GiB available (4.6 at 12:14Z); no nix
+  client running; cause unknown, reported to team-lead (CM).
 
 ## Reserved IDs
 
@@ -611,6 +622,11 @@ Allocated 2026-10-26 (PM, checked free across main, all origin/* and
 local branches, and worktrees): F-402 (QE option (b): journey-test
 skip-on-500 hides a server error) and F-403 (PO: capture redesign, P1
 after F-262). Next free (supersedes the line above): F-404, US-179,
+D-071, T66.
+Allocated 2026-10-26 (PM, checked free across main, all origin/* and
+local branches, and worktrees): F-404 (AE: measurement session leaves
+the gate as found; re-links production with the gate open after error
+or abort). Next free (supersedes the line above): F-405, US-179,
 D-071, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
@@ -4337,6 +4353,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     no-bypass run published. C4: the P-steps. B1 and B2 met. Removing
     test_format/test_d009 accepted (run_venue_checks covers them).
   - Not yet relayed to the PM: AE, SecSpec, TW, Architect, AD.
+  UPDATE (CM, 2026-10-26; supersedes "Not yet relayed" above): 6 of 7
+  verdicts posted on the PR at 0dc2a40b:
+  - AE: APPROVE, CI-conditional. Architect: APPROVED, CI-conditional.
+    UX: APPROVE, CI-conditional. SecSpec: APPROVE, CI-conditional. AD:
+    APPROVE, diff-only.
+  - TW: APPROVED, documentation complete, CI-conditional. Non-blocking
+    nits: the PR body is stale; AC5 still has the legacy wording
+    "(architect: a small WirePlumber rule)".
+  - QE: APPROVED WITH CONDITIONS C1-C4 (above); the CM posts it once
+    the QE's file arrives.
+  - Open: CI 40321143579; the B4 body fix (worker-3); the
+    jack-self-connect $out quote (QE C1) and the B3 run (QE C3), both
+    waiting on an Architect + QE route because Mac nix is blocked
+    (disk).
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -5207,6 +5237,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   Candidate addition (AE, 2026-10-26, see F-403): if the F-262
   diagnostic's pre-roll RMS shows the pink burst still on at the sweep
   start, that finding gates US-178 together with S4.
+  GATE (AE, 2026-10-26, see F-404): F-404 (session leaves the gate as
+  found; re-links production with the gate open after error or abort)
+  blocks US-178 and any amps-on measurement.
 - **F-262** Session filters use the raw room IR as the correction
   filter (P1, room lane; PO ruling 2026-10-26). Record
   docs/project/defects/F-262.md on main; this entry carries the
@@ -5335,6 +5368,42 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   whether the failing runs line up with the pink warm-up overlapping
   the sweep start; if they do, route it as the "anything else, report"
   outcome.
+  UPDATE (CM, 2026-10-26): driver fix 2676be53 pushed; diagnostic
+  rerun triggered.
+  DECISION RULE v2 (joint AE + Architect, 2026-10-26; replaces the
+  joint-diag-final.txt Decision block, lines 22-28, quoted in the
+  CORRECTION above; verbatim in
+  /tmp/cm-relay/F-262/diag-decision-rule-v2.txt, sha256 5ace2363). Why
+  (verbatim): "in run 40320962929 (n=2 valid) both IR peaks sit within
+  3.4 ms of the 1 s cutoff, and both onsets are > 1.26 s. The old
+  verify_minimum_phase pass/fail is not ground truth. The run that
+  "passed" did so by luck."
+  - Validity: driver_error runs are excluded; the rerun needs >= 20
+    VALID runs (complete or error), otherwise it fails loudly and no
+    verdict is drawn.
+  - Classification, independent of the verify result: TRUNCATED if the
+    deconvolved IR peak lies within 50 ms of the ir_duration cutoff,
+    OR the onset (cross-correlation peak against the generator.rs
+    port, relative to the 0.5 s trim point) is >= 950 ms; OK
+    otherwise.
+  - Decision, verbatim: "CONFIRMED if >= 1 run is TRUNCATED AND every
+    verify failure is TRUNCATED." Named cause "deterministic
+    truncation" (settle + pre-roll exceed ir_duration_s): onset spread
+    < 5 ms and every run TRUNCATED; named cause "jitter": onset spread
+    > 100 ms; anything in between reported as measured; the named
+    cause goes to the QE's T8 under the new defect ID. "REFUTED if no
+    run is TRUNCATED. The worker then reports to the AE and the
+    Architect before any S3 work." Onset spread is always reported; it
+    names the cause, it does not decide.
+  - Reported by name without changing the verdict: every TRUNCATED run
+    that ended "complete", with its
+    closed_loop.minimum_phase_residual_db (evidence that the old gate
+    accepts wrong filters; supports S6).
+  - Unchanged: the AE's <= 2-sample correlation-width rule against the
+    generator.rs port. Rerun logging (AE): peak distance to the window
+    end; correlation -3 dB width for both references;
+    closed_loop.minimum_phase_residual_db on every produced WAV;
+    pw-record and pre-roll start times relative to the sweep start.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -5451,6 +5520,28 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   No priority given; no ID allocated. PM cross-ref: same script as the
   #64 -rs change (test-e2e.sh:133/139, see F-362).
   CM, 2026-10-26: no F-ID unless the QE asks for one.
+- **F-404** A measurement session leaves the D-063 gate in whatever
+  state it found it, and after an error or abort it re-links
+  production with the gate open (AE, 2026-10-26, via CM; ID allocated
+  by the PM, checked free across main, all origin/* and local
+  branches, and worktrees; no P-level given). AE, verbatim: "New
+  defect (next free ID): a measurement session ends with the gate in
+  whatever state it found, and after error or abort it re-links
+  production with the gate open."
+  Fix (AE): every terminal state (complete, error, abort) closes the
+  gate via GM close_gate BEFORE _restore_production_mode. If
+  close_gate fails, the session reports "gate state unknown: amps off"
+  and does not restore production links.
+  Test (AE): an injected error in each phase ends with the gate
+  closed, then production restored, in that order.
+  Gate (AE): blocks US-178 and any amps-on measurement. It does NOT
+  block the F-262 merge; F-262's new fail-closed exits get the fix
+  with the rest.
+  Interim rule (AE): no measurement session with amps on. The
+  diagnostic driver closes the gate between runs.
+  PM cross-ref: docs/architecture/measurement-daemon.md (origin/main)
+  lists restore_production_mode() at the CP-2..CP-7 abort points; no
+  existing backlog entry found for the gate state at session end.
 - **F-361** Link audit protects only ports named playback_AUX0..7
   (link_audit.rs:52). Medium while latent; High on a non-AUX name or a
   non-pro-audio profile. Fix: match by node and direction. Visible fault
