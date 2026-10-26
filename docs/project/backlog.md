@@ -564,6 +564,13 @@ priority!"
   zero checks run in T1. US-172: RUN-4 kit v5 ready (pins e62744a7,
   CM-verified, built off the Pi), out for review with the Architect,
   QE, AE and AD; no grant yet.
+  UPDATE (CM, 2026-10-26, after v231): backlog v231 pushed as
+  48f8d754. US-172 RUN-4 kit v5: AE APPROVE, QE APPROVE WITH
+  CONDITIONS C1-C2 (both before the CHANGE 1 grant); Architect and AD
+  pending; worker-2's 3 deltas vs the v2 spec are with the Architect
+  (v6 if any is ruled in). #63: worker-3's caa63d9e HELD, not pushed
+  (differs from ruling v3); worker-3 conforming in a follow-up commit.
+  Disk 4.2 GiB, below the 4.5 line; holds stay (CM).
 
 ## Reserved IDs
 
@@ -3238,6 +3245,25 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   UPDATE (CM, 2026-10-26): the RUN-4 kit v5 is ready (pins e62744a7,
   CM-verified, built off the Pi). It is out for review with the
   Architect, QE, AE and AD. No grant yet.
+  Kit v5 review (pins e62744a7…6f2), record copies to the PM:
+  - AE: APPROVE (CM, 2026-10-26; verdict file
+    /tmp/us172-r4-v5-review/AE-verdict.txt, sha256 6bbaa5b0 at PM
+    read). Non-blocking note: an R4-gains FAIL does not block
+    tb-modprobe.
+  - QE: APPROVE WITH CONDITIONS (QE accounting, 2026-10-26), both to
+    be met before the CHANGE 1 grant. C1: an off-Pi test of the new
+    gains() parser (ok, FAIL and NOT VERIFIABLE cases), because the
+    sandbox stubbed it. C2: tb-modprobe also gates on R4-gains ok and
+    R4-gate ok, or the AE rules that this isn't needed. Non-blocking
+    notes n1-n3 went to the CM.
+  - PM cross-ref: QE C2 and the AE's non-blocking note address the
+    same point; C2 names an AE ruling as its alternative. Whether the
+    AE note is that ruling is for the QE and AE (via CM).
+  - Pending: Architect, AD.
+  Deltas (worker-2 via CM, 2026-10-26): 3 differences against the
+  relayed v2 spec (dtdebug=1; a 30 s vs 60 s wait; a step-4b greetd
+  verb), routed to the Architect for a ruling. If any is ruled in, kit
+  v6 follows.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
@@ -4476,6 +4502,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   QE CONFIRMED (2026-10-26, from CI 40321143579): the spare-mute zero
   checks run in T1. At the new head the QE checks those 3 tests and
   the 9 test_committed_venue_coeffs tests by name.
+  HELD (CM, 2026-10-26): worker-3's caa63d9e (parent e1813e16, which
+  merges main 29f5c61f) is not pushed. It differs from ruling v3 on
+  the ZERO_FILENAME naming, the item-4 report wording and test (a).
+  worker-3 is conforming in a follow-up commit.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
