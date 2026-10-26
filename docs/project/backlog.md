@@ -224,6 +224,19 @@ priority!"
   unlatch (F-320-E/F-348/F-320-D). The frozen amps-on list is
   untouched. Evidence observe4/GAINS-RECORD.txt, sha256
   ffc000b5...f08d.
+  (8) (AE, via CM, 2026-10-26; PRE-PROD, does NOT block M3), verbatim:
+  "Direct ALSA tools (aplay, speaker-test, amixer) bypass D-063 gains
+  and the gate when PW is stopped. speaker-test emits full-scale noise
+  at the USBStreamer's hw 0 dB maximum. Pre-prod: decide whether to
+  restrict them (audio group, or drop the package from the prod
+  image)."
+  (9) (AE, via CM, 2026-10-26; PRE-PROD) safety.md line for the TW's
+  next batch, verbatim: "Never run aplay or speaker-test against the
+  USBStreamer. Use amixer only to read, never to set USBStreamer
+  controls." Reason: the USBStreamer powers up at hw 0 dB, so lowering
+  it makes a power loss a gain increase, and the cold-cycle proof
+  would need redoing. safety.md is the TW's file; the PM only records
+  the line.
 - AE core items (2026-10-26): #55 and #57 wait only on CI; the HF
   bound; the CHN-50P mask after F-388; the SNR threshold; the 174c/d/e
   reviews; the US-172c/172/173 reviews (US-173 AC2/AC3a); a thermal
@@ -3428,6 +3441,35 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   ANSWERED (Architect, assigned by the CM, 2026-10-26): worker-4
   starts US-174d now (see US-174); US-174c waits for F-390/F-391;
   worker-5 starts F-390 then F-391 now (see F-390).
+  UPDATE (CM, 2026-10-26): M3 code pushed,
+  story/US-173-first-dj-session = 55dc75e3 (parent facd7b8a).
+  flake.nix: pi5-thermal-watch via writePython3Bin (shebang dropped,
+  because the writer prepends its own line; plus an assert).
+  applications.nix: alsa-utils, usbutils and pi5-thermal-watch,
+  packages only. NOT build-verified (disk hold). CM clearance item:
+  build the pi5-thermal-watch derivation (writer flake8) or the
+  mugge-pi5-deploy toplevel once there is room. The AE's ALSA-tools
+  concerns are pre-prod one-liners (8)/(9) and do not block M3.
+  M3 ALSA check (AE; PENDING, team-lead correction, 2026-10-26): a
+  read-only step AFTER the M3 deploy, not yet run: no ALSA units
+  (systemctl list-unit-files | grep -i alsa); a grep of the udev rules
+  plus udevadm for alsactl (90-alsa-restore.rules); the USBStreamer
+  amixer readback identical before and after the deploy. The AE closes
+  it only when the readback matches. Done so far: only the CM's repo
+  grep (nothing enables an ALSA restore service; no
+  sound/hardware.alsa option); nix eval is blocked by the disk hold.
+  Capture-commit kit READY (worker-3, uncommitted, via CM,
+  2026-10-26): unit patch /tmp/w3-us173/mixxx-soundconfig-unit.patch
+  (sha1 878e4a7c), regenerated on 55dc75e3, dry-run clean; Before=
+  dropped, with the "in practice, not by design" comment. The drift
+  test is tightened per the AE (whole-file case-insensitive CamillaDSP
+  check; a never-edit-to-match docstring): the stale file fails 2/5,
+  the corrected sample passes 5/5. The capture commit = captured
+  soundconfig.xml + patch + test, in one commit. Checklist 5f68cf7f
+  unchanged. Open to the AE: should the drift test also pin the
+  literal HP offset 4, besides == speakerChannels? worker-2's answer
+  on a US-172 labwc/session unit is still pending. CI for #55/#57 is
+  still in test-and-build.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
