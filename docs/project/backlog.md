@@ -606,6 +606,10 @@ priority!"
   UPDATE (CM, 2026-10-26, after v238): backlog v238 pushed as
   d0507d0c. US-172: the Architect's tb-greetd addendum is pinned
   (762f9035); the "Pending" line is resolved (CM).
+  UPDATE (CM, 2026-10-26, after v239): backlog v239 pushed as
+  5b3832ac. US-172: QE verified addendum 762f9035; G10 refined into
+  G10a/b/c; worker-2 v6 in progress (not pinned); one consolidated
+  FINAL v6 scope sent to worker-2, one v6 pin, no v7 (CM).
 
 ## Reserved IDs
 
@@ -3418,6 +3422,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     plus [MOD-gains] ok and [MOD-gate] ok, with no STOP/ABORT/FAIL;
     otherwise blocked, no release path. Relayed to worker-2 and the
     QE.
+  - QE (CM, 2026-10-26): addendum 762f9035 verified, no objection. G10
+    refined: G10a (each of the 4 oks missing in turn), G10b (MOD not
+    ok with the release env set is still refused), G10c (all 4 ok plus
+    a STOP/ABORT/FAIL line is refused), plus a happy path. Relayed to
+    worker-2.
+  - worker-2 v6 progress (CM, 2026-10-26; not yet pinned): R1, R3, AD
+    M1, n1 and n2 done. Flows L and L2 pass with no DECISION line. C1
+    pre-results on observe4: (a) ok 8/8, (b) FAIL, (c) NOT VERIFIABLE;
+    to be re-run on the final v6 script.
+  - FINAL v6 scope (CM, 2026-10-26; one consolidated message to
+    worker-2): 919fcd36 D1-D3, gate dcec60fa, addendum 762f9035,
+    G1-G11 with G10a/b/c, and C1. ONE v6 pin, not a v7.
 - **US-173** Supervised home-lab first DJ session (Pi 5) (PO,
   2026-10-25; P1/High; next after US-172). Origin: owner question
   "So how many days until I can use this setup to spin some
