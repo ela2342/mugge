@@ -378,6 +378,11 @@ priority!"
   34530467. #63 head 9b1aa8a1, CI restarted (see US-173). #57 CI
   40310308638 still in test-and-build (started 10:49:50Z, about 22 min
   at the CM's check, within normal range).
+  UPDATE (CM, 2026-10-26, after v200): backlog v200 pushed as
+  2ca434b8. #57 CI still in progress. F-401 allocated (whole test
+  module silently skipped). 174d: web-UI fallback at 2ec2b004 HELD;
+  `_deploy_sync` ruling pending with the Architect. #63: AE condition
+  (1) MET, checklist bdef865d.
 
 ## Reserved IDs
 
@@ -449,6 +454,10 @@ T66.
 Allocated 2026-10-26 (PM, checked free across main, origin and all
 worktrees): F-400 (Architect: conf.d fragments installed hash-named,
 #63). Next free (supersedes the line above): F-401, US-178, D-071,
+T66.
+Allocated 2026-10-26 (PM, checked free across main, origin and all
+worktrees): F-401 (worker-4: test module skipped by an ImportError
+guard). Next free (supersedes the line above): F-402, US-178, D-071,
 T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
@@ -3994,6 +4003,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   C3 is extended with the pw-metadata clock/quantum values, the
   USBStreamer node props unchanged, and a pre-deploy listing of the
   user conf.d.
+  UPDATE (CM, 2026-10-26): AE condition (1) MET (no key overlap; the
+  sentence is in the PR body). Checklist sha1 now bdef865d (AE
+  condition (2) added; supersedes 53daaa70). QE OK on the 9b1aa8a1
+  self-test; QE C1 waits for CI at the final head.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -4714,6 +4727,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   AE one-liner (US-174 measurement, 2026-10-26): measurement capture
   must always target the UMIK-1 node explicitly, never the default
   source.
+  UPDATE (CM, 2026-10-26): the web-UI fallback is committed at
+  2ec2b004 (HELD). New ruling pending with the Architect: the
+  measurement session `_deploy_sync` (web-ui measurement/session.py)
+  auto-deploys on every run, a 3rd F-348 writer; worker-4 recommends
+  disabling it. F-401 found and fixed on this branch (see P3).
   US-174c (measurement on the Pi, web-ui measurement/session.py)
   starts only after F-390/F-391 and builds on them, because it is the
   same file (L-046). Its Pi run is also gated by US-173 H, F-341 AC3,
@@ -6975,6 +6993,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   step because RLIMIT_NICE is 0), so it competes with Mixxx's non-RT
   threads. If it is too slow, the option is LimitNICE for user@1000,
   so PW's stock nice -11 applies; that needs a separate ruling.
+- **F-401** Whole test module silently skipped (worker-4 via CM,
+  2026-10-26; no priority given): tests/unit/test_filter_routes.py has
+  been skipped as a whole module since e5ed2cea. A `try: import ...
+  _PROFILES_DIR except ImportError: pytest.skip(...)` guard hid an
+  import of a name that no longer exists. Fixed on US-174d by removing
+  the guard. Other modules may use the same skip pattern; unchecked.
+  Suggested: a QE sweep.
+- **testing-process.md:324 stale** (TW via CM, 2026-10-26): it still
+  says "/deploy returns 200". The TW is deciding where to fix it.
 - development.md, ONE docs item (TW offers to write it; merges UX,
   QE, Arch N2, AD L2, TW F1-F3): run `nix build
   .#checks.<system>.app-source-paths` locally (test-all no longer
