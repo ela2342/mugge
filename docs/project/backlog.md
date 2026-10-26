@@ -3385,6 +3385,44 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   12 still says "the C+/z rules"; per the ruling, item 12 commits the
   soundconfig with test_mixxx_soundconfig.py and the mixxx-soundconfig
   oneshot.
+  RULED (Architect, via CM, 2026-10-26; supersedes "Open to the
+  Architect" above): usbutils goes into the Pi 5 systemPackages with
+  M3, next to alsa-utils, package only. The P-step stays on sysfs
+  regardless: `grep -H .
+  /sys/bus/usb/devices/*/{product,idVendor,idProduct,speed}`,
+  labelled.
+  P-step checklist REPLACED again (worker-3, via CM, 2026-10-26):
+  frozen copy /tmp/pm-backlog/us173-p-step-checklist-5f68cf7f.txt
+  (sha1 5f68cf7f) supersedes 585801d2, and with it the PM notes above.
+  Item 4: the labelled sysfs grep plus /proc/asound/cards and
+  /dev/snd/midi*, and "lsusb -t as well" after M3. Item 12: the
+  soundconfig commits with test_mixxx_soundconfig.py and the
+  mixxx-soundconfig user oneshot in applications.nix; the message
+  names the D-040 drift and speakerChannels (production.nix) as the
+  shared source for the HP channels.
+  Oneshot follow-up (Architect, via CM, 2026-10-26; supersedes
+  "Before=labwc.service" in the RULED paragraph above): (a) the unit,
+  the captured soundconfig.xml and the drift test go in ONE commit;
+  lib.mkIf false is rejected, and the patch stays out of the worktree
+  until the capture exists. (b) Drop Before=: the Pi 5 has no
+  labwc.service, because greetd runs labwc directly. The ordering is
+  guaranteed in practice, not by design, and the comment says so. The
+  CM is checking with worker-2 whether US-172 adds a labwc or session
+  unit. (c) Backlog line: when Mixxx gets a launcher or unit (gig
+  auto-start, design principle 6), the soundconfig install moves into
+  it (ExecStartPre or the launcher's first step).
+  AE drift-test conditions (via CM, 2026-10-26): the test asserts
+  values, not a byte match: API = JACK; no CamillaDSP device; Master
+  offset 0 width 2; Headphones offset 4 width 2 (GM out_4/5). A
+  capture that differs is a FAIL; the test is never edited to match
+  the capture. The AE reviews the XML at PR time. Standing condition:
+  before any audio, log pw-link -l and confirm there is no direct
+  Mixxx->USBStreamer link.
+  M3 cleared (CM, 2026-10-26) for worker-3 as code-only prep
+  (alsa-utils, usbutils, writePython3Bin, flake8), no nix. The CM
+  asked the Architect whether worker-4 (US-174c/d from 64d32f3e) and
+  worker-5 (F-390 from #55 head 17144904) can start now under the
+  parallel-work rule.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
