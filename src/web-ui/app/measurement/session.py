@@ -276,8 +276,8 @@ class MeasurementSession:
         self._deploy_result: Optional[Dict[str, Any]] = None
         self._recordings: Dict[str, np.ndarray] = {}  # US-096: raw recordings for cal
         # Deconvolved impulse responses per channel/position (populated after
-        # each sweep by deconvolution; used by _build_correction_filters for
-        # spatial averaging).
+        # each sweep by deconvolution; used by _measured_irs for spatial
+        # averaging).
         self._impulse_responses: Dict[str, np.ndarray] = {}
         # Time alignment delays computed from impulse responses (seconds).
         self._time_alignment_delays: Dict[str, float] = {}
@@ -918,15 +918,16 @@ class MeasurementSession:
 
     # -- Spatial averaging ---------------------------------------------------
 
-    def _build_correction_filters(
+    def _measured_irs(
         self, profile: dict,
     ) -> Optional[Dict[str, np.ndarray]]:
-        """Build per-speaker-key correction filters from impulse responses.
+        """Per-speaker-key MEASURED impulse responses (not corrections).
 
         Reads from ``_impulse_responses`` (deconvolved IRs), NOT raw
         ``_recordings`` (unprocessed sweeps).  For positions=1, returns
         the single IR per channel directly.  For positions>1, spatially
-        averages across positions per channel.
+        averages across positions per channel.  The corrections are built
+        from these by correction_from_measurement() (F-262).
 
         Returns None if no impulse responses are available (e.g. when
         deconvolution has not run yet — crossover-only mode).
@@ -952,7 +953,7 @@ class MeasurementSession:
             log.warning("No channel-to-speaker mapping — skipping correction")
             return None
 
-        correction_filters: Dict[str, np.ndarray] = {}
+        measured: Dict[str, np.ndarray] = {}
 
         for ch in self._config.channels:
             spk_key = ch_to_spk.get(ch.index)
@@ -972,17 +973,17 @@ class MeasurementSession:
 
             if len(per_position) == 1:
                 # Single position — use directly (no averaging needed)
-                correction_filters[spk_key] = per_position[0]
+                measured[spk_key] = per_position[0]
             else:
                 # Multi-position — spatial average
                 _ensure_rc_path()
                 from room_correction.spatial_average import spatial_average
-                correction_filters[spk_key] = spatial_average(per_position)
+                measured[spk_key] = spatial_average(per_position)
                 log.info("Spatial average for %s: %d positions -> %d samples",
                          spk_key, len(per_position),
-                         len(correction_filters[spk_key]))
+                         len(measured[spk_key]))
 
-        return correction_filters if correction_filters else None
+        return measured if measured else None
 
     # -- FILTER_GEN ----------------------------------------------------------
 
@@ -1039,10 +1040,12 @@ class MeasurementSession:
             load_profile_with_identities,
             validate_and_raise,
         )
+        from room_correction.combine import uniform_d009_trim
+        from room_correction.correction import correction_from_measurement
         from room_correction.generate_profile_filters import generate_profile_filters
         from room_correction.export import export_filter
         from room_correction.verify import (
-            verify_d009, verify_minimum_phase, verify_format,
+            gate_summary, mandatory_hpf_by_file, run_correction_gate,
         )
         from room_correction.pw_config_generator import generate_filter_chain_conf
 
@@ -1070,26 +1073,42 @@ class MeasurementSession:
             "step": "averaging", "message": "Building correction filters",
         })
 
-        # Build correction filters from sweep recordings.
-        # For positions=1 uses the single recording; for positions>1
-        # spatially averages across mic positions per channel.
-        # Returns None when no recordings exist (crossover-only mode).
-        correction_filters = self._build_correction_filters(profile)
-        if correction_filters:
-            log.info("Using %d correction filters from sweep recordings",
-                     len(correction_filters))
+        # Measured IRs per speaker: the single IR for positions=1, the
+        # spatial average for positions>1. None when no IRs exist
+        # (crossover-only mode).
+        measured_irs = self._measured_irs(profile)
+        target_curve = profile.get("target_curve", "flat")
+        correction_filters = None
+        if measured_irs:
+            log.info("Building %d corrections from measured IRs",
+                     len(measured_irs))
             # GAP-6: Save IRs with speaker-key naming so filter_routes
             # _load_correction_filters() can find them for later re-generation.
             from room_correction.export import export_filter as _export_ir
             ir_out = os.path.join(self._config.output_dir, "impulse_responses")
             os.makedirs(ir_out, exist_ok=True)
-            for spk_key, ir_data in correction_filters.items():
+            for spk_key, ir_data in measured_irs.items():
                 spk_path = os.path.join(ir_out, f"ir_{spk_key}.wav")
                 _export_ir(ir_data, spk_path,
                            n_taps=len(ir_data), sr=sr)
                 log.info("Saved speaker-key IR: %s", spk_path)
+            # F-262: the same shared function as venue_pipeline and
+            # filter_routes. A bad IR is a measurement error, never a filter.
+            correction_filters = {}
+            for spk_key, ir_data in measured_irs.items():
+                speaker = profile["speakers"].get(spk_key)
+                if speaker is None:
+                    raise RuntimeError(
+                        f"Measurement for {spk_key} has no profile speaker")
+                try:
+                    correction_filters[spk_key] = correction_from_measurement(
+                        ir_data, speaker,
+                        target_curve=target_curve, n_taps=n_taps, sr=sr)
+                except ValueError as exc:
+                    raise RuntimeError(
+                        f"Measurement rejected for {spk_key}: {exc}") from exc
         else:
-            log.info("No correction filters — crossover-only generation")
+            log.info("No measured IRs — crossover-only generation")
 
         self._enqueue_progress({
             "type": "filter_gen_progress", "phase": "in_progress",
@@ -1106,6 +1125,8 @@ class MeasurementSession:
             n_taps=n_taps,
             sr=sr,
         )
+        # F-262 S5: one uniform D-009 trim across all speaker channels.
+        combined_filters, d009_trim_db = uniform_d009_trim(combined_filters)
 
         self._check_abort("CP-5c")
 
@@ -1122,38 +1143,42 @@ class MeasurementSession:
 
         os.makedirs(output_dir, exist_ok=True)
         output_paths = {}
+        filenames = {}
         for spk_key, fir in combined_filters.items():
             ts = timestamp.strftime("%Y%m%d_%H%M%S")
             filename = f"combined_{spk_key}_{ts}.wav"
             path = os.path.join(output_dir, filename)
             export_filter(fir, path, n_taps=n_taps, sr=sr)
             output_paths[spk_key] = path
+            filenames[spk_key] = filename
 
         self._enqueue_progress({
             "type": "filter_gen_progress", "phase": "in_progress",
             "step": "minimum_phase",
-            "message": "Verifying filters (D-009, min-phase, format)",
+            "message": "Verifying filters (D-009, min-phase, format, closed loop)",
         })
 
-        # Verify (same D-009 interlock as filter_routes)
+        # F-262 S6: the shared gate (same as filter_routes and the venue
+        # pipeline).
+        all_pass, gate_results = run_correction_gate(
+            output_dir,
+            {filenames[k]: "fir" for k in combined_filters},
+            closed_loop_inputs={
+                filenames[k]: (measured_irs[k], c, profile["speakers"][k])
+                for k, c in (correction_filters or {}).items()},
+            mandatory_hpf_hz=mandatory_hpf_by_file(profile, identities, filenames),
+            expected_taps=n_taps, expected_sr=sr, target_curve=target_curve)
         verifications = []
-        all_pass = True
-        for name, path in sorted(output_paths.items()):
-            d009 = verify_d009(path)
-            min_phase = verify_minimum_phase(path)
-            fmt = verify_format(path, expected_taps=n_taps, expected_sr=sr)
-            ch_pass = bool(
-                d009.passed and fmt.passed and min_phase.passed)
-            ch_result = {
-                "channel": name,
-                "d009_pass": bool(d009.passed),
-                "d009_peak_db": float(round(
-                    d009.details.get("max_gain_db", 0.0), 2)),
-                "min_phase_pass": bool(min_phase.passed),
-                "format_pass": bool(fmt.passed),
-                "all_pass": ch_pass,
-            }
+        for name in sorted(output_paths):
+            ch_result = {"channel": name,
+                         **gate_summary(filenames[name], gate_results)}
+            correction = (correction_filters or {}).get(name)
+            if correction is not None:
+                ch_result["reference_level_db"] = float(
+                    round(correction.reference_level_db, 2))
+                ch_result["ref_band_hz"] = list(correction.ref_band_hz)
             verifications.append(ch_result)
+            ch_pass = ch_result["all_pass"]
             self._enqueue_progress({
                 "type": "filter_gen_progress", "phase": "in_progress",
                 "step": "minimum_phase",
@@ -1161,8 +1186,6 @@ class MeasurementSession:
                 "channel": name,
                 "channel_result": ch_result,
             })
-            if not ch_pass:
-                all_pass = False
 
         # Generate PW filter-chain .conf (uses speaker keys directly)
         pw_conf = generate_filter_chain_conf(
@@ -1189,6 +1212,7 @@ class MeasurementSession:
             },
             "verification": verifications,
             "all_pass": all_pass,
+            "d009_trim_db": float(d009_trim_db),
             "pw_conf_path": pw_conf_path,
             "pw_conf_content": pw_conf,
             "n_taps": n_taps,
