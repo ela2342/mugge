@@ -52,6 +52,10 @@ GAIN_NODES = (
 )
 PROBE_GAIN = "gain_left_hp"
 PROBE_MULT = 0.05
+# config.js SLIDER_STEP / SLIDER_MAX: a range input snaps its value to the
+# step, so a readback of 0.000631 shows as 0.0006.
+SLIDER_STEP = 0.0001
+SLIDER_MAX = 0.1
 
 # Rewrites gate.state / gate.gate_open in every /ws/system frame.
 WS_GATE_OVERRIDE = """
@@ -201,8 +205,9 @@ class TestGainApplyRefused:
             "fetch('/api/v1/config').then(r => r.json()).then(d => d.gains)")
         for name in GAIN_NODES:
             ui = float(pg.locator(f"#cfg-gain-{name}").input_value())
-            assert ui == pytest.approx(min(gains[name]["mult"], 0.1)), (
-                f"{name} slider {ui} != readback {gains[name]}")
+            assert ui == pytest.approx(min(gains[name]["mult"], SLIDER_MAX),
+                                       abs=SLIDER_STEP / 2), (
+                f"{name} slider {ui} != readback {gains[name]} (to the slider step)")
         assert float(pg.locator(f"#cfg-gain-{PROBE_GAIN}").input_value()) != PROBE_MULT
         expect(pg.locator("#cfg-gain-apply")).to_be_disabled()
 
