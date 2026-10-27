@@ -177,6 +177,68 @@ crossover shape, making the protection permanent once measurements are done.
 **Historical note:** Under the pre-D-040 CamillaDSP architecture, this was
 implemented as an IIR Butterworth HPF in the CamillaDSP YAML pipeline.
 
+### Subsonic Corner on Channels With a Crossover HP (F-383)
+
+The identity's `mandatory_hpf_hz` stays the protection spec; no profile or
+identity data changes. What F-383 changes is where the separate subsonic
+filter's corner sits on a channel that also has a crossover highpass:
+
+- **Protection is judged on the product.** On a channel with a crossover HP,
+  the D-031 protection is judged on the product of the crossover HP and the
+  subsonic, not on the subsonic alone. Lowpass and full-range channels keep
+  the subsonic at `mandatory_hpf_hz`.
+- **One derivation.** `derive_subsonic()` in
+  `src/room-correction/room_correction/crossover.py` derives the corner for
+  every combine caller (profile filters, the runner, the Bose generator). No
+  caller keeps the old corner.
+- **Rule R4.** Let m be `mandatory_hpf_hz`, fc_hp the channel's crossover HP
+  edge, and s the highest subsonic corner among its crossover partners (the
+  legs whose LP edge is fc_hp), or none if no partner has a subsonic. The
+  target is fc_hp/5 if s is none, otherwise max(fc_hp/5, s). The corner moves
+  to the target only if target < m < fc_hp; otherwise it stays at m. Below
+  the partner's own subsonic, a lower corner gains nothing at the crossover
+  and costs phase alignment between the two legs.
+- **Gates on a moved corner.** A moved corner must pass both checks on the
+  product, or filter generation stops with `SubsonicDerivationError`:
+  - NB-C4a: at every 1/12-octave point from 10 Hz to m, the product
+    attenuates at least as much as the subsonic at m with the same slope;
+  - L2': the attenuation at m/2 is at least 18 dB re the passband peak above
+    m, and the attenuation at m/4 is at least the attenuation at m/2.
+
+  On a failure no other corner is tried and the crossover frequency is never
+  changed. A crossover-frequency change is an audible tonal change and goes
+  to the owner.
+- `verify_mandatory_hpf` still checks every channel at m on the shipped
+  product.
+
+Moved set at C4 (`94f14fcc`); all other channels keep m:
+
+| Profile | Channels | m -> corner | Partner s | fc_hp |
+|---------|----------|-------------|-----------|-------|
+| 2way-200hz-markaudio-ultimax | sat_left/right | 80 -> 40 Hz | none | 200 Hz |
+| 2way-80hz-sealed | sat_left/right | 25 -> 20 Hz | 20 Hz | 80 Hz |
+| bose-home-chn50p | sat_left/right | 80 -> 42 Hz | 42 Hz | 200 Hz |
+| pa-2way-80hz-lavoce | sat_left/right | 55 -> 20 Hz | 20 Hz | 80 Hz |
+| workshop-c3d-elf-3way | hf_left/right | 800 -> 200 Hz | 100 Hz | 1000 Hz |
+
+**Pending step 4 (not a result): composition tail.** At C4 the composition
+row is log only; the tail does not gate yet. With step 4, the shipped
+combined filter on every cascade channel is gated on tail and decay (the
+last 5% at or below -45 dB, and decaying). The step-4 PR must report that
+tail/decay for every profile it ships. A buildable, shipped profile without
+that data, or any tail/decay failure, is a STOP to the audio engineer and
+the architect, with no workaround. Only a profile that does not build today
+(2way-80hz-ported, workshop-xrk10f-fullrange) may be reported as "cannot be
+generated", named as such.
+
+This changes driver protection, so it carries the audio engineer's veto in
+the PR. Until F-383 step 5 has landed, the CM hold F-383-AMPS stays: the
+new filters are not cleared for amps-on use.
+
+Rulings: C4.1 (Architect NOTE `1f1c1f05`, AE FINAL `80801402`); C4 fence
+`41fd1486` (AE `92386ab9`); R4 `62cd5e5c` (AE `9973bc8b`); s = max over
+partners `3267ecf2` (AE `a5885b6c`).
+
 ### Known Gap: Signal-Gen Measurement Path (D-040)
 
 Post-D-040, the RT signal generator replaces CamillaDSP for measurement I/O.
@@ -202,6 +264,7 @@ clip) is required. Tracked as a D-031 future safety item.
   Requirement"
 - `configs/speakers/identities/` -- `mandatory_hpf_hz` field in each identity
 - S-007 lab note: CHN-50P config deployment with HPF verification
+- F-383: subsonic corner derivation on channels with a crossover HP (rule R4)
 
 ---
 
