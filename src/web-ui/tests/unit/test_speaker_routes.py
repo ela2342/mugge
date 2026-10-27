@@ -23,18 +23,15 @@ from starlette.testclient import TestClient
 
 from app.main import app
 
-try:
-    from app.speaker_routes import (
-        _list_yamls, _read_yaml, _speakers_dir, _SAFE_NAME,
-        _validate_identity, _validate_profile, _slugify,
-        _write_yaml, _delete_yaml, _deep_validate_profile,
-        _VALID_TOPOLOGIES, _VALID_ROLES, _VALID_ENCLOSURE_TYPES,
-        _VALID_GM_MODES, _MAX_CHANNEL,
-        _compute_target_gains, _activate_profile_impl,
-        _PW_CONF_FILENAME,
-    )
-except ImportError:
-    pytest.skip("speaker_routes not available (pre-commit)", allow_module_level=True)
+from app.speaker_routes import (
+    _list_yamls, _read_yaml, _speakers_dir, _SAFE_NAME,
+    _validate_identity, _validate_profile, _slugify,
+    _write_yaml, _delete_yaml, _deep_validate_profile,
+    _VALID_TOPOLOGIES, _VALID_ROLES, _VALID_ENCLOSURE_TYPES,
+    _VALID_GM_MODES, _MAX_CHANNEL,
+    _compute_target_gains, _activate_profile_impl,
+    _PW_CONF_FILENAME,
+)
 
 
 # ── Fixtures ──────────────────────────────────────────────────────

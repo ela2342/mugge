@@ -19,12 +19,9 @@ from starlette.testclient import TestClient
 
 from app.main import app
 
-try:
-    from app.speaker_routes import (
-        _speakers_dir, _PW_CONF_FILENAME,
-    )
-except ImportError:
-    pytest.skip("speaker_routes not available (pre-commit)", allow_module_level=True)
+from app.speaker_routes import (
+    _speakers_dir, _PW_CONF_FILENAME,
+)
 
 
 # ── Test data ────────────────────────────────────────────────────

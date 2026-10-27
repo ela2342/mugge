@@ -57,10 +57,7 @@ from room_correction.excursion_estimator import (
     compute_xmax_safe_level_dbfs,
 )
 
-try:
-    from app.speaker_routes import _deep_validate_profile, _read_yaml
-except ImportError:
-    pytest.skip("speaker_routes not available", allow_module_level=True)
+from app.speaker_routes import _deep_validate_profile, _read_yaml
 
 
 # ── Helpers ──────────────────────────────────────────────────────
