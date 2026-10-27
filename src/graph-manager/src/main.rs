@@ -226,10 +226,16 @@ fn run_pipewire(
             (Some(name), gains)
         }
         None => {
-            // First boot (US-113): load default venue, persist it, populate
-            // pending_gains. Gate stays CLOSED per D-063 safety invariant.
-            match venue::load_default_venue(&resolved_venues_dir, &resolved_state_dir) {
-                Ok(name) => {
+            // First boot (US-113): load the default venue only if
+            // PI4AUDIO_DEFAULT_VENUE names one (F-465: no built-in default),
+            // persist it, populate pending_gains. Gate stays CLOSED per D-063.
+            let default_name = venue::default_venue_from_env();
+            match venue::load_default_venue(default_name.as_deref(), &resolved_venues_dir, &resolved_state_dir) {
+                Ok(None) => {
+                    info!("US-113: no persisted venue and {} unset — starting with no venue", venue::DEFAULT_VENUE_ENV);
+                    (None, Vec::new())
+                }
+                Ok(Some(name)) => {
                     let gains = match venue::find_venue(&resolved_venues_dir, &name) {
                         Ok(profile) => venue::venue_gains(&profile),
                         Err(e) => {

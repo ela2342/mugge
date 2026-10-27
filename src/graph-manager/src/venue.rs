@@ -206,14 +206,12 @@ pub fn load_persisted_venue(dir: &Path) -> Option<String> {
 }
 
 // ---------------------------------------------------------------------------
-// Default venue on first boot (US-113)
+// Default venue on first boot (US-113, opt-in since F-465)
 // ---------------------------------------------------------------------------
 
-/// Default venue name when no persisted venue exists.
-const DEFAULT_VENUE_NAME: &str = "foh-passthrough";
-
-/// Env var to override the default venue name.
-const DEFAULT_VENUE_ENV: &str = "PI4AUDIO_DEFAULT_VENUE";
+/// Env var naming the venue to load on first boot. There is no built-in
+/// default (F-465, AE 013d2fa8 (B)3): unset means no venue at startup.
+pub const DEFAULT_VENUE_ENV: &str = "PI4AUDIO_DEFAULT_VENUE";
 
 /// Validate a venue name: alphanumeric, hyphens, and underscores only.
 ///
@@ -239,24 +237,18 @@ pub fn validate_venue_name(name: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Resolve the default venue name for first boot (US-113).
-///
-/// Reads `PI4AUDIO_DEFAULT_VENUE` env var if set, otherwise uses
-/// `"foh-passthrough"`. Validates the name before returning.
+/// Read the first-boot default venue name from `PI4AUDIO_DEFAULT_VENUE`.
 ///
 /// Call once at startup and pass the result through.
-pub fn default_venue_name() -> Result<String, String> {
-    let name = std::env::var(DEFAULT_VENUE_ENV)
-        .unwrap_or_else(|_| DEFAULT_VENUE_NAME.to_string());
-    validate_venue_name(&name)?;
-    Ok(name)
+pub fn default_venue_from_env() -> Option<String> {
+    std::env::var(DEFAULT_VENUE_ENV).ok()
 }
 
 /// Load the default venue on first boot (US-113).
 ///
 /// When `load_persisted_venue()` returns `None`, this function:
-/// 1. Reads the default venue name from env var / built-in default
-/// 2. Finds and validates the venue profile
+/// 1. Returns `Ok(None)` if no default is configured (nothing persisted)
+/// 2. Validates the name, finds and validates the venue profile
 /// 3. Persists the venue name (so subsequent boots use normal restore)
 /// 4. Returns the venue name (NOT the gains — gate stays CLOSED per D-063)
 ///
@@ -264,28 +256,27 @@ pub fn default_venue_name() -> Result<String, String> {
 /// `pending_gains`, but does NOT open the gate. The operator must
 /// explicitly call `open_gate` after confirming the venue.
 pub fn load_default_venue(
+    default_name: Option<&str>,
     venues_dir: &Path,
     state_dir: &Path,
-) -> Result<String, String> {
-    let name = default_venue_name()?;
+) -> Result<Option<String>, String> {
+    let Some(name) = default_name else {
+        return Ok(None);
+    };
+    validate_venue_name(name)?;
 
     // Verify the venue profile actually exists and parses.
-    let _profile = find_venue(venues_dir, &name)?;
+    let _profile = find_venue(venues_dir, name)?;
 
     // Persist so subsequent boots use the normal restore path.
-    persist_venue_name(&name, state_dir);
+    persist_venue_name(name, state_dir);
 
     log::info!(
         "US-113: loaded default venue '{}' on first boot (source: {})",
-        name,
-        if std::env::var(DEFAULT_VENUE_ENV).is_ok() {
-            DEFAULT_VENUE_ENV
-        } else {
-            "built-in default"
-        },
+        name, DEFAULT_VENUE_ENV,
     );
 
-    Ok(name)
+    Ok(Some(name.to_string()))
 }
 
 // ---------------------------------------------------------------------------
@@ -801,41 +792,76 @@ channels:
     }
 
     // -----------------------------------------------------------------------
-    // Default venue loading (US-113)
+    // Default venue loading (US-113, opt-in since F-465)
     // -----------------------------------------------------------------------
 
-    #[test]
-    fn load_default_venue_on_first_boot() {
-        let venues_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .join("configs/venues");
+    /// Fresh temp dir for one test.
+    fn fresh_dir(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(name);
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
 
-        if !venues_dir.exists() {
-            return;
+    /// Venues dir holding one valid 8-channel venue at -20 dB.
+    fn test_venues_dir(name: &str, venue_name: &str) -> PathBuf {
+        let dir = fresh_dir(name);
+        let mut yaml = format!("name: \"{}\"\ndescription: \"F-465 test\"\nchannels:\n", venue_name);
+        for ch in ["1_sat_l", "2_sat_r", "3_sub1_lp", "4_sub2_lp", "5_eng_l", "6_eng_r", "7_iem_l", "8_iem_r"] {
+            yaml.push_str(&format!("  {}:\n    gain_db: -20\n    delay_ms: 0\n    coefficients: \"dirac.wav\"\n", ch));
         }
+        fs::write(dir.join(format!("{}.yml", venue_name)), yaml).unwrap();
+        dir
+    }
 
-        let state_dir = std::env::temp_dir().join("us113_default_venue_test");
+    // F-465 test (1): no default configured -> no venue, nothing persisted.
+    #[test]
+    fn load_default_venue_unset_is_none() {
+        let venues_dir = test_venues_dir("f465_t1_venues", "f465-venue");
+        let state_dir = fresh_dir("f465_t1_state");
+
+        assert_eq!(load_default_venue(None, &venues_dir, &state_dir), Ok(None));
+        assert!(!state_dir.join(LAST_VENUE_FILE).exists(), "nothing may be persisted");
+        assert_eq!(load_persisted_venue(&state_dir), None);
+
+        let _ = fs::remove_dir_all(&venues_dir);
         let _ = fs::remove_dir_all(&state_dir);
+    }
 
-        let name = load_default_venue(&venues_dir, &state_dir).unwrap();
-        assert_eq!(name, "foh-passthrough");
+    // F-465 test (2): default set to a valid venue -> loads and persists.
+    #[test]
+    fn load_default_venue_set_loads_and_persists() {
+        let venues_dir = test_venues_dir("f465_t2_venues", "f465-venue");
+        let state_dir = fresh_dir("f465_t2_state");
 
-        // Verify it was persisted.
-        let persisted = load_persisted_venue(&state_dir);
-        assert_eq!(persisted, Some("foh-passthrough".to_string()));
+        let name = load_default_venue(Some("f465-venue"), &venues_dir, &state_dir).unwrap();
+        assert_eq!(name, Some("f465-venue".to_string()));
+        assert_eq!(load_persisted_venue(&state_dir), Some("f465-venue".to_string()));
 
+        let _ = fs::remove_dir_all(&venues_dir);
+        let _ = fs::remove_dir_all(&state_dir);
+    }
+
+    // F-465 test (3): default set to an unknown name -> error, nothing persisted.
+    #[test]
+    fn load_default_venue_unknown_errors_without_persist() {
+        let venues_dir = test_venues_dir("f465_t3_venues", "f465-venue");
+        let state_dir = fresh_dir("f465_t3_state");
+
+        let err = load_default_venue(Some("no-such-venue"), &venues_dir, &state_dir).unwrap_err();
+        assert!(err.contains("venue not found"), "Error: {}", err);
+        assert!(!state_dir.join(LAST_VENUE_FILE).exists(), "nothing may be persisted");
+
+        let _ = fs::remove_dir_all(&venues_dir);
         let _ = fs::remove_dir_all(&state_dir);
     }
 
     #[test]
     fn load_default_venue_nonexistent_venue_dir() {
-        let state_dir = std::env::temp_dir().join("us113_nodir_test");
-        let _ = fs::remove_dir_all(&state_dir);
+        let state_dir = fresh_dir("us113_nodir_test");
 
         let err = load_default_venue(
+            Some("f465-venue"),
             Path::new("/tmp/us113_nonexistent_venues_xyz"),
             &state_dir,
         )
@@ -845,8 +871,27 @@ channels:
             "Error: {}",
             err,
         );
+        assert!(!state_dir.join(LAST_VENUE_FILE).exists(), "nothing may be persisted");
 
         let _ = fs::remove_dir_all(&state_dir);
+    }
+
+    // F-465 test (4): no built-in default venue name in the non-test code.
+    // Comment lines are skipped; everything after `#[cfg(test)]` is tests.
+    #[test]
+    fn no_builtin_default_venue_in_source() {
+        for (file, src) in [("venue.rs", include_str!("venue.rs")), ("main.rs", include_str!("main.rs"))] {
+            let code = src.split("#[cfg(test)]").next().unwrap();
+            for (i, line) in code.lines().enumerate() {
+                if line.trim_start().starts_with("//") {
+                    continue;
+                }
+                assert!(
+                    !line.contains("foh-passthrough"),
+                    "{}:{}: built-in default venue name: {}", file, i + 1, line,
+                );
+            }
+        }
     }
 
     // -----------------------------------------------------------------------
