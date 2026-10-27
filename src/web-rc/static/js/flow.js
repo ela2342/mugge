@@ -12,6 +12,7 @@
 //   { type: "output-stop" }                          4e ramp, then suspend
 //   { type: "meter-calibration", splOffsetDb }
 //   { type: "make-sweep", token, plan }              -> sweepReady()
+//   { type: "resume", token }                        -> resumed()
 //   { type: "record", token, frames }                -> recorded()
 //                                                       (+ output "started")
 //   { type: "sweep-start", channel, samples, gain }
@@ -50,6 +51,9 @@ export const FLOW = Object.freeze({
   // AE a1736914: |output onset - capture start| bound, the same as
   // webrc_pipeline.MAX_ONSET_S. More is an audio error.
   MAX_ONSET_S: 0.05,
+  // AE d1f133da Q2: the level noise's "stopped" must come this soon
+  // after Measure, or capture 1 does not start (audio error).
+  STOPPED_TIMEOUT_S: 1.0,
   ACK_ITEMS: 4,                 // 4a checkboxes (UX 64c83e3e), output last
 });
 
@@ -318,7 +322,8 @@ export class Flow {
       this.run.micRmsDbfs = reading.rmsDbfs;
       return [];
     }
-    if (this.step === STEP.MEASURE && this.run.capturing) {
+    if (this.step === STEP.MEASURE &&
+        (this.run.capturing || this._beforeCapture1())) {
       const cause = sweepStopCause(this.run.confirmed.micRmsDbfs, reading,
         this.run.confirmed.splOffsetDb);
       if (cause) return this._abortMeasure(cause);
@@ -326,20 +331,37 @@ export class Flow {
     return [];
   }
 
-  /** Clock tick: the 30 s level-check timeout without meter reports. */
+  /**
+   * Clock tick (wall clock): the 30 s level-check timeout without meter
+   * reports, and the wait between the level noise and capture 1.
+   */
   tick(nowMs) {
     if (this.step === STEP.LEVEL && this.run.lc) {
       const cause = this.run.lc.tick(nowMs);
       if (cause) return this._stopLevel(cause);
     }
+    if (this.step === STEP.MEASURE && this._beforeCapture1()) {
+      return this._settle(nowMs);
+    }
     return [];
   }
 
-  /** An output-worklet message: started / clamped / error / stopped / ended. */
-  output(msg) {
+  /**
+   * An output-worklet message: started / clamped / error / stopped / ended.
+   * nowMs: when it came (wall clock).
+   */
+  output(msg, nowMs) {
     if (msg.type === "error") return this.audioError();
     if (msg.type === "stopped" && msg.cause === LATCH.HEARTBEAT) {
       return this._hold(STOP.HEARTBEAT);
+    }
+    if (msg.type === "stopped" && this.step === STEP.MEASURE &&
+        this._beforeCapture1() && this.run.noiseStoppedMs === null) {
+      // The level noise reached zero: the room decays from here.
+      if (msg.cause) return this.autoStop(msg.cause);
+      if (!Number.isFinite(nowMs)) return this.audioError();  // no wait to time
+      this.run.noiseStoppedMs = nowMs;
+      return [];
     }
     if (!this.run.sounding) return [];
     if (msg.type === "started") {
@@ -438,8 +460,11 @@ export class Flow {
 
   // -- measure (AC4g, 7, 8) -----------------------------------------------
 
-  /** Level confirmed: stop the noise, plan the sweep at the same RMS (A4). */
-  measure() {
+  /**
+   * Level confirmed: stop the noise, plan the sweep at the same RMS (A4).
+   * Capture 1 waits for the noise's "stopped" and the room's decay.
+   */
+  measure(nowMs) {
     const lc = this.run.lc;
     if (this.step !== STEP.LEVEL || !lc || !lc.running ||
         this.run.micRmsDbfs === null) {
@@ -456,6 +481,7 @@ export class Flow {
       splOffsetDb: this.splOffsetDb,
     };
     this.run.plan = plan;
+    this.run.stopAskedMs = nowMs;
     this.run.sounding = false;
     this.step = STEP.MEASURE;
     this.notice = null;
@@ -476,13 +502,20 @@ export class Flow {
     played.set(samples, pre);
     this.run.played = played;
     this.run.gain = gain;
-    return this._capture();
+    this._wait("settle");         // tick() goes on
+    return [];
   }
 
   /** The pipeline could not make the sweep: named error, back to the level check. */
   sweepFailed(token, message) {
     if (!this._is(token, "sweep")) return [];
     return this._abortMeasure("rejected", message);
+  }
+
+  /** The context runs: capture 1's pre-roll is real input (AE 30d2bcef Q3). */
+  resumed(token) {
+    if (!this._is(token, "resume")) return [];
+    return this._capture();
   }
 
   /**
@@ -558,6 +591,7 @@ export class Flow {
     this.run = {
       lc: null, band: null, entry: null, micRmsDbfs: null, confirmed: null,
       plan: null, played: null, gain: 0, captures: [], capturing: false,
+      stopAskedMs: null, noiseStoppedMs: null,
       onsets: [], onsetFrame: null, onsetClock: null,
       sounding: false, pending: null, result: null,
     };
@@ -585,6 +619,31 @@ export class Flow {
   _is(token, kind) {
     const p = this.run.pending;
     return !!p && p.kind === kind && p.token === token;
+  }
+
+  /** Measure pressed, capture 1 not yet recording. */
+  _beforeCapture1() {
+    const p = this.run.pending;
+    return !!p && (p.kind === "sweep" || p.kind === "settle" ||
+      p.kind === "resume");
+  }
+
+  /**
+   * AE d1f133da, 30d2bcef: capture 1 starts no sooner than ROOM_DECAY_S
+   * of wall-clock time after the level noise reached zero, and on a
+   * running context. No "stopped" in time: fail closed, as an output fault.
+   */
+  _settle(nowMs) {
+    const r = this.run;
+    if (r.noiseStoppedMs === null) {
+      return nowMs - r.stopAskedMs >= 1000 * FLOW.STOPPED_TIMEOUT_S
+        ? this.audioError() : [];
+    }
+    if (r.pending.kind !== "settle" ||
+        nowMs - r.noiseStoppedMs < 1000 * LIMITS.ROOM_DECAY_S) {
+      return [];
+    }
+    return [{ type: "resume", token: this._wait("resume") }];
   }
 
   _capture() {

@@ -226,7 +226,10 @@ export function resultPlots(r) {
 export function progressText(flow) {
   const p = flow.run.pending;
   if (!p) return "";
-  if (p.kind === "sweep") return TEXT.PREPARING;
+  // UX: the wait for the room (settle, resume) shows PREPARING too.
+  if (p.kind === "sweep" || p.kind === "settle" || p.kind === "resume") {
+    return TEXT.PREPARING;
+  }
   if (p.kind === "record") {
     return flow.run.captures.length === 0 ? TEXT.CAPTURE_1 : TEXT.CAPTURE_2;
   }

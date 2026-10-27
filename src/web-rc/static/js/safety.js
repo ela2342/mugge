@@ -26,7 +26,10 @@ export const LIMITS = Object.freeze({
   HPF_RATIO: 0.8,                // AC4g/6b, subsonic corner = 0.8 x limit
   SWEEP_F_MAX_HZ: 20000,         // AC4g
   SWEEP_MAX_S: 10,               // AC4g
-  CAPTURE_TAIL_S: 1,             // AC2d, capture >= sweep + 1 s
+  // AE d1f133da Q1: the room's decay after a stimulus stops. The AC2d
+  // capture tail (capture >= sweep + 1 s) and the wait between the level
+  // noise and capture 1 (flow.js) both read it.
+  ROOM_DECAY_S: 1,
 });
 
 export function dbToLinear(db) {
@@ -78,7 +81,7 @@ export function checkDspFlags(settings) {
 
 /** AC2d: capture length for a sweep, in seconds. */
 export function captureSeconds(sweepSeconds) {
-  return sweepSeconds + LIMITS.CAPTURE_TAIL_S;
+  return sweepSeconds + LIMITS.ROOM_DECAY_S;
 }
 
 // -- AC3: per-channel declarations -----------------------------------------

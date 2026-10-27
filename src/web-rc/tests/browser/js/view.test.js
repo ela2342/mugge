@@ -7,7 +7,8 @@ import {
 } from "../../../static/js/calibration.js";
 import { topStepDbfs } from "../../../static/js/crest.js";
 import {
-  ROLE, STOP, changeRole, levelNoiseBand, levelNoiseBandLabel, stopMessage,
+  LIMITS, ROLE, STOP, changeRole, levelNoiseBand, levelNoiseBandLabel,
+  stopMessage,
 } from "../../../static/js/safety.js";
 import {
   REPORT_FILE, TEXT, ackOutputText, capText, channelLabel, micLevelText,
@@ -237,11 +238,20 @@ export async function test_measure_progress_and_result() {
   ackAll(f);
   f.startLevel(0);
   f.meter(0, { peakDbfs: -40, rmsDbfs: -50 });
-  const m = f.measure();
+  const m = f.measure(0);
   eq(viewModel(f).measure.progress, TEXT.PREPARING);
   const sweep = new Float32Array(SR);
   for (let i = 0; i < SR; i++) sweep[i] = 0.5 * Math.sin(i / 10);
-  const s = f.sweepReady(m[1].token, sweep);
+  eq(f.sweepReady(m[1].token, sweep).length, 0);
+  eq(viewModel(f).measure.progress, TEXT.PREPARING, "the room settles");
+  f.output({ type: "stopped", frame: 0, clamped: false, cause: null }, 0);
+  for (let t = 0; t < 1000 * LIMITS.ROOM_DECAY_S; t += 250) {
+    eq(f.tick(t).length, 0);
+    eq(viewModel(f).measure.progress, TEXT.PREPARING, "settling at " + t);
+  }
+  const r = f.tick(1000 * LIMITS.ROOM_DECAY_S);
+  eq(viewModel(f).measure.progress, TEXT.PREPARING, "the context resumes");
+  const s = f.resumed(r[0].token);
   eq(viewModel(f).measure.progress, "Capture 1 of 2: playing sweep…");
   eq(viewModel(f).stopVisible, true, "STOP during the captures (4e)");
   const s2 = rec(f, s[0].token, new Float32Array(1));
@@ -365,9 +375,11 @@ export async function test_notice_detail_after_capture_2_stop() {
   ackAll(f);
   f.startLevel(0);
   f.meter(0, { peakDbfs: -40, rmsDbfs: -50 });
-  const m = f.measure();
+  const m = f.measure(0);
   const sweep = new Float32Array(SR).fill(0.1);
-  const s = f.sweepReady(m[1].token, sweep);
+  f.sweepReady(m[1].token, sweep);
+  f.output({ type: "stopped", frame: 0, clamped: false, cause: null }, 0);
+  const s = f.resumed(f.tick(1000 * LIMITS.ROOM_DECAY_S)[0].token);
   rec(f, s[0].token, new Float32Array(1));
   f.userStop();
   const vm = viewModel(f);

@@ -24,7 +24,7 @@ import {
 
 const TICK_MS = 250;
 const AUDIO_TYPES = new Set(["noise-start", "sweep-start", "gain", "output-stop",
-  "meter-calibration", "record", "record-cancel"]);
+  "meter-calibration", "resume", "record", "record-cancel"]);
 
 export class App {
   constructor(doc, { io, rc, now } = {}) {
@@ -34,9 +34,10 @@ export class App {
     this.flow = new Flow();
     this.io = io || new AudioIO({
       onMeter: (m) => this.apply(this.flow.meter(this.now(), m)),
-      onOutput: (m) => this.apply(this.flow.output(m)),
+      onOutput: (m) => this.apply(this.flow.output(m, this.now())),
       onRecorded: (id, samples, startFrame, clock) =>
         this.apply(this.flow.recorded(id, samples, startFrame, clock)),
+      onResumed: (token) => this.apply(this.flow.resumed(token)),
       onError: () => this.apply(this.flow.audioError()),
     });
     this.rc = rc || null;
@@ -234,7 +235,7 @@ export class App {
     on("start", "click", () => this.apply(this.flow.startLevel(this.now())));
     on("again", "click", () => this.apply(this.flow.startLevel(this.now())));
     on("plus", "click", () => this.apply(this.flow.stepUp(this.now())));
-    on("measure", "click", () => this.apply(this.flow.measure()));
+    on("measure", "click", () => this.apply(this.flow.measure(this.now())));
     on("report", "click", () => this._downloadReport());
 
     // 4e STOP on Esc; 4d page hidden; AC11 unsaved work.

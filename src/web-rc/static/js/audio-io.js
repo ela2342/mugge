@@ -8,7 +8,7 @@
 //   io.info()                           // -> flow.setAudio()
 //   io.execute(cmd)                     // noise-start, gain, output-stop,
 //                                       // meter-calibration, sweep-start,
-//                                       // record, record-cancel
+//                                       // resume, record, record-cancel
 //
 // The context runs only while something plays or records; otherwise it is
 // suspended (4e). Both worklet modules load from the same base URL, so they
@@ -68,8 +68,9 @@ export function deviceKey(devices) {
 let clockSeq = 0;
 
 export class AudioIO {
-  constructor({ onMeter, onOutput, onRecorded, onError } = {}) {
+  constructor({ onMeter, onOutput, onRecorded, onResumed, onError } = {}) {
     this.onMeter = onMeter || (() => {});
+    this.onResumed = onResumed || (() => {});
     this.onOutput = onOutput || (() => {});
     this.onRecorded = onRecorded || (() => {});
     this.onError = onError || (() => {});
@@ -188,6 +189,9 @@ export class AudioIO {
         break;
       case "meter-calibration":
         this.meter.port.postMessage({ type: "calibration", splOffsetDb: cmd.splOffsetDb });
+        break;
+      case "resume":
+        this._resume(cmd.token);
         break;
       case "record":
         this.recording = cmd.token;
@@ -310,6 +314,20 @@ export class AudioIO {
       this.recording = null;
       this.onRecorded(msg.id, msg.samples, msg.startFrame, this.meter.clock);
     }
+  }
+
+  /**
+   * AE 30d2bcef Q3: report once the context runs, so a recording started
+   * then has no part on a still-resuming context. Suspends again if
+   * nothing was started.
+   */
+  _resume(token) {
+    const ctx = this.ctx;
+    ctx.resume().then(() => {
+      if (this.ctx !== ctx) return;
+      this.onResumed(token);
+      this._idle();
+    }, (e) => this.onError(String(e && e.message || e)));
   }
 
   _run() {

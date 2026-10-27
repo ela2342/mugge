@@ -20,6 +20,8 @@ const UMIK_TEXT = '"Sens Factor =-1.378dB, SERNO: 7161942"\n' +
   "20.000\t-0.13\n";
 const UMIK = parseCalibration(UMIK_TEXT);
 const QUIET = { peakDbfs: -60, rmsDbfs: -70 };
+/** The output worklet's zero-reached for a commanded stop. */
+const STOPPED = { type: "stopped", frame: 0, clamped: false, cause: null };
 
 function sub40() {
   return { ...changeRole({ enclosure: "closed" }, ROLE.SUBWOOFER), limitHz: 40,
@@ -78,7 +80,19 @@ function toMeasure(f, now = 0) {
   f.startLevel(now);
   while (f.canStepUp()) f.stepUp(now);
   f.meter(now, { peakDbfs: -40, rmsDbfs: -50 });
-  return f.measure();
+  return f.measure(now);
+}
+
+/**
+ * The sweep is ready, the level noise reaches zero at `now`, the room has
+ * decayed and the context runs: capture 1's commands.
+ */
+function settled(f, token, samples, now = 0) {
+  const cmds = f.sweepReady(token, samples);
+  if (cmds.length) return cmds;
+  f.output(STOPPED, now);
+  const r = f.tick(now + 1000 * LIMITS.ROOM_DECAY_S);
+  return types(r) === "resume" ? f.resumed(r[0].token) : r;
 }
 
 // -- setup gating (AC2, AC3, 4a) --------------------------------------------
@@ -335,14 +349,14 @@ export async function test_c6_sweep_needs_a_new_passed_level_check() {
   f.startLevel(0);
   f.meter(0, { peakDbfs: -40, rmsDbfs: -50 });
   f.output({ type: "stopped", cause: STOP.MIC_CLIP });
-  eq(f.measure().length, 0, "stopped: no sweep");
+  eq(f.measure(0).length, 0, "stopped: no sweep");
   f.startLevel(1000);
-  eq(f.measure().length, 0, "the old reading does not count");
+  eq(f.measure(0).length, 0, "the old reading does not count");
   f.meter(1000, { peakDbfs: -0.5, rmsDbfs: -20 });
-  eq(f.measure().length, 0, "the new check did not pass");
+  eq(f.measure(0).length, 0, "the new check did not pass");
   f.startLevel(2000);
   f.meter(2000, { peakDbfs: -40, rmsDbfs: -50 });
-  eq(types(f.measure()), "output-stop,make-sweep", "a new passed check");
+  eq(types(f.measure(0)), "output-stop,make-sweep", "a new passed check");
 }
 
 /** UX 64c83e3e: one checkbox per item; all ticked, or no acknowledgement. */
@@ -432,10 +446,10 @@ export async function test_measure_two_captures_then_analyze() {
   eq(plan.seconds, 10, "AC4g: at most 10 s");
   close(plan.hpfHz, 32, 1e-12);
   eq(plan.sampleRate, SR);
-  eq(f.measure().length, 0, "once");
+  eq(f.measure(0).length, 0, "once");
 
   const unit = unitSweep();
-  const s = f.sweepReady(m[1].token, unit);
+  const s = settled(f, m[1].token, unit);
   eq(types(s), "record,sweep-start");
   const pre = FLOW.PRE_ROLL_S * SR;
   eq(s[0].frames, Math.round((FLOW.PRE_ROLL_S + 10 + 1) * SR), "AC2d window");
@@ -481,14 +495,148 @@ export async function test_measure_two_captures_then_analyze() {
   eq(f.hasUnsavedWork(), false);
 }
 
+/**
+ * AE d1f133da, 30d2bcef: capture 1 starts no sooner than ROOM_DECAY_S of
+ * wall-clock time after the level noise's "stopped" (not after the click),
+ * and only once the context runs again.
+ */
+export async function test_capture_1_waits_for_the_room_to_settle() {
+  eq(LIMITS.ROOM_DECAY_S, 1, "the AC2d tail's constant");
+  const f = atLevel();
+  const m = toMeasure(f, 5000);
+  eq(types(m), "output-stop,make-sweep");
+  eq(f.sweepReady(m[1].token, unitSweep()).length, 0, "no capture yet");
+  eq(f.tick(5900).length, 0, "no stopped yet");
+  eq(f.output(STOPPED, 5900).length, 0);
+  eq(f.tick(6000).length, 0, "1 s after the click: the room still decays");
+  eq(f.tick(6899).length, 0);
+  eq(f.output(STOPPED, 6800).length, 0, "a second stopped");
+  const r = f.tick(6900);
+  eq(types(r), "resume", "1 s after stopped");
+  eq(f.tick(7150).length, 0, "once");
+  eq(f.resumed(r[0].token + 1).length, 0, "not this resume");
+  eq(types(f.resumed(r[0].token)), "record,sweep-start", "running: capture 1");
+  eq(f.resumed(r[0].token).length, 0, "once");
+
+  // On the page's 250 ms tick: the first record is ROOM_DECAY_S to
+  // ROOM_DECAY_S + 250 ms after stopped.
+  for (const stoppedAt of [100, 101, 237, 349]) {
+    const g = atLevel();
+    const gm = toMeasure(g, 0);
+    g.sweepReady(gm[1].token, unitSweep());
+    g.output(STOPPED, stoppedAt);
+    let t = 0, cmds = [];
+    for (; t < 5000 && !cmds.length; t += 250) cmds = g.tick(t);
+    t -= 250;
+    eq(types(cmds), "resume", "at " + stoppedAt);
+    assert(t - stoppedAt >= 1000 * LIMITS.ROOM_DECAY_S, "waited " + (t - stoppedAt));
+    assert(t - stoppedAt < 1000 * LIMITS.ROOM_DECAY_S + 250, "late " + t);
+  }
+
+  // The room settled before the sweep was ready: the next tick goes on.
+  const h = atLevel();
+  const hm = toMeasure(h, 0);
+  h.output(STOPPED, 20);
+  eq(h.tick(3000).length, 0, "no sweep yet");
+  eq(h.sweepReady(hm[1].token, unitSweep()).length, 0);
+  eq(types(h.tick(3250)), "resume");
+}
+
+/** AE d1f133da Q2: no "stopped": fail closed as an output fault, never the click. */
+export async function test_no_stopped_fails_closed() {
+  const f = atLevel();
+  const m = toMeasure(f, 1000);
+  f.sweepReady(m[1].token, unitSweep());
+  eq(f.tick(1000 + 1000 * FLOW.STOPPED_TIMEOUT_S - 1).length, 0, "not yet");
+  eq(f.tick(1000 + 1000 * FLOW.STOPPED_TIMEOUT_S).length, 0, "nothing sounds");
+  eq(f.step, STEP.LEVEL);
+  eq(f.notice.cause, STOP.AUDIO_ERROR);
+  eq(f.holdText, stopMessage(STOP.AUDIO_ERROR), "held until the devices reopen");
+  eq(f.output(STOPPED, 2500).length, 0, "a late stopped");
+  eq(f.tick(1e9).length, 0, "no capture later");
+
+  // Also while the sweep is still being made.
+  const g = atLevel();
+  toMeasure(g, 0);
+  g.tick(1000 * FLOW.STOPPED_TIMEOUT_S);
+  eq(g.notice.cause, STOP.AUDIO_ERROR);
+
+  // A "stopped" without a time can't start the wait.
+  for (const t of [undefined, NaN, Infinity]) {
+    const h = atLevel();
+    const hm = toMeasure(h, 0);
+    h.sweepReady(hm[1].token, unitSweep());
+    h.output(STOPPED, t);
+    eq(h.notice.cause, STOP.AUDIO_ERROR, String(t));
+    eq(h.tick(1e9).length, 0, String(t));
+  }
+}
+
+/**
+ * AE d1f133da Q3: in the wait nothing sounds and no gain changes; a stop
+ * aborts it; mic checks still apply; a retry starts a fresh wait.
+ */
+export async function test_the_settle_wait_aborts_and_restarts() {
+  const NO_SOUND = ["noise-start", "sweep-start", "gain", "record"];
+  const silent = (cmds, why) => {
+    for (const c of cmds) assert(!NO_SOUND.includes(c.type), why + ": " + c.type);
+  };
+  const stops = [
+    [(h) => h.userStop(), STOP.USER],
+    [(h) => h.hidden(), STOP.HIDDEN],
+    [(h) => h.deviceChange({ ...AUDIO }), STOP.DEVICE],
+    [(h) => h.output({ ...STOPPED, cause: STOP.MIC_CLIP }, 10), STOP.MIC_CLIP],
+    [(h) => h.meter(10, { peakDbfs: -0.5, rmsDbfs: -20 }), STOP.MIC_CLIP],
+  ];
+  for (const phase of ["sweep", "settle", "resume"]) {
+    for (const [act, cause] of stops) {
+      // After the plain "stopped" the noise node is gone: no second one.
+      if (phase === "resume" && act === stops[3][0]) continue;
+      const why = phase + " " + cause;
+      const h = atLevel();
+      const hm = toMeasure(h, 0);
+      let r = [];
+      if (phase !== "sweep") h.sweepReady(hm[1].token, unitSweep());
+      if (phase === "resume") {
+        h.output(STOPPED, 0);
+        r = h.tick(1000);
+        eq(types(r), "resume", why);
+      }
+          silent(act(h), why);
+      assert(h.step !== STEP.MEASURE, why);
+      eq(h.notice.cause, cause, why);
+      if (r.length) eq(h.resumed(r[0].token).length, 0, why + ": late resume");
+      silent(h.tick(5000), why + ": later tick");
+      eq(settled(h, hm[1].token, unitSweep(), 6000).length, 0, why + ": stale");
+    }
+  }
+  // A retry waits again from its own "stopped".
+  const f = atLevel();
+  const fm = toMeasure(f, 0);
+  f.sweepReady(fm[1].token, unitSweep());
+  f.output(STOPPED, 0);
+  f.userStop();
+  const m = toMeasure(f, 10000);
+  f.sweepReady(m[1].token, unitSweep());
+  eq(f.tick(10900).length, 0, "the old stopped does not count");
+  f.output(STOPPED, 10500);
+  eq(f.tick(11250).length, 0);
+  eq(types(f.tick(11500)), "resume");
+  // In the wait the mic may fall freely: the room decays.
+  const g = atLevel();
+  toMeasure(g, 0);
+  eq(g.meter(10, { peakDbfs: -90, rmsDbfs: -100 }).length, 0);
+  eq(g.step, STEP.MEASURE);
+}
+
 export async function test_measure_needs_a_running_level_check_with_reading() {
   const f = atLevel();
-  eq(f.measure().length, 0, "not started");
+  eq(f.measure(0).length, 0, "not started");
   f.startLevel(0);
-  eq(f.measure().length, 0, "no reading yet");
+  eq(f.measure(0).length, 0, "no reading yet");
   f.meter(0, QUIET);
   f.userStop();
-  eq(f.measure().length, 0, "stopped");
+  eq(f.measure(0).length, 0, "stopped");
 }
 
 /** AE a1736914: each capture's measured output onset goes to the analysis. */
@@ -497,7 +645,7 @@ export async function test_onset_reaches_the_analysis() {
   const m = toMeasure(f);
   eq(f.output({ type: "started", frame: 7 }).length, 0, "level-check noise");
   eq(f.run.onsetFrame, null, "not a capture's onset");
-  const s = f.sweepReady(m[1].token, unitSweep());
+  const s = settled(f, m[1].token, unitSweep());
   f.output({ type: "started", frame: 1000 + 128, clock: 5 });
   f.output({ type: "started", frame: 5000, clock: 5 });
   const s2 = f.recorded(s[0].token, new Float32Array(1), 1000, 5);
@@ -515,7 +663,7 @@ export async function test_unknown_onset_is_an_audio_error() {
   eq(limit, 2400, "the same bound as webrc_pipeline.MAX_ONSET_S");
   for (const onset of [-limit, limit]) {
     const f = atLevel();
-    const s = f.sweepReady(toMeasure(f)[1].token, unitSweep());
+    const s = settled(f, toMeasure(f)[1].token, unitSweep());
     eq(types(rec(f, s[0].token, new Float32Array(1), onset)),
       "record,sweep-start", "in bounds: " + onset);
   }
@@ -548,7 +696,7 @@ export async function test_unknown_onset_is_an_audio_error() {
   ];
   for (const [why, act] of bad) {
     const f = atLevel();
-    const s = f.sweepReady(toMeasure(f)[1].token, unitSweep());
+    const s = settled(f, toMeasure(f)[1].token, unitSweep());
     eq(types(act(f, s[0].token)), "output-stop,record-cancel", why);
     eq(f.step, STEP.LEVEL, why);
     eq(f.notice.cause, STOP.AUDIO_ERROR, why);
@@ -556,7 +704,7 @@ export async function test_unknown_onset_is_an_audio_error() {
   }
   // Capture 2 needs its own onset.
   const f = atLevel();
-  const s = f.sweepReady(toMeasure(f)[1].token, unitSweep());
+  const s = settled(f, toMeasure(f)[1].token, unitSweep());
   const s2 = rec(f, s[0].token, new Float32Array(1));
   eq(types(f.recorded(s2[0].token, new Float32Array(1), 4096, 1)),
     "output-stop,record-cancel", "no onset for capture 2");
@@ -574,7 +722,7 @@ export async function test_sweep_auto_stop_discards_captures() {
   for (const [act, cause] of stops) {
     const f = atLevel();
     const m = toMeasure(f); // level-check mic RMS -50
-    const s = f.sweepReady(m[1].token, unitSweep());
+    const s = settled(f, m[1].token, unitSweep());
     const s2 = rec(f, s[0].token, new Float32Array(10));
     eq(f.meter(0, { peakDbfs: -30, rmsDbfs: -44.1 }).length, 0, "5.9 dB rise ok");
     eq(types(act(f)), "output-stop,record-cancel", cause);
@@ -584,7 +732,7 @@ export async function test_sweep_auto_stop_discards_captures() {
     eq(f.notice.detail, FLOW_TEXT.BOTH_DISCARDED, "stop in capture 2: " + cause);
     eq(f.recorded(s2[0].token, new Float32Array(10)).length, 0,
       "late capture discarded: " + cause);
-    eq(f.measure().length, 0, "needs a fresh level check");
+    eq(f.measure(0).length, 0, "needs a fresh level check");
     release(f, cause);
     eq(types(f.startLevel(0)), "noise-start");
   }
@@ -594,7 +742,7 @@ export async function test_sweep_auto_stop_discards_captures() {
 export async function test_stop_in_capture_1_has_no_both_discarded_line() {
   const f = atLevel();
   const m = toMeasure(f);
-  f.sweepReady(m[1].token, unitSweep());
+  settled(f, m[1].token, unitSweep());
   f.userStop();
   eq(f.step, STEP.LEVEL);
   eq(f.notice.text, stopMessage(STOP.USER));
@@ -612,7 +760,7 @@ export async function test_sweep_failure_names_the_error() {
   eq(f.sweepFailed(m[1].token, "ValueError: bad limit").length, 0, "no sound");
   eq(f.step, STEP.LEVEL);
   eq(f.notice.text, "ValueError: bad limit");
-  eq(f.sweepReady(m[1].token, unitSweep()).length, 0, "late sweep dropped");
+  eq(settled(f, m[1].token, unitSweep()).length, 0, "late sweep dropped");
 }
 
 export async function test_stop_while_waiting_for_sweep_or_analysis() {
@@ -620,11 +768,11 @@ export async function test_stop_while_waiting_for_sweep_or_analysis() {
   const m = toMeasure(f);
   eq(f.userStop().length, 0, "nothing sounding");
   eq(f.step, STEP.LEVEL);
-  eq(f.sweepReady(m[1].token, unitSweep()).length, 0, "stale sweep");
+  eq(settled(f, m[1].token, unitSweep()).length, 0, "stale sweep");
 
   const g = atLevel();
   const gm = toMeasure(g);
-  const s = g.sweepReady(gm[1].token, unitSweep());
+  const s = settled(g, gm[1].token, unitSweep());
   const s2 = rec(g, s[0].token, new Float32Array(1));
   const a = rec(g, s2[0].token, new Float32Array(1));
   g.hidden();
@@ -638,20 +786,20 @@ export async function test_sweep_over_cap_is_refused() {
   const m = toMeasure(f);
   const spike = new Float32Array(SR); // RMS tiny, peak huge after the gain
   spike[100] = 1;
-  const cmds = f.sweepReady(m[1].token, spike);
+  const cmds = settled(f, m[1].token, spike);
   eq(cmds.length, 0, "no sound");
   eq(f.step, STEP.LEVEL);
   eq(f.notice.text, FLOW_TEXT.SWEEP_OVER_CAP);
   const g = atLevel();
   const gm = toMeasure(g);
-  eq(g.sweepReady(gm[1].token, new Float32Array(SR)).length, 0, "silent sweep");
+  eq(settled(g, gm[1].token, new Float32Array(SR)).length, 0, "silent sweep");
   assert(CAP_LINEAR > 0);
 }
 
 export async function test_analysis_failure_names_the_error() {
   const f = atLevel();
   const m = toMeasure(f);
-  const s = f.sweepReady(m[1].token, unitSweep());
+  const s = settled(f, m[1].token, unitSweep());
   const s2 = rec(f, s[0].token, new Float32Array(1));
   const a = rec(f, s2[0].token, new Float32Array(1));
   f.analysisFailed(a[1].token, "Capture rejected: SNR 12 dB below 20 dB.");
@@ -670,8 +818,8 @@ export async function test_analyze_request_records_calibration() {
   const f = atLevel({ cal: true });
   f.startLevel(0);
   f.meter(0, { peakDbfs: -40, rmsDbfs: -50 });
-  const m = f.measure();
-  const s = f.sweepReady(m[1].token, unitSweep());
+  const m = f.measure(0);
+  const s = settled(f, m[1].token, unitSweep());
   const s2 = rec(f, s[0].token, new Float32Array(1));
   const r = rec(f, s2[0].token, new Float32Array(1))[1].request;
   eq(r.calibrated, true);
@@ -691,8 +839,8 @@ export async function test_unbound_calibration_sends_no_curve() {
   assert(f.calibrationUnbound);
   f.startLevel(0);
   f.meter(0, { peakDbfs: -40, rmsDbfs: -50 });
-  const m = f.measure();
-  const s = f.sweepReady(m[1].token, unitSweep());
+  const m = f.measure(0);
+  const s = settled(f, m[1].token, unitSweep());
   const s2 = rec(f, s[0].token, new Float32Array(1));
   const r = rec(f, s2[0].token, new Float32Array(1))[1].request;
   eq(r.calibrated, false);
@@ -703,7 +851,7 @@ export async function test_unbound_calibration_sends_no_curve() {
 
 function finishedFilter(f, name) {
   const m = toMeasure(f);
-  const s = f.sweepReady(m[1].token, unitSweep());
+  const s = settled(f, m[1].token, unitSweep());
   const s2 = rec(f, s[0].token, new Float32Array(1));
   const a = rec(f, s2[0].token, new Float32Array(1));
   f.analysisDone(a[1].token, { fileName: name, wavBytes: new Uint8Array(1) });
@@ -714,7 +862,7 @@ export async function test_device_change_resets_and_marks() {
   const f = atLevel({ cal: true });
   finishedFilter(f, "sub_ch2_browser-generated.wav");
   const m = toMeasure(f);
-  const s = f.sweepReady(m[1].token, unitSweep());
+  const s = settled(f, m[1].token, unitSweep());
   const cmds = f.deviceChange({ ...AUDIO });
   eq(types(cmds), "output-stop,record-cancel,meter-calibration");
   eq(cmds[2].splOffsetDb, null, "meter uncalibrated");

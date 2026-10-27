@@ -21,10 +21,11 @@ function rig() {
     close() { log.push("close"); this.state = "closed"; return Promise.resolve(); },
   };
   const outputs = {}, meterOut = [];
-  const msgs = { output: [], meter: [], recorded: [] };
+  const msgs = { output: [], meter: [], recorded: [], resumed: [] };
   const io = new AudioIO({
     onOutput: (m) => msgs.output.push(m), onMeter: (m) => msgs.meter.push(m),
     onRecorded: (...args) => msgs.recorded.push(args),
+    onResumed: (t) => msgs.resumed.push(t),
   });
   io.ctx = ctx;
   io.meter = { port: { postMessage: (m) => meterOut.push(m) } };
@@ -226,4 +227,35 @@ export async function test_started_carries_the_node_clock() {
   io.clock = 4;                   // a new context opened meanwhile
   outputs.A.send({ type: "started", frame: 0 });
   eq(msgs.output[0].clock, 3);
+}
+
+/**
+ * AE 30d2bcef Q3: "resume" is reported once the context runs, so capture 1's
+ * pre-roll is never recorded on a still-resuming context.
+ */
+export async function test_resume_reports_once_running() {
+  const { io, ctx, log, meterOut, msgs } = rig();
+  io.execute({ type: "resume", token: 7 });
+  eq(since(log, 0), "resume");
+  eq(msgs.resumed.length, 0, "not before resume() resolves");
+  await sleep(0);
+  eq(msgs.resumed.join(), "7");
+  eq(since(log, 0), "resume, suspend", "nothing started: suspended again");
+
+  // The flow starts the capture on the report: no suspend.
+  const b = rig();
+  b.io.onResumed = (t) => b.io.execute({ type: "record", token: t, frames: 10 });
+  b.io.execute({ type: "resume", token: 8 });
+  eq(b.meterOut.length, 0, "no record before the context runs");
+  await sleep(0);
+  eq(b.meterOut.map((m) => m.type + " " + m.id).join(), "record 8");
+  eq(since(b.log, 0), "resume", "running, not suspended");
+  assert(b.ctx.state === "running");
+
+  // Closed or reopened meanwhile: no report.
+  const c = rig();
+  c.io.execute({ type: "resume", token: 9 });
+  c.io.ctx = null;
+  await sleep(0);
+  eq(c.msgs.resumed.length, 0);
 }
