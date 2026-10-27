@@ -942,6 +942,49 @@ priority!"
   note 5 (rt-tuning.nix:24 watchdog claim) fold into O-24 / F-317 /
   F-325, no new ID. Architect: F-413, F-414 and F-415 are P3; no kit
   change for run 5.
+- MERGE CHAIN AND PRE-AMPS HARD GATES (PM, v313, 2026-10-27). Order
+  (PO amendment A1 765723ca on PO 7f4eaf48 and QE 1ae4c8c3): #63 ->
+  F-465 -> F-341 -> F-439 (= "F-320 F / US-160 AC1-AC4", which also
+  closes F-410) -> #66. #66's F-262 R5 S2 restarts once, at 0/10,
+  after the last of these. After #66: F-320 D (worker-3's next PR),
+  then the shared F-444/F-445/F-452 PR (worker-1). STARVATION GUARD
+  (PM duty, PO 7f4eaf48): if the chain is not merge-ready within a day
+  of #63 merging, the PM flags it to the PO, who re-decides; trigger =
+  #63 merge time + 24 h (#63 not merged at v313). HARD GATES before
+  any gate open with amps connected: F-465, F-341, F-410 (ex-F-474),
+  F-320 D (AE 013d2fa8, 7f73dda1, adf62efa, 55f1a1b2). Amps-on rows 19
+  (F-465) and 20 (F-410, F-320 D) are PENDING their safety.md merge
+  and are NOT mirrored into the AMPS-ON PRECONDITION LIST yet (mirror
+  rule); row 20 final text = TW patch e1c5b698 (PM dry-apply at
+  01ad0a3a: blob 5019ab1f), AE release of e1c5b698 being collected by
+  the CM.
+  - PO DECISION on QE 1ae4c8c3 §4 (MESSAGE-ONLY, no PO file sha; the
+    same text went to the QE, CM and PM): confirms #63 before #66.
+    F-465 and F-341 also merge before #66, "since both gate any sound
+    on the DJ path". #66 S2 runs once, at the head after the last
+    US-173 chain PR merges. Chain: #63 -> F-465 -> F-341 nix -> F-341
+    -> #66 (update-branch, S2 0/10, PR CI, 7/7).
+    - PM TRACKING DUTY (PO guard): if the chain is not merge-ready
+      within a day of #63 merging, the PM flags it to the PO, who
+      re-decides. Trigger = #63 merge time + 24 h (time to be recorded
+      when the CM reports the #63 merge).
+  - PO ORDER FILE (supersedes the MESSAGE-ONLY label on the PO chain
+    decision above): /tmp/po-drafts/PO-confirm-QE-1ae4c8c3-order.txt,
+    sha256 7f4eaf48 verified at PM read (mode 644, not frozen).
+  - PO AMENDMENT A1 (/tmp/po-drafts/PO-order-amendment-A1-F439.txt,
+    sha256 765723ca verified at PM read; mode 644, not frozen; trigger
+    QE d3bf5f5c): "CHANGE: the F-439 PR joins the chain before #66."
+    "Order: #63 -> F-465 -> F-341 -> F-439 -> #66. #66's S2 restarts
+    once, after the last of these merges."
+    - Replaces "PR merged after #66" in F-439 r3 67f15d65 §5; the rest
+      of r3 unchanged. F-439 evidence condition per QE d3bf5f5c §2.
+    - Not in the chain: F-320 D (worker-3's next PR), F-444 and F-445
+      stay after #66.
+    - Starvation guard as 7f4eaf48 (PM flags to PO if the chain is not
+      merge-ready within a day of #63 merging). worker-3 order
+      unchanged: #63 S1 first, then F-439.
+    - PM cross-ref: the F-341 entry's "Order: #63 -> F-465 -> F-341
+      commit (3) -> F-341 merge" now continues -> F-439 -> #66.
 
 ## Reserved IDs
 
@@ -1095,6 +1138,11 @@ version, see P3): F-430, US-183, D-072, T66.
 Next free (v312; supersedes the line above; F-430 confirmed free on
 main, all origin/* and local branches at PM read, filed in this
 version, see P3): F-431, US-183, D-072, T66.
+Next free (v313; supersedes the line above; F-431 to F-473 confirmed
+free on main, all origin/* and local branches at PM read when each was
+filed, filed in this version, see P3; F-450, F-460 and F-474 RETIRED,
+never reused; F-475 confirmed free at v313 build): F-475, US-183,
+D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -3003,6 +3051,51 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   advisory version (P3); fail-closed allowlist + US-170 parity
   (postponed security, P3).
   Already PASS: AE AC13 A1-A4 on the Pi 5 (RT side lifted).
+- **F-320 D** watchdog_unlatch writes back a hardcoded Mult table
+  behind a closed gate: HARD PRE-AMPS GATE (AE 55f1a1b2; PO 141982e3;
+  owner worker-3, own PR after the F-439 PR and after #66; defect
+  record docs/project/defects/F-320.md on main; tracking entry added
+  in v313, 2026-10-27).
+  - F-320 D = HARD PRE-AMPS GATE (AE
+    /tmp/cm-relay/F-320D/ae-F320D-preamps-gate-r1.txt, sha256 55f1a1b2
+    verified at PM read; mode 644, not frozen; answers team-lead on AE
+    3088f33b NB2). Verbatim: "ANSWER: YES. The unlatch path is a hard
+    pre-amps gate, alongside F-465, F-341 and F-474."
+    - Why (AE): watchdog_unlatch (graph-manager main.rs l.660-697;
+      registry.rs l.480-527 at origin/main) writes back a hardcoded
+      table (0.001 mains/ch 5-8, 0.000631 subs) without checking or
+      re-opening the gate, so get_gate reports CLOSED while all 8
+      channels pass audio. The table also ignores the venue
+      (unused/unprotected channels, trims). Reachable by a normal
+      recovery step (node loss latch). Localhost RPC only.
+    - Chain: may stay where it is (worker-3's next item after the
+      F-439 PR, after #66), "provided the gate holds: no gate open
+      with amps connected until it has landed".
+    - Cond. 1: lands before the first gate open with amps (at least
+      "unlatch writes no Mult"); add to every pre-amps list with
+      F-465/F-341/F-474; TW safety.md wording to match. Cond. 2 test:
+      latch watchdog (drop a node) -> watchdog_unlatch -> all 8 Mults
+      == 0, get_gate CLOSED, hw-out at floor; audio only via Close
+      Gate -> pre-flight -> Open Gate; the QE agrees the form. Cond. 3
+      interim: on a watchdog latch, unlatch, then close_gate, confirm
+      Mults == 0 first; only relevant once something is connected.
+    - PM: hard-gate list before any gate open with amps is now F-465,
+      F-341, F-474, F-320 D. Fix basis r3 67f15d65 §4. PO placement
+      confirmation requested; TW item raised.
+  - F-320 D PLACEMENT CONFIRMED (PO
+    /tmp/po-drafts/F-320D-placement-confirm.txt, sha256 141982e3
+    verified; mode 644, not frozen): worker-3's next PR after the
+    F-439 PR, after #66 in the chain; HARD PRE-AMPS GATE, no gate open
+    with amps connected until it has landed. AE conditions 2 and 3
+    adopted. PM adds it to the amps-on precondition list next to
+    F-465, F-341 and F-474 (=F-410, see below). TW: matching safety.md
+    wording, AE releases.
+  - F-320 D: PO one-line (a), slot unchanged, after #66, gated as the
+    AE says (crossed 141982e3, same content). CM froze 141982e3 at
+    /tmp/cm-relay/F-320D/frozen/ with basis AE 55f1a1b2. CM holds the
+    amps-on items F-320D-AMPS, F-439-AMPS, F-383-AMPS together. CM
+    told worker-3 and the AE about the F-410 alias; PR body: "F-410
+    (filed as F-474)".
 - **F-341** signal-gen pre-flight #6 replacement. MEDIUM (AE):
   pre-flight #6 only VERIFIES the -20 dBFS signal-gen cap, which stays
   enforced in code and immutable after start; it would be High if an
@@ -3011,6 +3104,220 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   safety.md (not an equivalent). Until then: don't improvise, don't
   proceed." No improvised netcat variants (AE). Out of US-163 (FINAL
   (b)); a hard gate on the AMPS-ON PRECONDITION LIST (Pi 5).
+  - F-341 UPDATE (Architect ruling /tmp/cm-relay/PR63/frozen/
+    PR63-S1-G5-AC4-F341-ruling-architect-r1-78c1ffad, sha256 78c1ffad
+    verified at PM read; AE release /tmp/cm-relay/PR63/frozen/
+    ae-release-PR63-S1-G5-AC4-78c1ffad-deferral-7f73dda1, sha256
+    7f73dda1 verified at PM read; no new ID):
+    - Priority MEDIUM -> HIGH. AE (B)5 verbatim: "I raise my F-341
+      rating MEDIUM -> HIGH, agreeing with the Architect. It blocks
+      the room-correction path." v313 changes the v312 l.3006 "MEDIUM
+      (AE)" header to match.
+    - HARD GATE, AE (B)1 verbatim: "F-341 is a HARD GATE before (i)
+      any signal-gen measurement session on the Pi 5, as already
+      stated, AND NEW (ii) any gate open on the Pi 5. Before the first
+      gate open, one exact, documented and Pi 5-verified emergency
+      close form (F-341 AC3) must exist in safety.md. Today only REST
+      close is verified, and it is not the documented pre-flight
+      form."
+    - AC2 design, AE (B)2 verbatim: "Architect §4a is REQUIRED.
+      max_level_dbfs goes into the signal-gen StatusResponse from the
+      SafetyLimits in effect, with the rpc.rs test extended. An argv
+      or /proc cmdline check is NOT acceptable as the #6 form.
+      Transport §4b (one Nix-shipped RPC client with a read timeout,
+      plus a nix check) is acceptable to the AE; plain /dev/tcp
+      without a timeout is not. The QE and TW still choose the final
+      transport." Architect §4a-c, l.45-57, are recorded verbatim as
+      the design input (§4c: AC3 verifies that exact form on the Pi 5,
+      and the TW removes the nc lines and the "not yet verified"
+      labels in AC4).
+    - Interim safety.md marking, AE (B)3 (TW F-465 safety.md batch,
+      not #63), verbatim line: "the nc -q1 form is invalid on the Pi 5
+      image (libressl nc); status has no max_level_dbfs; see F-341. Do
+      not run a measurement session until F-341 lands." "No
+      replacement command is documented before F-341 AC3. I release it
+      by sha." The TW batch r2 sha is pending (CM to send).
+    - #63 / US-173, AE (B)4: AC4 recorded as "FAIL-deferred to F-341
+      (pre-existing; P10 PASS, REST close PASS; AE deferral
+      7f73dda1)", not as PASS or waived; the PO decides the story
+      scope. v313 US-173 carries it next to AC3e "FAIL-deferred ->
+      F-465". PM cross-ref: the PO has not ruled on scope for AC4 yet
+      (1e5f14eb covers AC3e only).
+    - Session facts (AE (A)): P10 PASS, P11 FINDING, P12 PARTIAL (REST
+      close PASS, RPC close via nc not delivered). The gate stayed
+      closed, 16/16 values were 0 at every read.
+    - PM cross-ref (sequencing): F-341 is now on both the DJ path
+      (gate open) and the room-correction path (measurement). With
+      F-465, it is one of two hard gates before the first gate open on
+      the Pi 5.
+  - F-341 / US-173 AC4 (PO ruling
+    /tmp/cm-relay/PR63/frozen/po-US-173-AC4-deferral-3e606082, sha256
+    3e606082 verified at PM read): "ACCEPTED. #63 may merge with AC4
+    recorded as "FAIL-deferred to F-341 (pre-existing; P10 PASS, REST
+    close PASS; AE deferral 7f73dda1)". This is a deferral, not a
+    waiver: AC4 stays not waivable." The AE's 7f73dda1 conditions 1-5
+    are "adopted as written". Priority (PO) verbatim: "by condition
+    1(ii), F-341 now sits on the DJ path as well as the
+    room-correction path. No gate can open on the Pi 5 until both
+    F-465 and F-341 land. Both go straight after #63, at US-173
+    priority, not backlog, and they may run in parallel where their
+    file sets are disjoint (the CM checks)." This supersedes the PM
+    cross-ref above that the PO had not ruled on AC4. v313 moves F-341
+    out of the defect backlog order into the US-173 DJ-path sequence
+    next to F-465, and records AC4 in US-173.
+    - F-341 OWNER (CM asks the PM to pick, not worker-5): no worker is
+      free in the PM record. PM pick: worker-6, IF the CM confirms
+      they are idle (the last US-179 relay file is from 02:27; US-179
+      follow-ups are queued until after #63/#66/#68). Fallback:
+      worker-1, queued after the F-465 branch work. The CM confirms
+      and briefs.
+    - F-341 STAFFING (team-lead; MESSAGE-ONLY): "the next story to
+      staff: whichever worker frees up first (e.g. worker-3 after S1
+      closes; not worker-5)". PM record: F-341 is first in line for
+      the next free worker. PM caveat sent to the CM: worker-3 already
+      has F-320 F (F-439 scope, HIGH, the amps-on/F-451 blocker)
+      queued after #63 S1, then F-320 D. Moving F-341 ahead of F-320 F
+      needs a PO priority call, and the PM does not reorder. So
+      worker-3 takes F-341 only if the PO puts it ahead of F-320 F.
+      Otherwise it goes to worker-6 if idle, or else to the first
+      other worker to free up (worker-1 after F-465, worker-7 after
+      F-383 C4, worker-2 after US-172 R5e).
+  - F-341 OWNER = worker-6 (PM staffing call, option (b) of the CM's
+    question). Reason: owner order (team-lead relay, verbatim): "the
+    owner's set order puts the DJ path and room correction ahead of
+    side quests, and US-179 is the side quest. F-341 now gates both."
+    US-179 PARKS with its 19/20 result and F-468 recorded; its 20-run
+    gate waits. F-468 is diagnosed after F-341, or by the first other
+    worker to free up if the PM re-staffs. worker-3 is still not
+    considered for F-341.
+    - F-341 BRIEFED (CM; MESSAGE-ONLY except the fence): worker-6,
+      branch fix/F-341-signal-gen-preflight from origin/main ff55d0c8,
+      own CM-created worktree. Fence
+      /tmp/cm-relay/F-341/frozen/cm-F341-fence-r1-d6ebc63f (sha
+      verified at PM read):
+      - F-465 owns flake.nix, the
+        graph-manager/web-ui/board-guard/production nix files,
+        src/graph-manager/**, venue.py and configs/venues/**.
+      - F-341 is expected to touch src/signal-gen/** only.
+      - safety.md stays with the TW. Cargo.lock needs CM clearance.
+      - If the §4b transport needs flake.nix or nix/, that part is
+        sequenced after F-465.
+      PM cross-ref: the AC2 transport (Nix-shipped RPC client plus nix
+      check) will most likely need nix/, so F-341 probably lands in
+      two steps: signal-gen StatusResponse now, transport after F-465.
+      The CM is passing ec040a78 to the QE.
+    - [moved to F-468 in v313: "F-468 DIAGNOSIS r1 (worker-6,
+      read-only, /tmp/cm-relay/US-179/frozen/
+      w6-run11-diagnosis-r1-a5c66871, ..."]
+  - F-341 PLAN r1 (worker-6,
+    /tmp/cm-relay/F-341/frozen/w6-F341-plan-r1-f41298ca, sha256
+    f41298ca verified at PM read; routing per the CM, MESSAGE-ONLY):
+    §2 transport to the QE (writer) with the TW; §1a rounding (0.01
+    dB) and the optional max_level_linear to the AE. worker-6 is
+    cleared for nix develop plus a focused signal-gen cargo test, and
+    is starting §4a (StatusResponse max_level_dbfs). The transport
+    waits on the QE/TW choice, and on F-465 if it needs flake.nix
+    (fence d6ebc63f).
+    - Plan side option (§1c, verbatim): "validate_level keeps using
+      the existing f64 cap. That is unchanged behaviour, because the
+      f32 round trip could move the bound by about 1e-7 dB. Unifying
+      the two is a backlog option, not in F-341." PM: noted under
+      F-341 as a possible later cleanup, no ID until an advisor asks
+      for one.
+  - F-341 §1a AE RULING
+    (/tmp/cm-relay/F-341/frozen/ae-F341-1a-ruling-r1-5d7f449a, sha256
+    5d7f449a verified at PM read; relayed to worker-6 by the CM).
+    Rounding "ACCEPTED, 0.01 dB, round to nearest". max_level_linear
+    "YES, add it to StatusResponse". Pre-flight #6 criterion, verbatim
+    (for the TW, F-341 AC4): "PASS iff the status response carries
+    max_level_dbfs == -20.0 exactly AND 0 < max_level_linear <= 0.1. A
+    missing field, a different value, or no response is a FAIL: no
+    measurement session. max_level_linear is recorded in the session
+    log. No argv or /proc check counts as #6 (7f73dda1 cond. 2)." Item
+    4: the AE agrees that unifying validate_level with the cap is a
+    backlog item. PM: that upgrades the F-341 side note above. Still
+    no ID; one is allocated when F-341's PR is reviewed, if it is not
+    folded in.
+  - F-341 §2 TRANSPORT (QE ruling r1, single writer,
+    /tmp/cm-relay/F-341/frozen/qe-F341-transport-ruling-r1-315d3d5e,
+    sha256 315d3d5e verified at PM read; PENDING the TW confirmation;
+    then the CM relays it to worker-6). "## Decision: Option A
+    (pi4audio-rpc script, shipped by Nix, with a nix check). B and C
+    are rejected." The QE's F-341 ACs R1-R5, tests t1-t7, and four
+    mutation checks are as written in 315d3d5e. Sequencing, verbatim:
+    "Script and test: in worker-6's current fence, commit (2). The nix
+    wiring ... comes last, after F-465, as the plan says (commit
+    (3))." "F-341 AC3 (verified on the Pi 5) is verified with the
+    SHIPPED A, after the nix wiring. There is no interim operator form
+    in safety.md."
+    - PM: no interim form requested. Reason: no measurement session
+      and no gate open can happen before both F-465 and F-341 land (AE
+      013d2fa8 cond. 1 and 7f73dda1 cond. 1), so an interim #3/#6 form
+      would have no use. Revisit only if F-465 lands well before F-341
+      commit (3).
+    - TW text for #3/#6, verbatim QE: "name the exit codes (R3). State
+      that a busy server (a measurement session still connected) gives
+      a timeout, which is fail-closed. Tell the operator to close that
+      session or wait, and never to retry in a loop."
+    - Later ruling (not F-341, no ID), verbatim: "GM port 4002 forms
+      (close_gate / watchdog_unlatch, when d063 lands) reuse the same
+      script. Before they are documented, check that the GM's ack
+      shape satisfies R2/R3". PM: record under the d063 work as a
+      pre-doc check.
+    - F-341 thus lands in three commits: (1) §4a StatusResponse, (2)
+      the script and test now, (3) the nix wiring after F-465.
+  - F-341 §4a PUSHED (CM): cd964991 on fix/F-341-signal-gen-preflight
+    (PM verified: ls-remote origin = cd9649913e98). Scope: signal-gen
+    safety/rpc/main.rs only, +122/-32, includes max_level_linear. CI
+    run 40554384947 dispatched without E2E: the crate can't build on
+    Darwin, and a /tmp harness passes 100/100 with mutations caught.
+    worker-6 watches the run. Commit (1) of the three; (2) is the
+    script and tests; (3) the nix wiring after F-465.
+  - F-341 commit (2) cleared (CM): worker-6's paths
+    src/signal-gen/scripts/pi4audio-rpc and
+    src/signal-gen/tests/test_pi4audio_rpc.py are inside fence
+    d6ebc63f. Any nix shipping is STOP-and-ask. CI run 40554384947
+    result pending.
+  - F-341 §4b QE RULING (QE accounting copy;
+    /tmp/f341-qe-4b-X1-ruling-r1.md, sha256 e3e9bbe6 verified at PM
+    read, mode 444; input worker-6 results
+    /tmp/cm-relay/F-341/frozen/w6-F341-4b-results-r1-fa28c800; code at
+    567053c3). Results "16/16, plus Q1-Q4 and X2 caught, plus 7/7 rpc
+    mutations: ACCEPTED as evidence for R1-R5." X1 (ok:true matched
+    anywhere) "ACCEPTED as an equivalent mutant". F-341 MERGE BLOCKERS
+    added by the QE (they block the merge, not the work):
+    - (C1) "CONDITION (small, blocks the F-341 merge)": one rpc.rs
+      unit test pinning the flat ack shape. AckResponse (ok:false with
+      error), the fallback ack and StatusResponse (max_level_* set)
+      must have no top-level value that is an object or an array
+      containing an object.
+    - (C2) Open item 1, verbatim: "F-341 cannot merge until
+      src/signal-gen/tests/test_pi4audio_rpc.py runs in a gating tier.
+      Sequencing it into the nix commit after F-465 is fine. The PR
+      body names the tier and the run." "The gating run must exercise
+      the BUILT artifact ... not src/signal-gen/scripts/pi4audio-rpc."
+      The closed-before-ack case (rc 3), t4 (rc 124) and the deadline
+      default must pass against the built script.
+    - Open item 2 (shellcheck) is covered by C2. "Any shellcheck fix
+      after the 16/16 run means the tests are rerun on the fixed
+      bytes."
+    - NB (non-blocking): the t4 bound [3.0, 3.5) s is tight on loaded
+      CI; [3.0, 4.5) is acceptable if worker-6 agrees. A failure on
+      the upper bound is "a finding to record, not a reason to rerun".
+    - PM: F-341 commit (3), the nix wiring after F-465, now also
+      carries the CI-tier wiring for the built script. F-341's merge
+      therefore depends on F-465 merging first (for commit (3)), and
+      F-465's own CI on #63 merging first (board-guard). So the order
+      is #63 -> F-465 -> F-341 commit (3) -> F-341 merge.
+  - F-341 (CM): 567053c3 pushed (PM verified: ls-remote origin =
+    567053c31cd6), CI run 40555704670 running. The QE X1 ruling
+    e3e9bbe6 is already recorded above.
+  - UPDATE (PM, v313): priority HIGH per AE 7f73dda1 (B)5 (with the
+    Architect); the "MEDIUM (AE)" in the header above is superseded.
+    Chain position: #63 -> F-465 -> F-341 -> F-439 -> #66 (PO A1
+    765723ca). Hard gate before any gate open with amps (see the MERGE
+    CHAIN bullet at the top). AE NB c54ab9f2 on F-465 AND F-341 is
+    recorded under F-465.
 
 - **AMPS-ON PRECONDITION** (AE + Architect): "pcm-bridge/level-bridge
   PW nodes don't come back after a PipeWire restart, so metering is
@@ -3356,6 +3663,77 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   path length shown before the reboot; DT status is the primary
   oracle, dmesg and /dev/dri secondary; RESTORED = o/ gone +
   manifest == PRE + marker 0; a mixed state or marker 0 = STOP.
+  - US-172 R5a (B1 result), QE accounting copy: QE check
+    /tmp/us172-qe-R5a-C1C2-check-r1.md (sha256 66ced0c8 verified;
+    against v8 verdict 38663487), l.11 verbatim: "the TRYBOOT
+    classification is sound. C1 is MET. C2 is NOT TRIGGERED. No QE
+    objection to the next step, which the Architect rules on."
+    Outcome: TRYBOOT, tb-post PASS (tb-post-b504efd1.txt). The
+    classification rests on positive evidence (flag 1 + marker), so
+    F-412 cannot apply (l.19). Boot changed 47ff40f7 -> 0a6a206a.
+    Next: Architect ruling (pending).
+  - US-172 R5b (CM): NOT-TRYBOOT, D=72 s (K-like), self-recovered on a
+    normal boot, no power pull. Next: return-obs, then the Architect's
+    class ruling (pending).
+  - US-172 R5b CLASSIFIED (CM): Architect
+    /tmp/cm-relay/US-172/run5b/arch-R5b-class-r1-fd761b8e.txt (sha256
+    fd761b8e verified). l.7 verbatim: "CLASSIFICATION: R5b = FAIL,
+    signature K (early kernel panic + panic=60 reset). Cause not
+    logged." Per the CM, the panic came about 8-12 s after the tryboot
+    kernel started and the return state is fine. Next: R5c (R5b minus
+    disable-bt-pi5) on a new grant; draft b9275a8c is out for
+    AE/Architect/QE release (PM: draft file not located in the relay
+    folder at PM read). Then R5d.
+  - R5c grant draft LOCATED (CM):
+    /tmp/cm-relay/US-172/grant-CHANGE-US172r5c-r1.txt (b9275a8c), next
+    to the R5a grant (not in run5b/). This supersedes the PM's "not
+    located" note above. Releases: Architect yes; AE and QE pending.
+  - US-172 R5b CLOSED on the CM side (CM): tb-normal D=7.6 s on boot
+    74d0caef, restored PASS, final return-obs
+    /tmp/cm-relay/US-172/run5b/return-obs-final-755da829.txt (755da829
+    verified) PASS (gains 0, gate closed). First-pass return-obs
+    80378b9e verified. All frozen. Grant CHANGE-US172r5c r1 b9275a8c
+    IN FORCE: released by the Architect, the QE and the AE
+    (/tmp/cm-relay/US-172/run5c/ae-release-e8e0a895.txt, e8e0a895
+    verified); handed to worker-2.
+  - US-172 unattended boot from R5d (CM): Architect ruling r1
+    /tmp/cm-relay/US-172/frozen/
+    us172-unattended-boot-check-architect-r1-6cf98c5b.txt (sha256
+    6cf98c5b verified). Released by the AE
+    (/tmp/cm-relay/US-172/frozen/
+    ae-US172-unattended-boot-6cf98c5b-release-81e36ef3.txt, 81e36ef3
+    verified; "no audio-safety need for the owner at HDMI") and the QE
+    (/tmp/cm-relay/US-172/frozen/
+    qe-US172-unattended-6cf98c5b-release-r1-dfcb0169.md, dfcb0169
+    verified; "RELEASE. No r2 is needed."; readings R1-R3 bind how the
+    CM applies the table without changing it).
+    - l.5 verbatim: "From R5d on the owner does NOT watch HDMI. The
+      only owner action left is a power pull after a hang."
+    - HANG = no SSH 300 s after the reboot -> the CM asks the owner
+      via team-lead for ONE power pull.
+    - The optional photo request (fd761b8e) is withdrawn.
+    - [moved to F-441 in v313: "F-441 is EXTENDED (l.29-33, under
+      F-441, ..."]
+  - US-172 (CM): R5d (CHANGE-US172r5d) is running, unattended per
+    6cf98c5b. K1-K4, the comparison with the known-working Raspbian
+    config, follows Architect strategy ruling
+    /tmp/cm-relay/US-172/frozen/
+    us172-strategy-known-good-reference-architect-r1-b505b66d
+    (b505b66d verified). It answers the owner, verbatim via team-lead:
+    "I suggest looking into known working distributions, I had
+    graphics on the Raspbian that booted on that machine before." The
+    answer: R5d stands; a worker runs a desk study at the same time
+    (not worker-2; on the Pi at most one OBSERVE); both results must
+    be in before R5e or any fix is designed. Team-lead assigned K1-K4
+    to worker-3, so #63 stays PARKED until it is done.
+  - US-172 status (CM, for v313; MESSAGE-ONLY): R5d = FAIL-K, restore
+    in progress, R5e designed (no dtbo applied); after R5e it STOPs to
+    the Architect whatever the outcome.
+  - LINK (PO e567159d item 2; PM, v313): US-173 AC7-Mixxx (P15, P17b)
+    and AC12 (P16) depend on US-172 (hardware-GL display). The
+    deferred display steps are a hard pre-audio gate for the DJ path.
+    Owner question to batch with the next physical owner task: is a
+    3.3 V USB-serial adapter or Pi Debug Probe at hand (F-441)?
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -5980,6 +6358,253 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     is closed and the Mults are 0." Record (b) had quoted only the
     first sentence of that release. The AE's v5 release supersedes the
     v4 release.
+  - #63 QE-A5 drvPath ruling r1 (CM accounting copy):
+    /tmp/cm-relay/PR63/frozen/qe-A5-drvpath-ruling-r1-044895f9 (sha256
+    044895f9 verified at PM read).
+    - (a) D1 compares three lines verbatim: jack-self-connect drvPath
+      = /nix/store/
+      539b5vcpk1fpz4x6xphry11ja97jnhb8-jack-self-connect.drv;
+      wireplumber-no-bypass drvPath = /nix/store/
+      72nxryxypxxq98hsnv1j4yv25yrxrp6y-wireplumber-no-bypass.drv;
+      HEAD^{tree} = a77c401ff65e9b4dcbfcab24436b781c11f0103f. Any
+      mismatch: STOP before D2. The toplevel drvPath is logged as
+      DRV_D1 (value of record, no comparator at this head).
+      Clarification only: no new plan file, no A6.
+    - (b) Merge-ref CI satisfies "CI green at that same head" (F3). CM
+      verified via gh: tree of 6892028 = tree of 3f28b6c7 = a77c401f;
+      29f5c61f is an ancestor of 3f28b6c7 (behind=0).
+    - PM verified (read-only git): 3f28b6c7^{tree} = a77c401f;
+      29f5c61f ancestor of 3f28b6c7; origin/main ff55d0c8 is 20
+      commits past 29f5c61f; no diff in nix/, src/web-ui/app,
+      src/web-ui/static between 29f5c61f and origin/main.
+    - Carry-over rule verbatim (l.47-49): "At the updated head, CI
+      green plus the toplevel drvPath of mugge-pi5-deploy evaluated
+      there (a one-off eval by a worker, or a CI print) = DRV_D1 means
+      the session-1 evidence carries over." / "Not equal means QE-A6
+      plus an Architect ruling on whether session 1 must be repeated."
+    - QE l.51 (sequencing for PM and CM), lean verbatim: "go now at
+      3f28b6c7 (the Architect has cleared it). Use the DRV_D1
+      carry-over check at merge."
+    - PM sequencing view (sent to CM): agree with the QE lean.
+  - STATUS (CM; MESSAGE-ONLY): worker-3 GO for 5d-5f. worker-1 acked
+    F-465 and is writing the plan.
+  - #63 S1 STATUS (CM; report
+    /tmp/cm-relay/PR63/frozen/G5-5d-5f-2846d710): 5d-5f all PASS or
+    DEFERRED as planned (P14 PARTIAL on path N). Peak temperature 69.4
+    C, no WARN. worker-3 has the G6 go. F-341 staffing: the CM is
+    asking worker-6 whether they are idle; otherwise the PM fallback
+    order applies, with worker-3 not considered without a PO reorder.
+  - #63 S1 CLOSED (CM; DEPLOY RELEASED 17:41:15Z). Log 7b065085
+    l.1539, verbatim: "RESULTS: P1-P8 PASS; FF88 PASS; P9 AC3e
+    FAIL-deferred -> F-465; P10 PASS; P11/P12 AC4 FAIL-deferred to
+    F-341 (REST close PASS); P13 PASS; P14 AC7 PARTIAL (path N);
+    P15/P16/P17b DEFERRED (PRE-DISPLAY); P17a PASS; C7 PASS; G6
+    readback PASS; B1 ERR finding HIGH (Live q256 only)." Final state
+    (CM): standby, gate closed, no venue, 16/16 gains 0, thermal max
+    69.4 C. Next: the PR body from worker-3 to the QE. Then worker-3
+    is free for F-320 F (the F-439 scope), per the PM record.
+      - PM cross-ref: P14 AC7 PARTIAL and P15/P16/P17b DEFERRED need
+        their US-173 record lines, like AC3e/AC4. The PO decides
+        whether they are accepted deferrals. v313 asks the PO unless
+        the PR body already carries PO-ruled wording.
+  - #63 BODY s1b (/tmp/cm-relay/PR63/frozen/pr63-body-s1b-3122374e,
+    sha1 3122374e verified at PM read; CM: adds only F-469 vs s1):
+    HELD from the QE until the PO rules the US-173 wording for P14 AC7
+    PARTIAL (path N) and P15/P16/P17b DEFERRED (PRE-DISPLAY). The CM
+    has asked the PO; record the PO sha in US-173 next to AC3e/AC4.
+  - NB1 OBSERVE PASS 10/10 (CM;
+    /tmp/cm-relay/PR63/frozen/NB1-report-a41136d4): kernel zy8qmwak;
+    the FAT Image, 3 bcm2712 DTBs and 4 overlays match K2 a3212f67. No
+    Pi session open. US-172 arming is no longer blocked by #63 on the
+    Pi side.
+  - US-173 SCOPE AFTER #63 (PO ruling /tmp/cm-relay/PR63/frozen/
+    po-US-173-path-N-record-e567159d, sha256 e567159d verified at PM
+    read; ruled against the body content with sha256 7b8bb2ed = the
+    same file as sha1 3122374e, per the CM). "the wording is ACCEPTED
+    as drafted". Verbatim:
+    "1. US-173 stays OPEN after #63 merges. Unchecked: AC12 (P16); the
+    Mixxx part of AC7 (P15, P17b); AC3e, until F-465 passes and AC3
+    b-e has re-run; AC4, until F-341 passes. P14 is recorded as
+    PARTIAL (path N), not PASS.
+     2. The deferred display steps are a hard pre-audio gate. No
+     audio-producing use of the DJ path until they pass. They depend
+     on US-172 (hardware-GL display, owner top priority). The PM links
+     US-173's open ACs to US-172.
+     3. US-173 closes only when every AC above has passed on the Pi 5
+     and has the usual Rule 13 approvals. Closure is the PO's call, on
+     the PM's evidence list.
+     4. F-469 ... is outside US-173 scope (DJ mode). The PM files its
+     follow-up session as backlog under the Live-mode story, below
+     US-172, F-465 and F-341."
+    - PM v313 actions: US-173 status = OPEN post-merge, with the
+      open-AC list above; link AC7-Mixxx/AC12 (P15/P16/P17b) to
+      US-172; add a US-173 closure evidence list (PM-owned); move the
+      F-469 follow-up under the Live-mode story (PM identifies the
+      story ID at v313 build), ranked below US-172, F-465 and F-341.
+      This settles the earlier PM cross-ref asking for a PO ruling on
+      P14-P17b.
+    - #63 body s1b went to the QE with e567159d (CM).
+  - #63 QE §9(iii) BODY RE-CHECK (QE accounting copy;
+    /tmp/pr63-qe-body-s1b-recheck-r1.md, sha256 7e8ea51b verified at
+    PM read, mode 444). Input: body s1b sha256 7b8bb2ed (= sha1
+    3122374e). Verdict verbatim: "§9(i)-(iii): SATISFIED." "OK to
+    publish once the three text edits below are made. The CM checks
+    the diff against this file; no new QE pass is needed unless
+    something else changes." Edits to worker-3 via the CM:
+    - (a) AC9 per-run thermal counts (170 samples, all INVALID with
+      reason no_cooling_devices only, max 69.40 °C at 17:21:45Z, 0
+      WARN, 0 STOP);
+    - (b) the status line must read as "required, not yet collected"
+      for 7/7 + T1-T3 at the final head;
+    - (c) a carry-over note: S1 evidence from 3f28b6c7 holds only if
+      the post-update pi5-deploy drvPath == DRV_D1 (QE A5 044895f9);
+      otherwise QE-A6 plus an Architect ruling before merge.
+    - PM accounting for #63: QE §9(iii) = SATISFIED-conditional (edits
+      a-c). QE C4 = OPEN until the post-update head shows drvPath ==
+      DRV_D1. That matches the PM's earlier #63 view ("check
+      carry-over at merge"). Rule 13 approvals at the final head: none
+      collected yet. update-branch is needed (base 20 commits behind
+      ff55d0c8), and it voids approvals per main-protection-strict, so
+      the 7/7 review runs after update-branch.
+    - PM cross-ref: edit (a) is the F-462 symptom (thermal_watch marks
+      every sample INVALID with no cooling devices). F-462 stays open;
+      the body records it as valid for AC9 per AE f5ec66ef.
+  - #63 UPDATE-BRANCH (CM): new head 01ad0a3a = merge of 3f28b6c7 +
+    ff55d0c8 (PM verified: refs/pull/63/head = 01ad0a3a, parents as
+    stated, contains origin/main). defects-index.md conflict resolved
+    as the union (F-400 | F-406, F-407) (CM). PR CI runs on the push.
+    Approvals voided by the update (strict protection). Next (CM):
+    DRV_D1 check (QE names who runs it), s1c + body update, 7/7 at the
+    final head.
+    - PM: the CM's order message omitted F-439; it crossed PO A1
+      765723ca. Sent to the CM.
+  - ORPHAN FILE in the #63 worktree (CM, no urgency):
+    .claude/worktrees/story-US-173-first-dj-session/src/
+    web-ui/tests/unit/test_mixxx_soundconfig.py, untracked, mtime
+    2026-10-26 10:23:29 local, sha256 56b15906 (PM read). worker-3
+    says it is not theirs (CM). Also noted in the S1 G0 report
+    (/tmp/cm-relay/PR63/s1/G0-report-b6de07bd l.30: "never committed,
+    not in the bundle").
+    - PM record: it is the PLANNED US-173 drift-guard test. v312
+      l.5147-5151 (CM UPDATE 2026-10-26, head bf4bcfcb): "The
+      drift-guard test src/web-ui/tests/unit/test_mixxx_soundconfig.py
+      (HP index from speakerChannels=4, production.nix) lands in the
+      SAME commit as the captured soundconfig.xml". The
+      Architect-ruled P-step item 12 (worker-3 P-step list 63cfa7f9)
+      commits the captured soundconfig.xml with this test and the
+      mixxx-soundconfig oneshot. The file docstring matches (drift
+      guard vs GM dj_links, US-173). The author is not in the PM
+      record; PM inference: written in the US-173 lane before the
+      capture, possibly by worker-3 before a compaction.
+    - Status: the capture belongs to AC7-Mixxx (P15/P17b), which PO
+      e567159d leaves OPEN after #63 merges. So the file belongs to
+      the US-173 AC7-Mixxx follow-up, not to #63.
+    - RISK: removing the #63 worktree after the merge deletes it. PM
+      ask to the CM: keep the worktree, or copy the file (by sha
+      56b15906) to a scratch location before any cleanup. The PO names
+      the follow-up owner when the AC7-Mixxx work is placed.
+  - #63 BODY s1c 222ffb86 LIVE at head 01ad0a3a (CM; diff vs s1b =
+    5084a03d, 3 hunks, QE 7e8ea51b edits verbatim). QE re-check
+    pending.
+  - #63 RULE 13 ROUND OPEN (CM) at head 01ad0a3a (PM verified:
+    refs/pull/63/head = 01ad0a3a). Bundle /tmp/pr63-review-01ad0a3a/
+    (SHA256SUMS sha256 79523738 verified), sent to all 7: AE, SecSpec,
+    TW, QE, Architect, UX, AD. PR CI 40557036296 in progress. Merge
+    needs 7/7 at the final head with no open conditions, T1-T3 green,
+    QE C4 closed (post-update drvPath == DRV_D1); QE may approve
+    conditional on C4. If E1/E2 move the head, the round restarts
+    (CM).
+    - PM approval accounting #63 @01ad0a3a: AE -, SecSpec -, TW -, QE
+      -, Architect -, UX -, AD -. CI 40557036296 pending. C4 open.
+    - Starvation-guard clock (PO 7f4eaf48) starts at the #63 merge
+      time.
+  - #63 APPROVAL: AD APPROVE (diff-only) at 01ad0a3a, nothing
+    BLOCKING; /tmp/pr63-ad-verdict-01ad0a3a.md (sha256 20004790
+    verified; mode 644, not frozen). Carries over the 3f28b6c7 verdict
+    incl. L1. "If E1 or E2 forces a head change, this verdict lapses."
+    Tally #63 @01ad0a3a: AD APPROVE; AE, SecSpec, TW, QE, Architect,
+    UX pending. CI 40557036296 pending. C4 open.
+    - AD N1 -> UPDATE to F-362 (no new ID; dup check: F-362 AC5, QE
+      verbatim: "Every pytest invocation in the nix test apps reports
+      skip reasons (`-rs`)."). AD verbatim: "after the merge,
+      flake.nix runs the drivers tests with `-rs` (from #64) but the
+      new stability tests without it. A skip in pi5_thermal_watch
+      tests would then not be listed. Add `-rs` to the stability lines
+      in a follow-up." PM: the F-362 PR covers the #63 stability lines
+      under AC5.
+    - AD N2: "the PR body heading still reads "(draft)"." Not a
+      backlog item; PR body writer worker-3 via the CM (a body edit
+      does not move the head). Sent to the CM.
+  - #63 APPROVALS @01ad0a3a (cont.):
+    - UX APPROVE, nothing blocking: /tmp/pr63-ux-verdict-01ad0a3a.md
+      (sha256 e7154543 verified). Note: body title still ends
+      "(draft)" (same as AD N2; with the CM).
+    - QE APPROVE CONDITIONAL on C4 (DRV_D1 E1-E3, spec 5df7cc82) and
+      C5 (PR CI 40557036296 green plus a QE count check):
+      /tmp/pr63-qe-verdict-01ad0a3a-r1.md (sha256 685f9824 verified).
+      QE NB (stability-tests step in test-all without -rs) = same as
+      AD N1 -> F-362 AC5 UPDATE, no new ID.
+    - Tally: AD APPROVE, UX APPROVE, QE APPROVE-conditional (C4, C5);
+      AE, SecSpec, TW, Architect pending.
+  - #63 C4 DRV_D1 EVAL (CM; worker-3): E1 MISMATCH (toplevel lp2jajrj
+    vs DRV_D1 r2mlv60j); E2/E3 MATCH. Result
+    /tmp/cm-relay/PR63/frozen/w3-pr63-drvD1-eval-result-r1-335d8bf2,
+    log w3-pr63-drvD1-eval-log-73ef3c7d. Per spec 5df7cc82: #63 needs
+    QE-A6 plus an Architect ruling (Architect writer) before merge; C4
+    stays OPEN. The round stands unless the ruling forces a head
+    change; if it does, all verdicts lapse (AD l.23).
+    - PM cross-ref: QE C4 text (l.18) requires "E1 == DRV_D1"; E1
+      mismatch means the QE condition is not met until QE-A6 + the
+      Architect ruling replace it.
+  - ORPHAN test_mixxx_soundconfig.py (CM): copied by sha to
+    /tmp/cm-relay/US-173/scratch/test_mixxx_soundconfig.py-56b15906
+    (mode 444, sha256 56b15906 verified). The #63 worktree is kept
+    until the AC7-Mixxx owner is placed. RISK above closed.
+  - #63 TALLY @01ad0a3a (CM; all six frozen in
+    /tmp/cm-relay/PR63/frozen/verdict-01ad0a3a-*, shas verified at PM
+    read; posted verbatim on the PR): 6/7 IN, TW OUTSTANDING.
+    - AE af60c2ca APPROVE, no veto. NB: gate-closed hw-out errors in
+      CI are F-410 (ex-F-474), not #63; the QE classifies; no xfail.
+    - SecSpec 0f5f14bf APPROVE, conditional on CI 40557036296 green.
+    - QE 685f9824 APPROVE, conditional on C4 (E1-E3) and C5 (CI
+      40557036296 green, counts checked).
+    - Architect f1f79553 APPROVE. NB1: -rs missing on the 2 new
+      stability pytest calls; follow-up, not a new head (-> F-362 AC5,
+      with AD N1 and the QE NB; one item, no new ID).
+    - UX e7154543 APPROVE. AD 20004790 APPROVE.
+    - OPEN: TW verdict; C4 (E1 MISMATCH -> QE-A6 + Architect E1
+      ruling); CI 40557036296 (nixos-eval and changes green,
+      test-and-build in progress). "(draft)" heading: the CM fixes it
+      with the next body revision.
+  - #63 7/7 @01ad0a3a (CM): TW f08fd70f APPROVE (verified at PM read)
+    completes the round: AE af60c2ca, SecSpec 0f5f14bf (cond. CI), TW
+    f08fd70f, QE 685f9824 (cond. C4+C5), Architect f1f79553, UX
+    e7154543, AD 20004790. OPEN: C4 (E1 MISMATCH -> QE-A6 + Architect
+    E1 ruling), C5/CI 40557036296. Body s1d (worker-3, after the E1
+    ruling; AD N2 "(draft)", TW N2 leftover "QE re-check of this
+    body." fragment, plus any Carry-over change) -> one QE re-check;
+    the CM sends the sha.
+    - TW N3 (post-merge, TW): a dated S1 note in US-173.md (path N
+      split, P9/F-465 and P11-12/F-341 deferrals, F-469 blocking Live
+      q256). PM answer to the TW: F-469 is in the PM record
+      (held-for-next), v313 pending.
+    - PM finding: F-439..F-473 (and the F-410 update, F-474
+      retirement, merge chain) exist only in held-for-next; none is in
+      backlog.md on any ref (v312 = 9b83e104 = chore/backlog head,
+      verified), and none has a defects/*.md on any origin ref. PM
+      proposed building v313 now on 9b83e104 (CM go requested).
+  - US-173 STATUS AND CLOSURE EVIDENCE LIST (PM-owned, per PO e567159d
+    items 1 and 3; v313). Status: OPEN after #63 merges. Evidence the
+    PM collects before the PO closes it: (1) AC3 b-e re-run PASS on
+    the generation with F-465 deployed (AE 013d2fa8 cond. 2); (2) AC4
+    PASS after F-341 lands (AE 7f73dda1); (3) AC7 Mixxx part (P15,
+    P17b) and AC12 (P16) PASS on the Pi 5, after US-172; (4) P14 as
+    recorded by the PO in e567159d item 1; (5) the usual Rule 13
+    approvals on each closing PR; (6) TW N3 dated S1 note in US-173.md
+    (post-merge). The orphan drift-guard test
+    test_mixxx_soundconfig.py (sha256 56b15906, CM copy
+    /tmp/cm-relay/US-173/scratch/) belongs to AC7-Mixxx; the PO names
+    its owner when AC7-Mixxx is placed.
 - **US-174** Automated room correction pipeline (Pi 5, home lab
   first) (PO, 2026-10-25; P1 EPIC). Owner, verbatim via team-lead:
   "As a milestone yes, but I want the room correction too.", "I
@@ -7759,6 +8384,147 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   main ff55d0c8, ls-remote verified); A1 OK (CM). PR CI 40423191144
   running at this version; series S2 (10 runs) starts at 6931c372 once
   it is green.
+  - #66 CI 40423191144 still running (CM).
+  - #66: PR CI 40423191144 SUCCESS at 6931c372 (all 4 jobs; ledger
+    2026-10-27T00:47:05Z). main still ff55d0c8 (ls-remote). F-262 R5
+    S2 OPEN, streak head 6931c372; S2-1 = 40428554299 in_progress
+    (ledger /tmp/cm-relay/F-262/R5/ledger.txt, PM read).
+  - F-262 #66 R5 S2 (CM; PM-verified against the ledger and the
+    excerpt):
+    - S2-1 40428554299 at 6931c372: success, F-262 AC max=1.22 dB PASS
+      (excerpt 6cf563d9). The QE ruled at 2026-10-27T07:56:31Z
+      (ledger) that S2-1 counts. The svc-int count shift is explained
+      by #68. No new ruling: abfd33d7 + ebd890d0 + 69ebc46f stand.
+    - S2-2 40470085642 at 6931c372: FAILURE (test-and-build and
+      ci-gate failed). The F-262 AC itself passed at max=1.12 dB. The
+      run had 2 setup ERRORS in
+      tests/service-integration/test_mute_e2e.py
+      (TestMuteSilencesOutput::test_mute_silences_hw_out and
+      TestUnmuteRestoresSignal::test_unmute_restores_levels),
+      verbatim: "hw-out not at the floor with the gate closed and the
+      tone playing: [-40.0, -40.0, -34.0, -34.0]". Summary: "75
+      passed, 2 skipped, 2 xfailed, 3 warnings, 2 errors". Excerpt
+      /tmp/cm-relay/F-262/R5/frozen/
+      R5-S2-2-40470085642-excerpt-fba83758.txt (fba83758 verified).
+    - S2 is at 1 PASS + 1 RED; dispatches PAUSED pending the QE
+      ruling; the AE has an FYI. HOLD: no backlog ID or classification
+      until the QE rules.
+  - QE RULING on S2-2 (releases the hold above):
+    /tmp/f262-qe-R5-S2-2-ruling-r1.md (sha256 7240c033 verified). S2-2
+    is a PASS (F-262 AC 1.12 dB) and counts. S2 = 2/10. S2 dispatches
+    may resume (per the QE ruling; the CM dispatches).
+  - #66 merge planning (QE §4, for information): #66 needs a fully
+    green Rule 13 CI at its final head; if the race recurs there, #66
+    cannot merge until it is fixed or ruled. If the F-439 fix lands on
+    main first, the update-branch brings in src/ changes, and ebd890d0
+    §A means a new 10-run series at the new head. The QE will not
+    loosen §A ad hoc. PM: sequencing is for the PO/Architect.
+  - S2 RESUMED per QE 7240c033 (CM): S2-3 = run 40483087517 at
+    6931c372, dispatched 09:44:32Z. The AE has the ruling for F-439
+    severity (pending). F-383: worker-7's C1 data report e2f9c7a6 is
+    with the Architect (writer) and the AE; worker-7 has started C2
+    under the FINAL set (80801402).
+  - F-262 R5 S2 (CM): S2-3 40483087517 at 6931c372 PASS at 1.22 dB,
+    all green, no mute errors (excerpt 04f74c00). S2 = 3/10. S2-4 =
+    40490280494, dispatched 10:40:19Z.
+  - F-262 R5 S2-4 (CM): run 40490280494 at 6931c372 ended in CI
+    FAILURE. One unit-test ERROR at teardown of
+    test_measurement_integration.py::TestGMFullSessionLifecycle::
+    test_gm_mode_transitions_during_happy_path, and E2E did not run.
+    Excerpt /tmp/cm-relay/F-262/R5/frozen/
+    R5-S2-4-40490280494-excerpt-16de454d.txt (16de454d verified). S2
+    stays at 3/10; dispatches PAUSED pending the QE class. HOLD: a new
+    F-ID, if the QE opens one, = F-443.
+  - QE RULING on S2-4 (releases the S2-4 hold above):
+    /tmp/f262-qe-R5-S2-4-ruling-r1.md (sha256 4a5adbab verified; rules
+    abfd33d7 + ebd890d0 + 69ebc46f + 7240c033, no rule change).
+    - S2-4 = VOID (T1). It does not count and does not break the
+      streak. S2 = 3/10 PASS, VOIDs 1 (cap: more than 3).
+    - §3: resume one at a time; next is S2-5. Stop early on a RED, on
+      the same T1 test failing again (deterministic), or on more than
+      3 VOIDs.
+    - The final #66 head needs a fully green CI. This flake and F-439
+      can block it.
+  - S2-4 ruling frozen copy (CM): /tmp/cm-relay/F-262/R5/frozen/
+    qe-R5-S2-4-ruling-r1-4a5adbab.md (4a5adbab verified, same sha as
+    the QE accounting copy). S2-5 = run 40495680499 at 6931c372,
+    dispatched. PM: the CM's message said "use F-443", which crossed
+    the PM ack giving F-443 to the AE's NB1 (25c2ec77). The flaky-T1
+    finding stays F-444 (QE §2 wording, matches the CM relay).
+  - F-262 R5 S2-5 (CM): run 40495680499 at 6931c372 ended in CI
+    FAILURE, in a different place from S2-4. Unit tests clean
+    (including the F-444 test). Browser integration had 1 failure:
+    test_dashboard_dual_ws.py::
+    test_monitoring_meters_have_nonzero_values[chromium] (meter
+    readout stayed "-inf"). E2E did not run. Excerpt
+    /tmp/cm-relay/F-262/R5/frozen/
+    R5-S2-5-40495680499-excerpt-25dc44c2.txt (25dc44c2 verified). S2 =
+    3/10 PASS, 1 VOID; PAUSED pending the QE class. HOLD: a new ID, if
+    needed, = F-445.
+  - QE RULING on S2-5 (releases the S2-5 hold above):
+    /tmp/cm-relay/F-262/R5/frozen/qe-R5-S2-5-ruling-r1-adc64c08.md
+    (sha256 adc64c08 verified).
+    - S2-5 = VOID (pre-E2E test failure). It does not count and does
+      not break the streak. S2 = 3/10 PASS, 2 VOID.
+    - §2 clarification: a pre-E2E browser-integration failure gets the
+      same extra handling as a T1 failure in ebd890d0 §B: (a) a
+      finding of its own; (b) one more failure of the same test at
+      this head = deterministic, stop; (c) it counts toward the
+      more-than-3-VOID cap.
+    - l.21 verbatim: "At 2 VOIDs now, two more voids of ANY cause in
+      S2 stop the series and come to me."
+    - S2-6 = run 40501858451 at 6931c372, dispatched (CM).
+  - #66-FIRST RULE (team-lead question; PM answer
+    /tmp/pm-backlog/pm-66-status-r1.md sha256 ac02e1a1, to CM cc
+    team-lead): #66 NOT merged (head 6931c372, current with main
+    ff55d0c8); S2 3/10 PASS 2 VOID; S2-6 40501858451 result missing
+    from the ledger (CM read requested). Setter = QE ebd890d0 §A
+    (+69ebc46f l.30); per-PR "after #66": QE dc003e70, QE F-445 §2, PO
+    67f15d65 §5. No ruling names #63; "#63 only after #66" = CM
+    reading of §A, diff supports it. Stands; the QE re-rules, the PO
+    confirms priority. Correction: run pace about 40-55 min, not
+    30-40.
+  - F-262 R5 S2-6 (CM, one read): run 40501858451 at 6931c372 FAILURE,
+    real (ended 12:59:40Z). Two setup ERRORs in service-integration
+    test_mute_e2e.py (test_mute_silences_hw_out,
+    test_unmute_restores_levels), "...-out not at the floor with the
+    gate closed and the tone playing: [-40.0, -40.0, -34.0, -34.0]";
+    all other suites green (CM). Log /tmp/cm-relay/PR66/frozen/
+    s2-6-run-40501858451-failed-c446e8cb.log (sha256 c446e8cb
+    verified). HOLD: no tally change until the QE classifies (AE asked
+    for domain impact).
+    - PM cross-ref: same signature as S2-2 (F-439). QE 7240c033 l.9,
+      verbatim: "If the mute errors recur in later S2 runs, classify
+      the same way (PASS if the API test and AC lines are good). No
+      new ruling is needed; just log it." The CM report does not quote
+      the F-262 AC line or the API test result. l.29: "If this race
+      recurs there, #66 cannot merge until it is fixed or ruled."
+      F-439 evidence: 2nd occurrence at 6931c372 (S2-2, S2-6).
+  - QE RE-RULING #63 vs #66 (/tmp/f262-qe-66-vs-63-order-ruling-r1.md,
+    sha256 1ae4c8c3 verified, mode 444; single writer QE at team-lead
+    request). SUPERSEDES the "#66-first" reading in pm-66-status-r1
+    (ac02e1a1) for #63; ebd890d0 §A unchanged.
+    - Verbatim: "Decision: #63 merges BEFORE #66. ebd890d0 §A itself
+      is unchanged." "§A was never a priority rule."
+    - S2 at 6931c372 DISCARDED (3 PASS + S2-6). No new dispatches at
+      6931c372. S2-6 is logged for the record only: "It counts for
+      nothing." The S2-6 hold above is moot.
+    - After #63 merges: #66 update-branch (voids approvals), A1
+      re-check, S2 restarts at 0/10 (VOID count resets), then Rule 13
+      PR CI and 7/7 again. Net cost to #66 about 2-3 h CI plus one
+      re-approval round (QE).
+    - F-444/F-445/F-439 PRs stay after #66 (dc003e70 §2, F-445 §2, PO
+      r3 §5).
+    - OPEN for the PO (§4): F-465 and F-341 would each restart S2
+      again if they merge before #66. QE CI view: run S2 once, after
+      the last US-173 chain PR, unless the PO wants #66 between them.
+      No PO decision yet.
+  - QE S2-6 RULING (/tmp/f262-qe-R5-S2-6-ruling-r1.md, sha256 d3bf5f5c
+    verified, mode 444): S2-6 = PASS 1.12 dB (test_full_session_api
+    PASSED l.6598; AC l.6650), under 7240c033 §1. S2 = 4/10 PASS, 2
+    VOID at 6931c372, FOR THE RECORD ONLY: 1ae4c8c3 stands and the PO
+    confirmed it, so this S2 is discarded. Releases the S2-6 hold
+    above.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -8244,6 +9010,198 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   cites the batch as fb386d1f (PM: not located as a file or commit at
   PM read; the TW patch /tmp/tw-f410-nb-ff55d0c8.patch has sha256
   97599e15).
+  - F-410 batch: fb386d1f = sha1 of TW patch
+    /tmp/tw-f410-nb-ff55d0c8.patch (PM shasum verified; sha256
+    97599e15, same file). Not a commit; nothing committed; queued
+    lowest priority (CM). Corrects v312 "not located" note.
+  - NEW ID F-474 (HIGH, set by the AE; AE owns acceptance; free in all
+    refs at PM read). Title verbatim: "unmute restores gains behind a
+    closed D-063 gate". Source: AE ruling
+    /tmp/cm-relay/PR66/frozen/ae-s2-6-hwout-r1-adf62efa (sha256
+    adf62efa verified, mode 444), section "NEW DEFECT". Evidence: S2-6
+    log /tmp/cm-relay/PR66/frozen/
+    s2-6-run-40501858451-failed-c446e8cb.log (sha256 c446e8cb), run
+    40501858451 at 6931c372, stack log l.8062-8136.
+    - Finding (AE): virtual_gate_open
+      (src/web-ui/tests/fixtures/backend.py:661-664 @6931c372) read
+      hw-out [-40.0, -40.0, -34.0, -34.0] = exact open-gate venue
+      levels, while the GM reported the gate closed. Cause
+      app/audio_mute.py: "unmute() writes them back unconditionally.
+      It never checks the D-063 gate." Deterministic on any stack
+      incl. the Pi; not caused by #66 (audio_mute.py last changed
+      8f42b8c9); exposed by the F-394 non-vacuous mute tests.
+    - AE, verbatim: "The finding is NOT a flake". "Do not xfail or
+      skip the two tests. They are correct." A green rerun is not
+      evidence it is gone.
+    - Fix reqs F1-F3 (verbatim from adf62efa): "F1. Unmute must never
+      write a non-zero Mult while the GM gate is closed." "F2. Any
+      gate close (standby, close_gate, watchdog, D-063) must
+      invalidate the web-ui pre-mute snapshot." (the Architect picks
+      the shape; GM owning mute preferred). "F3. The mute snapshot
+      must come from a confirmed live read, not a pw-dump that may be
+      stale".
+    - Tests (a) open gate -> mute -> close_gate -> unmute -> all 8
+      Mults == 0, hw-out at floor; (b) standby then immediate
+      mute/unmute -> Mults == 0 (shows whether GM zeroing lands); (c)
+      existing test_mute_e2e fixtures unchanged and passing.
+    - PRE-AUDIO GATE: fixed before the first gate open with amps
+      connected, alongside F-341 (7f73dda1) and F-465 (013d2fa8). No
+      Pi impact today (nothing connected, gate closed, gains 0). PM
+      cross-ref: hard-gate list before any gate open on the Pi is now
+      F-465, F-341, F-474. Amps-on list mirror: a safety.md row for
+      F-474 is a TW item (amps-on-list-mirrors-safety-md); not yet
+      requested.
+    - LINK to F-439 (worker-3): AE D2 56043d31 stands, no conditions
+      voided. NB for D2 (no new rN): guarded_set_mult (C4) also
+      refuses any Mult raise while the gate is closed; unmute goes
+      through guarded_set_mult (or GM equivalent); C3 applies to the
+      mute snapshot read. The F-439 PR review must show F-474 F1
+      either covered or explicitly left to F-474, with no gap between
+      them (AE).
+    - #66: AE does not withhold approval in their domain, on condition
+      F-474 is filed first at HIGH with this log cited (now filed).
+      Merge on a rerun green with F-474 open = QE call.
+    - Owner: none yet. Sequencing: no PO placement yet. PM cross-ref:
+      F-439 is in the chain before #66 (A1 765723ca) and may cover
+      F1-F3; whether F-474 joins F-439's PR or follows it is for the
+      PO with Architect input.
+    - Next free -> F-475.
+  - F-474 PLACEMENT (PO ruling
+    /tmp/po-drafts/F-474-placement-ruling.txt, sha256 123cb139
+    verified at PM read; mode 644, not frozen): "RULING: option (a).
+    F-474 is folded into the F-439 PR. Owner: worker-3. No new chain
+    slot; the order stays #63 -> F-465 -> F-341 -> F-439 -> #66."
+    Supersedes "Owner: none yet / no PO placement yet" in the F-474
+    entry above.
+    - Why (PO): F-439 r3 (MUTE = close_gate, UNMUTE removed as a gain
+      restore, r3 §2) leaves no pre-mute snapshot and no unmute write;
+      F1-F3 hold by construction; r3 §3a single write path covers the
+      AE NB on guarded_set_mult.
+    - Conditions for the F-439 PR (in addition to r3 and A1): (1) PR
+      body maps AE F1-F3 one by one to r3 (no gap, AE requirement);
+      (2) AE tests adapted to r3: (a) open gate -> mute -> close_gate
+      -> all 8 Mults == 0 and hw-out at floor, "No web UI action other
+      than Open Gate raises any Mult"; (b) standby then immediate mute
+      -> all 8 Mults == 0; (c) test_mute_e2e fixtures unchanged and
+      passing, none xfailed or skipped; the QE and AE agree the exact
+      form; (3) if (b) shows the GM standby/close zeroing does not
+      land, that is a separate GM defect, filed at once by the QE/AE
+      and placed by the PO, "It does not silently pass"; (4) F-474
+      closes with the F-439 PR after AE acceptance; the PR body cites
+      adf62efa.
+    - PM cross-ref: F-439 PR evidence list now = QE 6e0e16b1 T1-T6 +
+      QE d3bf5f5c §2 virtual_gate_open statement + PO 123cb139
+      conditions 1-4.
+  - F-474 (CM): ACK of the filing; PO ruling frozen at
+    /tmp/cm-relay/F-474/frozen/po-F474-placement-ruling-123cb139 and
+    relayed to worker-3. Amps-on mirror: PM raised the safety.md item
+    with the TW (own row vs joining row 14, gate-authority; AE signs
+    off the wording). PM also asked the TW to check with the AE
+    whether F-439 itself needs an amps-on row (none found in the
+    record). The backlog list mirrors only after the safety.md text
+    merges.
+  - F-474 TEST FORM (PO 123cb139 cond. 2): joint QE+AE text r1
+    /tmp/f474-qe-ae-test-form-r1.md, sha256 c686048f (QE single
+    writer). AE release PENDING. Not relayable to worker-3 until the
+    AE releases this sha (joint text needs all releases).
+  - F-474 TEST FORM r2 (QE): /tmp/f474-qe-ae-test-form-r2.md, sha256
+    8ab9077f verified (mode 444); AE release PENDING. r1 c686048f VOID
+    (supersedes the r1 entry above). T2 now REWRITES
+    TestUnmuteRestoresSignal instead of deleting it (AE 3088f33b NB1);
+    this overrides the T2 deletion line in QE 6e0e16b1 (QE).
+  - DEDUPE (TW flag; PM ID decision): F-474 is a DUPLICATE of F-410
+    (v265/v266 record l.8194ff: "Unmute restores the venue gains
+    behind a closed gate", AudioMuteManager.unmute() audio_mute.py
+    l.102-132, no gate check; AE: "HIGH once anything is connected",
+    fix before amps-on). PM missed this at filing: the ID-free check
+    does not catch duplicates.
+    - DECISION: F-410 SURVIVES (older; cited on main in F-394.md;
+      record file already queued in TW batch
+      /tmp/tw-f410-nb-ff55d0c8.patch). F-474 is RETIRED as "duplicate
+      of F-410"; never reused. Next free stays F-475.
+    - Everything filed under F-474 carries over to F-410 unchanged:
+      severity HIGH (AE adf62efa), S2-6 evidence c446e8cb, F1-F3 and
+      tests (a)-(c), PO placement 123cb139 (folded into the F-439 PR,
+      owner worker-3, closes with that PR after AE acceptance;
+      supersedes the earlier worker-1 assignment of F-410), QE/AE test
+      form r2 8ab9077f, pre-amps gate status. Files that say "F-474"
+      (AE adf62efa, PO 123cb139, QE form, CM /tmp/cm-relay/F-474/)
+      stay valid as alias; no re-issue needed.
+    - Hard-gate list before any gate open with amps: F-465, F-341,
+      F-410 (ex-F-474), F-320 D.
+    - TW: the queued F-410 batch needs the HIGH severity, the
+      adf62efa/c446e8cb evidence and the 123cb139 placement; the
+      amps-on row cites F-410. F-320 overlap (Found-in audio_mute.py
+      l.102-140) noted: F-410 closes in the F-439 = F-320 F PR, so the
+      overlap resolves in that PR.
+  - AMPS-ON (TW 293e5a9f question to the AE, verified): TW recommends
+    an own row 20 for F-410/F-474 (row 14 allows an interim rule, the
+    AE allows none). F-439: no separate row proposed; PO r3 67f15d65
+    §1 closes F-439 as duplicate of F-320 F, already in row 14. Both
+    PENDING the AE.
+  - F-410 (ex-F-474) TEST FORM r2 RELEASED (supersedes "AE release
+    PENDING" above): AE release /tmp/cm-relay/F-474/frozen/
+    ae-F474-test-form-r2-release-262206c3 (sha256 262206c3 verified),
+    verbatim: "RELEASED as written. Relay it to worker-3." Relayed to
+    worker-3 (CM). AE NB (no change to r2), verbatim: "a2's list must
+    name EVERY web UI Mult writer that the D8 grep guard finds, not
+    only the four listed." AE 36c50c60 (crossed position file, allowed
+    deletion) VOID, not relayed. r1 c686048f never released.
+    - Also on record: AE placement release
+      /tmp/cm-relay/F-474/frozen/
+      ae-F474-placement-release-r1-3088f33b (the NB1 source cited by
+      the QE).
+  - AMPS-ON ROW 20 (TW; PENDING the safety.md merge, mirror rule): AE
+    row text /tmp/cm-relay/F-474/ae-F474-amps-on-row-293e5a9f-r1.txt
+    (sha256 03db3e0f verified; mode 644, not frozen); TW full
+    safety.md /tmp/tw-f474-safety-r1-ff55d0c8/r3.md (sha256 07292853,
+    blob cb82e7a4, both verified, mode 444). One row 20 for F-474
+    (=F-410) and F-320 D; "no interim operating rule counts; AE
+    acceptance required". Lead-in: 16 rows (1-14, 19, 20; 15-18
+    reserved for US-174d); gate line "(1-3, 5-14, 19, 20)". F2
+    CONFIRMED by the AE: no F-439 row. COI: TW wrote the safety.md
+    text, AE the row text.
+    - DEDUPE STANDS (PM): F-410 survives. The AE's preference (F-410
+      as duplicate of F-474) crossed the PM decision, which was
+      already relayed to worker-3 ("F-410 (filed as F-474)"). Evidence
+      and placement carry over by record, so the AE's reason is met.
+      AE file l.16, verbatim: "Row 20 cites the survivor." So row 20
+      reads F-410 in place of F-474, covered by that release; no new
+      AE release needed (PM reading). Sent to the TW and the AE.
+  - AMPS-ON ROW 20 r2 (TW; PENDING the safety.md merge, mirror rule;
+    supersedes the row-20 entry above): TW r3.md 07292853 VOID (cited
+    F-474). New full safety.md /tmp/tw-f410-safety-r2-ff55d0c8/new.md
+    (sha256 2dbd5daa verified, mode 444; no "F-474" left, row 20 at
+    l.48). Row 20 verbatim: "| 20 | F-410, F-320 D | While the D-063
+    gate is closed, no action other than Open Gate raises any Mult:
+    the web UI unmute never restores gains behind a closed gate
+    (F-410, closes with the F-439 / F-320 F PR), and the GM watchdog
+    unlatch writes no Mult (F-320 D). Both must be fixed; no interim
+    operating rule counts; AE acceptance required |". AE release of
+    the F-410 citation and the watchdog-latch interim bullet:
+    /tmp/cm-relay/F-474/frozen/
+    ae-F474-amps-on-addendum-release-f3c58693 (sha256 f3c58693
+    verified). With the CM.
+  - F-410 RECORD BATCH r2 (TW): /tmp/tw-f410-nb-r2-ff55d0c8.patch
+    (sha256 b7ddaea5 verified, mode 444); supersedes the queued
+    97599e15/fb386d1f batch. Carries HIGH (adf62efa), c446e8cb / run
+    40501858451, F1-F3 verbatim, PO 123cb139 placement (worker-3,
+    F-439 PR, supersedes worker-1), "F-474 retired as a duplicate of
+    F-410; the ID is not reused", and AE 3088f33b NB1
+    (test_unmute_restores_levels rewrite) and NB2 (F-320 D owns the GM
+    side). With the CM. COI: TW wrote both; the AE wrote the row and
+    the bullet.
+  - AMPS-ON ROW 20 FINAL TEXT (TW; supersedes 2dbd5daa as the file of
+    record; PENDING merge, mirror rule):
+    /tmp/tw-f410-safety-r2-01ad0a3a.patch (sha256 e1c5b698 verified,
+    mode 444), on the #63 base 01ad0a3a. PM dry-apply to safety.md at
+    01ad0a3a: clean, no fuzz; result blob 5019ab1f matches the TW. No
+    "F-474" in the patch. Carries row 20 (F-410, F-320 D) and the
+    watchdog-latch bullet (AE f3c58693). AE confirmation of the F-410
+    citation: MESSAGE-ONLY as relayed by the TW, verbatim: "Only
+    change: the PM made F-410 the surviving ID ... so the row should
+    cite F-410." The CM is collecting the AE release of the final sha.
+    VOID: r3 07292853 / blob cb82e7a4. F-410 batch r2 b7ddaea5 stands.
 - **F-411** Correction under-corrects near the closed-loop band edge
   (mock-room Left, 272.6 Hz: room +3.95 dB, FIR -0.71 dB) (AE,
   2026-10-26; title verbatim from the AE; severity Medium, AE; no
@@ -8673,6 +9631,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     non-strict xfails), and xfail reasons stay unprinted. Backlog
     idea: `-rsx` across the test apps." AD message: "low priority". PM
     cross-ref: the test_full_session_api flip one-liner above.
+  - UPDATE (PM, v313, 2026-10-27; no new ID, duplicate check done):
+    AC5 also covers the 2 new stability-test pytest calls that #63
+    adds to the nix test apps without -rs (AD N1 20004790, QE NB
+    685f9824, Architect NB1 f1f79553; one item). Follow-up after #63
+    merges; not a new head for #63.
 - **F-402** Integration test turns a 500 from POST /filters/generate
   into a skip, hiding a real server error
   (test_full_user_journey.py:179-183) (QE, 2026-10-26; option (b), ID
@@ -11307,6 +12270,164 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     Architect r2 arch-F383-step3-Q1-r2-1a8e02ee.txt (sha256 1a8e02ee),
     adds a C1 pin test; awaits the AE's release, and the commit waits
     on that. A3 one-liner filed as F-430.
+  - F-383 step 3: AE released Q1 r2 1a8e02ee; relayed to worker-7 with
+    C1 pin test in the new test file; no fence r2 needed; worker-7
+    step-3 commit unblocked (CM). AE release MESSAGE-ONLY (CM, no
+    file), verbatim as relayed: "I release the Architect's answer r2
+    as written … sha256 1a8e02eeb131bfb1…46bd. A1b keeps its
+    independence through the helper's own grid. The C1 pin, including
+    the assert that the subsonic passes _LR_LOG_FLOOR, closes the
+    blind spot the shared floor creates. My OBJ-1 is satisfied." (CM's
+    ellipses.) Architect answer frozen
+    arch-F383-step3-Q1-r2-1a8e02ee.txt (sha256 1a8e02ee verified in
+    v312).
+  - F-383 Part B ruling: Architect r1 /tmp/cm-relay/F-383/frozen/
+    arch-F383-partB-ruling-r1-9e5eb913.txt (sha256 9e5eb913 verified);
+    AE release ae-F383-partB-r1-release-85648357.txt (85648357
+    verified) verbatim "RELEASED as written. D1-D5 stand. I keep none
+    of my as-written limits."; team-lead FINAL (CM).
+  - F-383 step 3 stopped before commit: worker-7 Q4
+    /tmp/cm-relay/F-383/frozen/
+    w7-F383-step3-Q4-short-taps-r1-dbb4e639.md (sha256 dbb4e639
+    verified): A1b raises at short n_taps in 33 existing tests.
+    Architect writes ruling, AE releases. Nothing committed (HEAD
+    0af057ba).
+  - F-383 step-3 Q4 ruling: Architect r1 /tmp/cm-relay/F-383/frozen/
+    arch-F383-step3-Q4-ruling-r1-bf088723.txt (sha256 bf088723
+    verified) — Option 2, A1B_MIN_TAPS = 16384, 33 tests unedited; AE
+    release /tmp/cm-relay/F-383/frozen/
+    ae-F383-step3-Q4-release-d47b710e.txt (sha256 d47b710e verified),
+    verbatim "RELEASED as written."
+  - SUPERSEDES the two items above in part (CM message, 2026-10-27):
+    Architect VOIDED Q4 r1 bf088723 and issued r2 e72bf792, which is
+    with the AE for release (not yet released). F-434 carries over
+    unchanged into r2 (per CM). F-435 (AE NB2) is on HOLD: the CM is
+    asking the AE whether it still stands. Do not write F-435 into
+    v313 until the CM confirms. A new UX one-liner is pending (r2
+    l.52, "web-ui speaker editor: filter_taps input allows < 8192; set
+    min 8192 and show …"). No ID yet; the CM will send the final
+    wording after the AE releases r2. Next free stays F-436.
+  - SUPERSEDES the item above (CM message, 2026-10-27, team-lead
+    FINAL): F-383 Q4 FINAL = r1 bf088723 + AE release d47b710e + NB1.
+    r2 e72bf792 WITHDRAWN and VOID (it crossed). F-434 is unchanged
+    (basis bf088723 l.40-41). F-435 is RELEASED into v313 exactly as
+    the AE wrote it (d47b710e l.17-18). AE note for the record, text
+    unchanged, verbatim as relayed: "under r1 an 8192-tap profile gets
+    no A1b", so the AE suggests a minimum of 16384 or a warning; the
+    PM and Architect decide the number (PM: the F-435 text already
+    says 16384; not decided further here). The pending UX r2 l.52 line
+    is dropped; it is absorbed into F-436.
+  - F-383 step 3 PUSHED (CM): fix/F-383-step3-subsonic-f1 =
+    f3c84c74f90693d217c0ff7212903b7987e4d478, parent 0af057ba (F-384
+    head, stacked), subject "fix(room-correction): F-383 step 3
+    subsonic F1-64 + A1b generator checks". PM-verified via ls-remote
+    and git log. Worker report /tmp/cm-relay/F-383/frozen/
+    w7-F383-step3-commit-report-r1-f78df0d6.md (sha256 f78df0d6
+    verified). Per CM: room-correction 1702 passed / 1 skipped / 0
+    failed (baseline 1551 + 151 new); unit 953 passed. Next is
+    worker-7's step-4 plan (PM: step 4 should confirm it removes the
+    F-432 legacy-combine S vs U shift).
+  - PM cross-check of f78df0d6 against the item above: room-correction
+    line matches (l.27: "1702 passed, 1 skipped, 0 failed, 0 errors",
+    2 warnings). Unit per report l.32: "953 passed, 1 skipped, 1
+    warning (same read-only cache warning as base), exit 0". The 1
+    skipped and 1 warning were not in the CM message; use the report
+    text in v313.
+  - F-383 step 4 FENCED (CM): plan /tmp/cm-relay/F-383/frozen/
+    w7-F383-step4-plan-r1-041646b7.md (sha256 041646b7 verified) +
+    Architect fence r1 /tmp/cm-relay/F-383/frozen/
+    arch-F383-step4-fence-r1-c49a1500.txt (c49a1500 verified; F1-F6;
+    Q1: A1c logged in step 4, fail-closed in step 5, step 5 covering
+    all 3 combine_filters callers; Q2: A2 defaults) + AE release
+    /tmp/cm-relay/F-383/frozen/
+    ae-F383-step4-fence-release-34348be3.txt (34348be3 verified).
+    Branch fix/F-383-step4-combine at f3c84c74 (per CM; not on origin
+    at PM read, which is expected before the first push). worker-7 is
+    on phase 4a.
+  - CM HOLD F-383-AMPS (record on the F-383 PR(s)). CM wording,
+    verbatim: "No DEPLOY for amps-on use of a build containing F-383
+    step 4 without step 5's A1c / L1'-L3' gate; nothing-connected test
+    builds not affected." AE source, 34348be3 l.11, verbatim: "HOLD:
+    no DEPLOY of a build that contains F-383 step 4 but not step 5's
+    A1c / L1'-L3' gate, for amps-on use." The AE says a CM-held
+    condition is enough; it does not need to be in the ruling (l.10).
+    PM: the "nothing-connected test builds not affected" scope is the
+    CM's wording; it is not in the AE line quoted.
+  - CORRECTION to the PM note in the item above: the scope IS in the
+    AE source, 34348be3 l.12, verbatim: "Builds for nothing-connected
+    or measurement-free testing are not affected." The CM wording
+    matches in substance. Use the AE l.11-12 text in v313.
+  - F-383 step-4 phase 4a HELD (CM) on the Architect's ruling:
+    /tmp/cm-relay/F-383/frozen/
+    arch-F383-4a-C1C2-AGREED-r1-83c26488.txt (83c26488 verified;
+    C1/C2, agreed) + /tmp/cm-relay/F-383/frozen/
+    arch-F383-4a-C3C4-DISPUTED-r1-5430bc9d.txt (5430bc9d verified;
+    C3/C4, disputed). Pending the AE's release. G0 (per CM): step 4
+    lands together with or after the C1-C4 fixes.
+  - F-383 4a set AMENDED (CM): Architect NOTE r1
+    /tmp/cm-relay/F-383/frozen/arch-F383-4a-NOTE-AE-r1-1f1c1f05.txt
+    (sha256 1f1c1f05 verified) covers AE input
+    /tmp/cm-relay/F-383/frozen/ae-F383-step4-4a-input-7833e3f5.txt
+    (7833e3f5, verified by the Architect at read, NOTE l.3). NOTE l.4
+    verbatim: "Neither is voided." The governing set awaiting the AE's
+    release is now 83c26488 + 5430bc9d + 1f1c1f05. C3 becomes step 4b
+    on the same branch (the AE's composition set), landing before or
+    with the step-4 combine change (G0) (l.30). F-408 returns to the
+    backlog, l.31 verbatim: "F-408 goes back to backlog as the
+    long-term metric replacement and is not required." Order (l.54):
+    "C3 step 4b fence -> C4 fence -> step-4 combine change -> PR. No
+    red commit at any point."
+  - F-383 4a set FINAL (CM): Architect AGREED 83c26488 + DISPUTED
+    5430bc9d + NOTE 1f1c1f05, with the AE FINAL release
+    /tmp/cm-relay/F-383/frozen/
+    ae-F383-4a-set-release-FINAL-80801402.txt (sha256 80801402
+    verified). l.1 verbatim: "AE RELEASE of the three-file set. FINAL,
+    no more flips." The AE's crossed points
+    /tmp/cm-relay/F-383/frozen/
+    ae-F383-4a-DISPUTED-points-cf0b6903.txt (cf0b6903 verified) are
+    superseded where they differ; the NOTE governs (l.9-14). l.15-16
+    verbatim: "The Architect is asked NOT to write an r2 in answer to
+    cf0b6903. If any later file crosses this one, it resolves to THIS
+    set."
+    - C3: step 4b on the same branch, with the NOTE's composition set
+      (C3.1-C3.5). F-408 goes back to the backlog.
+    - C4: NOTE C4.1-C4.4, product rule <= fc_xo/5 (per CM). Two AE NBs
+      are required in the C4 fence; they are non-blocking for the
+      start (l.18-24). NB-C4a: the product (HP x subsonic) must
+      attenuate at least as much as the 80 Hz/24 reference at every
+      frequency from 10 to 80 Hz, on a 1/12-oct grid. NB-C4b verbatim:
+      "if no corner <= fc_xo/5 passes, STOP. A crossover-frequency
+      change is NOT in scope; it is an audible tonal change and goes
+      to the owner in plain language via team-lead."
+    - Order (NOTE l.53-54) verbatim: "AGREED (C2 + C1 data run) -> C1
+      source fix -> C3 step 4b fence -> C4 fence -> step-4 combine
+      change -> PR. No red commit at any point." worker-7 is on the C1
+      data run plus C2.
+  - F-383 C1 AE response (CM): /tmp/cm-relay/F-383/frozen/
+    ae-F383-C1-R5-data-c57f0303-NB-response-r1-25c2ec77.txt (sha256
+    25c2ec77 verified; released by the AE and the Architect per the
+    CM; basis worker-7 R5 data c57f0303). Verdict verbatim: "VERDICT:
+    ACCEPT AS-IS. No condition on the C1 commit. C1 may commit (R5
+    met: 0/1000 fails in all six 16384 cells, D4 +1.7%)."
+    - NB2 (seed 962) accepted: not an S-012 gain increase. CM hold
+      F-383-AMPS stays. The commit message records the seed-962 delta.
+  - F-383 C4 RULED (CM): Architect /tmp/cm-relay/F-383/frozen/
+    F383-step4-C4-fence-ruling-architect-r1-41fd1486 (sha256 41fd1486
+    verified) + AE release /tmp/cm-relay/F-383/frozen/
+    ae-F383-C4-fence-ruling-arch-r1-41fd1486-release-92386ab9
+    (92386ab9 verified). AE l.4: "It crossed my answers a7eed54f.
+    41fd1486 governs." The points of a7eed54f that 41fd1486 does not
+    cover become binding NBs on it. AE l.12: "Q-C4c: fc/5 for all
+    orders plus the 48 dB/oct backlog line. Confirmed (backlog owner:
+    AE)." AE l.13: "Q-C4e: both backlog lines as worded. Confirmed."
+    - PM: the ruling has three backlog lines (one Q-C4c, two Q-C4e).
+      The CM's "two Q-C4e lines ... the AE owns the 48 dB/oct line"
+      read as all three; all three are recorded.
+  - F-383 C3 PUSHED (CM): d923a783 on fix/F-383-step4-combine,
+    "feat(room-correction): F-383 C3 (step 4b) composition row, logged
+    only". PM verified: ls-remote origin = d923a783, which descends
+    from the previous origin ref 2cd362f0. worker-7 is now coding C4
+    under Arch 41fd1486 + AE 92386ab9.
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
@@ -12999,6 +14120,56 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     so the US-179 PR must be reviewed at a head that contains it." PM
     cross-ref: no worker-6 ack file for 3ae67f4c in frozen/ at PM
     read; the push resumed under the team-lead ack rule.
+  - US-179 worker-6 ack of 3ae67f4c: MESSAGE-ONLY (CM), no file.
+    Partial ack first (10bc34bf, 1f5a4d8c, a1736914, E6 shas, without
+    3ae67f4c); then ack of 10bc34bf, 1f5a4d8c, 3ae67f4c by sha256
+    (crossed CM's); later ack of 3ae67f4c + 1683b0fb. Team-lead ruled
+    strictness question moot. Record like Architect D2d' "no change".
+  - US-179: story/US-179-web-rc pushed to 1ba20dad (PM: ls-remote +
+    log verified). Chain 1666db80 -> d4938d07 'feat(web-rc): result
+    step and report texts, repeatability rejection (US-179)' ->
+    cf2f1315 'feat(web-rc): result-step plots (US-179 AC11)' ->
+    1ba20dad 'fix(web-rc): rejection texts per UX 09da95d8, drop late
+    capture without meter (US-179)' (CM: + null guard). Pending: plot
+    changes per UX ux-us179-w6-plots-866c44ff.md (sha256 866c44ff
+    verified); UX answer on BOTH_DISCARDED ending.
+  - US-179 settle (CM): AE settle r2 /tmp/cm-relay/US-179/frozen/
+    ae-US179-settle-ruling-r2-30d2bcef.txt (30d2bcef verified) answers
+    worker-6 r2 question /tmp/cm-relay/US-179/frozen/
+    w6-US179-q-settle-r2-ea89fa16.md (ea89fa16 verified). The ≥1.0 s
+    wait stands, timed on the wall clock (r2 l.21, verbatim: "The wait
+    is timed in WALL-CLOCK time (performance.now or similar), not on
+    the AudioContext clock."). It supersedes r1 d1f133da (verified),
+    which per the CM was based on a test artifact.
+  - US-179 beat ruling (CM): Architect r1
+    /tmp/cm-relay/US-179/frozen/
+    arch-us179-beat-ruling-r1-3fb4cd0c.txt (3fb4cd0c verified) + AE
+    release with Q2 answer /tmp/cm-relay/US-179/frozen/
+    ae-us179-beat-release-Q2-42dada94.txt (42dada94 verified; l.6
+    "RELEASED as written (Q1 option B, B1-B4)"). The meter uses its
+    own beat counter (option B); clock-glitched captures are discarded
+    per G1-G6. The E2E becomes a CI gate only after 20 consecutive
+    clean runs (3fb4cd0c l.29-30). G3 text is with the UX (pending).
+  - US-179 PUSHED (CM; PM-verified via ls-remote and git log):
+    story/US-179-web-rc = 493da78d. Chain from the last recorded head
+    1ba20dad: 0210ea56 "feat(web-rc): result plots per UX 866c44ff
+    (US-179 AC11)" -> 5e36322f "test(web-rc): one-channel browser E2E
+    with a Playwright fake room (US-179)" -> 460e1c41 settle (AE
+    d1f133da + 30d2bcef) -> d32558ba beat counter (Arch 3fb4cd0c) ->
+    493da78d "feat(web-rc): reject captures with a render clock glitch
+    (US-179)" (G1-G5; AE 42dada94, UX /tmp/cm-relay/US-179/frozen/
+    ux-us179-clock-glitch-text-7b893ef9.md, 7b893ef9 verified, which
+    settles the pending G3 text). The UX plots item is now in
+    0210ea56. worker-6 is running the 20-run E2E series; no PR yet.
+  - US-179 E2E SERIES r1 (worker-6,
+    /tmp/cm-relay/US-179/frozen/w6-e2e20-results-r1-ec040a78, sha256
+    ec040a78 verified at PM read): 20 runs on 493da78d, no retry.
+    "Result: 19 passed, 1 failed (run11). ... The 20-in-a-row gate is
+    NOT met." "Heartbeat stop (the old ~25% flake): none in 20 runs."
+    Clock-glitch caveat, verbatim: "whether console.warn reaches these
+    logs is unverified, so "0 glitches" is shown by the passes only,
+    not by the log." The QE may take the results for the US-179 record
+    (CM).
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
@@ -13683,6 +14854,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   all P3, as filed. None of them blocks run 5: the v8 kit already
   matches boot ids by whole line (awk) and dates boots by
   /proc/uptime."
+  - Item (iii) is NOT a new ID: the non-sudo pstore ls gets
+    "Permission denied" (cosmetic). PM cross-ref: this is F-414
+    ("pstore read needs sudo", P3 per the Architect, v297) still
+    present in kit v8.1. Next free -> F-443.
 - **F-415** (worker-2 via CM, 2026-10-26; no P-level given, listed
   under P3 until ruled) Boot timelines on the Pi 5 (no RTC): tooling
   and reports must date boots by /proc/uptime or the first NTP sync,
@@ -13802,6 +14977,1761 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   truncation of the LF ringing; check whether it can be reduced". A3,
   verbatim: "Its shape points to the n-tap truncation of the LF
   ringing, not to F1's grid/floor fix."
+- **F-431** small_club sub dMid 0.19 dB does not shrink with n (F-383
+  Part B D4) (filed 2026-10-27; ID free across main, all origin/* and
+  local branches at PM read; full record below, folded from the PM
+  held file in v313).
+  - NEW IDs from D4 (l.70-72, "Backlog one-liners (PM), not gating";
+    no P-level given; both free in all refs at PM read):
+    F-431 verbatim: "F-383 small_club sub dMid 0.19 dB does not shrink
+    with n: locate (correction vs cascade)". Context AE: small_club
+    dMid maxima at 38-69 Hz, in correction notches (AE 85648357
+    l.11-12).
+    - [moved to F-432 in v313: "F-432 verbatim: "D6 today+(i): legacy
+      combine ..."]
+    Next free -> F-433.
+- **F-432** Legacy combine phase-shifts S vs U by 100 samples (F-383
+  Part B D4) (filed 2026-10-27; ID free across main, all origin/* and
+  local branches at PM read; full record below, folded from the PM
+  held file in v313).
+  - Filed from the F-431 record item "NEW IDs from D4 (l.70-72,
+    "Backlog one-liners (PM), not gating"; ..." (v313 fold; context
+    there).
+  - F-432 verbatim: "D6 today+(i): legacy combine phase-shifts S vs U
+    by 100 samples (moot after step 4; confirm step 4 removes it)".
+- **F-433** filter_type fullrange cannot be built (workshop-xrk10f
+  profile); AE owner; next room-correction item after the F-383 PR
+  (filed 2026-10-27; ID free across main, all origin/* and local
+  branches at PM read; full record below, folded from the PM held file
+  in v313).
+  - NEW ID F-433 (worker-7 side finding, dbb4e639 §Side finding,
+    pre-existing, not gating; no P-level given; free in all refs at PM
+    read; PM: the yml exists at 0af057ba), verbatim:
+    "`generate_profile_filters` raises `ValueError: Unknown
+    filter_type 'fullrange'` for
+    `configs/speakers/profiles/workshop-xrk10f-fullrange.yml`, because
+    `_generate_channel_crossover` has no fullrange branch." and "I
+    didn't check whether some other path (web-ui) handles fullrange
+    profiles." Next free -> F-434.
+  - AE ruling /tmp/cm-relay/F-383/frozen/
+    ae-F383-xrk10f-f05401cd-ruling-r1-ea800d81 (sha256 ea800d81
+    verified at PM read), on worker-7 f05401cd: xrk10f does not build.
+    Checked at 94f14fcc: generate_profile_filters.py:172 raises
+    ValueError "Unknown filter_type 'fullrange'";
+    test_shared_correction.py:302-303 pins XO_UNBUILDABLE. The AE's
+    own b27273ea and r2 release afc82fe9 are VOID. The governing
+    safety.md text is r1 paragraph b2f22c19 / patch cffb23f1 under AE
+    release bd173a82 ("apply cffb23f1, not 24fa6ca3"). Step 4:
+    worker-7 reports xrk10f as "cannot be generated (filter_type
+    fullrange is not supported by the profile combine; pre-existing on
+    main)", with no C4 code change. AE verbatim: "This is my one flip
+    back, made on new evidence. I won't change it again; any later
+    crossing resolves to this file."
+    - Backlog item, verbatim l.13: "Making fullrange buildable is a
+      backlog item for the PM, not part of F-383."
+    - [moved to F-460 in v313: "F-460 = CLOSED as a DUPLICATE ..."]
+    - F-433 UPDATE: AE confirmed (ea800d81), no build path known.
+      Item: make filter_type fullrange buildable in the profile
+      combine. Domain owner: AE. Not part of F-383.
+      - PM placement (the CM delegated priority to the PM; the PO may
+        re-rank): the next room-correction backlog item after the
+        F-383 PR. Reason: it is a room-correction functional gap under
+        the owner's focus, but not gating, since xrk10f is reported as
+        "cannot be generated" and has a test pin.
+      - When it is fixed, test_shared_correction.py:302-303's
+        XO_UNBUILDABLE entry for xrk10f changes together with the QE,
+        and so does the safety.md "cannot be generated" sentence (TW).
+    - Next free -> F-461.
+- **F-434** F-383 A1b: fade-matched reference so A1b holds at every
+  n_taps (filed 2026-10-27; ID free across main, all origin/* and
+  local branches at PM read; full record below, folded from the PM
+  held file in v313).
+  - NEW ID F-434 (Architect, bf088723 l.40-41; not gating; no P-level
+    given), verbatim: "F-383 A1b: evaluate a fade-matched reference so
+    A1b holds at every n_taps (would retire A1B_MIN_TAPS)".
+- **F-435** Profile validation for filter_taps < 16384 on
+  speaker-facing channels (filed 2026-10-27; ID free across main, all
+  origin/* and local branches at PM read; full record below, folded
+  from the PM held file in v313).
+  - NEW ID F-435 (AE NB2, d47b710e l.17-18; not gating; no P-level
+    given), verbatim from file: "profile validation rejects or warns
+    on filter_taps < 16384 for speaker-facing channels until Option 4
+    retires A1B_MIN_TAPS." (PM cross-ref: "Option 4" = the F-434
+    fade-matched reference, per bf088723.) F-434/F-435 free in all
+    refs at PM read. Next free -> F-436.
+- **F-436** F-383 Q4: fail-closed A1b at all n_taps in production
+  (filed 2026-10-27; ID free across main, all origin/* and local
+  branches at PM read; full record below, folded from the PM held file
+  in v313).
+  - NEW ID F-436 (CM/team-lead, from void r2; not gating; no P-level
+    given; free in all refs at PM read), verbatim: "F-383 Q4: consider
+    fail-closed A1b at all n_taps in production with a test-only
+    opt-out, and a web-ui filter_taps minimum (r2 proposed 8192)
+    (Architect r2 e72bf792, withdrawn on crossing)". Next free ->
+    F-437.
+  - SUPERSEDES the F-436 wording above (CM correction, 2026-10-27):
+    F-436 uses the Architect's own wording (author's text, replaces
+    the CM's), verbatim as relayed: "F-383 Q4: consider fail-closed
+    A1b at all n_taps in production with a test-only conftest opt-out
+    for short test filters (stricter alternative to the logged skip
+    below 16384; the web UI suggests filter_taps 8192)". Message-only
+    (no file sha). ID F-436 is unchanged; F-434 and F-435 are
+    unchanged. Next free stays F-437.
+- **F-437** US-179: clock-glitch rate on the real Pi 5 + USBStreamer
+  path (filed 2026-10-27; ID free across main, all origin/* and local
+  branches at PM read; full record below, folded from the PM held file
+  in v313).
+  - NEW ID F-437 (AE G6, 42dada94 l.27; not gating; no P-level given;
+    free in all refs at PM read), verbatim: "US-179: measure the
+    clock-glitch rate on the real Pi 5 + USBStreamer path". Next free
+    -> F-438.
+  - F-437 WORDING AMENDED (worker-6 line 1 is the same item as F-437,
+    so no new ID). New text, worker-6 wording via CM, verbatim:
+    "US-179: measure the clock-glitch rate on the real Pi 5 +
+    USBStreamer path, and count glitches in the downloaded report".
+    The base is AE G6 (42dada94 l.27). Per the CM, the "count glitches
+    in the downloaded report" part is the AE's optional item folded
+    in. PM: that part was not found in any US-179 relay file, so it is
+    MESSAGE-ONLY.
+  - F-437 "count glitches" basis (CM): message-only, from the AE's G5
+    reply ("Optional, not required"); worker-6 chose not to take it.
+    The F-437 wording above stands.
+- **F-438** US-179: settle/tail from a measured venue RT60 (filed
+  2026-10-27; ID free across main, all origin/* and local branches at
+  PM read; full record below, folded from the PM held file in v313).
+  - NEW ID F-438 (worker-6 line 2; originally the AE's one-liner in
+    settle r1 d1f133da l.16, kept by r2 30d2bcef l.13-14; not gating;
+    no P-level given; free in all refs at PM read), verbatim: "US-179:
+    settle/tail from a measured venue RT60 instead of a fixed 1.0 s".
+    Next free -> F-439.
+- **F-439** Unmute behind a closed gate in test_mute_e2e (QE, AE HIGH,
+  blocks amps-on). CLOSED as a duplicate of F-320 F (PO r3 67f15d65);
+  the rating carries over to F-320 F. This entry keeps the record of
+  the F-439 PR = "F-320 F / US-160 AC1-AC4" (worker-3, branch
+  fix/F-439-unmute-fail-closed), which also closes F-410 (filed
+  2026-10-27; ID free across main, all origin/* and local branches at
+  PM read; full record below, folded from the PM held file in v313).
+  - NEW ID F-439 (QE §3; pre-existing, not F-262 code; product path,
+    not test-only; the AE rules severity (pending), so no P-level
+    given; free in all refs at PM read), QE one-liner verbatim:
+    "test_mute_e2e setup ERROR at 6931c372 run 40470085642: hw-out at
+    venue gain (-40/-34) with D-063 gate closed after mute/unmute
+    70-170 ms after the measurement standby gate close; unmute
+    restores pre-mute gains without a gate check; non-deterministic
+    (S2-1 passed)." QE minimum test AC verbatim: "a deterministic test
+    (unit or service-integration) that runs gate close -> mute ->
+    unmute and asserts all gains stay 0 / hw-out at the floor; plus
+    the existing test_mute_e2e precondition unchanged." The QE notes
+    "Nothing is connected now, so no Pi action follows from this
+    ruling." No writer or owner assigned yet (PO/CM to assign). Next
+    free -> F-440.
+  - F-439 / S2-2 AE input (CM FYI, MESSAGE-ONLY, no AE file sha;
+    forwarded verbatim by the CM to the QE). PM: this crossed the QE
+    ruling 7240c033, which the PM had already relayed to the CM. AE
+    view, as relayed: the S2-2 setup errors are most likely a
+    test-isolation problem, not a gate leak. test_full_session_api
+    opens the gate (_ensure_gate_open, l.~111), never closes it, and
+    ran right before test_mute. Two test-only fixes proposed: (1)
+    virtual_gate_open checks the API gate state before the floor check
+    and FAILs with a separate message for "left open by an earlier
+    test" vs "reports closed but has signal" (the latter = real safety
+    bug); (2) test_full_session_api closes the gate in a finally. PM:
+    this conflicts with QE 7240c033 §3 ("Product path, not
+    test-only"). F-439's ID stands; its root cause and wording are
+    OPEN until the QE reconciles with the AE input. Do not write
+    F-439's one-liner as final in v313 without that.
+  - F-439 crossing RESOLVED (CM): the QE confirms 7240c033 STANDS, so
+    S2 resuming under it was correct. S2-3 40483087517 is running. QE
+    note on the AE input: /tmp/cm-relay/F-262/R5/frozen/
+    qe-R5-S2-2-AE-input-note-r1-4cc7b173.md (sha256 4cc7b173
+    verified).
+    - GM log, l.7-9: gate opened 08:21:47, closed on the standby
+      transition at 08:22:50, and no reopen until 08:22:59.
+      Mute/unmute ran at 08:22:50.678/.765. The floor check failed at
+      08:22:52.3.
+    - l.11: "By the AE's own criterion ("a real safety bug if the gate
+      reports closed but hw-out has signal"), this is the safety
+      case." The caveat is that the evidence is the GM log state, not
+      an API read.
+    - The AE's two test fixes are accepted as extra ACs. l.16
+      verbatim: "These are NOT sufficient on their own."
+    - Relayed to the AE for F-439 severity and scope. The F-439
+      wording stays OPEN until then.
+  - F-439 SEVERITY + WORDING SETTLED (CM): AE ruling
+    /tmp/cm-relay/F-262/R5/frozen/ae-F439-severity-r1-455e0190.txt
+    (sha256 455e0190 verified; basis QE 7240c033, full log fdf4c15b,
+    code at 6931c372).
+    - §0: the AE's test-isolation view is WITHDRAWN. The gate closed
+      at 08:22:50.60, before mute (.678) and unmute (.765). The QE's
+      reading is correct.
+    - §1 verbatim: "Severity: HIGH -- safety-interlock bypass on the
+      product path. BLOCKS AMPS-ON (same class as F-410/F-405/F-407).
+      Not a stop-the-line item now (nothing connected), and not an AE
+      veto on #66/F-262 (pre-existing, outside that diff). #66 still
+      needs a green CI per the QE." No P-level given (severity HIGH as
+      above).
+    - §2 root cause: audio_mute.unmute() (audio_mute.py:104-133)
+      restores _pre_mute_gains with no gate check. The AE suspects a
+      deterministic operator path too (gate open -> mute -> gate close
+      -> unmute); this is a hypothesis from code reading, and the
+      fix's test proves or disproves it.
+    - Fix ACs F1-F4 (§3), in addition to the QE minimum test AC:
+      - F1: unmute fails closed while the gate is closed; the gate
+        state comes from the GM; no restore if the GM is unreachable.
+      - F2: any gate close (including watchdog) invalidates the
+        pre-mute snapshot.
+      - F3: deterministic tests for both orders, asserting 8 Mult = 0
+        by readback AND hw-out at the floor; virtual_gate_open
+        precondition unchanged.
+      - F4: check speaker_routes.py profile activation (mute_manager)
+        and the GM watchdog store_pre_mute_gains restore; report each.
+    - §4: pre-amps-on backlog item under core-tech-first; it does not
+      preempt US-172, the DJ path or room correction.
+    - CM HOLD F-439-AMPS: no amps-on session until F1-F4 are met.
+    - PM: for the v313 entry, the F-439 one-liner is the QE §3 text
+      with the root cause confirmed by AE §0. Owner/writer still
+      unassigned.
+  - F-439 OWNER PROPOSAL (CM, MESSAGE-ONLY): the PM's proposal
+    (worker-3 desk task: F-439 prep, F3 tests first, then F1/F2, F4
+    report; fresh worktree off origin/main; merge AFTER #66) is with
+    the PO, who names the owner; worker-3 proposed. CM file checks:
+    the F-444 fixes are test-only and touch no mute tests or
+    test_mute_e2e; F-445 is still in diagnosis, so its file set gets
+    confirmed before F-439 work touches anything shared. The CM cuts
+    the worktree from origin/main once the PO names the owner. Owner
+    still unassigned at PM write.
+  - F-439 OWNER = worker-3 (CM; PO named; MESSAGE-ONLY, no PO file
+    sha). Branch fix/F-439-unmute-fail-closed cut at origin/main
+    ff55d0c8 (PM verified: origin/main = ff55d0c8, local branch and
+    worktree .claude/worktrees/fix-F-439-unmute-fail-closed at
+    ff55d0c8). worker-3 briefed with the PO's scope and ranking (PM:
+    the scope/ranking text has not reached the PM). PR merges AFTER
+    #66. Supersedes "owner unassigned" above.
+  - F-439 AE design answers r1 (CM): /tmp/cm-relay/F-439/frozen/
+    ae-F439-design-3aa83eba-answers-r1-6cc213ee (sha256 6cc213ee
+    verified at PM read).
+    - [moved to F-450 in v313: "NEW ID F-450 (AE Q3 (iii), ..."]
+    - Q4d (l.31-36), HIGH, BLOCKS AMPS-ON, verbatim: "/config/gain and
+      thermal_limiter writing non-zero while the gate is CLOSED: the
+      same severity as F-439 (HIGH, BLOCKS AMPS-ON). Required: no
+      non-zero Mult write while the gate is closed or the web-ui is
+      muted. Either refuse it (409) or store it as pending and never
+      write it. The thermal limiter may only ever lower a Mult that is
+      already live, never write one while the gate is closed or
+      muted."
+      - Packaging is OPEN: the Architect writes ONE file (in the F-439
+        PR, or a new F). The PM confirms and does not co-write. If it
+        becomes a new F, it joins the amps-on list and needs a
+        matching TW safety.md row (amps-on list mirrors safety.md).
+    - In F-439 PR scope per AE: Q4(a) watchdog unlatch writes nothing;
+      Q4(c) web-ui /venue/gate/open and set_venue return 409 while
+      muted. Q4(b) speaker_routes NOT AFFECTED as a restore path.
+  - F-439 AE design direction r2 (CM): /tmp/cm-relay/F-439/frozen/
+    ae-F439-design-direction-r2-3232e202 (sha256 3232e202 verified at
+    PM read). SUPERSEDES AE r1 6cc213ee, which is void as a design
+    basis (the file stays).
+    - §1: the existing joint ruling governs (F-320 F / US-159 U5: GM
+      is the single source of truth; MUTE = close_gate; UNMUTE as a
+      gain restore is removed; interim form = US-160 AC1/AC2). The
+      gate_close_seq design (B1-B4) and the AE's E1 and Q1-Q3 answers
+      are WITHDRAWN.
+    - §2: F1-F4 (455e0190) stay as acceptance tests; F3 stays
+      required. F4 maps to existing records: (a) = F-320-D; (c) =
+      F-320 F (moot once MUTE = close_gate); (d) /config/gain = F-344,
+      thermal limiter = F-345 (both on origin/main ff55d0c8, PM
+      verified), "Their severities and ACs are as recorded. I add no
+      new ruling."
+    - §3: scope (F-439 closed as a duplicate of F-320-F, or folded
+      into US-160) is the PO's/PM's call; the PO is writing the
+      ruling. AE view verbatim: "F-439 adds the CI evidence and the F3
+      tests to F-320-F; the fix is US-160 AC1/AC2. F-439's HIGH /
+      blocks-amps-on rating carries to whichever record survives."
+    - §4 verbatim: "Backlog line from r1 Q3 (GM-owned mute): VOID. U5
+      already makes GM the owner."
+    - [moved to F-450 in v313: "F-450 WITHDRAWN (PM, per AE r2 ..."]
+    - PR review still needs the AE's approval (veto), r2 l.last.
+  - F-439 CROSSING (CM, 14:29): PO FINAL de84e4f0 and Architect
+    packaging aa3e6bed disagree on Q4a/Q4d (in-PR vs F-320 D / F-344 /
+    F-345). The PO is settling it. NEITHER is recorded as final until
+    the CM relays the outcome.
+  - F-439 SCOPE SETTLED (CM): PO FINAL r2 /tmp/cm-relay/F-439/frozen/
+    po-F439-scope-ruling-r2-fc0e09a9 (sha256 fc0e09a9 verified at PM
+    read). It supersedes PO r1 de84e4f0, which is void (on disk). The
+    Architect confirmed that aa3e6bed is input only, so the 14:29
+    crossing is settled. Supersedes the "F-439 CROSSING" entry above.
+    - RULING: option (2). The existing F-320 F / US-159 U5 ruling
+      governs, delivered as its interim form, US-160 AC1-AC4. Option
+      (3) (seq design) and option (1) are rejected.
+    - §1 record: F-439 CLOSED as a duplicate of F-320 F. It adds its
+      CI evidence and the F3 tests to F-320 F. F-439's HIGH / blocks
+      amps-on rating CARRIES OVER to F-320 F (AE r2 §3). PR name:
+      "F-320 F / US-160 AC1-AC4". worker-3 keeps branch
+      fix/F-439-unmute-fail-closed. US-160 keeps AC5-AC15 unchanged;
+      the PM records the split and fixes US-160's title to match (PM:
+      for v313; the title text is not given in the ruling, so the PM
+      drafts it from the split and flags it to the PO).
+    - §2 PR scope, web UI only, no GM/Rust change: (a) MUTE =
+      close_gate; audio_mute.py does no pw-cli zeroing of its own and
+      keeps no pre-mute gains. (b) UNMUTE as a gain restore is
+      removed; only Open Gate raises a Mult (US-160 AC1); an
+      UNMUTE-labelled control, if kept, may only call open_gate with
+      confirmation and ramp (UX words it, tier A). (c) Tests: AE
+      455e0190 F1-F4 as mapped in AE r2 §2; F3 required; result-only
+      tests at fdf41424 fit; US-160 AC3 browser test cross-checking
+      all 8 Mult in PipeWire; any test expecting UNMUTE to restore
+      gains is changed only together with the QE. (d) US-160 AC4
+      stays.
+    - §3 out of this PR: (a) = F-320 D; (c) moot; (d) = F-344 / F-345
+      as recorded, and r1's re-rate instruction is withdrawn. F-450
+      CLOSED as superseded by US-159 U5 (consistent with the PM
+      withdrawal above).
+    - Priority: worker-3 does this after #63 S1. Branch off
+      origin/main; the PR merges after #66.
+  - F-439 GOVERNING RULING = PO r3 (team-lead correction; supersedes
+    the "F-439 SCOPE SETTLED ... r2" entry above):
+    /tmp/cm-relay/F-439/frozen/po-F439-scope-ruling-r3-67f15d65
+    (sha256 67f15d65 verified at PM read; the draft
+    /tmp/po-drafts/F-439-scope-ruling-r3.txt is the same sha but mode
+    644, so cite the frozen copy). r2 fc0e09a9 and r1 de84e4f0 are
+    VOID. Team-lead named r3 final. Architect, no objection (CM
+    verbatim capture /tmp/cm-relay/F-439/frozen/
+    arch-msgs-F445-release-F439-r3-NB-dabf64de, sha256 dabf64de
+    verified): "no objection to PO r3 67f15d65 (sha checked). ... I'm
+    not flipping again. Both deviations (F-320 D as its own PR, Q4c
+    moot) are technically right."
+    - §1-§2 as r2: F-439 CLOSED as a duplicate of F-320 F (HIGH /
+      blocks amps-on carries over); US-160 AC1-AC4 in this PR,
+      AC5-AC15 stay; PM records the split and fixes US-160's title;
+      MUTE = close_gate, no snapshot restore, only Open Gate raises;
+      tests F1-F4 (F3 required), US-160 AC3 browser test, fdf41424
+      tests where they fit.
+    - §3 NEW, same PR, web UI only: ONE web-UI Mult writer. Zero
+      always allowed; non-zero only on a fresh get_gate reading Open;
+      validated per US-159 G3 (finite, 0 <= Mult <= 1.0;
+      NaN/inf/negative/>1 refused, never clamped); /config/gain
+      returns 409 when refused (UX words the Config-tab message: gate
+      closed, no gain changed); thermal limiter reduce-only (the
+      cached node ID at thermal_limiter.py:427-435 is out of scope).
+      - §3e: US-159 D1 (the GM gate module as the only Mult writer)
+        replaces this guard when it lands; the guard is deleted, not
+        stacked on. PM ACTION: add this to US-159 in v313.
+      - §3f: closes F-344, F-345, F-352 (/config/gain path) and F-355
+        (limiter NaN, if through the same check) ONLY if the QE
+        confirms each defect's own repro test passes in this PR.
+        Anything still open stays open. F-354 out of scope.
+      - Architect NB (dabf64de, no revision): "in 3a, if get_gate
+        errors or times out, the write is refused (fail closed), and
+        that case gets a test."
+    - §4: F-320 D (registry.rs, WatchdogStatus/RPC pre_mute_gains) is
+      worker-3's NEXT item, its own PR, Architect's form, needed
+      before amps-on. Q4c DROPPED as moot. F-450 closed as superseded
+      by U5.
+    - §5: AE veto plus all Rule 13 reviewers. Priority: after #63 S1
+      for worker-3. Branch off origin/main; PR merges after #66.
+    - PO applying note /tmp/cm-relay/F-439/frozen/
+      po-F439-r3-note-aa3e6bed-b8c05fe1 (sha256 b8c05fe1 verified): r3
+      governs, no r4. aa3e6bed §1 details are technical guidance where
+      they fit (grep test against raw set_mult outside the helper;
+      speaker ramp via the helper with a test; MOCK_MODE same rule;
+      limiter on refusal leaves current_mult unchanged and logs once
+      per state change). Not applicable: the muted conditions, §1d
+      recovery, §2 (Q4a), §3 (Q4c). §5: CM HOLD F-439-AMPS now lasts
+      until this PR merges under Rule 13; the F-320 D PR is needed
+      before amps-on too.
+    - [moved to F-451 in v313: "NEW ID F-451 (Architect aa3e6bed
+      l.40-43 ..."]
+  - F-439 r3 CONFIRMED by the CM (correction relay): r3 67f15d65 plus
+    note b8c05fe1 govern, "no more flips" per team-lead; r2/r1 void.
+    This matches the PM entry above, so there is no change to the
+    record. The CM passed the PM's shared F-444+F-445 PR decision to
+    worker-1, with the fallback of keeping separate commits.
+  - AE ack of F-439 r3 (CM): /tmp/cm-relay/F-439/frozen/
+    ae-F439-r3-ack-thermal-r1-00e6f49a (sha256 00e6f49a verified at PM
+    read). AE: no objection to r3 67f15d65 + note b8c05fe1; r3 §3d
+    unchanged; AE agrees with Architect NB dabf64de (a get_gate error
+    or timeout -> refuse, with a test). The PR still needs the AE's
+    approval (veto).
+    - [moved to F-451 in v313: "F-451 RE-RECORDED (append-only;
+      supersedes "not an ..."]
+    - [moved to F-453 in v313: "NEW ID F-453 (AE §A; AE ..."]
+  - F-320 F START (team-lead request; MESSAGE-ONLY): worker-3 is idle
+    after #63 S1 (body s1b with the CM, NB1 passed, no Pi session
+    held). PM asks the CM to start worker-3 on F-320 F / US-160
+    AC1-AC4 under PO r3 67f15d65 + note b8c05fe1 + Architect NB
+    dabf64de + AE F-451 §B (00e6f49a), on fix/F-439-unmute-fail-closed
+    (cut at ff55d0c8 = current origin/main; at fdf41424). worker-3
+    still owns the #63 body revision once the PO words
+    P14/P15/P16/P17b; it interleaves. Next for worker-3 after this:
+    F-320 D (r3 §4).
+  - F-320 F RELAY SET (PM confirmation to the CM; all shas verified at
+    PM read): PO r3 67f15d65 + note b8c05fe1; Architect aa3e6bed +
+    dabf64de; AE 3232e202, 00e6f49a, 455e0190 (F1-F4; at
+    /tmp/cm-relay/F-262/R5/frozen/); QE f5c607ef; UX
+    220558aa/f05b5f4a/9c7109b4 with AE releases
+    0d28985d/6d080c85/aa0f798b. Excluded: AE 6cc213ee (void as a
+    basis), PO de84e4f0/fc0e09a9 (void). PM: "F-439 paused until the
+    PO rules" is stale; no PO ruling is outstanding (r3 final).
+    worker-3 queue: F-320 F, then F-320 D. worker-6 is coding F-341
+    §4a.
+  - F-320 F BRIEFED (CM): worker-3, with the PM-corrected set plus the
+    three UX wordings and their AE releases.
+  - F-439 SET CORRECTION SENT (CM): worker-3 got ONE correction, ADD
+    455e0190 (now also frozen in F-439/frozen), 3232e202 and aa3e6bed;
+    VOID 6cc213ee, de84e4f0 and fc0e09a9. worker-3 had acked the start
+    before it arrived.
+    - F-341 §2 TRANSPORT CONFIRMED (CM; MESSAGE-ONLY, no TW file): the
+      TW confirmed QE 315d3d5e with no points; the rpc.rs citations
+      hold at ff55d0c8. This ends the PENDING status above. Relayed to
+      worker-6: the script and tests now; the nix wiring and check
+      after F-465. The TW takes the #3/#6 exit codes from the shipped
+      script.
+  - F-320 F / F-439 PLAN r1 TEST RULING (QE accounting copy;
+    /tmp/f439-qe-T-items-ruling-r1.md, sha256 6e0e16b1 verified at PM
+    read, mode 444; input worker-3 plan r1
+    /tmp/cm-relay/F-439/frozen/w3-F439-plan-r1-5db94218, l.49-72).
+    Verdict verbatim: "T1-T6: ACCEPTED, with the conditions below.
+    F-344: no base run of the service-integration test is needed
+    (§R)." "D2 is the AE's call; nothing here rules on it." PM: D2 is
+    OPEN with the AE.
+    - Conditions, per test, as in 6e0e16b1: T1 adds case (c) (gate
+      open, unmute -> 410, 8 Mults unchanged); T2-T6 as written.
+      Unmute now returns 410 {"error":"unmute_removed"}.
+    - §R closer rule for F-344/F-345/F-352/F-355, verbatim: "the test
+      may use only interfaces that already exist at ff55d0c8 ... It
+      must not import gain_guard or other new modules. The base output
+      must show an ASSERTION failure on the defect ... ImportError,
+      collection errors and 404s do not count as red." "PR body: one
+      base run output and one head run output per defect, each naming
+      the sha and the exact command." PM: this is the evidence form
+      for r3 §3f; those four defects close only with it.
+    - F-439 red-at-base: cite a CI T2 run at fdf41424 if one exists;
+      otherwise none is needed (T1 plus the AE F3 analysis 455e0190).
+  - F-439 (QE d3bf5f5c §2, for the F-439 entry):
+    - 2nd occurrence at 6931c372: S2-2 and S2-6, i.e. 2 of the 4 S2
+      runs that reached the stack (S2-4/S2-5 never did). Signature
+      verbatim: "hw-out not at the floor with the gate closed and the
+      tone playing: [-40.0, -40.0, -34.0, -34.0]".
+    - worker-3's T2 deletion of TestUnmuteRestoresSignal does NOT
+      remove the signal; the error comes from the virtual_gate_open
+      precondition, which TestMuteSilencesOutput also uses; the
+      precondition stays unchanged (7240c033 §2). "F-439 counts as
+      fixed only when this signature stops recurring with the fix."
+    - NEW EVIDENCE CONDITION (adds to QE 6e0e16b1 T-items): the F-439
+      PR body cites its CI runs and states that the virtual_gate_open
+      precondition did not fail in any of them.
+    - F-344: no link shown, not ruled related.
+    - QE §3 CI fact for the PO: at the observed rate F-439 turns #66's
+      final CI red about 1 run in 2; if F-439 merges before the S2
+      restart, the restart is not paid twice. PM cross-ref: the PO
+      chain decision (MESSAGE-ONLY, above) does not place F-439; PO r3
+      67f15d65 §5 still has F-439 after #66. Flagged to the PO.
+  - US-159 ADDITION (PO r3 67f15d65 §3e; PM action; US-159 has no
+    backlog entry, so it is recorded here; the story file update goes
+    to the TW with the PO): US-159 D1 (the GM gate module as the only
+    Mult writer) replaces the F-320 F single web-UI Mult writer guard
+    when it lands; the guard is deleted, not stacked on.
+  - US-160 SPLIT AND TITLE (PO r3 §1-§2; PM record; FLAG TO PO):
+    AC1-AC4 are delivered by the F-439 PR, AC5-AC15 stay open. The
+    current title on origin/main (stories-index l.170) is "Interim —
+    hide or relabel web UI UNMUTE to match interim rule 6". PM draft
+    title, for the PO to confirm or replace: "Interim: MUTE closes the
+    gate, UNMUTE gain restore removed (AC1-AC4 via F-320 F); AC5-AC15
+    open". Not applied to the story file until the PO confirms.
+  - F-439 PR EVIDENCE LIST (PM cross-ref, v313): QE 6e0e16b1 T1-T6; QE
+    d3bf5f5c §2 statement that the virtual_gate_open precondition did
+    not fail in any of its CI runs; PO 123cb139 conditions 1-4
+    (F-410); AE 262206c3 release of test form r2 8ab9077f (AE NB: a2
+    names every Mult writer the D8 grep guard finds). AE approval
+    (veto) required.
+- **F-440** runner MAX_CUT_DB vs venue_pipeline: a D-009 question for
+  the AE (filed 2026-10-27; ID free across main, all origin/* and
+  local branches at PM read; full record below, folded from the PM
+  held file in v313).
+  - NEW ID F-440 (Architect F-383 C1 ruling
+    /tmp/cm-relay/F-383/frozen/
+    arch-F383-step4-C1-source-fix-r1-f3286c42.txt, sha256 f3286c42
+    verified, l.7-12; the AE rules; not gating; no P-level given; free
+    in all refs at PM read). PM one-liner built from the file text:
+    "runner.py:190 (CLI full pipeline) and :390 (run_stage_correct)
+    call generate_correction_filter without max_cut_db at filter_taps
+    16384: should runner pass MAX_CUT_DB like venue_pipeline does?
+    (D-009, AE rules)". Source verbatim l.11-12: "Whether runner
+    should pass MAX_CUT_DB like venue_pipeline does is a D-009
+    question for the AE; it goes to the PM backlog as a one-liner. It
+    is NOT part of this fix." Next free -> F-441.
+- **F-441** US-172 tryboot failure leaves no log (pstore/serial
+  console, watchdog, display state over SSH) (filed 2026-10-27; ID
+  free across main, all origin/* and local branches at PM read; full
+  record below, folded from the PM held file in v313).
+  - NEW ID F-441 (Architect, fd761b8e l.54-55; not blocking; no
+    P-level given; free in all refs at PM read), verbatim from file:
+    "the tryboot failure leaves no log. A ramoops/pstore region or a
+    serial console would capture it; either one is a new variable and
+    is NOT added inside run 5." (PM: the CM's relay reads "either is";
+    the file says "either one is". PM cross-ref: related to F-414,
+    pstore read needs sudo.) Next free -> F-442.
+  - Filed from the US-172 record item "US-172 unattended boot from R5d
+    (CM): Architect ruling r1 /tmp/cm-relay/US-172/frozen/
+    us172-unattended-boot-check-architect-r1-6cf98c5b.txt ..." (v313
+    fold; context there).
+  - F-441 is EXTENDED (l.29-33, under F-441, one line each, NOT added
+    inside run 5):
+    - a hardware watchdog to replace the hang power pull (unproven on
+      this path; the armed 10-min watchdog did not fire after the
+      2026-10-25 tryboot hang);
+    - ramoops/pstore or a serial console (the existing F-441 text);
+    - display state over SSH (/sys/class/drm/*/status, enabled), which
+      belongs in the HW-GL boot ACs per the CM.
+  - F-441 EXTENSION (CM relay; Architect R5d classification
+    /tmp/cm-relay/US-172/run5d/arch-R5d-class-r1-b9b911c0, sha256
+    b9b911c0 verified at PM read; sec 6 l.63-66; not a gate for R5e;
+    no P-level given; no new ID), verbatim:
+    "Every R5 failure leaves no text. The normal and tryboot cmdlines
+    already carry console=ttyAMA10,115200, and the EEPROM has
+    BOOT_UART=1.
+     A 3.3 V USB-serial adapter or Pi Debug Probe on the Pi 5's 3-pin
+     UART would capture the panic text with no config change.
+     Ask the owner, batched with the next physical task, whether one
+     is at hand (F-441). Not a gate for R5e."
+    - PM: owner question, batched with the next physical owner task.
+- **F-442** US-172 kit v8.1 evidence handling (return-obs overwrites,
+  go-text, panic grep) (filed 2026-10-27; ID free across main, all
+  origin/* and local branches at PM read; full record below, folded
+  from the PM held file in v313).
+  - NEW ID F-442 (worker-2 via CM, kit v8.1 evidence handling; not
+    safety; not inside run 5; no P-level given; free in all refs at PM
+    read; PM: the git grep hit on "F-442" is the substring in
+    "Scan-Speak_10F-4424G00", not an ID). One ID for the bundle, items
+    as relayed:
+    - (i) a second return-obs in the same run dir appends to
+      us172-thermal-return.log;
+    - (ii) a second return-obs overwrites the un-timestamped
+      ac17-B-{gate,amixer,pwdump}-RETURN-*, us172-fdt-RETURN-*.dtb and
+      gains-RETURN/ from the first; the raw first-pass dumps are lost,
+      but the verdicts are in the frozen 80378b9e. Fix: per-run
+      timestamps;
+    - the known item: the "FAT still armed" OBSERVATION line prints
+      after restore (PM: no earlier backlog entry found for it; it is
+      recorded here).
+  - F-442 ADDENDUM (worker-2 at R5c, via CM):
+    - The kit addendum's case-insensitive "BUG" grep matches "DEBUG"
+      (bcm2712_iommu DEBUG_INFO); use a word-bounded `BUG:`.
+    - Seen again (already item (ii)): return-obs rewrites the
+      un-timestamped ac17-B-*-RETURN, fdt-RETURN and gains-RETURN
+      files.
+  - F-442 ADDENDUM 2 (worker-2 direct, at the CM's request; kit v8.1;
+    no kit change inside run 5):
+    - (iv) go-text is stale. `us172.sh go-text reboot` still asks "Are
+      you at the HDMI screen now?" and tells the owner to describe the
+      screen, take a photo, then pull the power. That contradicts
+      Architect 6cf98c5b (from R5d on the owner does not watch HDMI).
+      v8.1 should use the Architect's plain-words brief instead. As
+      relayed by worker-2: "You don't need to watch the screen… if the
+      Pi doesn't come back on its own within about five minutes, we'll
+      ask you to pull the power once." The kit also says "Pi logo
+      comes back", while in R5b and R5c the owner saw the CLI text
+      boot. Evidence /tmp/us172-r5d-go-text.out (2dd7cad2 verified;
+      l.3, l.6, l.10).
+    - (v) panic-grep follow-up. The R5d addendum (a)-(c) was an ad-hoc
+      read outside the kit. Its header echoed the grep pattern, and
+      zsh echo turned \b into raw backspace bytes, so the logged
+      pattern is unreadable; the grep itself was correct and was
+      tested on the Pi. Evidence /tmp/cm-relay/US-172/run5d/
+      return-obs-addendum-abc-r5d-98d2f2e2 (98d2f2e2 verified, l.2).
+      Fix for v8.1:
+      - fold (a)-(c) into return-obs: labeled list-boots, a
+        word-bounded case-sensitive panic grep on -b -1 and -b 0, and
+        a sudo pstore listing (PM cross-ref: the sudo listing also
+        covers F-414);
+      - log the pattern with printf '%s\n'.
+    - No new ID; next free stays F-450.
+- **F-443** Correction realisation error 20-26 Hz at 16384 taps (AE
+  owner) (filed 2026-10-27; ID free across main, all origin/* and
+  local branches at PM read; full record below, folded from the PM
+  held file in v313).
+  - NEW ID F-443 (AE owner, NB1; not blocking; no P-level given; free
+    in all refs at PM read), verbatim from 25c2ec77: "Correction
+    realisation error 20-26 Hz at 16384 taps, up to +/-6.6 dB capped
+    (pre-existing, C1 reduces it). Measure it on the COMBINED product
+    (with subsonic and crossover), and decide whether the design
+    should taper the target below ~25 Hz." AE: "Before amps-on there
+    is no action beyond tracking." Next free -> F-444. (PM: F-443 had
+    been reserved for a possible QE S2-4 finding; that one, if opened,
+    now gets F-444.)
+- **F-444** Flaky T1 teardown ERROR in TestGMFullSessionLifecycle
+  (worker-1; shared PR with F-445/F-452 after #66) (filed 2026-10-27;
+  ID free across main, all origin/* and local branches at PM read;
+  full record below, folded from the PM held file in v313).
+  - NEW ID F-444 (QE §2; pre-existing, not in the F-262 diff; cause
+    unknown, a worker diagnoses; no P-level given; free in all refs at
+    PM read). QE one-liner verbatim: "Flaky T1 at 6931c372, run
+    40490280494: test_measurement_integration.py::
+    TestGMFullSessionLifecycle::
+    test_gm_mode_transitions_during_happy_path ERROR at teardown
+    (CancelledError in TestClient shutdown); captured: session.py:530
+    resp.get on None from gm_client.set_mode('measurement'), then
+    session.py:1613 'Failed to restore GM to standby mode'. 1 of 4 S2
+    runs." Same finding, per the QE: production code calling
+    resp.get(...) on a None set_mode reply is a robustness gap (an
+    unreachable GM gives an AttributeError, not a named error). Next
+    free -> F-445.
+  - F-444 assignment (team-lead -> PM): team-lead asked the PM to
+    decide with the CM whether idle worker-1 or worker-5 takes the
+    F-444 diagnosis now. Team-lead, as relayed: "Your F-444 governs"
+    (over the CM's "F-443"). PM proposal sent to the CM: worker-1 (or
+    worker-5), diagnosis only, own scratch branch from 6931c372, no
+    #66 file overlap and no PR until the QE/Architect rule, frozen
+    diagnosis file + sha256. Owner: pending the CM's confirmation.
+  - F-444 owner (CM): worker-1 briefed for diagnosis only. Worktree
+    .claude/worktrees/scratch-F-444-diag, branch scratch/F-444-diag at
+    6931c372. Deliverable: frozen file + sha256 to the CM, routed to
+    the QE and the Architect. worker-5 not used (on the CM avoid
+    list). Owner PROVISIONAL until worker-1 acks; if busy, the CM
+    spawns a fresh worker and names it.
+  - F-444 owner CONFIRMED (CM): worker-1 acked (was idle).
+    scratch/F-444-diag at 6931c372, worktree
+    .claude/worktrees/scratch-F-444-diag, diagnosis only.
+  - F-444 diagnosis (CM): worker-1
+    /tmp/cm-relay/F-444/frozen/w1-F-444-diagnosis-r1-1b6b6a4a
+    (1b6b6a4a verified). Architect points r1
+    /tmp/cm-relay/F-444/frozen/
+    F444-diagnosis-1b6b6a4a-architect-points-r1-dec0ed02 (dec0ed02
+    verified). P2 verbatim: "D2 is a PRODUCT defect, not only a flake.
+    It needs its OWN F-number (PM), separate from F-444. F-444 = the
+    test defects."
+  - F-444 FIX RULING (CM): QE r1
+    /tmp/cm-relay/F-444/frozen/qe-F444-fix-ruling-r1-dc003e70 (sha256
+    dc003e70 verified; QE single writer). RELEASED by the Architect as
+    written (MESSAGE-ONLY; ledger l.26, 2026-10-27T12:45:14Z:
+    "RELEASED by Architect (msg)").
+    - §1 REQUIRED, test-only:
+      - F1: the TestGMFullSessionLifecycle wrappers return
+        original_set_mode.
+      - F2: the happy test asserts final state "complete"; the abort
+        test asserts its terminal state. Since US-140 (ce0d85da) the
+        "happy path" test has passed in state error.
+      - F3: the conftest.py:67 teardown waits for
+        app.state.measurement_task is None, bounded at 10 s, and FAILs
+        with a named message on timeout.
+      - F4: evidence in the PR body: V1 + F3 PASS; 1000 runs under 16x
+        load → 0 errors; both files green; harness sha256s.
+    - (c) DROPPED, no backlog line. Per Architect dec0ed02 P4(c): "the
+      non-dict set_mode reply hardening: NOT wanted. The real client
+      is typed -> dict, and None comes only from a broken test
+      double." PM: this SUPERSEDES the "robustness gap ... belongs in
+      the same finding" clause recorded with F-444 (QE 4a5adbab §2).
+    - (d) = F-449.
+    - §3 S2 refinement (F-444 ONLY): a repeat with the SAME signature
+      ("ERROR at teardown of
+      TestGMFullSessionLifecycle.test_gm_mode_transitions_during_happy_path",
+      concurrent.futures CancelledError via conftest.py:71 / starlette
+      wait_shutdown) is VOID (T1). It counts toward the
+      more-than-3-VOID cap and does NOT trigger the deterministic
+      stop. Any other failure of this test → §B as written. The
+      browser meter test (F-445) keeps the stop-on-repeat rule
+      (adc64c08). S2 VOIDs so far: 2.
+    - §4 #66 final CI: if the run fails ONLY with the exact F-444
+      signature, ONE fresh full workflow run at the same head is
+      allowed. Log both run ids in the PR; no failed-job rerun. Any
+      other failure (F-439, F-445, new) needs its own ruling first.
+  - SEQUENCING (PM, per QE dc003e70 §2):
+    - F-444 fix = a SEPARATE PR off main, merged AFTER #66. Not in #66
+      (it would move the head and close S2), and not on main before
+      #66 (the update-branch would force a new series under ebd890d0
+      §A).
+    - Order: #66 completes S2 (7 more PASS) and its final CI → #66
+      merges → the F-444 PR is rebased/created off the new main → its
+      own Rule 13 + CI → merge.
+    - Worker-1 may implement it on its branch in parallel at any time
+      (not merge). The CM proposed to team-lead that worker-1
+      implements after F-445.
+    - Nothing depends on F-444. If #66 stalls, the PM asks the QE to
+      re-rule.
+    - PM cross-ref: F-439 (HIGH, amps-on) and F-445 fixes would face
+      the same §A update-branch effect if merged to main before #66;
+      they should be sequenced after #66 too unless the QE re-rules.
+  - F-444/F-445/F-452 shared branch (CM):
+    fix/F-444-measurement-teardown-race head c6c74907 (5 commits past
+    origin/main, local; PM verified, and cfb99c15 is an ancestor); the
+    F-444-alone commit is still cfb99c15.
+- **F-445** Flaky browser test
+  test_monitoring_meters_have_nonzero_values (worker-1; shared PR with
+  F-444/F-452 after #66) (filed 2026-10-27; ID free across main, all
+  origin/* and local branches at PM read; full record below, folded
+  from the PM held file in v313).
+  - NEW ID F-445 (QE §2 l.17; pre-existing, not attributed to F-262 by
+    the diff ff55d0c8..6931c372; cause unknown, a worker diagnoses; no
+    P-level given; free in all refs at PM read). Verbatim: "Flaky
+    browser-integration test at 6931c372, run 40495680499:
+    test_dashboard_dual_ws.py::
+    test_monitoring_meters_have_nonzero_values[chromium] —
+    #meters-main-db-0 stays '-inf' past 5 s (line 78). 1 of 4 S2 runs
+    that reached the browser step." No owner assigned. PM: like
+    F-439/F-444, it can block #66's final green CI. Next free ->
+    F-446.
+  - F-445 owner (CM): "worker-1 (queued after F-444)". No worker is
+    free now (worker-1 F-444, worker-2 US-172 R5c, worker-6 US-179,
+    worker-7 F-383; worker-5 on the CM avoid list). Same pattern:
+    diagnosis only, own scratch branch from 6931c372, frozen file. PM:
+    sequential is enough for now, because #66 still needs 7 more S2
+    PASSes before its final CI matters. No parallel request from the
+    PM.
+  - SUPERSEDES the F-445 owner item above (team-lead, crossed):
+    team-lead asked the CM to spawn a fresh worker-8 for F-445 in
+    parallel. Reason, as relayed: the flakes threaten S2 itself, not
+    only #66's final CI, because a repeat of either one stops the
+    series and two more VOIDs hit the cap. PM: this corrects the PM's
+    "sequential is enough" note above, which missed that point. Owner
+    = whatever the CM confirms (pending).
+  - F-445 owner FINAL (CM, per team-lead): worker-1, queued after
+    F-444. No worker-8: the spawn was rejected at the permission
+    prompt, and team-lead is reporting the block to the owner.
+    Worktree ready: .claude/worktrees/scratch-F-445-diag, branch
+    scratch/F-445-diag at 6931c372.
+  - F-445 QE fix ruling r1 (CM accounting copy):
+    /tmp/cm-relay/F-445/frozen/qe-F445-fix-ruling-r1-2f003c5d (sha256
+    2f003c5d verified at PM read). Architect release PENDING; not
+    final until released.
+    - Test-only diagnostics G1-G4 (G1 pageerror capture fails at
+      teardown; G2 JSON dump on meter/rAF failure; G3 per-phase
+      durations; G4 evidence in the PR body). (b) readiness signal
+      deferred to G2 data plus an Architect ruling; (c) longer timeout
+      REJECTED for now.
+    - §2: SEPARATE PR off main, merged AFTER #66; it may share a PR
+      with F-444 (disjoint files, both worker-1), "The PM decides."
+    - §3: adc64c08 stays in force; a second S2 failure of
+      test_dashboard_dual_ws.py::
+      test_monitoring_meters_have_nonzero_values = STOP, with no VOID
+      carve-out (unlike F-444).
+    - §4: no F-444-style one-rerun allowance at #66's final head; a QE
+      ruling is needed first.
+    - Backlog line, verbatim l.30 (PM-owned; no new ID, under F-445;
+      no P-level given): "(e) a full-chrome Linux/aarch64
+      reproduction: backlog (PM). It needs CM clearance under the disk
+      hold. Worth doing if F-445 recurs before G1-G3 land."
+    - PM decision on §2 (sent to CM): ONE shared PR for F-444 + F-445.
+      Reason: with strict main protection, every PR that merges after
+      #66 needs an update-branch, which voids its approvals. Two
+      sequential PRs mean two 7/7 rounds and two CI runs, plus a
+      second update-branch for whichever goes last. Both are
+      test-only, owned by worker-1, on disjoint files, and both wait
+      for #66 (S2 at 3/10), so combining costs no calendar time.
+      Fallback: if F-445 is not Architect-released and implemented by
+      the time #66 merges, F-444 ships alone and F-445 follows
+      separately.
+  - F-445 ARCHITECT RELEASE (CM verbatim capture dabf64de): "release
+    2f003c5d." So the QE ruling 2f003c5d is now final. NB verbatim:
+    "G1 and G4 can collide. If G1 exposes existing pageerrors, "not
+    fixed in F-445, not allow-listed" plus "suite green" can't both be
+    true. Then the F-445 PR waits until those F-fixes merge first, in
+    the order the PM sets. Not xfail, not a G1 allow-list."
+    - PM: this fits the shared-PR fallback above. If G1 exposes
+      existing pageerrors, F-444 ships alone, and F-445 waits for
+      those fixes. The PM sets their order when the pageerrors are
+      known.
+- **F-446** F-385 class: +58.2 deg lead at fc/5 at 48 dB/oct (AE
+  owner) (filed 2026-10-27; ID free across main, all origin/* and
+  local branches at PM read; full record below, folded from the PM
+  held file in v313).
+  - NEW ID F-446 (Q-C4c, 41fd1486 l.41-44; owner AE; not part of C4;
+    no P-level given), verbatim: "F-385 class at 48 dB/oct: +58.2 deg
+    lead remains at fc/5; order-dependent ratio to be evaluated".
+    Context: every moved 48 dB/oct row improves on today's |lead|, and
+    changing the ratio would amend a released AE rule, so it is the
+    AE's call.
+  - F-446 to F-448 were free in all refs at PM read. Next free ->
+    F-449.
+  - F-446/F-447/F-448 CONFIRMED (CM): keep all three. The CM's "two"
+    counted only Q-C4e, and the PM's verbatim reading of 41fd1486
+    governs. F-448 owner: the PM asked the Architect (author) directly
+    (pending). Next free stays F-449.
+- **F-447** D-031: bose sat leg has no separate subsonic (AE owner)
+  (filed 2026-10-27; ID free across main, all origin/* and local
+  branches at PM read; full record below, folded from the PM held file
+  in v313).
+  - NEW ID F-447 (Q-C4e, 41fd1486 l.57-59; owner AE; not part of C4;
+    no P-level given), verbatim: "D-031: bose sat leg has no separate
+    subsonic; confirm that verify_mandatory_hpf covers it on the
+    product".
+- **F-448** Remove the D-040 dead CamillaDSP emitters (Architect
+  owner, low priority) (filed 2026-10-27; ID free across main, all
+  origin/* and local branches at PM read; full record below, folded
+  from the PM held file in v313).
+  - NEW ID F-448 (Q-C4e, 41fd1486 l.60-61; no owner named; no P-level
+    given; the Architect said the line "already exists or goes to the
+    PM"; PM: no existing backlog entry found in v312, so it is
+    allocated here), verbatim: "remove the D-040 dead CamillaDSP
+    emitters" (config_generator.py:516/613, the legacy CamillaDSP
+    YAML; no action in F-383).
+  - F-448 OWNER (Architect, message-only): owner Architect, AE
+    consulted. "Low priority, not amps-on blocking." The
+    production-reach check is the AE's input, from the AE's a7eed54f
+    version of the line (/tmp/cm-relay/F-383/frozen/
+    ae-F383-C4-fence-78045717-AE-answers-r1-a7eed54f, sha256 a7eed54f
+    verified, l.42-43). The text is in the next item.
+    AE a7eed54f l.42-43 verbatim: "config_generator legacy CamillaDSP
+    YAML (D-040) still emits a BW4 HPF at m. Confirm it cannot reach
+    production, or remove it." The F-448 one-liner stays the
+    Architect's 41fd1486 wording; the AE line is recorded as consult
+    input.
+- **F-449** web-ui lifespan shutdown cancels the measurement task
+  during the GM restore tail (Architect owner) (filed 2026-10-27; ID
+  free across main, all origin/* and local branches at PM read; full
+  record below, folded from the PM held file in v313).
+  - NEW ID F-449 (Architect dec0ed02 P2+P3; source worker-1 1b6b6a4a
+    D2; owner Architect unless they say otherwise (per the CM); no
+    P-level given; free in all refs at PM read).
+    - PM one-liner (built from P2/CM): "web-ui lifespan shutdown
+      cancels the measurement task during a non-COMPLETE GM restore
+      tail (main.py:261-270 at 6931c372): GM set_mode can be cut off
+      mid-request (GM may stay in measurement mode), and the
+      CancelledError skips the rest of the shutdown (close_db,
+      executor.shutdown)."
+    - Impact, P2 verbatim: "low. With the session dead nothing drives
+      signal-gen, and mode_manager's startup recovery restores standby
+      from an orphaned measurement mode on the next start. Not amps-on
+      blocking. It goes to the backlog under the core-tech-first rule
+      unless the AE rules otherwise."
+    - Design (P3, coded when scheduled, not inside F-444):
+      - request_abort first, then a bounded wait above the GM RPC
+        timeout; cancel only on timeout;
+      - swallow our own CancelledError only if
+        current_task().cancelling() == 0; never a bare except
+        BaseException;
+      - close_db and executor move into a finally;
+      - no client close while a to_thread call is in flight;
+      - deterministic test using worker-1's V1 injected delay.
+    - Next free -> F-450.
+- **F-450** RETIRED, never reused: GM-owned mute line withdrawn (AE r2
+  3232e202 §4), superseded by US-159 U5 (PO r3) (filed 2026-10-27; ID
+  free across main, all origin/* and local branches at PM read; full
+  record below, folded from the PM held file in v313).
+  - Filed from the F-439 record item "F-439 AE design answers r1 (CM):
+    /tmp/cm-relay/F-439/frozen/
+    ae-F439-design-3aa83eba-answers-r1-6cc213ee (sha256 6cc213ee
+    verified ..." (v313 fold; context there).
+  - NEW ID F-450 (AE Q3 (iii), l.17-19; AE owner; pre-amps-on NOT
+    required; no P-level given; free in all refs at PM read, git grep
+    -w over refs/remotes/origin + refs/heads), verbatim: "GM-owned
+    mute: move the mute state into GM so that restore is atomic with
+    the gate". Scope note (AE Q4c, l.27-29): "Other RPC clients going
+    straight to GM fall under the Q3 backlog line (GM-owned mute)."
+    Next free -> F-451.
+  - Filed from the F-439 record item "F-439 AE design direction r2
+    (CM): /tmp/cm-relay/F-439/frozen/
+    ae-F439-design-direction-r2-3232e202 (sha256 3232e202 verified
+    ..." (v313 fold; context there).
+  - F-450 WITHDRAWN (PM, per AE r2 §4): the ID is retired, not reused;
+    its line above is void. Q4d's new-F note is dropped (covered by
+    F-344/F-345); no new amps-on row and no safety.md row from it.
+    Next free stays F-451.
+- **F-451** TOCTOU between the get_gate read and the pw-cli write
+  (blocks amps-on until the F-439 PR merges with the AE §B re-read)
+  (filed 2026-10-27; ID free across main, all origin/* and local
+  branches at PM read; full record below, folded from the PM held file
+  in v313).
+  - Filed from the F-439 record item "F-439 GOVERNING RULING = PO r3
+    (team-lead correction; supersedes the ..." (v313 fold; context
+    there).
+  - NEW ID F-451 (Architect aa3e6bed l.40-43 via PO note b8c05fe1; not
+    an amps-on blocker unless the AE says so; no P-level given; free
+    in all refs at PM read), verbatim: "TOCTOU: the gate can close
+    between the get_gate read and the pw-cli write. That window is
+    accepted for this PR (GM closing the gate also zeroes Mults on its
+    side). Record a backlog line; it is not an amps-on blocker unless
+    the AE says so." Next free -> F-452.
+  - Filed from the F-439 record item "AE ack of F-439 r3 (CM):
+    /tmp/cm-relay/F-439/frozen/ae-F439-r3-ack-thermal-r1-00e6f49a
+    (sha256 00e6f49a verified ..." (v313 fold; context there).
+  - F-451 RE-RECORDED (append-only; supersedes "not an amps-on blocker
+    unless the AE says so" above). AE §B, verbatim: "after every
+    NON-zero write, the helper re-reads get_gate. If the gate now
+    reads not Open, or the read errors, it writes 0 to that Mult and
+    logs a WARNING. ... Test: a fake GM closes the gate between the
+    read and the write -> the Mult reads 0 afterwards. With this, the
+    TOCTOU backlog line is not an amps-on blocker. Without it, it is."
+    - PM status: F-451 stays OPEN. It BLOCKS AMPS-ON until the F-439
+      PR (F-320 F / US-160 AC1-AC4) merges with the §B re-read/re-zero
+      and its test, which are now in that PR's scope inside r3 §3a.
+      After that, the remaining millisecond window is a non-blocking
+      backlog line, removed for good by US-159 D1 (GM as the only Mult
+      writer). It is not closed by the F-439 PR, because the AE
+      shrinks the window but does not remove it. The amps-on list
+      needs no new row: it is covered by the F-439-AMPS hold, which
+      lasts until that PR merges.
+- **F-452** test_happy_path_status_shows_progress wall-clock budget
+  flake (joins the F-444/F-445 PR as its own commit) (filed
+  2026-10-27; ID free across main, all origin/* and local branches at
+  PM read; full record below, folded from the PM held file in v313).
+  - NEW ID F-452 (QE via CM, from F-383 C3; does not block C3;
+    Architect agrees, 5f6b5436 per the CM, "the 0.4 s is acceptable,
+    the test goes to the QE backlog" (PM: the Architect file was not
+    read, so this is CM-relayed); no P-level given; free in all refs
+    at PM read). The CM proposed F-451, but F-451 was already the
+    TOCTOU line, so this is F-452. QE line verbatim:
+    "test_happy_path_status_shows_progress polls with a fixed ~5 s
+    wall-clock budget against a 3.3-3.7 s mock session, about 1.3 s
+    margin. It flakes under host load on C2a too. Fix: wait for the
+    session to reach a terminal state with a generous bound (e.g. 30
+    s), failing with a named message on timeout, and keep the
+    progress-state assertions. Same class as F-444. It can go in that
+    follow-up PR if the PM wants, but not into the released dc003e70
+    scope." Next free -> F-453.
+    - PM decision: F-452 JOINS the shared F-444+F-445 PR as its own
+      commit, kept separate from the dc003e70 scope. Reason: the test
+      lives in
+      src/web-ui/tests/unit/test_measurement_integration.py:130
+      (origin/main), which fix/F-444-measurement-teardown-race
+      (cfb99c15) already touches. So it is the same file and the same
+      owner (worker-1), and a separate PR would conflict with F-444.
+      The F-383 branch (d923a783) and the F-439 branch (fdf41424) do
+      not touch that file (PM verified with git diff --name-only).
+- **F-453** US-159 gate module: thermal recovery toward base_mult (AE
+  owner) (filed 2026-10-27; ID free across main, all origin/* and
+  local branches at PM read; full record below, folded from the PM
+  held file in v313).
+  - Filed from the F-439 record item "AE ack of F-439 r3 (CM):
+    /tmp/cm-relay/F-439/frozen/ae-F439-r3-ack-thermal-r1-00e6f49a
+    (sha256 00e6f49a verified ..." (v313 fold; context there).
+  - NEW ID F-453 (AE §A; AE owner; not amps-on blocking; no P-level
+    given; cross-ref US-159; free in all refs at PM read), verbatim:
+    "US-159 gate module: decide whether thermal recovery toward
+    base_mult (gate open, ramped, never above base_mult or the D-009
+    cap) is allowed once GM is the only Mult writer." AE: no recovery
+    raise in the F-439 PR; after a thermal reduction, gains return
+    only through Close Gate -> pre-flight #10 -> Open Gate. Next free
+    -> F-454.
+- **F-454** The Pi has no git; Pi-side plans that need git must say
+  how it is provided (filed 2026-10-27; ID free across main, all
+  origin/* and local branches at PM read; full record below, folded
+  from the PM held file in v313).
+  - NEW ID F-454 (Architect ruling /tmp/cm-relay/PR63/frozen/
+    PR63-S1-G2-nogit-ruling-architect-r1-f16682fc, sha256 f16682fc
+    verified at PM read, l.50-51; owner Architect; not part of #63 S1;
+    no P-level given; free in all refs at PM read), verbatim: "the Pi
+    has no git; Pi-side plans that need git must say how it is
+    provided. Decide whether git goes into the Pi 5 system packages (a
+    config change, needs its own PR)". Next free -> F-455.
+- **F-455** Pi-side plans state where build-only outputs come from
+  (filed 2026-10-27; ID free across main, all origin/* and local
+  branches at PM read; full record below, folded from the PM held file
+  in v313).
+  - Architect #63 ruling /tmp/cm-relay/PR63/frozen/
+    PR63-S1-G2-D1-C3bc-ruling-architect-r1-785deac0 (sha256 785deac0
+    verified at PM read), §6 backlog. None of it is part of #63 S1. No
+    P-levels given. All IDs free in all refs at PM read. Verbatim:
+    - NEW ID F-455 (B1, owner Architect): "Pi-side plans state where
+      build-only outputs come from. Default for Pi deploys: build on
+      the Mac linux-builder, copy the closure, activate on the Pi (as
+      US-172 R6a plans). Correct plan l.104's cachix claim in the
+      template."
+    - [moved to F-456 in v313: "NEW ID F-456 (B2, owner Architect
+      ..."]
+    - [moved to F-457 in v313: "NEW ID F-457 (B3, owner Architect):
+      ..."]
+    - PM cross-ref: F-455 and F-454 (git on the Pi) are the same class
+      of Pi-plan provisioning gap. Next free -> F-458.
+- **F-456** How the Pi accepts project-built packages: signed off-Pi
+  deploy path (POSTPONED; due before prod or gig use; covers the
+  owner's "sign builds") (filed 2026-10-27; ID free across main, all
+  origin/* and local branches at PM read; full record below, folded
+  from the PM held file in v313).
+  - Filed from the F-455 record item "Architect #63 ruling
+    /tmp/cm-relay/PR63/frozen/
+    PR63-S1-G2-D1-C3bc-ruling-architect-r1-785deac0 (sha256 785deac0
+    verified at PM read), ..." (v313 fold; context there).
+  - NEW ID F-456 (B2, owner Architect + Security, POSTPONED): "decide
+    whether the Pi should trust a project binary cache, and how."
+  - Filed from the F-458 record item "Architect #63 M4 ruling
+    /tmp/cm-relay/PR63/frozen/
+    PR63-S1-M4-sigs-ruling-architect-r1-73bc07b6 (sha256 73bc07b6
+    verified at PM ..." (v313 fold; context there).
+  - CONDITIONAL DEPENDENCY on F-456 (§5, verbatim): "If Security or
+    the owner declines W2, S1 ends here with nothing changed except
+    the store additions (D1 .drv files, flake sources, 2 usbutils
+    paths; all harmless and unreferenced). Then the backlog item B2
+    (how the Pi accepts project-built packages) becomes the blocker
+    for every off-Pi deploy, US-172 R6a included. Record that
+    dependency in the PM's backlog."
+    - PM: B2 = F-456 (postponed). If W2 is declined, F-456 is no
+      longer postponed: it BLOCKS #63 S1 and every off-Pi deploy,
+      including US-172 R6a. W2 is `nix copy --no-check-sigs` from the
+      Mac (l.30), and it is pending a Security and owner release (l.4,
+      l.27). Cross-ref F-454, F-455, F-458.
+  - F-456 ADDITION (CM; SecSpec W2 verdict /tmp/cm-relay/PR63/frozen/
+    secspec-W2-verdict-73bc07b6-d2c0010b, sha256 d2c0010b verified at
+    PM read). The CM paraphrased it as "a signed deploy path before
+    production"; the file's l.22 text, verbatim: "B2: a signed off-Pi
+    deploy path (Mac signing key in the Pi's trusted-public-keys, or
+    an equivalent), so a deploy no longer needs the trusted-user
+    waiver. Due before prod or gig use. It is a dependency for US-172
+    R6a as noted in section 5."
+    - PM: F-456 is still postponed (the section header reads
+      "postponed per owner"), with a due bar of "before prod or gig
+      use". SecSpec l.6 verdict: "APPROVE W2 WITH CONDITIONS (C1-C5
+      below). This is not a veto. The go also needs the owner, the AE
+      and the QE." So SecSpec does not decline W2, and the §5
+      conditional (F-456 blocks all off-Pi deploys) is not triggered
+      by Security; it is still open on the owner. SecSpec l.23 concurs
+      with F-458/F-459.
+  - OWNER on #63 W2 (verbatim, relayed by team-lead via the CM;
+    MESSAGE-ONLY): "1 yes, allowed, but maybe put an item to sign
+    builds on the backlog". W2 (nix copy --no-check-sigs, Architect
+    73bc07b6, under SecSpec C1-C5 d2c0010b) is APPROVED by the owner.
+    So the 73bc07b6 §5 conditional is NOT triggered: F-456 does not
+    become a blocker for off-Pi deploys.
+    - PM: the owner's "sign builds" is COVERED by F-456 (option (a);
+      no new ID). The SecSpec bar in F-456 already reads "a signed
+      off-Pi deploy path (Mac signing key in the Pi's
+      trusted-public-keys, or an equivalent) ... Due before prod or
+      gig use". The owner quote is added to F-456. F-456 stays a
+      backlog item (owner Architect + Security), due before prod or
+      gig use. Next free stays F-461.
+  - W2 CLOSED (CM; MESSAGE-ONLY): owner-decided, with signing tracked
+    as F-456. The SecSpec and the Architect are informed. Consistent
+    with the F-456 entry above (owner quote recorded there).
+- **F-457** PipeWire 1.6.2 override makes reverse dependencies cache
+  misses (filed 2026-10-27; ID free across main, all origin/* and
+  local branches at PM read; full record below, folded from the PM
+  held file in v313).
+  - Filed from the F-455 record item "Architect #63 ruling
+    /tmp/cm-relay/PR63/frozen/
+    PR63-S1-G2-D1-C3bc-ruling-architect-r1-785deac0 (sha256 785deac0
+    verified at PM read), ..." (v313 fold; context there).
+  - NEW ID F-457 (B3, owner Architect): "the PipeWire 1.6.2 override
+    makes every reverse dependency a cache miss (gtk4, ffmpeg, gst,
+    sdl). Check whether the override can be narrowed so it does not
+    rebuild unrelated desktop packages."
+- **F-458** Off-Pi deploy plans state the signature handling
+  explicitly (filed 2026-10-27; ID free across main, all origin/* and
+  local branches at PM read; full record below, folded from the PM
+  held file in v313).
+  - Architect #63 M4 ruling /tmp/cm-relay/PR63/frozen/
+    PR63-S1-M4-sigs-ruling-architect-r1-73bc07b6 (sha256 73bc07b6
+    verified at PM read), §5-6. Owner Architect. Not part of #63 S1.
+    No P-levels given. Both IDs free in all refs at PM read. Verbatim:
+    - NEW ID F-458 (§6): "Any off-Pi deploy plan states the signature
+      handling explicitly (US-172 R6a included; I'll carry it into the
+      R6a kit)."
+    - [moved to F-459 in v313: "NEW ID F-459 (§6): "M0-type pre-checks
+      ..."]
+    - [moved to F-456 in v313: "CONDITIONAL DEPENDENCY on F-456 (§5,
+      verbatim): ..."]
+    - Next free -> F-460.
+- **F-459** M0-type pre-checks test the real trust path, not only
+  nix.conf (filed 2026-10-27; ID free across main, all origin/* and
+  local branches at PM read; full record below, folded from the PM
+  held file in v313).
+  - Filed from the F-458 record item "Architect #63 M4 ruling
+    /tmp/cm-relay/PR63/frozen/
+    PR63-S1-M4-sigs-ruling-architect-r1-73bc07b6 (sha256 73bc07b6
+    verified at PM ..." (v313 fold; context there).
+  - NEW ID F-459 (§6): "M0-type pre-checks test the actual operation's
+    trust path (nix store info --store <url>), not only nix.conf."
+- **F-460** RETIRED, never reused: duplicate of F-433 (AE ea800d81
+  confirms F-433) (filed 2026-10-27; ID free across main, all origin/*
+  and local branches at PM read; full record below, folded from the PM
+  held file in v313).
+  - Filed from the F-433 record item "AE ruling
+    /tmp/cm-relay/F-383/frozen/
+    ae-F383-xrk10f-f05401cd-ruling-r1-ea800d81 (sha256 ea800d81
+    verified at PM read), on ..." (v313 fold; context there).
+  - F-460 = CLOSED as a DUPLICATE of F-433 (PM; append-only). The CM
+    proposed F-460 for this item, but F-433 (worker-7 dbb4e639,
+    2026-10-27) already records the same defect. The ruling ea800d81
+    is added to F-433 as confirmation; F-460 is retired, not reused.
+- **F-461** On-Pi evals outside any audio session (Pi 5 eval load
+  75-77 C; AE owner) (filed 2026-10-27; ID free across main, all
+  origin/* and local branches at PM read; full record below, folded
+  from the PM held file in v313).
+  - NEW ID F-461 (AE via CM, MESSAGE-ONLY; the CM sent it as "an
+    addition to F-453"; PM filed it separately, see below; owner AE;
+    not gating; no P-level given; free in all refs at PM read), AE
+    verbatim: "Pi 5 eval load reaches 75-77 C, so put on-Pi evals
+    outside any audio session."
+    - Evidence: #63 S1 G3 report
+      /tmp/cm-relay/PR63/frozen/G3-report-c17d5f72 (sha256 c17d5f72
+      verified at PM read), l.6-12. During the D1 eval and dry run
+      (14:14:22Z-14:16:01Z): 14:15:26Z 75.45 C | 14:15:46Z 75.45 C |
+      14:15:56Z 76.55 C (peak) | 14:16:06Z 72.70 C. Below the 80 C
+      STOP; freq 2.4 GHz, lcrit 0, governor performance; nothing
+      connected. Later steps 66.1-68.3 C.
+    - Same file, l.6-11: the G2 report ef782802 MISSED the >=75 C WARN
+      (it said peak 72.7 C); the worker raised it late in G3 ("I
+      should have raised a WARN via the CM at that point and did not;
+      I read only part of the log."). PM: this is a process slip
+      against the AE thermal rule (>=75 C -> warn the owner via
+      team-lead). Recorded only; no owner action, since it was under
+      the STOP with nothing connected.
+    - Why not under F-453: F-453 is the US-159 decision on automatic
+      thermal gain recovery toward base_mult. F-461 is a scheduling
+      rule for on-Pi evaluation load. They share only the word
+      "thermal", so filing them together would mix two open items. PM
+      cross-ref: F-453 (thermal), F-455 (default: build on the Mac
+      linux-builder, which also keeps eval load off the Pi), and the
+      flight-case ventilation TODO.
+    - Next free -> F-462.
+- **F-462** pi5_thermal_watch marks "no cooling devices" as INVALID
+  (fix after #63; interim reading per AE f5ec66ef §2) (filed
+  2026-10-27; ID free across main, all origin/* and local branches at
+  PM read; full record below, folded from the PM held file in v313).
+  - NEW ID F-462 (AE ruling /tmp/cm-relay/PR63/frozen/
+    ae-ruling-PR63-S1-G5-thermal-watch-r1-f5ec66ef, sha256 f5ec66ef
+    verified at PM read, §5 l.37-39; owners Architect / PM; a tool
+    defect, NOT a G5 blocker; no P-level given; free in all refs at PM
+    read; not a duplicate), verbatim: "pi5_thermal_watch treats "no
+    cooling devices" as INVALID, which flags every sample on a
+    passively cooled Pi 5. Fix: record cooling=none without INVALID,
+    or add a flag, with a test for an empty cooling tree. Keep
+    below_max_freq as the throttling check."
+    - PM cross-ref: the script is
+      scripts/stability/pi5_thermal_watch.py (+
+      tests/test_pi5_thermal_watch.py) on the #63 head 3f28b6c7
+      (worker-3's M4, not on origin/main). The tool deviates from the
+      existing recorded rule (backlog v312 l.2338-2340, AC18b grant
+      condition): "the cooling_device criterion N/A if no cpufreq-type
+      device exists." PM view: F-462 brings the tool back in line with
+      that rule; it is not a new rule. Since the script ships in #63,
+      the fix can go in #63 or after it; the Architect decides.
+    - Next free -> F-463.
+  - F-462 PLACEMENT: AFTER #63 (Architect ruling via CM, MESSAGE-ONLY,
+    no Architect file sha). Reason: pi5_thermal_watch.py is in the Pi
+    system closure at 3f28b6c7 (PM verified: flake.nix:900-905
+    writePython3Bin "pi5-thermal-watch", applications.nix:81
+    pi4audio-packages.pi5-thermal-watch), so a fix inside #63 would
+    change the toplevel P and void the S1 deploy evidence and all
+    approvals. The defect is already made harmless by the AE reading
+    f5ec66ef §2/§4.
+    - Condition 1: the F-462 fix PR carries the QE's two test cases:
+      an empty cooling tree, and one active device -> still INVALID.
+      Source: QE release /tmp/cm-relay/PR63/frozen/
+      qe-release-G5-thermal-f5ec66ef-msg.txt (sha256 39f9d3a6 verified
+      at PM read; CM capture of a message), which supports the §5
+      line.
+    - Condition 2: until the fix merges, every pi5-thermal-watch run
+      on main uses the AE f5ec66ef §2 reading. The CM's short form is
+      "only reason no_cooling_devices = valid"; the file's l.15 text,
+      verbatim: "A sample whose ONLY reason is no_cooling_devices
+      counts as VALID for the thermal rule and for AC9 / D-069
+      evidence." Per QE, the counts to check per run are "only reason
+      = no_cooling_devices" and "any other reason = 0".
+    - PM precision note on condition 1: the QE file's tail reads
+      verbatim "the fix's test should cover both an empty cooling tree
+      and a non-empty tree with one active device." The "-> still
+      INVALID" expectation comes from the Architect's ruling as
+      relayed by the CM; it is not in the QE text.
+    - F-462 SOURCE NOW FILED (supersedes "MESSAGE-ONLY, no Architect
+      file sha" above):
+      /tmp/cm-relay/PR63/frozen/arch-F462-after-PR63-msg.txt (sha256
+      a667f9e7 verified at PM read; CM verbatim capture). It contains
+      both conditions as relayed, including "one active device ->
+      still INVALID", which comes from the Architect, as the precision
+      note says.
+    - F-462 GOVERNING SOURCE (Architect's own file; same content as
+      the CM capture a667f9e7): /tmp/cm-relay/F-462/architect/
+      F462-placement-ruling-architect-r1.txt (sha256 2c5e2c1b verified
+      at PM read; mode 444). RULING: after #63. Conditions verbatim:
+      "1. The F-462 fix PR carries the QE's two test cases:
+        - an empty cooling tree, where the sample is not INVALID for
+          that reason;
+        - one active cooling device, where the sample is still INVALID
+          (<name>_active).
+       2. Until that fix merges, every pi5-thermal-watch run from main
+       uses the f5ec66ef §2 reading: a sample whose ONLY reason is
+       no_cooling_devices counts as valid, and any other reason is a
+       real INVALID. The PM records this in F-462."
+    - F-462 SOURCE CITATION, FINAL (PM; crossed messages). The CM
+      asked the PM to cite the Architect's file 2c5e2c1b (frozen copy
+      /tmp/cm-relay/F-462/frozen/
+      F462-placement-ruling-architect-r1-2c5e2c1b, sha256 2c5e2c1b
+      verified, same bytes as the architect/ path). The Architect
+      asked the PM to cite the CM freeze a667f9e7. Both say the
+      substance is the same, and the PM confirms it by reading both.
+      So the record cites BOTH as equivalent sources of one ruling:
+      2c5e2c1b (Architect's file) and a667f9e7 (CM capture). There is
+      no preferred copy and no further change on this citation,
+      whichever later message crosses it.
+- **F-463** WirePlumber module-rt hits the F-358 EPERM (filed
+  2026-10-27; ID free across main, all origin/* and local branches at
+  PM read; full record below, folded from the PM held file in v313).
+  - Architect #63 S1 G5 P4 ruling /tmp/cm-relay/PR63/frozen/
+    PR63-S1-G5-P4-ruling-architect-r1-59d559c5 (sha256 59d559c5
+    verified at PM read), §4 l.39-47; AE release
+    /tmp/cm-relay/PR63/frozen/
+    ae-release-PR63-S1-G5-P4-59d559c5-54cdb759 (sha256 54cdb759
+    verified). Not #63, not blockers. Owner Architect, AE informed. No
+    P-levels given. Both IDs free in all refs at PM read; no existing
+    record of either at PM read. Verbatim:
+    - NEW ID F-463 (B-WP-RT): "WirePlumber's module-rt hits the F-358
+      EPERM (nice -11, RLIMIT_NICE 0). Decide one of these:
+        - give WirePlumber the same module.rt.args override
+          (nice.level = 20, rtkit/rtportal off, no RT prio needed);
+        - or record the line as an accepted baseline.
+        Also check whether WP then gets RTKit RR for any thread." PM
+        cross-ref: F-358 (same mechanism).
+    - [moved to F-464 in v313: "NEW ID F-464 (B-WP-ASSERT): "the
+      wp-event-dispatcher ..."]
+    - Next free -> F-465.
+- **F-464** wp-event-dispatcher unregister_hook assertion at WP 0.5.12
+  startup (filed 2026-10-27; ID free across main, all origin/* and
+  local branches at PM read; full record below, folded from the PM
+  held file in v313).
+  - Filed from the F-463 record item "Architect #63 S1 G5 P4 ruling
+    /tmp/cm-relay/PR63/frozen/
+    PR63-S1-G5-P4-ruling-architect-r1-59d559c5 (sha256 59d559c5
+    verified ..." (v313 fold; context there).
+  - NEW ID F-464 (B-WP-ASSERT): "the wp-event-dispatcher
+    unregister_hook assertion at WP 0.5.12 startup. Look for the
+    upstream issue or fix, and identify which built-in component
+    triggers it. If it is benign, pin it as baseline text in the
+    journal checks."
+- **F-465** HIGH, HARD PRE-AUDIO GATE: GM venues dir not deployed (no
+  venue can be armed on the Pi 5); worker-1, branch
+  fix/F-465-venues-dir; next on the US-173 DJ path after #63 (filed
+  2026-10-27; ID free across main, all origin/* and local branches at
+  PM read; full record below, folded from the PM held file in v313).
+  - NEW ID F-465, HIGH (Architect #63 S1 G5 P9 ruling
+    /tmp/cm-relay/PR63/frozen/
+    PR63-S1-G5-P9-ruling-architect-r1-827c2d69, sha256 827c2d69
+    verified at PM read, §3; owner Architect, AE informed; "priority
+    HIGH, because the DJ path needs a venue"; free in all refs at PM
+    read). Defect (CM summary; PM verified): no nix file sets
+    PI4AUDIO_VENUES_DIR on origin/main or at #63 3f28b6c7 (git grep -i
+    VENUES -- nix is empty on both). GM (venue.rs:300-303) falls back
+    to ./configs/venues under cwd /home/ela, which is missing, so no
+    venue can be armed. Fail-safe: the gate cannot open. Fix,
+    Architect §3 verbatim:
+      "a. package configs/venues into the Nix store (a read-only
+      venues derivation from the flake source);
+       b. set PI4AUDIO_VENUES_DIR to that store path in the GM user
+       unit. The venues stay git-controlled; nothing is editable on
+       the Pi;
+       c. add a nix check, like board-guard, asserting that the GM
+       unit Environment carries PI4AUDIO_VENUES_DIR and that the path
+       contains home-lab-chn50p-ultimax.yml with the committed sha;
+       d. on-device AC: get_venue / set_venue home-lab-chn50p-ultimax
+       / get_gate, plus the P9 re-read block of plan v5 l.249-256, in
+       the first Pi session after that fix deploys. The AE-Q2 handover
+       sentence is given then.
+       e. Decide in the fix whether PI4AUDIO_DEFAULT_VENUE should be
+       set too. That is the AE's call (a default armed venue changes
+       the startup gain path)."
+    - AE release /tmp/cm-relay/PR63/frozen/
+      ae-release-PR63-S1-G5-P9-827c2d69-AC3e-013d2fa8 (sha256 013d2fa8
+      verified at PM read). (A) RELEASE 827c2d69 incl. 5e; P9 is a
+      FINDING; handover sentence "no venue armed (deploy gap,
+      F-<new>); gate closed, gains 0". NB: any non-closed gate or
+      non-zero Mult in 5c-5f -> close_gate, STOP, report to the AE.
+      (B) AC3e DEFERRED for the #63 merge, "a deferral, not a waiver:
+      AC3 stays "not waivable"." Binding conditions, verbatim:
+      "1. F-<new> is a HARD PRE-AUDIO GATE. No gate open, no DJ
+      session and no amps-on use on any generation until F-<new> has
+      deployed and AC3e has PASSED on-device as Architect §3d, with
+      the AE-Q2 sentence "venue armed: ...". The PM lists it with the
+      amps-on blockers (F-410/F-405/F-407).
+       2. In that session, all of AC3 (b, c, d, e) is re-run on the
+       new generation, not 3e alone. It is a new P, and the QE
+       validity note applies: "every session after any deploy or
+       reboot".
+       3. §3e, PI4AUDIO_DEFAULT_VENUE: NOT set in F-<new>. The venue
+       stays armed only by an explicit set_venue, and startup stays
+       gate closed with no venue. A default venue is a separate later
+       decision with its own AE review.
+       4. The #63 PR body and US-173 record AC3e as "FAIL-deferred to
+       F-<new> (pre-existing deploy gap; AE deferral <this sha>)", not
+       as PASS or waived. The PO decides the story scope."
+      (F-<new> = F-465; <this sha> = 013d2fa8.) So §3e is settled by
+      the AE: no default venue in F-465.
+    - PM listing: F-465 joins the pre-amps-on group with
+      F-405/F-407/F-410, marked HARD PRE-AUDIO GATE. That group is not
+      part of the numbered safety.md table (F-405/F-407/F-410 do not
+      appear in safety.md on origin/main), so the
+      amps-on-mirrors-safety.md rule does not require a numbered row.
+      BUT condition 1 is stricter than amps-on (no gate open and no DJ
+      session even with nothing connected), so the PM proposes an
+      operator-facing line for the TW (see the CM message). The AE
+      confirms whether a numbered row is wanted instead.
+    - Priority note (PM): F-465 is on the DJ critical path. Under
+      condition 1, no DJ session on any generation until F-465 deploys
+      and AC3e passes. So it ranks with core-tech-first, not with the
+      safety-edge backlog.
+    - PM cross-ref: web-ui venue.py:102 defaults to
+      "/etc/pi4audio/venues", while GM venue.rs falls back to
+      ./configs/venues. The fix should make both read the same env
+      (Architect to note in the fix; not a new ID).
+    - For #63: AC3e "FAIL-deferred to F-465 (pre-existing deploy gap;
+      AE deferral 013d2fa8)" in the PR body and US-173; the PO decides
+      the US-173 scope (Architect §3 (ii)).
+    - [moved to F-466 in v313: "NEW ID F-466 (Architect §3, "Lesson
+      ..."]
+    - Next free -> F-467.
+    - F-465 PRIORITY (PO ruling /tmp/cm-relay/PR63/frozen/
+      po-US-173-AC3e-deferral-1e5f14eb, sha256 1e5f14eb verified at PM
+      read), verbatim: "Priority: F-465 is the next item on the US-173
+      DJ path. It goes straight after #63, at the same priority as
+      US-173, and is not backlog." Ruling: "ACCEPTED. #63 may merge
+      with AC3e recorded as "FAIL-deferred", not waived." The AE's
+      conditions are "adopted as written". PO condition 3: "The PM
+      records it in US-173." So v313 US-173 gets: AC3e "FAIL-deferred
+      -> F-465 (pre-existing deploy gap; AE deferral 013d2fa8; PO
+      1e5f14eb)". The backlog places F-465 in the US-173 DJ-path
+      sequence directly after #63, not in the defect backlog order.
+    - F-465 OWNER (team-lead request: start the branch now, from
+      origin/main and not #63; Pi deploy and test wait for the CM
+      after #63 S1): PM pick worker-1. Their shared F-444/F-445/F-452
+      branch is complete locally (c6c74907) and waits only on #66.
+      Busy at PM read: worker-2 US-172 R5e, worker-3 #63/F-320 F,
+      worker-4 US-174d, worker-6 US-179, worker-7 F-383 C4; worker-5
+      is on the CM avoid list. The CM briefs. PM cross-ref: the F-465
+      files (nix/ GM unit plus check, possibly web-ui venue.py) look
+      disjoint from the F-444 set, so the CM checks the
+      working-dir/branch separation.
+    - F-465 BRIEFED (CM; MESSAGE-ONLY): worker-1. Branch
+      fix/F-465-venues-dir from origin/main ff55d0c8, own worktree.
+      The CM confirms the F-444 set (ci.yml, web-ui test conftests) is
+      disjoint. Inputs: 827c2d69 §3 a-d, 013d2fa8 (B)3, 1e5f14eb, the
+      PM venue.py:102 note. First deliverable: a plan file.
+  - AMPS-ON ROW 19 (CM, from the TW; MESSAGE-ONLY until the r2 sha):
+    the TW's F-465 safety.md batch adds table row 19 in AE wording.
+    Backlog amps-on row 19 = F-465, with wording mirrored from the
+    released r2 text. The PM writes it only after the AE has released
+    r2 by sha. Row 19 follows the pending 15-18, so the lead-in
+    count/range must match what r2 says.
+  - F-465 SCOPE FINDING (worker-1 plan r1
+    /tmp/cm-relay/F-465/frozen/w1-F465-plan-r1-67cce1d1, sha256
+    67cce1d1 verified at PM read; MESSAGE-ONLY status: the Architect
+    rules Q1 as single writer, the AE releases; no new ID unless the
+    Architect splits it out):
+    - Q1, verbatim: "The GM has a BUILT-IN first-boot default venue.
+      Today it can't fire, because the dir is missing. F-465 makes it
+      live." "The name is PI4AUDIO_DEFAULT_VENUE if set, ELSE the
+      hard-coded "foh-passthrough"." "GM persists that name to
+      last-venue and arms it". "foh-passthrough.yml is 0 dB on all
+      channels with dirac.wav. Its own header says it is not for PA
+      use (no D-031 protection, D-271)." "So "§3e: don't set
+      PI4AUDIO_DEFAULT_VENUE" alone does NOT meet AE (B)3". Options: A
+      (worker-1 recommendation) "GM code: drop the built-in default";
+      B "Nix only: leave foh-passthrough.yml out of the packaged dir";
+      C "Ship as is and accept a first-boot auto-arm (gate closed)".
+      The worker cites main.rs l.211-243, venue.rs l.248-290 and the
+      US-113 tests at venue.rs l.808-835.
+    - Q1b, verbatim: "A persisted /var/lib/pi4audio/last-venue already
+      on the Pi would also be restored and armed at startup, without a
+      set_venue in that session. Whether one exists is unknown.
+      Suggest a CM OBSERVE `ls -l /var/lib/pi4audio/` before the F-465
+      deploy. The AE rules what happens if one is present."
+    - PM cross-ref: if Q1=A, F-465 widens into src/graph-manager
+      (venue.rs, maybe main.rs). The CM's F-341 disjointness check
+      should then compare against GM code too (F-341 touches
+      signal-gen rpc.rs plus nix). Record the ruling sha when it
+      arrives.
+  - AMPS-ON ROW 19 / F-465 safety.md r2 (TW sole writer; AE release
+    /tmp/cm-relay/F-465/frozen/
+    ae-F465-safety-r2-184ea796-release-c54ab9f2, sha256 c54ab9f2
+    verified at PM read; releases paragraph 184ea796, patch main
+    7134571c, patch #63 38407bec; r1 a78bc894/7fa0e64c/752a032a NOT
+    released). v313 adds to the AMPS-ON PRECONDITION LIST, after row
+    14 and the pending 15-18 text:
+    19. F-465 (AE wording, verbatim from r2 ITEM 2; PENDING: this list
+    takes it as merged safety.md wording once the TW batch merges,
+    mirror rule): "F-465 fixed and AC3 b-e passed on that generation;
+    see F-465 rule". Pending lead-in, verbatim r2: "The list has 15
+    rows: 1-14 and 19 (rows 15-18 are reserved for the US-174d PR, not
+    merged yet). On the Pi 5, rows 1-3, 5-14 and 19 must ALL hold".
+    Gate range: "(1-3, 5-14)" -> "(1-3, 5-14, 19)". r2: "When US-174d
+    lands rows 15-18, its batch drops the "reserved" parenthesis and
+    says "19 rows" / "rows 1-3 and 5-19" in both the lead-in and
+    Gate." The AE confirms: "The lead-in and the Gate range (1-3,
+    5-14, 19) are consistent."
+    - F-465 rule (r2 ITEM 1, safety.md "Until the list is closed"
+      bullet after "Gate:"), recorded on F-465 verbatim: "Do not open
+      the gate, start a DJ session or turn amps on, on any generation,
+      until the F-465 fix has deployed and AC3 (b-e) has passed on the
+      Pi 5 on that generation." (Full bullet text in 184ea796.)
+    - r2 ITEM 3 = the AE 7f73dda1 cond. 3 line on pre-flight #3/#6
+      ("**Pi 5:**" prefix), as recorded on F-341 above.
+    - PM cross-ref: the r2 patch for main means the TW batch can land
+      without #63. Which PR carries it is MESSAGE-ONLY/unknown to the
+      PM; record it when the CM names it.
+  - AE NB on F-465 AND F-341 (c54ab9f2, verbatim; record on both
+    entries): "7f73dda1 condition 1(ii) (F-341 before any gate open on
+    the Pi 5) is covered today only because the F-465 rule blocks
+    every gate open. Whoever drops the F-465 rule must, in the same
+    batch, add a gate-open precondition for F-341 (a documented, Pi
+    5-verified emergency close form). Otherwise F-341 would gate
+    amps-on only." PM: the F-465 close-out AC gets this as a TW/AE
+    item. Row 2's amps-on text alone does not cover gate open.
+  - F-465 PLAN RULING (Architect r1, sole writer,
+    /tmp/cm-relay/F-465/frozen/
+    F465-plan-r1-ruling-architect-r1-bd68d14a, sha256 bd68d14a
+    verified at PM read; PENDING the AE release, status MESSAGE-ONLY
+    until then):
+    - Q1 = A, verbatim: "load_default_venue() runs only if
+      PI4AUDIO_DEFAULT_VENUE is set. Remove the DEFAULT_VENUE_NAME
+      fallback. When it is unset: no venue, nothing persisted, one
+      info line." B and C rejected. T2 tests (1)-(4) per bd68d14a.
+      Separate commit. F-465 scope now includes GM code (venue.rs,
+      main.rs). The Architect, verbatim: "My §3 missed this; the
+      omission is mine."
+    - US-113 note, verbatim: "US-113's first-boot default changes from
+      "built-in" to "opt-in via env": the PO records that in US-113
+      and the TW in any doc that describes the behaviour". PM: flag
+      this to the PO in v313 (the CM relays after the AE release).
+    - Q1b position (the AE decides): keep the US-123 restore. Deploy
+      precondition: the F-465 deploy plan's first step is an RO `ls
+      -la /var/lib/pi4audio/` (and `cat last-venue` if present);
+      "Absent: proceed. Present: STOP to the AE before the reboot into
+      the F-465 generation." "If the AE reads (B)3 as also excluding a
+      restore at startup, that is a US-123 change, and it is a NEW
+      defect, not F-465."
+    - Q2: code now; after #63 merges, the CM merges origin/main into
+      fix/F-465-venues-dir (merge, no rebase); board-guard after that.
+      Q3: no pinned literal in board-guard; a hashFile equality
+      between the packaged and flake-source venue file, plus existence
+      and non-empty dir checks; the 3e9c7758 pin stays in the
+      on-device AC (§3d).
+  - F-465 bd68d14a RELEASED (AE /tmp/cm-relay/F-465/frozen/
+    ae-F465-plan-ruling-bd68d14a-points-r1-16ab21eb, sha256 16ab21eb
+    verified at PM read; this ends the PENDING status above). P1,
+    verbatim: "my 013d2fa8 (B)3 does NOT exclude the US-123 restore of
+    a persisted last-venue. It is not a new defect." (B)3 now reads,
+    verbatim: "a venue is armed only by an explicit set_venue, or by
+    restoring the venue a previous explicit set_venue persisted; never
+    by a built-in or env default unless the AE later opts in." "The
+    Q1b deploy precondition is ACCEPTED and BINDING." So no US-123
+    defect ID. P4: Q3 accepted.
+    - Architect answer /tmp/cm-relay/F-465/frozen/
+      F465-AE-points-P2-P3-answer-architect-r1-4c7eceaa (sha256
+      4c7eceaa verified at PM read; "There is no r2 of bd68d14a; this
+      file adds P2/P3 to it."): "P2 ACCEPTED. The fix goes inside
+      F-465, as its own commit (a separate defect commit, so it can be
+      reverted alone)." "P3 ACCEPTED." "The total for worker-1 is
+      tests (1)-(7)." The Architect still recommends the multi-read
+      AC3e on the device (get_venue + journal line + YAML sha + gains
+      pending), verbatim: "The worker writes it into the deploy plan
+      either way."
+    - F-467 STATUS: fixed INSIDE the F-465 PR as its own commit
+      (Architect 4c7eceaa P2; AE 16ab21eb P2 preferred). F-467 stays a
+      separate ID and closes when the F-465 PR merges with that commit
+      and test (7). Note the scope detail: "the last-venue file is not
+      deleted or rewritten".
+    - worker-1 has the go to code (CM; MESSAGE-ONLY).
+  - F-465 RESULTS r2 (worker-1,
+    /tmp/cm-relay/F-465/frozen/w1-F465-results-r2-1041f6a9, sha256
+    1041f6a9 verified at PM read). Pushed fix/F-465-venues-dir at
+    7072dd7c (PM verified: ls-remote origin = 7072dd7c03c2). CI run
+    40554626494 (run_e2e=false) is dispatched for the Linux compile of
+    main.rs; worker-1 watches it. No PR yet. Board-guard green needs
+    #63 merged first, then a T1 re-run on CM clearance.
+    - T4 docs (CM): the TW is the single writer for
+      foh-passthrough.yml (needs AE review because of the hash),
+      US-113, D-062 and US-127 l.104.
+    - Deploy-plan inputs (1041f6a9 l.62-72), held for the F-465 deploy
+      plan. Writer worker-1; the Architect rules, the AE releases; the
+      CM requests it when the deploy is scheduled. Contents: the
+      binding Q1b ls first step; the AC3e reads (get_venue, the GM
+      journal "loaded ... gate closed" line, the YAML sha pin 3e9c7758
+      at the PI4AUDIO_VENUES_DIR path, gains pending); and the new
+      startup info line, verbatim: "US-113: no persisted venue and
+      PI4AUDIO_DEFAULT_VENUE unset — starting with no venue". l.71-72
+      verbatim: "GM journal baselines that mark the old line as
+      "known: F-465" need updating." PM: add that baseline update to
+      the F-465 close-out list.
+  - DISKO WARNING (CM, from worker-1, F-465 eval): "legacy table is
+    outdated" from nix/nixos/boards/pi4/disko.nix, pre-existing.
+    ALREADY TRACKED: backlog v312 l.13599-13609 ("Lowest: Pi 5 deploy
+    eval warns that disko's legacy "table" type is deprecated ...
+    Owner: Architect.") and l.1139 ("MBR layout via disko legacy
+    table; F-288 stays open"). No new ID. v313 appends a re-report
+    line: seen again 2026-10-27 in the F-465 evals; source file named
+    as nix/nixos/boards/pi4/disko.nix.
+  - F-465 T4 DOCS, TW P2 (CM; TW patch e7750af6 covers 4 files and is
+    out for AE + PO release; MESSAGE-ONLY at PM read): F-037.md l.116
+    on origin/main calls foh-passthrough "the first-boot default";
+    F-465 makes that untrue. PM DECISION: yes, F-037.md gets an F-465
+    note. Form: an APPEND-ONLY dated note under that bullet; the
+    original line is not rewritten (defect records are append-only).
+    Writer: the TW, folded into the next F-465 TW batch. SecSpec
+    informed (F-037 is their Critical rationale). PM-suggested sense:
+    "Note (F-465, 2026-10-27): once F-465 lands, foh-passthrough is no
+    longer the first-boot default. GM arms no venue at startup unless
+    PI4AUDIO_DEFAULT_VENUE is set. The attack in this bullet is
+    unchanged: an unauthenticated POST /api/v1/venue/select can still
+    pick foh-passthrough." The note must not read as lowering F-037's
+    severity.
+    - TW P1 (T2/T3 tests that may assume a venue at start) has gone to
+      the QE (CM).
+  - F-465 T4 PO RELEASE
+    (/tmp/cm-relay/F-465/frozen/po-F465-T4-release-9454997b, sha256
+    9454997b verified at PM read): TW patch r1 e7750af6 RELEASED for
+    US-113, D-062 and US-127. The foh-passthrough.yml header waits on
+    the AE release. D-062 verbatim: "no built-in default venue; any
+    future default needs its own decision with AE review. Accepted as
+    the product position."
+    - PO note 1 (status.md owner FYI), PM decision: writer = TW,
+      inside the F-465 PR (the next F-465 TW batch), so the line lands
+      on main only when it becomes true. Text verbatim PO: "Fresh
+      deploy now starts with no venue (F-465); FoH passthrough is
+      selected explicitly." Not an owner question.
+  - F-465 T4 AE POINTS
+    (/tmp/cm-relay/F-465/frozen/ae-F465-t4-points-r1-5d495e4d, sha256
+    5d495e4d verified at PM read): OBJECTION P1 on the
+    foh-passthrough.yml l.4-5 header; TW r2 carries it, then the AE
+    releases by sha. Required meaning, verbatim: "It is not a
+    first-boot default: there is no built-in default venue (F-465),
+    and PI4AUDIO_DEFAULT_VENUE is opt-in and set nowhere. It is armed
+    only by an explicit set_venue, and after that it is restored at
+    every startup (US-123) until another venue is set. It has no
+    driver protection (D-031): never open the gate on own speakers
+    with this venue armed." No objection to the hash change (396186cd
+    -> b3fc8fcb); the AE's only venue pin is 3e9c7758, untouched.
+    - status.md FYI AMENDED (team-lead; MESSAGE-ONLY): the TW's FYI
+      inside the F-465 PR must carry the AE 5d495e4d caveat, to match
+      the header r2. PM sense: "Fresh deploy now starts with no venue
+      (F-465); FoH passthrough is selected explicitly. Once selected,
+      it is restored at every startup (gate closed) until another
+      venue is set. It has no driver protection: never open the gate
+      on own speakers with it armed." This supersedes the PO-only line
+      recorded above. Team-lead has told the owner in plain words.
+    - F-037 hunk is in TW F-465 T4 r2; SecSpec informed (CM).
+  - F-465 P1 QE RULING (QE accounting copy;
+    /tmp/f465-qe-P1-venue-at-start-ruling-r1.md, sha256 d1b72d40
+    verified at PM read, mode 444). Verbatim: "worker-1 does NOT need
+    a manual fixture audit now. The F-465 PR's own CI must run T2 and
+    T3 green at its final head before merge". "The current CI run
+    40554626494 stopped at board-guard, so it is no T2/T3 evidence."
+    Remaining-risk fix rule, verbatim: "Fix it with an explicit
+    venue/select in the failing fixture, never by setting
+    PI4AUDIO_DEFAULT_VENUE." PM: CI 40554626494 = stopped at
+    board-guard (expected until #63 merges).
+  - F-465 T4 r3 LANDED (CM): TW patch
+    /tmp/cm-relay/F-465/frozen/tw-F465-t4-r3-c2f681e7.patch is on
+    fix/F-465-venues-dir as 1eb84dac (PM verified: ls-remote origin =
+    1eb84dac4005). Releases (frozen in F-465/frozen): AE ec341799, PO
+    9454997b + c6ae502c, SecSpec /tmp/cm-relay/F-465/frozen/
+    secspec-F465-t4-r3-release-2901ed63 (sha256 2901ed63 verified at
+    PM read: "RELEASED. No objection."; "Critical stands"). Still no
+    PR. Option A waits on R6a's end. T2/T3 must be green on the PR's
+    own CI (QE d1b72d40); board-guard waits on #63.
+    - SecSpec optional F-037 wording (2901ed63, non-blocking),
+      verbatim: "a venue armed by anyone (including an unauthenticated
+      POST /api/v1/venue/select) is restored at every startup
+      (US-123), so a reboot does not undo the attack." PM DECISION
+      (team-lead: TW's next batch or the backlog, not an r4): BACKLOG,
+      recorded under F-037 and F-472, no new ID. Reason: it sharpens
+      the F-472 question (the restore does not know who armed the
+      venue, so a remote select of foh-passthrough survives reboots).
+      Writer: the TW, in the batch that records the F-472 decision, or
+      in the next docs batch that touches F-037.md, whichever comes
+      first. F-472 decision input (PM cross-ref for the AE): the
+      restore re-arms an attacker-chosen venue too. F-037 (no auth)
+      and F-472 (restore of an unprotected venue) compound.
+- **F-466** Process: Pi plans name the path and env each RPC relies on
+  (PM owner) (filed 2026-10-27; ID free across main, all origin/* and
+  local branches at PM read; full record below, folded from the PM
+  held file in v313).
+  - Filed from the F-465 record item "NEW ID F-465, HIGH (Architect
+    #63 S1 G5 P9 ruling ..." (v313 fold; context there).
+  - NEW ID F-466 (Architect §3, "Lesson (PM, process)"; owner PM; no
+    P-level given; free in all refs), verbatim: "the plan v5 P9 step
+    assumed a venues dir without checking the unit. Pi plans name the
+    path and env each RPC relies on, with an RO pre-check (as M0 now
+    does for trust)." PM cross-ref: same class as F-454, F-455, F-458,
+    F-459.
+- **F-467** GM keeps active_venue for a persisted venue that is not
+  found (fixed inside the F-465 PR as its own commit) (filed
+  2026-10-27; ID free across main, all origin/* and local branches at
+  PM read; full record below, folded from the PM held file in v313).
+  - NEW ID F-467 (Architect bd68d14a "Backlog line (PM, not F-465;
+    owner Architect, AE informed)"; no P-level given; "not a safety
+    issue"; free in all refs at PM read; PENDING the AE release of
+    bd68d14a, filed now as the Architect's own line), verbatim:
+    "main.rs l.218-224 keeps active_venue = Some(name) with empty
+    gains when a persisted venue is not found. get_venue then reports
+    a venue that is not loaded. open_gate is guarded at l.768, so this
+    is not a safety issue, but it misreports state. Fix: None on a
+    lookup failure." PM cross-ref: the same startup code that F-465 Q1
+    changes (main.rs l.211-245); the code owner may fold it into the
+    F-465 GM commit only if the Architect says so.
+    - Next free -> F-468.
+- **F-468** US-179 web-rc double Open (E2E ack-label flake, run11;
+  parked behind F-341) (filed 2026-10-27; ID free across main, all
+  origin/* and local branches at PM read; full record below, folded
+  from the PM held file in v313).
+  - NEW ID F-468 (US-179 E2E ack-label flake; worker-6 run11 finding
+    via CM; owner worker-6 when un-parked, QE informed; no P-level
+    given; free in all refs at PM read), verbatim from ec040a78:
+    "run11 failed at 6.7 s, before any measurement (test_e2e.py:103):
+    ack item 4 read 'Sound plays on this browser's default output
+    device. ...' instead of 'Sound plays on "Fake Audio Output 2".'
+    The context had opened on the chosen sinkId (the assertion at line
+    44 passed), so the ack text lost the chosen output's label. New
+    failure mode, unrelated to the beat fix and the clock check. Not
+    diagnosed yet." Blocks the US-179 20-in-a-row E2E gate.
+    - Next free -> F-469.
+  - Filed from the F-341 record item "F-341 OWNER = worker-6 (PM
+    staffing call, option (b) of ..." (v313 fold; context there).
+  - F-468 DIAGNOSIS r1 (worker-6, read-only,
+    /tmp/cm-relay/US-179/frozen/w6-run11-diagnosis-r1-a5c66871,
+    sha256 a5c66871 verified at PM read; PARKED behind F-341 per the
+    PM option (b); no new ID). Status, verbatim: "LIKELY CAUSE, NOT
+    CONFIRMED." Cause, verbatim: "two overlapping App._open() calls
+    (app.js:146) with no serialization, finishing in reverse order."
+    The E2E checks "window.__room.contexts[-1] is the LAST CREATED
+    context (open 2's on the sink), not the active one". App impact,
+    verbatim: "This is an app bug, not only a test bug. A real
+    double-click on Open, or Open clicked again quickly, can leave the
+    page on an older device choice and leak a context + mic stream.
+    Ack item 4 stays truthful (it names the context's actual device),
+    so no sound goes to an unacknowledged device."
+    - Proposed fix a-d ("src/web-rc only; needs a go"): an open
+      sequence number in AudioIO.open(); a unit test for overlapping
+      opens; test_e2e.py asserting the active context; the 20-run
+      series re-run from 0. Confirmation is an instrumented E2E, not
+      run under the read-only fence; it needs a go.
+    - F-468 scope (PM): widened from a test flake to an app bug
+      (web-rc double Open), still no P-level given. The fix needs a go
+      when un-parked.
+    - Side note, verbatim: "test_e2e's console hook records only
+      console errors, so G5's console.warn never shows in these logs."
+      PM: the US-179 record carries this as a test-gap note on the
+      clock-glitch claim, not as a new ID.
+- **F-469** HIGH: Pi 5 USBStreamer driver ERR at quantum 256 (PR63 S1
+  G6); Live-mode track, outside US-173 (filed 2026-10-27; ID free
+  across main, all origin/* and local branches at PM read; full record
+  below, folded from the PM held file in v313).
+  - NEW ID F-469 "Pi 5 USBStreamer driver ERR at quantum 256 (PR63 S1
+    G6)" (Architect ruling /tmp/cm-relay/PR63/frozen/
+    PR63-S1-G6-ERR-ruling-architect-r1-ff9f6c78, sha256 ff9f6c78
+    verified at PM read; AE release /tmp/cm-relay/PR63/frozen/
+    ae-release-PR63-S1-G6-ERR-ff9f6c78-d57a3f42, sha256 d57a3f42
+    verified at PM read; owner Architect/RT, AE informed; free in all
+    refs at PM read). PRIORITY PENDING the G6 B1 result, per the
+    ruling: "ERR increase 0 over the 7 reads: reading (i). It goes in
+    as a backlog note under the new finding, priority MEDIUM." / "Any
+    increase: reading (ii). The new finding is HIGH. It blocks
+    Live-mode (q256) use on the Pi 5 until it is investigated; it does
+    NOT block DJ mode (q1024, ERR 0 in P13) or the #63 merge in my
+    domain." Verbatim: "In both cases the finding is NOT a #63
+    regression claim."
+    - Evidence (ff9f6c78): ERR "0 at 17:33:53Z, 4 at 17:35:38Z, 5 at
+      17:35:50Z" after the C7 switch dj/1024 -> standby/256
+      (G6-readback 636edb1d).
+    - Follow-up session, verbatim: "A dedicated OBSERVE or CHANGE
+      session, nothing connected: ERR rate at q256, q512 and q1024, 5
+      min each, from a fresh PW start; the ALSA node props of the
+      USBStreamer from pw-dump (period-size, period-num, headroom,
+      api.alsa.*); /proc/asound/<card>/pcm0p/sub0/hw_params and
+      status; the same on the Pi 4 baseline if it is available. Then
+      decide: an ALSA tuning issue (headroom, period size), a USB
+      scheduling issue on the Pi 5, or a counter artefact of the
+      quantum change." The AE adds, verbatim: "Add the per-period xrun
+      timing at q256 vs. Live-mode latency (D-011) to the follow-up's
+      decision."
+    - The AE NB read (in G6): `ps -L -o tid,cls,rtprio,comm -p $(pgrep
+      -x pipewire)` (the 59d559c5 form). "Not FF/88 is recorded as a
+      finding and is not a STOP here". PM cross-ref: a lost FF/88
+      would link F-469 to F-463 (B-WP-RT).
+    - Sequencing (PM): DJ mode is not blocked, so F-469 does not sit
+      on the DJ path. If HIGH, it gates Live mode only and goes behind
+      the DJ path and room correction (owner order).
+    - Next free -> F-470.
+    - F-469 CLASSIFIED HIGH (session log /tmp/cm-relay/PR63/frozen/
+      pr63-pi-session-2026-10-27-log-7b065085, sha256 7b065085
+      verified at PM read, l.1523-1532). Verbatim l.1526: "Increase
+      over the 7 reads (60 s): +2, i.e. 2/min. Whole history: 0 (C7
+      17:33:53Z), 4 (17:35:38Z), 5 (17:35:50Z), 11 (17:39:41Z), 13
+      (17:40:41Z), so about 1.9/min average since C7, with no sign of
+      stopping." Convolver (38) and convolver-out (39) ERR 0. Journal:
+      "-- No entries --". pw-metadata: quantum 256, force-quantum 256,
+      rate 48000. l.1531 verbatim: "774 FF 88 pipewire; 780 FF 88
+      data-loop.0. RT class intact (PASS); a lost RT class does not
+      explain it." So the PM cross-ref to F-463 above is ruled out for
+      this case. Consequence, per ff9f6c78: HIGH; blocks Live-mode
+      (q256) use on the Pi 5; does NOT block DJ mode or the #63 merge;
+      not a #63 regression.
+      - Unclassified observation for the Architect (l.1528, verbatim;
+        recorded under F-469, no new ID until the Architect classifies
+        it): "pi4audio-pcm-bridge-capture (42, driven by the
+        USBStreamer capture side) ERR 69 -> 77 over the same 60 s;
+        pi4audio-level-bridge-hw-out (48) ERR 32 steady. No earlier
+        values exist for them (earlier reads filtered to rows
+        33/38/39)." PM cross-ref: the capture side counts too, which
+        may matter for the measurement path (UMIK-1 is separate USB,
+        but the ADA8200 mic inputs ride the USBStreamer capture). That
+        is a question for the Architect, not a ruling.
+      - The AE addition stands: per-period xrun timing at q256 vs
+        D-011 Live latency.
+      - PM placement: Live-mode track. Ahead of any Live-mode (Cole
+        Porter) on-device work, behind the DJ path and room correction
+        (owner order).
+  - LIVE-MODE PLACEMENT (PM, v313, per PO e567159d item 4): the
+    follow-up session is filed under the Live-mode story US-030 ("Live
+    Vocal Mode User Acceptance Test", stories-index l.41 on
+    origin/main; it has no backlog entry), ranked below US-172, F-465
+    and F-341. The PO may name another story.
+- **F-470** Unused-import warning at
+  src/signal-gen/src/file_playback.rs:15 (filed 2026-10-27; ID free
+  across main, all origin/* and local branches at PM read; full record
+  below, folded from the PM held file in v313).
+  - NEW ID F-470 (worker-6 via CM; pre-existing on origin/main; not
+    safety; no P-level given; free in all refs at PM read):
+    unused-import warning at src/signal-gen/src/file_playback.rs:15.
+    PM verified that the line on origin/main is "use log::{error,
+    info, warn};". Which name is unused is per worker-6 and not
+    checked by the PM. PM note (CLAUDE.md warning rule): low risk, a
+    lint item; it may ride any later signal-gen PR as its own commit.
+    Not folded into F-341 unless the fence owner agrees.
+    - Next free -> F-471.
+- **F-471** No-venue UI state offers FoH passthrough as a visible
+  choice (UX owner) (filed 2026-10-27; ID free across main, all
+  origin/* and local branches at PM read; full record below, folded
+  from the PM held file in v313).
+  - NEW ID F-471 (PO 9454997b note 2; owner UX; no P-level given; "Not
+    an F-465 gate"; free in all refs at PM read), verbatim: "in the
+    no-venue state, the UI offers FoH passthrough as a clearly visible
+    choice, so the "just output channels" path stays one action." PM
+    cross-ref: keeps the D-062 owner directive ("System should work
+    without any room correction or speaker setup, just outputting
+    channels") one action away. It touches the web-ui venue selector
+    (F-037 surface; SecSpec consulted when designed). Placement: after
+    F-465 merges, with the UX/web-ui items, not on the DJ critical
+    path.
+    - Next free -> F-472.
+- **F-472** US-123 restore of a venue without D-031 protection after a
+  reboot (AE owner) (filed 2026-10-27; ID free across main, all
+  origin/* and local branches at PM read; full record below, folded
+  from the PM held file in v313).
+  - NEW ID F-472 (AE 5d495e4d backlog line; owner AE; not F-465;
+    pre-existing on main, masked today by the missing venues dir; no
+    P-level given; free in all refs at PM read), verbatim: "US-123
+    restore of a venue without D-031 protection (foh-passthrough)
+    after a reboot. Decide whether the startup restore should skip or
+    flag such a venue, or whether the D-062 own-speakers flow already
+    blocks the gate open." PM cross-ref: becomes reachable when F-465
+    lands. Related to F-471 (the UI offers FoH passthrough) and F-037
+    (remote venue/select). The F-472 decision should come before
+    F-471's design. Interim: the header r2 and status.md caveat
+    ("never open the gate on own speakers with this venue armed").
+- **F-473** Two tests weak under the F-465 "no venue at start" default
+  (QE owner) (filed 2026-10-27; ID free across main, all origin/* and
+  local branches at PM read; full record below, folded from the PM
+  held file in v313).
+  - NEW ID F-473 (QE d1b72d40 backlog line; owner QE; non-blocking; no
+    P-level given; free in all refs at PM read), verbatim: "F-465
+    makes "no venue at start" the deterministic default. Two tests are
+    weak for that reason: e2e/test_venue_gate_e2e.py
+    test_gate_open_requires_venue never asserts disabled, and
+    e2e/test_gate_closed_e2e.py l.147 tolerates a venue left by a
+    prior test. Strengthen them later; they need per-test venue
+    isolation (the persisted state survives between tests)."
+    - Next free -> F-474.
+- **F-474** RETIRED, never reused: duplicate of F-410 (TW flag; PM ID
+  decision, 2026-10-27). F-410 survives (older, cited on main in
+  F-394.md). Everything filed under F-474 (HIGH per AE adf62efa, S2-6
+  evidence c446e8cb, F1-F3, tests (a)-(c), PO placement 123cb139, test
+  form r2 8ab9077f released by AE 262206c3) is recorded under F-410.
+  PR bodies say "F-410 (filed as F-474)".
 
 ## Open PRs (2026-10-24, per CM)
 
