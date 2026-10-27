@@ -305,7 +305,8 @@ export class AudioIO {
       if (msg.cause && this.out) this._retire(this.out, true);
       this.onMeter(msg);
     } else if (msg.type === "recorded") {
-      if (msg.id !== this.recording) return;
+      // After close() there is no meter (and no recording): drop it.
+      if (!this.meter || msg.id !== this.recording) return;
       this.recording = null;
       this.onRecorded(msg.id, msg.samples, msg.startFrame, this.meter.clock);
     }

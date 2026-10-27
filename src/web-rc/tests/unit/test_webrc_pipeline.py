@@ -338,18 +338,20 @@ class TestRepeatability:
         (1.0 + 1e-9, "1.1"),                  # any reject reads above the limit
     ])
     def test_rejection_rounds_up(self, wp, worst, shown):
-        """UX 1683b0fb: X rounds UP to 0.1 dB; the band is the checked one."""
+        """UX 1683b0fb/09da95d8: X rounds UP to 0.1 dB; the checked band."""
         rep = {"band_hz": [250.0, 500.0], "max_abs_db": worst, "limit_db": 1.0}
         assert wp.repeatability_text(rep) == (
             f"Measurement not used: the two sweeps differ by up to {shown} dB "
             "between 250 and 500 Hz (limit 1.0 dB). Keep the microphone still "
-            "and the room quiet, then measure again.")
+            "and the room quiet, then restart.")
 
     def test_rejection_without_a_number(self, wp):
         rep = {"band_hz": [30.0, 200.0], "max_abs_db": float("nan"),
                "limit_db": 1.0}
-        text = wp.repeatability_text(rep)
-        assert "between 30 and 200 Hz" in text and "nan" not in text
+        assert wp.repeatability_text(rep) == (
+            "Measurement not used: the two sweeps could not be compared "
+            "between 30 and 200 Hz. Restart; if this happens again, check "
+            "the microphone connection.")      # UX 09da95d8 Q2
 
     def test_only_the_closed_loop_band_gates(self, wp, sweep, run):
         """A difference above 200 Hz shows in the trace, not the verdict."""
@@ -508,7 +510,7 @@ class TestAnalyze:
         assert re.fullmatch(
             r"Measurement not used: the two sweeps differ by up to \d+\.\d dB "
             r"between 30 and 200 Hz \(limit 1\.0 dB\)\. Keep the microphone "
-            r"still and the room quiet, then measure again\.", str(exc.value))
+            r"still and the room quiet, then restart\.", str(exc.value))
 
     def test_clipped_second_capture_names_it(self, wp, sweep):
         req = _request(sweep)

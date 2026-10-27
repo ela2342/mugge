@@ -658,6 +658,12 @@ export async function test_analysis_failure_names_the_error() {
   eq(f.step, STEP.LEVEL);
   eq(f.notice.text, "Capture rejected: SNR 12 dB below 20 dB.");
   eq(f.filters.size, 0);
+  // UX 09da95d8 Q1: the notice stays until Start level check, no timer.
+  f.tick(10 * 60 * 1000);
+  f.meter(10 * 60 * 1000, { peakDbfs: -40, rmsDbfs: -50 });
+  eq(f.notice && f.notice.text, "Capture rejected: SNR 12 dB below 20 dB.");
+  f.startLevel(10 * 60 * 1000);
+  eq(f.notice, null, "Start level check clears it");
 }
 
 export async function test_analyze_request_records_calibration() {

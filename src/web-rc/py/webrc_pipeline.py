@@ -358,20 +358,23 @@ def repeatability(ir1, ir2, speaker, limit_hz, sr=SAMPLE_RATE):
 
 
 def repeatability_text(rep):
-    """The AC8a rejection, worded as UX 1683b0fb rules.
+    """The AC8a rejection, worded as UX 1683b0fb with 09da95d8.
 
     X is the worst difference rounded UP to 0.1 dB, so a reject never
-    reads as within the limit; lo/hi are the band the check used.
+    reads as within the limit; lo/hi are the band the check used. A
+    difference that can't be computed gets the 09da95d8 Q2 text, which
+    names no speaker or level (nothing to turn up).
     """
     lo, hi = rep["band_hz"]
     worst, limit = rep["max_abs_db"], rep["limit_db"]
-    tail = " Keep the microphone still and the room quiet, then measure again."
     if not np.isfinite(worst):
         return (f"Measurement not used: the two sweeps could not be compared "
-                f"between {lo:g} and {hi:g} Hz.{tail}")
+                f"between {lo:g} and {hi:g} Hz. Restart; if this happens "
+                f"again, check the microphone connection.")
     shown = max(math.ceil(round(worst * 10, 6)) / 10, round(limit + 0.1, 1))
     return (f"Measurement not used: the two sweeps differ by up to {shown:.1f} "
-            f"dB between {lo:g} and {hi:g} Hz (limit {limit:.1f} dB).{tail}")
+            f"dB between {lo:g} and {hi:g} Hz (limit {limit:.1f} dB). Keep "
+            f"the microphone still and the room quiet, then restart.")
 
 
 def predict(wav_bytes, holdout_ir, speaker, sr=SAMPLE_RATE):

@@ -207,6 +207,17 @@ export async function test_onset_and_start_frame_are_passed_on() {
   eq(msgs.recorded[0][3], 3, "the meter's clock");
 }
 
+/** AE d7ffcfb6: a capture arriving with no meter left is dropped, no throw. */
+export async function test_recorded_without_a_meter_is_dropped() {
+  const { io, msgs } = rig();
+  io.clock = io.meter.clock = 3;
+  io.execute({ type: "record", token: 5, frames: 10 });
+  io.meter = null;
+  io._onMeterMessage({ type: "recorded", id: 5, startFrame: 0,
+    samples: new Float32Array(10) });
+  eq(msgs.recorded.length, 0);
+}
+
 /** AE onset clock condition: a node keeps the clock of the context it ran on. */
 export async function test_started_carries_the_node_clock() {
   const { io, outputs, msgs, play } = rig();
