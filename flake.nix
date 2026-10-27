@@ -882,6 +882,14 @@
                 cargoLock.lockFile = ./src/Cargo.lock;
                 buildAndTestSubdir = "signal-gen";
               });
+              # F-465: venue profiles for GM and the web UI, read-only from the
+              # flake source. A source path (no build), so board-guard can hash
+              # the packaged files at eval time.
+              venues = builtins.path {
+                name = "pi4audio-venues";
+                path = ./configs/venues;
+                filter = path: type: type == "regular" && pkgs.lib.hasSuffix ".yml" path;
+              };
             };
           };
 
