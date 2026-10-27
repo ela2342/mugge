@@ -32,9 +32,6 @@ async def ws_system(
     """Push system health data at ~1 Hz."""
     await ws.accept()
 
-    # Mute state from AudioMuteManager (F-040)
-    mute_mgr = getattr(ws.app.state, "audio_mute", None)
-
     if MOCK_MODE:
         from .mock.mock_data import MockDataGenerator
         gen = MockDataGenerator(scenario=scenario, freeze_time=freeze_time.lower() == "true")
@@ -42,13 +39,18 @@ async def ws_system(
         try:
             while True:
                 data = gen.system()
-                data["is_muted"] = mute_mgr.is_muted if mute_mgr else False
                 # F-056: Reflect quantum changes made via Config tab
                 from .config_routes import _mock_quantum as current_q
                 data["pipewire"]["quantum"] = current_q
                 # US-126: Gate state for persistent banner
+                # F-439: the per-request mock GM gate is always closed.
                 if "gate" not in data:
-                    data["gate"] = {"gate_open": False, "venue": None, "venue_loaded": False}
+                    data["gate"] = {"gate_open": False, "venue": None,
+                                    "venue_loaded": False, "state": "closed"}
+                data["gate"].setdefault(
+                    "state", "open" if data["gate"].get("gate_open") else "closed")
+                data["is_muted"] = data["gate"]["state"] == "closed"
+                data["thermal_limiter"] = _thermal_limiter_section(ws.app)
                 await ws.send_text(json.dumps(data))
                 await asyncio.sleep(1.0)
         except WebSocketDisconnect:
@@ -62,7 +64,7 @@ async def ws_system(
     try:
         while True:
             data = _build_system_snapshot(ws.app)
-            data["is_muted"] = mute_mgr.is_muted if mute_mgr else False
+            data["is_muted"] = data["gate"]["state"] == "closed"
             await ws.send_text(json.dumps(data))
             await asyncio.sleep(1.0)
     except WebSocketDisconnect:
@@ -71,16 +73,31 @@ async def ws_system(
         log.exception("System WS error")
 
 
+def _thermal_limiter_section(app) -> dict:
+    """Latched limiter faults (AE 56043d31 C3): ``degraded`` while any exist."""
+    limiter = getattr(app.state, "thermal_limiter", None)
+    faults = limiter.faults() if limiter else []
+    return {"degraded": bool(faults), "faults": faults}
+
+
 def _gate_section(cdsp_col) -> dict:
-    """Build the gate state fragment from FilterChainCollector's GM state."""
+    """Build the gate state fragment from FilterChainCollector's GM state.
+
+    ``state`` is ``open``/``closed``/``unknown`` (F-439): ``unknown`` when
+    GM is unreachable or the last reading is stale.  ``gate_open`` is True
+    only for a fresh open reading.
+    """
+    state = cdsp_col.gate_state() if cdsp_col else "unknown"
     gm_state = cdsp_col.get_gm_state() if cdsp_col else None
     if gm_state:
         return {
-            "gate_open": gm_state.get("gate_open", False),
+            "gate_open": state == "open",
             "venue": gm_state.get("persisted_venue"),
             "venue_loaded": gm_state.get("venue_loaded", False),
+            "state": state,
         }
-    return {"gate_open": False, "venue": None, "venue_loaded": False}
+    return {"gate_open": False, "venue": None, "venue_loaded": False,
+            "state": state}
 
 
 def _build_system_snapshot(app) -> dict:
@@ -168,4 +185,5 @@ def _build_system_snapshot(app) -> dict:
             "labwc_cpu": 0.0,
         }),
         "gate": _gate_section(cdsp_col),
+        "thermal_limiter": _thermal_limiter_section(app),
     }

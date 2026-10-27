@@ -33,6 +33,8 @@ import yaml
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
+from . import gain_guard
+
 log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/speakers", tags=["speakers"])
@@ -1003,7 +1005,7 @@ def _configure_thermal_protection(
 async def _activate_profile_impl(
     name: str,
     profile: dict,
-    mute_manager,
+    close_gate,
     is_mock: bool,
     thermal_monitor=None,
     thermal_limiter=None,
@@ -1012,11 +1014,13 @@ async def _activate_profile_impl(
 
     Steps:
     1. Validate profile — reject if errors
-    2. Mute all channels (skip in mock mode)
+    2. Mute: close the D-063 gate (skip in mock mode, F-439)
     3. Generate PW filter-chain config
     4. Write config file
     5. Write active-profile marker
     6. Return target gains for frontend ramp-up (no auto-unmute)
+
+    ``close_gate`` is an async callable (``gain_guard.close_gate``) or None.
     """
     # 1. Validate
     validation = _deep_validate_profile(profile)
@@ -1027,14 +1031,16 @@ async def _activate_profile_impl(
             "validation": validation,
         }
 
-    # 2. Mute (D-043 safety: mute before any config change)
-    if not is_mock and mute_manager is not None:
-        mute_result = await mute_manager.mute()
-        if not mute_result.get("ok"):
+    # 2. Mute (D-043 safety: mute before any config change).  F-439: mute
+    # is close_gate; gains come back only via Open Gate.
+    if not is_mock and close_gate is not None:
+        try:
+            await close_gate()
+        except Exception as exc:  # noqa: BLE001 — not muted: do not proceed
             return {
                 "activated": False,
                 "error": "mute_failed",
-                "detail": mute_result.get("error", "unknown mute error"),
+                "detail": f"close_gate failed: {exc}",
             }
 
     # 3. Generate PW filter-chain config
@@ -1114,8 +1120,8 @@ async def _activate_profile_impl(
         "target_gains": target_gains,
         "warnings": validation.get("warnings", []),
         "instructions": (
-            "All channels are muted. Use the ramp-up endpoint or "
-            "manually set gain values to restore output."
+            "All channels are muted (audio gate closed). Use OPEN GATE "
+            "in the Audio Gate section to play again."
             if not is_mock else
             "Mock mode — no PW reload needed. Config file written."
         ),
@@ -1136,13 +1142,12 @@ async def activate_profile(name: str, request: Request):
             content={"error": "not_found",
                      "detail": f"Speaker profile '{name}' not found"},
         )
-    mute_manager = getattr(request.app.state, "audio_mute", None)
     thermal_monitor = getattr(request.app.state, "thermal_monitor", None)
     thermal_limiter = getattr(request.app.state, "thermal_limiter", None)
     is_mock = os.environ.get("PI_AUDIO_MOCK", "1") == "1"
 
     result = await _activate_profile_impl(
-        name, data, mute_manager, is_mock,
+        name, data, gain_guard.close_gate, is_mock,
         thermal_monitor=thermal_monitor,
         thermal_limiter=thermal_limiter,
     )

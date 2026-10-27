@@ -14,6 +14,17 @@ The limiter runs as an async loop alongside the thermal monitor, reading
 its state and applying gain corrections.  Gain changes are session-only
 via pw-cli (C-009: revert on PW restart).
 
+Reduce-only (F-345, AE 00e6f49a A): the limiter never raises a gain.  It
+writes only when its target is below the live Mult read back from
+PipeWire, so there is no recovery raise and nothing is written behind a
+closed gate (live Mult 0).  Every write goes through
+``gain_guard.guarded_set_mult`` (non-zero only while the gate is open).
+A non-finite factor or target is never written; it latches a per-channel
+fault and the last factor holds (F-355).  A failed live read latches
+``thermal_readback_failed`` until the next good read (AE 56043d31 C3);
+both show in ``snapshot()`` and in /ws/system ``thermal_limiter``.  Recovery after a reduction goes
+through Open Gate, which restores the venue gains.
+
 Operator override: temporary ceiling increase with acknowledgment, logged
 and time-limited (default 5 minutes), resets on mode/profile switch.
 
@@ -40,6 +51,9 @@ SOFT_KNEE_THRESHOLD_DB = 3.0
 # Maximum gain reduction applied by the soft knee (dB).
 # At exactly 0 dB headroom the limiter applies this much reduction.
 SOFT_KNEE_MAX_REDUCTION_DB = 3.0
+
+# Latched fault name for a failed live-Mult read (AE 56043d31 C3).
+READBACK_FAILED = "thermal_readback_failed"
 
 # Default operator override duration (seconds).
 DEFAULT_OVERRIDE_DURATION_S = 300.0  # 5 minutes
@@ -88,6 +102,17 @@ class ChannelLimitState:
     # Whether limiter is currently engaged for this channel.
     is_limiting: bool = False
 
+    # Latched fault (e.g. "non_finite_target"); cleared on reconfigure.
+    fault: Optional[str] = None
+
+    # Latched while the live Mult cannot be read back (READBACK_FAILED):
+    # no write, so this channel has no thermal protection (AE 56043d31
+    # C3).  Cleared by the next successful read.
+    readback_fault: Optional[str] = None
+
+    # Last reason a write was skipped or refused (logged once per change).
+    blocked: Optional[str] = None
+
 
 @dataclass
 class OverrideEntry:
@@ -123,7 +148,7 @@ class ThermalGainLimiter:
     """Enforces thermal gain limits on PW filter-chain gain nodes.
 
     Reads thermal state from ThermalMonitor, computes required gain
-    reductions, and applies them via pw-cli set_mult.
+    reductions, and applies them through gain_guard (reduce-only, F-345).
     """
 
     def __init__(
@@ -275,12 +300,26 @@ class ThermalGainLimiter:
                 "reduction_factor": round(ch.reduction_factor, 4),
                 "reduction_db": round(_linear_to_db(ch.reduction_factor), 1),
                 "is_limiting": ch.is_limiting,
+                "fault": ch.fault,
+                "readback_fault": ch.readback_fault,
                 "override": override_info,
             })
         return {
             "channels": channels,
             "any_limiting": any(ch.is_limiting for ch in self._channels.values()),
+            "faults": self.faults(),
+            "degraded": bool(self.faults()),
         }
+
+    def faults(self) -> List[dict]:
+        """Latched per-channel faults (the limiter is degraded while any exist)."""
+        out = []
+        for name, ch in sorted(self._channels.items(),
+                                key=lambda x: x[1].channel_index):
+            for fault in (ch.fault, ch.readback_fault):
+                if fault is not None:
+                    out.append({"channel": name, "fault": fault})
+        return out
 
     def audit_log(self, limit: int = 50) -> List[dict]:
         """Return recent audit log entries."""
@@ -377,6 +416,20 @@ class ThermalGainLimiter:
 
             # Compute required reduction
             new_factor = self.compute_reduction(headroom, pct, name)
+            target_mult = ch_limit.base_mult * new_factor
+
+            # F-355: a non-finite level, factor or base never reaches a
+            # write.  Latch a fault and hold the last factor.
+            if not (math.isfinite(new_factor) and math.isfinite(target_mult)):
+                if ch_limit.fault is None:
+                    ch_limit.fault = "non_finite_target"
+                    self._audit(now, name, "fault",
+                                f"non-finite factor={new_factor} "
+                                f"base={ch_limit.base_mult} headroom={headroom}")
+                    log.error("Thermal limiter FAULT: %s non-finite target "
+                              "(factor=%s base=%s headroom=%s); not written",
+                              name, new_factor, ch_limit.base_mult, headroom)
+                continue
 
             # Track engage/disengage transitions
             was_limiting = ch_limit.is_limiting
@@ -396,45 +449,97 @@ class ThermalGainLimiter:
             ch_limit.is_limiting = is_now_limiting
             ch_limit.reduction_factor = new_factor
 
-            # Compute target Mult
-            target_mult = ch_limit.base_mult * new_factor
-
-            # Only send pw-cli if the change is significant and enough
-            # time has passed since last update.
-            mult_diff = abs(target_mult - ch_limit.current_mult)
-            time_since_update = now - ch_limit.last_update_time
-
-            if mult_diff < MULT_CHANGE_THRESHOLD:
+            # Reduce-only: no write unless limiting (no recovery raise).
+            if not is_now_limiting:
                 continue
-            if time_since_update < MIN_UPDATE_INTERVAL_S:
+            if now - ch_limit.last_update_time < MIN_UPDATE_INTERVAL_S:
+                continue
+            ch_limit.last_update_time = now
+
+            live_mult = await self._read_live_mult(ch_limit)
+            self._set_readback_fault(now, ch_limit, live_mult is None)
+            if live_mult is None:
+                continue
+            if live_mult - target_mult < MULT_CHANGE_THRESHOLD:
+                # Already at or below the target (e.g. gate closed: 0).
                 continue
 
-            # Apply gain change
-            ok = await self._apply_mult(ch_limit.gain_node_name, target_mult)
-            if ok:
+            result = await self._write_mult(ch_limit.gain_node_name, target_mult)
+            if result.ok:
                 ch_limit.current_mult = target_mult
-                ch_limit.last_update_time = now
+                self._set_blocked(ch_limit, None)
+            else:
+                # Refused or failed: current_mult stays as it was.
+                self._set_blocked(ch_limit, result.reason)
 
-    async def _apply_mult(self, gain_node_name: str, mult: float) -> bool:
-        """Apply a Mult value to a gain node via pw-cli."""
-        if self._is_mock:
-            return True
+    def _set_readback_fault(self, now: float, ch_limit: ChannelLimitState,
+                            failed: bool) -> None:
+        """Latch or clear READBACK_FAILED; ERROR log per state change."""
+        if failed == (ch_limit.readback_fault is not None):
+            return
+        if failed:
+            ch_limit.readback_fault = READBACK_FAILED
+            self._audit(now, ch_limit.name, "fault", READBACK_FAILED)
+            log.error("Thermal limiter FAULT: %s live Mult unreadable; "
+                      "no reduction written (no thermal protection)",
+                      ch_limit.name)
+        else:
+            ch_limit.readback_fault = None
+            self._audit(now, ch_limit.name, "fault_cleared", READBACK_FAILED)
+            log.error("Thermal limiter %s: live Mult readable again; "
+                      "%s cleared", ch_limit.name, READBACK_FAILED)
 
-        from .pw_helpers import pw_dump, find_convolver_node, set_mult
+    def _set_blocked(self, ch_limit: ChannelLimitState,
+                     reason: Optional[str]) -> None:
+        """Record why a write did not happen; log once per change."""
+        if reason == ch_limit.blocked:
+            return
+        if reason is None:
+            log.info("Thermal limiter %s: writes accepted again", ch_limit.name)
+        else:
+            log.warning("Thermal limiter %s: reduction not written (%s)",
+                        ch_limit.name, reason)
+        ch_limit.blocked = reason
 
-        # Cache convolver node ID (it doesn't change during a session).
+    async def _convolver_id(self) -> Optional[int]:
+        """Convolver node ID, cached (it doesn't change during a session)."""
         if self._convolver_node_id is None:
+            from .pw_helpers import pw_dump, find_convolver_node
             pw_data = await pw_dump()
             if pw_data is None:
                 log.warning("ThermalGainLimiter: pw-dump failed")
-                return False
+                return None
             node_id, _ = find_convolver_node(pw_data)
             if node_id is None:
                 log.warning("ThermalGainLimiter: convolver node not found")
-                return False
+                return None
             self._convolver_node_id = node_id
+        return self._convolver_node_id
 
-        return await set_mult(self._convolver_node_id, gain_node_name, mult)
+    async def _read_live_mult(self, ch_limit: ChannelLimitState) -> Optional[float]:
+        """Read the channel's Mult from PipeWire (mock: the tracked value)."""
+        if self._is_mock:
+            return ch_limit.current_mult
+        from .pw_helpers import read_mult
+        node_id = await self._convolver_id()
+        if node_id is None:
+            return None
+        live = await read_mult(node_id, ch_limit.gain_node_name)
+        if live is None or not math.isfinite(live):
+            # The node ID may be stale after a PW restart: look it up again.
+            self._convolver_node_id = None
+            return None
+        return live
+
+    async def _write_mult(self, gain_node_name: str, mult: float):
+        """Write a reduced Mult through the gate guard (mock: no write)."""
+        from .gain_guard import GuardResult, guarded_set_mult
+        if self._is_mock:
+            return GuardResult(True)
+        node_id = await self._convolver_id()
+        if node_id is None:
+            return GuardResult(False, "convolver_not_found")
+        return await guarded_set_mult(node_id, gain_node_name, mult)
 
     def _audit(self, timestamp: float, channel: str,
                action: str, detail: str) -> None:
