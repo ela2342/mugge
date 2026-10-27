@@ -21,11 +21,13 @@
 // window.__room (set by the test before the page loads):
 //   { sinkLabel, channel, taps: [[samples, gain], ...], noiseRms }
 // The script adds: sinkId (resolved from sinkLabel), contexts (the opts of
-// every AudioContext the page made), heard (contexts given the room).
+// every AudioContext the page made), live (those contexts themselves, in
+// the same order), heard (contexts given the room).
 
 (() => {
   const room = window.__room;
   room.contexts = [];
+  room.live = [];
   room.heard = 0;
   const RATE = 48000;
   const md = navigator.mediaDevices;
@@ -63,6 +65,7 @@
       super(ours ? { ...opts, sampleRate: RATE } : opts);
       this.__ours = ours;
       room.contexts.push({ sinkId: opts.sinkId || "", rate: this.sampleRate });
+      room.live.push(this);
     }
   }
   window.AudioContext = RoomContext;

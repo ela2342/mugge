@@ -40,6 +40,24 @@ CAL_TEXT = (
     "10\t0.0\n90\t0.0\n110\t{s:.1f}\n20000\t{s:.1f}\n".format(s=CAL_STEP_DB))
 
 
+# F-468: holds the first meter worklet addModule() until __hold.release().
+HOLD_FIRST_METER_JS = """(() => {
+  const add = AudioWorklet.prototype.addModule;
+  window.__hold = { reached: false, release: null };
+  AudioWorklet.prototype.addModule = function (url, ...rest) {
+    if (window.__hold.reached || !String(url).endsWith("/meter-worklet.js")) {
+      return add.call(this, url, ...rest);
+    }
+    window.__hold.reached = true;
+    return new Promise((resolve, reject) => {
+      window.__hold.release = () => add.call(this, url, ...rest).then(
+        resolve, reject);
+    });
+  };
+})();
+"""
+
+
 @pytest.fixture()
 def room_page(browser_type):
     browser = browser_type.launch(args=FAKE_MEDIA)
@@ -164,4 +182,51 @@ def test_one_channel_end_to_end(room_page, page_url, tmp_path):  # noqa: F811
                  "  Delay (audio latency + time of flight): "
                  f"{1000 * DIRECT / RATE:.1f} ms"):
         assert line + "\n" in text, (line, text)
+    assert errors == []
+
+
+def test_open_race_newest_open_wins(room_page, page_url):  # noqa: F811
+    """F-468 (run 11): two opens in flight, the older one finishing last.
+
+    The order is forced, not timed: the first open's meter worklet module
+    is held until the second open has committed. Meanwhile a devicechange,
+    as Chromium sends once the mic is granted, lists the labels early, so
+    the room's output can be chosen while the first open is still waiting.
+    The page must end on the newer choice, with the older context closed.
+    """
+    page, errors = room_page
+    # Playwright's routing does not see worklet module fetches: hold the
+    # first meter addModule() in the page instead.
+    page.add_init_script(HOLD_FIRST_METER_JS)
+    page.goto(page_url)
+    page.wait_for_function("window.__webrcApp !== undefined")
+
+    # addModule() comes after getUserMedia: the mic is granted once held.
+    page.click("#open")
+    page.wait_for_function("window.__hold.reached")
+    page.evaluate(
+        "navigator.mediaDevices.dispatchEvent(new Event('devicechange'))")
+    expect(page.locator("#sink option", has_text=SINK)).to_have_count(1)
+    page.select_option("#sink", label=SINK)
+    page.click("#open")
+    sink_id = page.evaluate("window.__room.sinkId")
+    assert sink_id
+    page.wait_for_function("(id) => window.__webrcApp.io.sinkId === id",
+                           arg=sink_id)
+
+    page.evaluate("window.__hold.release()")
+    # The first open is done once it has committed or closed its context.
+    page.wait_for_function("""() => { const c = window.__room.live[0];
+        return window.__webrcApp.io.ctx === c || c.state === "closed"; }""")
+    page.wait_for_function("window.__webrcApp.flow.audio !== null")
+    state = page.evaluate("""() => { const app = window.__webrcApp;
+        const io = app.io, live = window.__room.live;
+        return { sinkId: io.sinkId, rate: io.ctx && io.ctx.sampleRate,
+                 newest: io.ctx === live[live.length - 1],
+                 others: live.filter((c) => c !== io.ctx).map((c) => c.state),
+                 flowSink: app.flow.audio.sinkId,
+                 openError: app.openError }; }""")
+    assert state == {"sinkId": sink_id, "rate": RATE, "newest": True,
+                     "others": ["closed"], "flowSink": sink_id,
+                     "openError": ""}, state
     assert errors == []
