@@ -7,15 +7,16 @@ sends the GM ``set_mode`` RPC and then ``await_settled``. The GM closes the
 D-063 gate on standby and zeroes the gain Mults asynchronously.
 
 - b1: standby, then POST /api/v1/audio/mute within 100 ms of set_mode
-  returning. All 8 Mults read back 0 within 2 s, hw-out at the floor,
-  gate reported closed.
+  returning. All 16 gain values (8 Mult, 8 Add) read back 0 within 2 s,
+  hw-out at the floor, gate reported closed.
 - b2: the same without the mute, isolating GM zeroing. A failure here is
   a separate GM defect: no retry, xfail or skip (PO 123cb139).
 
 Each test runs 10 iterations. Every iteration opens the gate through the
 product path (DJ mode, venue select, gate open) and proves the tone on
 hw-out before entering standby. Each iteration prints one line
-``F-474-b iter=<n> ok mults=<8 values> t_zero_ms=<ms>`` for the PR body.
+``F-474-b iter=<n> ok mults=<8 values> adds=<8 values> t_zero_ms=<ms>``
+for the PR body.
 
 Usage:
     nix run .#test-e2e
@@ -37,7 +38,8 @@ from fixtures.backend import (  # noqa: F401
     _rpc_call,
     _switch_gm_mode_detail,
     in_window,
-    read_back_mults,
+    nonzero_gains,
+    read_back_gains,
     tone_channels,
     tone_on_sw_tap,
     virtual_gate_open,
@@ -89,14 +91,15 @@ def _await_settled(gm_port: int, resp: dict, n: int) -> None:
 
 
 def _wait_all_zero(since: float, n: int) -> tuple[dict, float]:
-    """Poll the read-back until all 8 Mults are 0; FAIL at the 2 s deadline."""
+    """Poll the read-back until all 16 gain values are 0; FAIL at 2 s."""
     while True:
-        mults = read_back_mults()
+        gains = read_back_gains()
         elapsed = time.monotonic() - since
-        if all(m == 0.0 for m in mults.values()):
-            return mults, elapsed
+        live = nonzero_gains(gains)
+        if not live:
+            return gains, elapsed
         assert elapsed < ZERO_DEADLINE_S, (
-            f"iter={n}: Mults not all 0 {ZERO_DEADLINE_S}s after standby: {mults}")
+            f"iter={n}: gains not all 0 {ZERO_DEADLINE_S}s after standby: {live}")
 
 
 def _assert_closed_and_silent(base_url, port: int, n: int) -> None:
@@ -120,13 +123,16 @@ def _run(capsys, virtual_gate_open, base_url, gm_port, port, mute: bool) -> None
             status, body = _api_post(base_url, "/api/v1/audio/mute")
             assert status == 200 and body.get("ok"), f"iter={n}: mute: {status} {body}"
 
-        mults, t_zero = _wait_all_zero(returned, n)
+        gains, t_zero = _wait_all_zero(returned, n)
         _assert_closed_and_silent(base_url, port, n)
         _await_settled(gm_port, resp, n)
 
-        values = ",".join(f"{mults[name]:g}" for name in GAIN_NAMES)
+        mults, adds = (",".join(gains[f"{name}:{param}"].removeprefix("Float ")
+                                for name in GAIN_NAMES)
+                       for param in ("Mult", "Add"))
         with capsys.disabled():
-            print(f"F-474-b iter={n} ok mults={values} t_zero_ms={t_zero * 1000:.0f}")
+            print(f"F-474-b iter={n} ok mults={mults} adds={adds} "
+                  f"t_zero_ms={t_zero * 1000:.0f}")
 
 
 class TestStandbyZeroesGains:

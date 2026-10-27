@@ -31,7 +31,8 @@ from fixtures.backend import (  # noqa: F401
     GAIN_NAMES,
     LEVEL_FLOOR_DB,
     STIMULUS_HW_OUT_CHANNELS,
-    read_back_mults,
+    nonzero_gains,
+    read_back_gains,
     tone_on_sw_tap,
     virtual_gate_open,
     wait_for_peaks,
@@ -135,10 +136,10 @@ def _dspout_readouts(page) -> list[str]:
             for ch in STIMULUS_HW_OUT_CHANNELS]
 
 
-def _assert_all_mult_zero(when: str) -> None:
-    mults = read_back_mults()
-    assert all(m == 0.0 for m in mults.values()), (
-        f"Mult not all 0 in PipeWire {when}: {mults}")
+def _assert_all_gains_zero(when: str) -> None:
+    """All 16 gain values (8 Mult, 8 Add) read 0 in PipeWire (AE 1fb3da7c P1)."""
+    live = nonzero_gains(read_back_gains())
+    assert not live, f"gain not 0 in PipeWire {when}: {live}"
 
 
 # ===========================================================================
@@ -167,7 +168,7 @@ class TestMutedWhileGateClosed:
         expect(demo_page.locator("#cfg-audio-gate")).to_be_in_viewport()
         expect(btn).to_have_text("MUTED")
         assert requests == [], f"a MUTED click sent requests: {requests}"
-        _assert_all_mult_zero("after a MUTED click")
+        _assert_all_gains_zero("after a MUTED click")
 
 
 class TestNoGainRaiseWhileGateClosed:
@@ -175,7 +176,7 @@ class TestNoGainRaiseWhileGateClosed:
 
     def test_gain_apply_refused(self, demo_page, local_demo_url):
         _wait_for_ws_data(demo_page)
-        _assert_all_mult_zero("before the apply")
+        _assert_all_gains_zero("before the apply")
         demo_page.locator('.nav-tab[data-view="config"]').click()
         slider = demo_page.locator("#cfg-gain-gain_left_hp")
         expect(slider).to_be_enabled(timeout=GATE_UI_TIMEOUT_MS)
@@ -194,7 +195,7 @@ class TestNoGainRaiseWhileGateClosed:
             ui = float(demo_page.locator(f"#cfg-gain-{name}").input_value())
             assert ui == pytest.approx(gains[name]["mult"]), (
                 f"{name} slider {ui} != server readback {gains[name]}")
-        _assert_all_mult_zero("after a refused gain apply")
+        _assert_all_gains_zero("after a refused gain apply")
 
 
 class TestMuteClosesGate:
@@ -206,8 +207,11 @@ class TestMuteClosesGate:
         btn = demo_page.locator('[data-testid="panic-button"]')
         expect(btn).to_have_text("MUTE", timeout=GATE_UI_TIMEOUT_MS)
         expect(btn).to_have_attribute("title", PANIC_TITLE_MUTE)
-        assert any(m > 0.0 for m in read_back_mults().values()), (
-            "gate open but no Mult above 0: the mute check would prove nothing")
+        gains = read_back_gains()
+        assert nonzero_gains(gains, "Mult"), (
+            "gate open but every Mult is 0: the mute check would prove nothing")
+        assert not nonzero_gains(gains, "Add"), (
+            f"gate open with a non-zero Add: {nonzero_gains(gains, 'Add')}")
         demo_page.wait_for_function(
             "() => ['0', '1'].every(ch => {"
             " const el = document.getElementById('meters-dspout-db-' + ch);"
@@ -218,7 +222,7 @@ class TestMuteClosesGate:
         expect(btn).to_have_text("MUTED", timeout=GATE_UI_TIMEOUT_MS)
         assert _get(local_demo_url, "/api/v1/audio/mute-status") == {
             "is_muted": True, "gate": "closed"}
-        _assert_all_mult_zero("after a MUTE click")
+        _assert_all_gains_zero("after a MUTE click")
         peaks = wait_for_peaks(level_hw_out_port, STIMULUS_HW_OUT_CHANNELS,
                                lambda p: max(p) <= LEVEL_FLOOR_DB,
                                timeout=HW_OUT_FLOOR_TIMEOUT_S)
@@ -235,7 +239,7 @@ class TestMuteClosesGate:
             re.compile(r"\bactive\b"), timeout=GATE_UI_TIMEOUT_MS)
         expect(btn).to_have_text("MUTED")
         assert requests == [], f"the second click sent requests: {requests}"
-        _assert_all_mult_zero("after the second click")
+        _assert_all_gains_zero("after the second click")
 
 
 class TestFailedMuteNeverShowsMuted:

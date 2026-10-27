@@ -4,8 +4,9 @@ Verifies mute against the real local-demo stack — no mocks.  Since F-439
 (PO r3 67f15d65) mute closes the D-063 gate (GM zeroes every gain) and
 there is no unmute: POST /api/v1/audio/unmute returns 410 and the only way
 back is Open Gate.  mute-status is derived from a fresh gate reading.
-Every mute assertion reads all 8 gain Mults back from PipeWire (pw-cli),
-not only the hw-out level (QE 6e0e16b1 T2, QE/AE 8ab9077f (c)).
+Every mute assertion reads all 16 gain values (8 Mult, 8 Add) back from
+PipeWire (pw-cli, strict "Float 0.000000"), not only the hw-out level
+(QE 6e0e16b1 T2, QE/AE 8ab9077f (c), AE 1fb3da7c P1).
 
 Signal flow in DJ mode (routing.rs dj_links):
     Mixxx substitute (--tone) -> level-bridge-sw tap
@@ -33,7 +34,8 @@ from fixtures.backend import (  # noqa: F401
     HW_OUT_TONE_WINDOW_DB,
     _gate_state,
     LEVEL_FLOOR_DB,
-    read_back_mults,
+    nonzero_gains,
+    read_back_gains,
     SETTLE_S,
     STIMULUS_HW_OUT_CHANNELS,
     in_window,
@@ -78,10 +80,9 @@ def _tone_on_hw_out(port: int, expected: float) -> list[float]:
 
 
 def _assert_closed_and_silent(base_url, port: int, when: str) -> None:
-    """All 8 Mults read back 0, hw-out at the floor, gate reported closed."""
-    mults = read_back_mults()
-    live = {name: m for name, m in mults.items() if m != 0.0}
-    assert not live, f"non-zero Mult {when}: {live}"
+    """All 16 gain values read back 0, hw-out at the floor, gate closed."""
+    live = nonzero_gains(read_back_gains())
+    assert not live, f"non-zero gain {when}: {live}"
     peaks = wait_for_peaks(port, STIMULUS_HW_OUT_CHANNELS,
                            lambda p: max(p) <= LEVEL_FLOOR_DB, timeout=MUTE_TIMEOUT_S)
     assert max(peaks) <= LEVEL_FLOOR_DB, (
@@ -140,12 +141,20 @@ class TestMuteIdempotency:
     """Double mute is a safe no-op."""
 
     def test_double_mute_is_idempotent(self, ensure_dj_mode, api_post, api_get):
-        """Muting twice returns ok both times; the gate stays closed."""
+        """Muting twice returns ok both times; closed and all gains 0 after.
+
+        The old 'already muted' detail check is replaced by D1-D4: the r3
+        mute response has no detail field (QE ruling 4dac2326).
+        """
         s1, b1 = api_post("/api/v1/audio/mute")
-        assert s1 == 200 and b1.get("ok"), f"First mute failed: {b1}"
+        assert s1 == 200 and b1.get("ok") is True and b1.get("gate_open") is False, (
+            f"First mute failed: {s1} {b1}")
 
         s2, b2 = api_post("/api/v1/audio/mute")
-        assert s2 == 200 and b2.get("ok") is True, f"Double mute failed: {s2} {b2}"
+        assert s2 == 200 and b2.get("ok") is True and b2.get("gate_open") is False, (
+            f"Double mute failed: {s2} {b2}")
+        live = nonzero_gains(read_back_gains())
+        assert not live, f"non-zero gain after the second mute: {live}"
 
         _, status_body = api_get("/api/v1/audio/mute-status")
         assert status_body.get("is_muted") is True
@@ -178,14 +187,17 @@ class TestMuteStatusEndpoint:
         assert body.get("is_muted") is True, f"Expected muted: {body}"
         assert body.get("gate") == "closed", body
 
-    def test_status_after_unmute(self, ensure_dj_mode, api_post, api_get):
-        """Unmute is 410 and leaves the status unchanged."""
+    def test_status_after_unmute(self, tone_on_sw_tap, base_url, api_post,
+                                 api_get, level_hw_out_port):
+        """Unmute is 410: status unchanged and muted, all gains 0, floor."""
         api_post("/api/v1/audio/mute")
         _, before = api_get("/api/v1/audio/mute-status")
 
         status, body = api_post("/api/v1/audio/unmute")
 
+        _assert_closed_and_silent(base_url, level_hw_out_port, "after unmute")
         _, after = api_get("/api/v1/audio/mute-status")
         assert after == before, f"unmute changed the status: {before} -> {after}"
+        assert after.get("is_muted") is True, f"not muted after unmute: {after}"
         assert status == 410 and body.get("error") == "unmute_removed", (
             f"unmute must be removed: {status} {body}")

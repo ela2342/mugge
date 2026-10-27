@@ -10,9 +10,10 @@ back is Open Gate.
 Against the real local-demo stack (QE 6e0e16b1 T1, QE/AE test form 8ab9077f):
     (a) gate open -> gate close -> mute -> unmute
     (b) gate open -> mute -> gate close -> unmute          (F-474 a1)
-    (c) gate open -> unmute: 410 and every Mult unchanged
+    (c) gate open -> unmute: 410 and every gain value unchanged
     a2  gate closed, venue selected: /config/gain, unmute, venue select and
-        a DJ <-> standby switch each leave all 8 Mults at 0 (F-474 a2)
+        a DJ <-> standby switch each leave all 16 gain values (8 Mult,
+        8 Add) at 0 (F-474 a2, AE 1fb3da7c P1)
 Read-back and floor are asserted BEFORE the status code, so a run at base
 shows the restored gains rather than a status mismatch.
 
@@ -34,7 +35,8 @@ from fixtures.backend import (  # noqa: F401
     STIMULUS_HW_OUT_CHANNELS,
     _gate_state,
     in_window,
-    read_back_mults,
+    nonzero_gains,
+    read_back_gains,
     tone_channels,
     tone_on_sw_tap,
     virtual_gate_open,
@@ -59,9 +61,8 @@ def _assert_unmute_removed(status: int, body: dict) -> None:
 
 
 def _assert_all_zero(when: str) -> None:
-    mults = read_back_mults()
-    live = {name: m for name, m in mults.items() if m != 0.0}
-    assert not live, f"non-zero Mult behind a closed gate {when}: {live}"
+    live = nonzero_gains(read_back_gains())
+    assert not live, f"non-zero gain behind a closed gate {when}: {live}"
 
 
 def _assert_hw_out_floor(port: int, when: str) -> None:
@@ -123,14 +124,14 @@ class TestUnmuteBehindClosedGate:
 
     def test_unmute_with_gate_open_writes_nothing(self, virtual_gate_open,
                                                   api_post, level_hw_out_port):
-        """(c) gate open -> unmute: 410, and every Mult is unchanged."""
+        """(c) gate open -> unmute: 410, and every gain value is unchanged."""
         _assert_tone_on_hw_out(level_hw_out_port, virtual_gate_open)
-        before = read_back_mults()
+        before = read_back_gains()
 
         status, body = api_post("/api/v1/audio/unmute")
 
-        after = read_back_mults()
-        assert after == before, f"unmute changed Mults: {before} -> {after}"
+        after = read_back_gains()
+        assert after == before, f"unmute changed gains: {before} -> {after}"
         _assert_unmute_removed(status, body)
 
 
