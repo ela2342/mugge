@@ -21,8 +21,9 @@ gig-capable.** Evidence: `docs/lab-notes/US-163-pi5-bootstrap.md`.
 **No amps, headphones or IEM, and no signal-gen measurement use,** until
 every Pi 5 row of the AMPS-ON PRECONDITION LIST (Pi 5) below holds. The
 PM keeps the list in the backlog, using the same item numbers; if the
-backlog adds an item, this table must be updated too. The list has 14
-rows. On the Pi 5, rows 1-3 and 5-14 must ALL hold; row 4 applies to the
+backlog adds an item, this table must be updated too. The list has 16
+rows: 1-14, 19 and 20 (rows 15-18 are reserved for the US-174d PR, not
+merged yet). On the Pi 5, rows 1-3, 5-14, 19 and 20 must ALL hold; row 4 applies to the
 Pi 4 only. For a defect row, "holds" means the defect is closed and its
 fix verified on the Pi 5, unless the row itself names an alternative
 (row 14).
@@ -43,6 +44,8 @@ fix verified on the Pi 5, unless the row itself names an alternative
 | 12 | RTTIME | A PipeWire RT overrun is SIGKILLed with no warning first (see "Unannounced PipeWire kill" below) |
 | 13 | US-159 G16 (F-373) | Any re-adoption of the USBStreamer sink after a re-enumeration (by GraphManager or WirePlumber) comes up gated: gains 0, gate closed, and audio returns only when the operator re-opens the gate (an instant step to the venue gain, F-315; there is no ramp). To be tested (AE; US-159 T65) |
 | 14 | Gate-authority defects (AD M4) | F-338, F-339, F-320, F-314, F-325 and F-349 are closed, or each has an interim operating rule in the merged safety.md (planned in PR #45, paused since 2026-10-26; until it merges, the rules in this row and in the Pi 5 rules below apply) that is followed. For F-314, F-349, F-338 and F-339 the interim rule must be AE-accepted. For F-338 and F-339 it must not rely on the web-UI Close Gate or on a CloseGate success reply: the emergency stop is the amp power switches (including the HP/IEM amps); a person at the switches the whole time the amps are on. After any gate close, mute or GraphManager restart, reading the gains does not prove "muted" yet. Switch the amps off, including the headphone/IEM amps, and headphones/IEMs not worn, and keep them off until PipeWire is restarted or the Pi is cold power-cycled, with all 16 gains verified at their boot values (safety.md, Gains at boot) and the gate closed. A gains reading counts only if the filter-chain node and its output node were idle or running immediately before and after the reading (states logged with it); a reading on a suspended node shows 0 whatever the real gain is and proves nothing (F-395, Gate-2 r6b). Once the live readback is proven on the Pi, this goes back to: "muted" is proven only by all 16 gains reading exactly 0.000000 via `pw-cli enum-params` on a node that is idle or running. That interim covers supervised sessions only; before any gig or unattended use, F-338 and F-339 are closed. For any own-speaker venue (e.g. CHN-50P), F-321 and F-322 are also closed |
+| 19 | F-465 | F-465 fixed and AC3 b-e passed on that generation; see F-465 rule |
+| 20 | F-410, F-320 D | While the D-063 gate is closed, no action other than Open Gate raises any Mult: the web UI unmute never restores gains behind a closed gate (F-410, closes with the F-439 / F-320 F PR), and the GM watchdog unlatch writes no Mult (F-320 D). Both must be fixed; no interim operating rule counts; AE acceptance required |
 
 Until the list is closed, these rules apply on the Pi 5:
 
@@ -166,7 +169,23 @@ Until the list is closed, these rules apply on the Pi 5:
   headphones/IEMs not worn; report. (Section 5 check 10 is added by PR #45,
   paused; until then this paragraph is the rule.)
 - **Gate:** the GraphManager gate boots closed. Do not open it while any
-  Pi 5 row (1-3, 5-14) of the list above is open.
+  Pi 5 row (1-3, 5-14, 19, 20) of the list above is open.
+- **F-465 rule (no venue armed):** the GraphManager service has no venues
+  directory, so it cannot arm a venue. Without a venue the gate cannot
+  open and the gains stay 0: the gap blocks audio, it does not make
+  audio unsafe. Do not open the gate, start a DJ session or turn amps on,
+  on any generation, until the F-465 fix has deployed and AC3 (b-e) has
+  passed on the Pi 5 on that generation. AC3 is the US-173 coefficient
+  check: (b) the coefficient WAVs match their committed sha256, (c)
+  PipeWire started after those files were written, (d) the journal shows
+  no filter-chain load error, (e) GraphManager's active venue is the
+  expected one.
+- **Watchdog latch (F-320 D):** until F-320 D lands, `watchdog_unlatch`
+  writes a fixed gain table back (0.001 on the mains and ch 5-8, 0.000631
+  on the subs), not the venue gains, while the gate still reads closed.
+  So a closed gate is not silent after an unlatch. If the watchdog
+  latches: unlatch, then `close_gate`, then confirm all 8 Mults read 0
+  (read as in "Gains at boot") before anything else.
 - **Outputs:** the WirePlumber allowlist disables every ALSA card except the
   USBStreamer (and the UMIK-1 capture). The HiFiBerry DAC+ HAT is blocked on
   2 layers (allowlist and module blacklist). The third layer
@@ -420,10 +439,10 @@ constraints discovered during system testing, updated for D-040 architecture
 |---|-------|---------------|---------------------|
 | 1 | Web UI monitor service stopped (if using JACK backend) | `systemctl --user status pi4audio-webui-monitor` | F-030: SCHED_OTHER JACK client causes xruns under load. US-060 replaces JACK monitoring with PW-native data sources -- retire this check after US-060 validation. |
 | 2 | Mixxx not running | `pgrep -x mixxx` | CPU competition, PipeWire resource contention |
-| 3 | Signal generator running and reachable | `echo '{"cmd":"status"}' \| nc -q1 127.0.0.1 4001` | Measurement audio I/O unavailable. Signal-gen is the sole measurement output path (D-040). |
+| 3 | Signal generator running and reachable | `echo '{"cmd":"status"}' \| nc -q1 127.0.0.1 4001` **Pi 5:** the nc -q1 form is invalid on the Pi 5 image (libressl nc); status has no max_level_dbfs; see F-341. Do not run a measurement session until F-341 lands. | Measurement audio I/O unavailable. Signal-gen is the sole measurement output path (D-040). |
 | 4 | PipeWire running at FIFO/88 | `chrt -p $(pgrep -x pipewire)` | Graph clock not real-time (F-020) |
 | 5 | Correct PipeWire quantum for measurement mode | `pw-metadata -n settings \| grep quantum` | Quantum affects convolver processing latency and CPU load. Measurement typically uses quantum 256 (live mode). |
-| 6 | Signal-gen hard cap is -20 dBFS | `echo '{"cmd":"status"}' \| nc -q1 127.0.0.1 4001` -- check `max_level_dbfs` in response | Safety cap incorrect or missing. The -20 dBFS cap is immutable after startup but verify at pre-flight to confirm correct startup flag. |
+| 6 | Signal-gen hard cap is -20 dBFS | `echo '{"cmd":"status"}' \| nc -q1 127.0.0.1 4001` -- check `max_level_dbfs` in response. **Pi 5:** the nc -q1 form is invalid on the Pi 5 image (libressl nc); status has no max_level_dbfs; see F-341. Do not run a measurement session until F-341 lands. | Safety cap incorrect or missing. The -20 dBFS cap is immutable after startup but verify at pre-flight to confirm correct startup flag. |
 | 7 | Signal-gen ports visible in PipeWire graph | `pw-cli ls Node \| grep signal-gen` | Signal-gen not registered as PW node. In managed mode, GraphManager creates links -- if ports are missing, no audio can flow. |
 | 8 | ADA8200 capture adapter stopped (if not needed) | `pw-cli ls \| grep ada8200` | F-015: USB bandwidth contention between capture and playback streams on USBStreamer |
 | 9 | Owner confirmed amp level safe | Verbal/written confirmation | Transient/excursion damage risk |
