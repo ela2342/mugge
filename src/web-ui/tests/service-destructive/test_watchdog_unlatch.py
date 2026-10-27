@@ -8,13 +8,18 @@ web-ui state.
 
 L1 (QE f79c7a5a, AE 1e8c1fb3 NB1/NB2): remove pi4audio-convolver-out,
     wait for the latch, check open_gate is refused, unlatch, then all 16
-    gain values (8 x Mult, 8 x Add) are exactly 0.0 and get_gate is closed.
+    gain values (8 x Mult, 8 x Add) are exactly 0.0, get_gate is closed and
+    the watchdog is not latched.  A relatch (watchdog_mute event) between
+    the unlatch and the read-back is a FAIL, because its mute would hide
+    what the unlatch wrote (QE ae15808b Q1).
     No hw-out claim: with -out gone there is no path to hw-out.
     L1 then restores the convolver (as in L2) for the next test.
 L2: remove both convolver nodes, recreate them in a separate PipeWire
     client (``pipewire -c filter-chain.conf`` with the stack's convolver
     config), so PipeWire and GM keep running and the latch survives.  With
-    the tone playing: unlatch, then hw-out stays at the floor for 2 s and
+    the tone playing: unlatch (same relatch guard), check the tone ->
+    convolver and convolver-out -> hw-out links exist, then hw-out stays at
+    the floor for 2 s and
     all 16 values are 0.0.  Positive control: Close Gate -> Open Gate (the
     only way back, AE 55f1a1b2 cond 2) brings the tone to hw-out.
 
@@ -70,6 +75,10 @@ NODES_TIMEOUT_S = 10.0
 FLOOR_HOLD_S = 2.0
 OPEN_TIMEOUT_S = 5.0
 ABOVE_FLOOR_DB = 40.0
+# routing.rs MIXXX_PREFIX / USBSTREAMER_OUT_PREFIX; local-demo names its
+# virtual nodes after the real devices.
+TONE_NODE_PREFIX = "Mixxx"
+HW_OUT_PREFIX = "alsa_output.usb-MiniDSP_USBStreamer"
 
 
 # ---------------------------------------------------------------------------
@@ -161,48 +170,113 @@ def _wait_latched(missing: str) -> dict:
     return status
 
 
-def _unlatch_collecting_events() -> tuple[dict, list[dict]]:
-    """Send watchdog_unlatch; return the reply and any watchdog_unlatched events.
+class _GmWindow:
+    """One GM connection kept open for a test window; records every push event.
 
-    GM pushes events to every client, so this connection also sees the
-    unlatch event if it is sent.  Events are read for 1 s after the reply.
+    GM broadcasts events to every connected client, so a connection opened
+    before an action sees all events up to the moment it is drained.
     """
-    events: list[dict] = []
-    reply: dict = {}
-    with socket.create_connection(("127.0.0.1", GM_PORT), timeout=5) as s:
-        s.sendall(b'{"cmd": "watchdog_unlatch"}\n')
-        buf = b""
-        deadline = None
-        while deadline is None or time.monotonic() < deadline:
-            s.settimeout(max(0.05, (deadline or time.monotonic() + 5) - time.monotonic()))
+
+    def __init__(self):
+        self._sock = socket.create_connection(("127.0.0.1", GM_PORT), timeout=5)
+        self._buf = b""
+        self.events: list[dict] = []
+
+    def __enter__(self):
+        # The reply proves GM is serving this connection (and so broadcasting
+        # to it) before the window's first action.
+        assert self.call("get_gate").get("ok"), "GM event window: get_gate failed"
+        return self
+
+    def __exit__(self, *exc):
+        self._sock.close()
+
+    def _lines(self, timeout: float):
+        """Yield decoded lines until timeout passes with nothing to read."""
+        while True:
+            while b"\n" in self._buf:
+                line, self._buf = self._buf.split(b"\n", 1)
+                if line.strip():
+                    yield json.loads(line)
+            self._sock.settimeout(timeout)
             try:
-                chunk = s.recv(4096)
+                chunk = self._sock.recv(4096)
             except socket.timeout:
-                break
+                return
             if not chunk:
-                break
-            buf += chunk
-            while b"\n" in buf:
-                line, buf = buf.split(b"\n", 1)
-                if not line.strip():
-                    continue
-                msg = json.loads(line)
-                if msg.get("type") == "event":
-                    if msg.get("event") == "watchdog_unlatched":
-                        events.append(msg)
-                elif msg.get("cmd") == "watchdog_unlatch" and not reply:
-                    reply = msg
-                    deadline = time.monotonic() + 1.0
-    return reply, events
+                return
+            self._buf += chunk
+
+    def call(self, cmd: str) -> dict:
+        """Send one command on this connection and return its reply ({} on timeout)."""
+        self._sock.sendall((json.dumps({"cmd": cmd}) + "\n").encode())
+        for msg in self._lines(timeout=5.0):
+            if msg.get("type") == "event":
+                self.events.append(msg)
+            elif msg.get("cmd", cmd) == cmd:
+                return msg
+        return {}
+
+    def drain(self, quiet_s: float = 0.5) -> None:
+        for msg in self._lines(timeout=quiet_s):
+            if msg.get("type") == "event":
+                self.events.append(msg)
 
 
-def _assert_unlatch_ok() -> None:
-    reply, events = _unlatch_collecting_events()
+def _unlatch_and_read_back(when: str) -> None:
+    """Unlatch, then check gains, gate and latch with no relatch in between.
+
+    A relatch re-runs the safety mute (every Mult = 0.0) and so would hide
+    whatever the unlatch wrote (QE ae15808b Q1).  The event connection stays
+    open from before the unlatch until after the read-back; any
+    watchdog_mute in that window is a FAIL.
+    """
+    with _GmWindow() as gm:
+        reply = gm.call("watchdog_unlatch")
+        gains = _read_gains()
+        gate = gm.call("get_gate")
+        status = gm.call("watchdog_status")
+        gm.drain()
+    print(f"F-320D {when}: unlatch reply={reply} events={gm.events}")
+    print(f"F-320D {when}: status={json.dumps(status.get('watchdog'))} gains={gains}")
     assert reply.get("ok") is True, f"watchdog_unlatch failed: {reply}"
+    mutes = [e for e in gm.events if e.get("event") == "watchdog_mute"]
+    assert not mutes, (
+        f"relatched before read-back: unlatch read-back not discriminating: {mutes}")
     # F-320 D: the event carries no gains (Architect a9ec4ed5).
-    for event in events:
-        assert event == {"type": "event", "event": "watchdog_unlatched"}, event
-    print(f"F-320D unlatch reply={reply} events={events or 'not observed'}")
+    for event in gm.events:
+        if event.get("event") == "watchdog_unlatched":
+            assert event == {"type": "event", "event": "watchdog_unlatched"}, event
+    assert all(v == 0.0 for v in gains.values()), (
+        f"{when}: gain values not all exactly 0.0: {gains}")
+    assert gate.get("ok") and gate.get("gate_open") is False, f"{when}: gate not closed: {gate}"
+    assert status.get("ok") and status["watchdog"]["latched"] is False, (
+        f"{when}: still latched after unlatch: {status}")
+
+
+def _links(out_match, in_match) -> list[str]:
+    """Links whose output node matches out_match and input node in_match, as text."""
+    objs = _pw_dump()
+    names = {o["id"]: ((o.get("info") or {}).get("props") or {}).get("node.name", "")
+             for o in objs if o.get("type") == "PipeWire:Interface:Node"}
+    found = []
+    for o in objs:
+        if o.get("type") != "PipeWire:Interface:Link":
+            continue
+        info = o.get("info") or {}
+        out_name = names.get(info.get("output-node-id"), "")
+        in_name = names.get(info.get("input-node-id"), "")
+        if out_match(out_name) and in_match(in_name):
+            found.append(f"{out_name}:{info.get('output-port-id')} -> "
+                         f"{in_name}:{info.get('input-port-id')}")
+    return found
+
+
+def _path_links() -> tuple[list[str], list[str]]:
+    """The tone -> convolver and convolver-out -> hw-out links (DJ mode, routing.rs)."""
+    tone_in = _links(lambda n: n.startswith(TONE_NODE_PREFIX), lambda n: n == CONVOLVER)
+    hw_out = _links(lambda n: n == CONVOLVER_OUT, lambda n: n.startswith(HW_OUT_PREFIX))
+    return tone_in, hw_out
 
 
 def _assert_open_gate_refused(when: str) -> None:
@@ -322,16 +396,7 @@ class TestUnlatchWritesNoGain:
 
             _assert_open_gate_refused("latched")
 
-            _assert_unlatch_ok()
-            # -out is still missing, so the next graph change may latch the
-            # watchdog again (check() runs after every mutation).  That is
-            # correct behaviour; anything else latched is not.
-            status = _watchdog()
-            print(f"F-320D status after unlatch: {json.dumps(status)}")
-            assert not status["latched"] or status["missing_nodes"] == [CONVOLVER_OUT], status
-
-            _assert_all_zero("after unlatch")
-            assert _gate_open() is False, "gate open after unlatch"
+            _unlatch_and_read_back("L1")
         finally:
             _restore_convolver(recreate_convolver)
 
@@ -347,10 +412,16 @@ class TestUnlatchWritesNoGain:
         assert _watchdog()["latched"], "latch lost when the convolver came back"
         _assert_open_gate_refused("latched, convolver recreated")
 
-        _assert_unlatch_ok()
-        assert not _watchdog()["latched"], f"still latched after unlatch: {_watchdog()}"
-        _assert_all_zero("after unlatch")
-        assert _gate_open() is False, "gate open after unlatch"
+        _unlatch_and_read_back("L2")
+
+        # The floor hold only discriminates if the path is live: without
+        # these links hw-out would be silent at base too (QE ae15808b Q3).
+        tone_in, hw_out = _wait(lambda: all(links := _path_links()) and links,
+                                NODES_TIMEOUT_S) or _path_links()
+        print(f"F-320D path links: tone->convolver={tone_in} convolver-out->hw-out={hw_out}")
+        assert tone_in and hw_out, (
+            f"signal path not linked before the floor hold: "
+            f"tone->convolver={tone_in} convolver-out->hw-out={hw_out}")
 
         deadline = time.monotonic() + FLOOR_HOLD_S
         while time.monotonic() < deadline:
