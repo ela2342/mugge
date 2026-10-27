@@ -1012,6 +1012,51 @@ priority!"
     unchanged; F-320 D after #66 and on top of the docs PR; then the
     shared F-444/F-445/F-452 PR. F-348a and F-348b rank after #66 and
     F-320 D (PO c06db0a8 item 3).
+  - POST-#63 DOCS PR = #70 MERGED (CM, v316): main c1e1db03 ->
+    057b93260447fdd75b4ab3248c9334a10cde3776 (PM verified ls-remote;
+    object not local, not fetched). Head fc8a953e; 7/7 APPROVE at
+    fc8a953e, all frozen in /tmp/cm-relay/PR-post63/frozen/ (sha256
+    verified at PM read): QE 6e38333a, AD 7f7a89a9, AE fcac75e0,
+    SecSpec 249545c1, UX 4e29974b, TW b7891210 (author COI declared),
+    Architect a1a7d8f7. CI 40566259897: changes, nixos-eval, ci-gate
+    pass; test-and-build skipped (docs-only). CM: result files
+    byte-identical to the PM stack (safety.md 4bec2343). Amps-on rows
+    19-21 mirrored (P1 AMPS-ON list). Next in the chain: F-465 ->
+    F-341 -> F-439 -> #66; F-320 D rebases onto 057b9326.
+    - #70 NON-BLOCKING NBs (no new IDs): SecSpec INFO-1 -> amps-on row
+      21 (recorded there). UX: the web UI still shows the four actions
+      the F-348 rule bans = F-478 (dup). TW N1 -> PO: US-160 narrative
+      (done, below). TW N2: F-348a / F-348b get no defect files or
+      index rows (PM ruling, TW accepted): sub-IDs of F-348 (PO
+      c06db0a8). TW N3 (record only): the 7eb8e4c6 commit message says
+      "safety text released by audio-engineer", but that commit holds
+      only F-348.md + status.md records (AE release 00c9a089); not
+      re-cut (would void 7/7). Architect NB1 -> PM US-174 patch (next
+      docs PR, below). Architect NB2 = FALSE FINDING, closed:
+      CloseGate is main.rs l.824 at ff55d0c8 (PM verified git show;
+      Architect confirmed a sed-window miscount). QE NB1 -> F-465
+      closure evidence (row 19). AD one-liners: see F-410 and F-439.
+  - NEXT DOCS PR (CM vehicle; base 057b9326; three different files, CM
+    apply-checks on post-#70 main): (1) TW US-173 S1 note r2
+    /tmp/cm-relay/US-173/frozen/tw-us173-s1note-r2-c1e1db03.patch-6a8dd22d
+    (MANIFEST 78b09b1c), PO-released ed86cb0e (PO points 913e7e50
+    P1-P3 applied; r1 ef2c1e2d VOID); F-469 needs no docs/ record
+    (PO). (2) TW US-160 narrative
+    /tmp/tw-us160-narrative-r1-fc8a953e.patch (sha256 4f3e071e;
+    MANIFEST 37248400, commitmsg 79134454, result blob 8687dc44; form
+    "(AC1-AC4, via F-320 F)" without "delivered"), PO-released
+    1a8fc8f3 (PO source 034f24b1, now 444); answers TW #70 N1. (3) PM
+    US-174 Architect NB1 patch
+    /tmp/pm-docs/us174-nb1/pm-US174-nb1-on-fc8a953e.patch (sha256
+    cd14786e; US-174.md blob 2333480a -> ba0ad98c): 174c design line
+    cites the architect boundary ruling eefb0c27 (session mode, deploy
+    off by default, unconditional "skipped (F-348)" path, no opt-in).
+  - OPEN TRACKING (v316): starvation guard 2026-10-28T20:04+01:00 (PM
+    flags to the PO if F-465 -> F-341 -> F-439 -> #66 is not
+    merge-ready); F-320 D C3 PR-body note; F-477 + AD #70 nits (1) and
+    (3) marked fixed at the F-320 D merge; QE tier-docs text; worker-4
+    measure-only run; F-441 UART question batched with the next
+    physical owner task.
 
 ## Reserved IDs
 
@@ -1176,6 +1221,9 @@ read, filed in this version, see P3): F-476, US-183, D-072, T66.
 Next free (v315; supersedes the line above; F-476 and F-477 confirmed
 free on main, all origin/* and local branches and the CM relay files
 at PM read, filed in this version, see P3): F-478, US-183, D-072, T66.
+Next free (v316; supersedes the line above; F-478 and F-479 confirmed
+free on main, all origin/* and local branches and the CM relay files
+at PM read, filed in this version, see P3): F-480, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -3025,6 +3073,41 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      autoconnect forced on, and after a JACK client calls jack_connect
      into a USBStreamer port (jack.self-connect-mode =
      ignore-external, US-173);"
+  19. F-465 (MIRRORED v316 from merged safety.md: #70 merged at main
+     057b9326, safety.md blob 4bec2343; rows 1-14 unchanged by #70, PM
+     diff against c1e1db03), verbatim: "F-465 fixed and AC3 b-e passed
+     on that generation; see F-465 rule". The "F-465 rule" bullet in
+     safety.md (Pi 5 rules) applies. QE #70 NB1: when F-465 closes,
+     its evidence names the generation (system profile link) with the
+     AC3 output.
+  20. F-410, F-320 D (MIRRORED v316, same source), verbatim: "While
+     the D-063 gate is closed, no action other than Open Gate raises
+     any Mult: the web UI unmute never restores gains behind a closed
+     gate (F-410, closes with the F-439 / F-320 F PR), and the GM
+     watchdog unlatch writes no Mult (F-320 D). Both must be fixed; no
+     interim operating rule counts; AE acceptance required"
+  21. F-348 (MIRRORED v316, same source), verbatim: "No generated
+     filter-chain conf can bring the gains up behind a closed gate. A
+     generated conf writes the venue gains as its Mult defaults, and
+     they take effect at the next PipeWire restart (F-348). Holds when
+     F-348 is closed, or when the F-348 rule below is followed. Row
+     14's interim alternative does not cover F-348" SecSpec #70
+     INFO-1: row 21 must not be lifted on an "operator won't click it"
+     argument while F-037 (row 6) stands; lifting row 6 and row 21 are
+     independent (carries into the 174d deploy gate, PO c06db0a8 item
+     4).
+  LEAD-IN AND GATE RULE (MIRRORED v316 from safety.md blob 4bec2343;
+     SUPERSEDE every earlier lead-in and Gate rule text in this list).
+     Lead-in, verbatim: "The list has 17 rows: 1-14 and 19-21 (rows
+     15-18 are reserved for the US-174d PR, not merged yet). On the Pi
+     5, rows 1-3, 5-14 and 19-21 must ALL hold; row 4 applies to the
+     Pi 4 only. For a defect row, "holds" means the defect is closed
+     and its fix verified on the Pi 5, unless the row itself names an
+     alternative (rows 14 and 21)." Gate rule, verbatim: "Do not open
+     it while any Pi 5 row (1-3, 5-14, 19-21) of the list above is
+     open." Items 15-18 above stay PENDING for the US-174d PR
+     (safety.md reserves rows 15-18); the lead-in and Gate rule change
+     again when that PR merges (mirror rule).
   NEXT safety.md TOUCH (#51 reviews, non-blocking, fail safe; TW
   drafts, AE owns the wording, this list follows per the mirror
   rule): (1) AD L1 = UX (a): the lead-in "holds" (closed and
@@ -3215,6 +3298,18 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       the F-320 D PR (worker-3 applies the QE file + sha256; the QE
       does not edit the branch), sent once the test form is final.
       F-475 stays a separate small QE docs PR on main (#42 precedent).
+    - F-320 D DOCS r1b FROZEN (CM):
+      /tmp/cm-relay/F-320D/frozen/tw-f320d-docs-r1b-158be1e2.patch-17a1a605
+      (sha256 17a1a605), commit msg 46706e6e, manifest 6cfbbd96;
+      AE-released. r1 70079c2b SUPERSEDED. Base tree 158be1e2 = CM
+      docs-stack head 7eb8e4c6. r2 follows as a delta: F-477, the
+      service-destructive tier, the AC1 CI evidence, AD #70 nits (1)
+      (F-410.md) and (3) (safety.md watchdog latch "all 16 gain values
+      (8 Mult + 8 Add)"); the AE reviews r2 as a delta. MERGE BLOCKER:
+      the F-320 D PR does not merge while "CI evidence: TBD" is in it.
+      Rebase onto 057b9326 (#70 merged).
+    - AE C3 (70541687) still OPEN: the F-320 D PR body must carry the
+      "exactly 0.0" = |v| < 5e-7 note.
 - **F-341** signal-gen pre-flight #6 replacement. MEDIUM (AE):
   pre-flight #6 only VERIFIES the -20 dBFS signal-gen cap, which stays
   enforced in code and immutable after start; it would be High if an
@@ -7685,6 +7780,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       under the interim F-348 rule the room-correction deploy to
       pipewire.conf.d is unavailable until F-348a + F-348b land;
       measurement goes ahead via the measure-only run.
+    - #70 MERGED (057b9326): F-348.md Status, US-174.md Depends on /
+      174c / 174d (PM ddf0b414) and amps-on row 21 are on main. Row 21
+      mirrored in v316. Architect NB1 (cite eefb0c27 in 174c) rides
+      the next docs PR (PM patch cd14786e). Measure-only run
+      (worker-4) still OPEN.
 - **US-178** Measurement flow deploys via 174d sets (Architect,
   2026-10-26; P1, PO ruling 2026-10-26: directly after US-174d, ranked
   ABOVE US-177, design principle 6, one button per venue; PO wording:
@@ -9461,6 +9561,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     change: the PM made F-410 the surviving ID ... so the row should
     cite F-410." The CM is collecting the AE release of the final sha.
     VOID: r3 07292853 / blob cb82e7a4. F-410 batch r2 b7ddaea5 stands.
+  - #70 MERGED (057b9326): the TW F-410 batch (stack commit ecc9e9fc)
+    and amps-on row 20 are on main; row 20 mirrored in v316. AD #70
+    (1) (no new ID; owner TW): F-410.md AE quote "Unlike OpenGate's
+    30-step ramp" contradicts F-315 and safety.md; add "(in effect
+    also a single step, F-315)" after it, quote unchanged. Vehicle:
+    F-320 D docs r2 (a commit on #70 would have voided its round).
+    Marked fixed at the F-320 D merge.
 - **F-411** Correction under-corrects near the closed-loop band edge
   (mock-room Left, 272.6 Hz: room +3.95 dB, FIR -0.71 dB) (AE,
   2026-10-26; title verbatim from the AE; severity Medium, AE; no
@@ -15719,6 +15826,26 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     (F-410); AE 262206c3 release of test form r2 8ab9077f (AE NB: a2
     names every Mult writer the D8 grep guard finds). AE approval
     (veto) required.
+  - 2(c) FIXTURE RULING FINAL (AD #70 (2); QE single writer): QE r2
+    /tmp/f439-qe-fixture-ruling-2c-r2.md (sha256 1730e0c2) governs,
+    AE-released in
+    /tmp/cm-relay/F-474/ae-F410-2c-qe-ruling-r2-1730e0c2-release-r1.txt
+    (sha256 ffd783af verified at PM read, "FINAL SET, no more flips");
+    confirmed by the AE, the QE (correcting its own crossed "r2 VOID"
+    line) and team-lead. r1 0b551b7d and AE release 83c0d2bc
+    SUPERSEDED (not void). NB1: every "8 Mults == 0.0" read-back (A3,
+    T-a) follows AE C1-C2 (70541687), PR body cites C3. NB2 BINDING as
+    N6: the expected level = tone peak + venue gain_db stays; the
+    fixture's expected-level logic is not loosened; a wrong-gain open
+    must still fail. NB3: the NB1 ref is 3088f33b, not 123cb139.
+    Mute-fixture hold LIFTED. The CM's crossed r1 record: the PM sent
+    the CM a correction (one correction to worker-3 naming both shas,
+    if r1 was relayed); CM ack pending.
+  - CI 40562795846 at 8094d9ae FAILED, 1 test:
+    test_gate_closed_reverts_to_readback (class TestGainApplyRefused
+    in test_f439_gate_ui.py, l.204): slider 0.0006 != readback
+    0.000631. Excerpt frozen ci-40562795846-excerpt-r1-577b3452.
+    Routed to worker-3; OPEN.
 - **F-440** runner MAX_CUT_DB vs venue_pipeline: a D-009 question for
   the AE (filed 2026-10-27; ID free across main, all origin/* and
   local branches at PM read; full record below, folded from the PM
@@ -16885,6 +17012,24 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       (assertion); R0 and U1 green at the fix; every listed mutation
       killed (a table of mutation -> failing test); 20/20 clean runs
       in a row, as an evidence file.
+    - QE RESULTS r1 REVIEW
+      (/tmp/cm-relay/F-468/frozen/f468-qe-results-r1-review-r1.md-fc026cf7)
+      on results r1 cb694855 (code f56b54c8, 7fcc6491): R0
+      hold-mechanism deviation ACCEPTED; T2, T3, U1, M0-M7b + M6 met.
+      Required, test-only: R1 R0 asserts the superseded open's mic
+      track ended; R2 U1 case with three overlapping opens, the middle
+      finishing last; R3 cleanup ORDER (close + track stop before
+      reject) + mutation M8.
+    - Results r2 fa3ffce6 and r3 24488521 (local head aaa9a4ad, tree
+      a59f8785; r3 superseded). UX r2 APPROVE 26ee5f8d. QE r2 review
+      8882efdf: R1-R3 MET; r4 needs C1-C4 (tests identical after the
+      split; M8b; one test_page.py; K3 from 0 after the r4 head +
+      R6a). QE ACCEPT r2+r3 at aaa9a4ad:
+      /tmp/f468-qe-results-r3-verdict-r1.md (sha256 50aba691); carries
+      to the split head only if its tree is a59f8785. worker-6 splits
+      into a test-only commit + a UX commit (M9 fix in the UX commit);
+      r4 follows. Closure still needs K3 20/20 at the split head,
+      after R6a.
 - **F-469** HIGH: Pi 5 USBStreamer driver ERR at quantum 256 (PR63 S1
   G6); Live-mode track, outside US-173 (filed 2026-10-27; ID free
   across main, all origin/* and local branches at PM read; full record
@@ -17058,6 +17203,30 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   docs r2, in the F-320 D PR. No F-477.md or index row; the PM marks
   it fixed here when the F-320 D PR merges.
   - Next free -> F-478.
+- **F-478** LOW while nothing is connected (owner UX for the design;
+  amps-on candidate, not a gate yet; UX #70 one-liner; filed
+  2026-10-27): before amps-on, the web UI should disable or warn on
+  profile activation, filter rollback, filter deploy and measurement
+  DEPLOY until F-348 is fixed. Today only the safety.md F-348 rule
+  (row 21) stops an operator. Related: F-348 (four conf writers, AE
+  766faf2f), F-348a/b, the measure-only run, SecSpec #70 INFO-1. Dup
+  check: no existing entry (grep disable/warn on profile activation,
+  UI guard until F-348 in v315 + held). ID free across main, all
+  origin/* and local branches and the CM relay files at PM read.
+- **F-479** LOW (web-rc, US-179 area; pre-existing at 493da78d; UX
+  one-liner from F-468 r2 verdict 26ee5f8d l.26-30; fix ruling:
+  Architect or the worker; filed 2026-10-27): a device-list change
+  while "Use these devices" is still opening does not stop that open;
+  it commits on the old selection with no E5a stop/reset text, so E5a
+  ("any change of the device list stops and resets") is not fully
+  true. Impact low: no measurement runs yet, and an unplugged device
+  makes getUserMedia fail visibly. Not an F-468 closure item. CM hint:
+  a devicechange during an open in flight (ctx null, isOpen false) is
+  not cancelled; possible fix: also close/cancel when this.opening is
+  set. Dup check: no existing entry (grep "Use these devices", E5a,
+  devicechange, still opening in v315 + held). ID free across main,
+  all origin/* and local branches and the CM relay files at PM read.
+  - Next free -> F-480.
 
 ## Open PRs (2026-10-24, per CM)
 
