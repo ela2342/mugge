@@ -52,6 +52,11 @@ REFERENCE_BANDS_HZ = {
 }
 # AE, 2026-10-25: never cut deeper than 18 dB.
 MAX_CUT_DB = 18.0
+# F-383 C1 (Architect f3286c42, AE 6192482b): the step-7 cepstral synthesis
+# runs on a grid this many times finer than the design grid. On the design
+# grid the cepstrum aliases and the FIR misses A1a (residual -40 / tail -60 dB)
+# on some inputs; the design itself (steps 1-6) stays on its own grid.
+SYNTH_GRID_FACTOR = 4
 
 
 @dataclass(frozen=True)
@@ -157,8 +162,13 @@ def _unscaled_correction_filter(
     target_phon=None,
     reference_phon=80.0,
     max_cut_db=None,
+    synth_grid_factor=SYNTH_GRID_FACTOR,
 ):
-    """Steps 1-8 of generate_correction_filter(): the FIR before the D-009 scalar."""
+    """Steps 1-8 of generate_correction_filter(): the FIR before the D-009 scalar.
+
+    synth_grid_factor 1 is the pre-F-383 synthesis on the design grid; kept for
+    the regression test only.
+    """
     ir = np.asarray(ir, dtype=np.float64)
 
     # Step 1: Apply frequency-dependent windowing to the IR
@@ -194,27 +204,9 @@ def _unscaled_correction_filter(
     correction_linear = dsp_utils.db_to_linear(correction_db)
 
     # Step 7: Build minimum-phase FIR directly from the clipped magnitude
-    # spectrum using the cepstral method. This guarantees the output
-    # magnitude matches the D-009-compliant design exactly.
+    # spectrum using the cepstral method, on a finer grid (F-383 C1).
     log_mag_half = np.log(np.maximum(correction_linear, 1e-10))
-    # Construct full-spectrum log magnitude (conjugate symmetric)
-    log_mag_full = np.zeros(n_fft, dtype=np.float64)
-    log_mag_full[:len(log_mag_half)] = log_mag_half
-    log_mag_full[len(log_mag_half):] = log_mag_half[-2:0:-1]
-
-    cepstrum = np.fft.ifft(log_mag_full).real
-
-    # Causal window for minimum-phase
-    n_half = n_fft // 2
-    causal_window = np.zeros(n_fft)
-    causal_window[0] = 1.0
-    causal_window[1:n_half] = 2.0
-    if n_fft % 2 == 0:
-        causal_window[n_half] = 1.0
-
-    min_phase_cepstrum = cepstrum * causal_window
-    min_phase_spectrum = np.exp(np.fft.fft(min_phase_cepstrum))
-    correction_filter = np.fft.ifft(min_phase_spectrum).real
+    correction_filter = _cepstral_min_phase(log_mag_half, n_fft, synth_grid_factor)
 
     # Step 8: Truncate to desired length with fade-out
     correction_filter = correction_filter[:n_taps]
@@ -223,6 +215,41 @@ def _unscaled_correction_filter(
     correction_filter *= fade
 
     return correction_filter
+
+
+def _cepstral_min_phase(log_mag_half, n_fft, k):
+    """
+    Minimum-phase impulse response of a log magnitude on an n_fft rfft grid.
+
+    The log magnitude is linearly interpolated onto a grid k times finer
+    (DC and Nyquist land on grid points, so they are kept exactly) and the
+    cepstrum is taken there (F-383 C1). Returns the full k * n_fft response;
+    the caller truncates. k=1 is the synthesis on the design grid itself.
+    """
+    n_fine = n_fft * k
+    if k == 1:
+        log_mag_fine = log_mag_half
+    else:
+        log_mag_fine = np.interp(
+            np.arange(n_fine // 2 + 1) / k, np.arange(len(log_mag_half)), log_mag_half)
+    # Construct full-spectrum log magnitude (conjugate symmetric)
+    log_mag_full = np.zeros(n_fine, dtype=np.float64)
+    log_mag_full[:len(log_mag_fine)] = log_mag_fine
+    log_mag_full[len(log_mag_fine):] = log_mag_fine[-2:0:-1]
+
+    cepstrum = np.fft.ifft(log_mag_full).real
+
+    # Causal window for minimum-phase
+    n_half = n_fine // 2
+    causal_window = np.zeros(n_fine)
+    causal_window[0] = 1.0
+    causal_window[1:n_half] = 2.0
+    if n_fine % 2 == 0:
+        causal_window[n_half] = 1.0
+
+    min_phase_cepstrum = cepstrum * causal_window
+    min_phase_spectrum = np.exp(np.fft.fft(min_phase_cepstrum))
+    return np.fft.ifft(min_phase_spectrum).real
 
 
 def _d009_scale(fir, margin_db, sr=SAMPLE_RATE):

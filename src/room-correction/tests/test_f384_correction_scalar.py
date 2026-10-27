@@ -4,8 +4,9 @@ The old step 9 re-clipped the FIR's native rfft bins and kept their phase.
 That bounds the native bins only, not the true (inter-bin) peak. Step 9 is now
 one gain, sized on the B3 grid (full band 0 Hz - Nyquist, 8x), that never
 boosts. A scalar keeps the FIR's shape, and so its minimum phase, exactly.
-The full band matters: case A's unscaled FIR peaks at 9.5 Hz (-0.12 dB),
-above its 20 Hz - 20 kHz peak (F-384 q2).
+The full band matters: case A's unscaled FIR peaks at 9.5 Hz (-0.20 dB;
+-0.12 dB before the F-383 C1 synthesis on the 4x grid), above its
+20 Hz - 20 kHz peak (F-384 q2).
 
 Ruling: Architect r2 (0221e6ed), AE release d5c4b28d, T5 note c70fccae;
 full band per the q2 answer (7c6c86c3, AE a2946e74, fence r4 e016eb0b).
@@ -251,7 +252,11 @@ def test_max_gain_db_default_band_is_unchanged(name, oversample):
 
 
 def test_max_gain_db_full_band_reads_sub_20_hz_peak():
-    """Band test (ii): band=None on case A returns the 9.5 Hz peak (-0.12 dB)."""
+    """Band test (ii): band=None on case A returns the 9.5 Hz peak (-0.20 dB).
+
+    The level is -0.20 dB since F-383 C1 (synthesis on the 4x grid, ruling
+    a1d2672f); it was -0.12 dB on the design grid.
+    """
     unscaled = correction._unscaled_correction_filter(
         _case_ir("A"), n_taps=CASES["A"]["n_taps"], max_cut_db=MAX_CUT_DB)
     n_fft = dsp_utils.next_power_of_2(len(unscaled)) * combine.D009_TRIM_OVERSAMPLE
@@ -260,5 +265,7 @@ def test_max_gain_db_full_band_reads_sub_20_hz_peak():
     full = combine.max_gain_db(unscaled, sr=SR, band=None)
     assert peak_hz < 20.0
     assert full == float(dsp_utils.linear_to_db(np.max(mag)))
-    assert full == pytest.approx(-0.12, abs=0.01)
+    assert full == pytest.approx(-0.20, abs=0.01)
     assert full >= combine.max_gain_db(unscaled, sr=SR)
+    assert full > combine.max_gain_db(unscaled, sr=SR, band=(20.0, 20000.0))
+    assert full > D009_MARGIN_DB  # the step-9 scalar still fires
