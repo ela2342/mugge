@@ -990,6 +990,28 @@ priority!"
     on the 01ad0a3a base. Both land together in the post-#63 docs PR
     on main (one Rule 13 round). Rows 19 and 20 stay unmirrored until
     that safety.md text merges (mirror rule).
+  - #63 MERGED (CM, v315): main =
+    c1e1db033ff96f771210cee5b88a1160eb276ea0, merge commit of
+    2026-10-27T20:04:02+01:00 (parents ff55d0c8 + 01ad0a3a; tree = the
+    01ad0a3a tree; PM verified ls-remote and the object). STARVATION
+    GUARD TRIGGER = 2026-10-28T20:04+01:00: if F-465 -> F-341 -> F-439
+    -> #66 is not merge-ready by then, the PM flags it to the PO, who
+    re-decides.
+  - POST-#63 DOCS PR (CM vehicle; base c1e1db03): stack e1c5b698 (TW
+    safety r2) > ecc9e9fc (TW F-410 batch r3) > 910dfca4 (TW F-348 row
+    21; AE 3f9bcd96) > 8ad855c1 (TW F-348 records; AE 00c9a089) > PM
+    pm-F348-US174-on-c1e1db03.patch (sha256 ddf0b414; PO c06db0a8 item
+    6) > PM pm-US160-on-c1e1db03.patch (sha256 f08f9633; PO 133d4ad4),
+    files in /tmp/pm-docs/c1e1db03/. PM apply-check at c1e1db03 with
+    -F0: no fuzz, no offset; safety.md result blob 4bec2343. Rows 19,
+    20 and 21 are mirrored into the AMPS-ON PRECONDITION LIST only
+    after this PR merges (mirror rule).
+  - CHAIN UPDATE (CM): F-320 D rebases onto main AFTER the post-#63
+    docs PR merges (its safety.md builds on that stack). Order after
+    #63: post-#63 docs PR; chain F-465 -> F-341 -> F-439 -> #66
+    unchanged; F-320 D after #66 and on top of the docs PR; then the
+    shared F-444/F-445/F-452 PR. F-348a and F-348b rank after #66 and
+    F-320 D (PO c06db0a8 item 3).
 
 ## Reserved IDs
 
@@ -1151,6 +1173,9 @@ D-072, T66.
 Next free (v314; supersedes the line above; F-475 confirmed free on
 main, all origin/* and local branches and the CM relay files at PM
 read, filed in this version, see P3): F-476, US-183, D-072, T66.
+Next free (v315; supersedes the line above; F-476 and F-477 confirmed
+free on main, all origin/* and local branches and the CM relay files
+at PM read, filed in this version, see P3): F-478, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -3104,6 +3129,92 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     amps-on items F-320D-AMPS, F-439-AMPS, F-383-AMPS together. CM
     told worker-3 and the AE about the F-410 alias; PR body: "F-410
     (filed as F-474)".
+  - F-320 D HEAD AND RULINGS (v315; CM). Branch
+    fix/F-320D-unlatch-no-mult on base ff55d0c8, worker-3: 8d296824 ->
+    54053ce5 (QE Q1/Q3) -> 576db48e (parent 54053ce5, test file only;
+    AE C2 strict string match). Not pushed; cargo test, clippy and CI
+    wait for R6a's end line. Notes
+    /tmp/cm-relay/F-320D/frozen/w3-F320D-notes-r1-5ce4b1fd (sha256
+    5ce4b1fd verified at PM read).
+    - AE Q2-Q5 r1
+      /tmp/cm-relay/F-320D/frozen/ae-F320D-Q2-Q5-r1-916c7e50 (sha256
+      916c7e50 verified). Q2b: G6 "refuse unlatch while the trip cause
+      persists" is BACKLOG (US-159 G6), not pre-amps; leftover risk
+      (unlatch while a monitored node is missing, then open_gate) is
+      owned by US-159 G6/G4. Q5: NO NEW ID; the shipped
+      30-filter-chain-convolver.conf has all 8 Mult = 0.0 (D-063), and
+      0.001/0.000631 are the watchdog table (registry.rs l.482-484)
+      this PR deletes; the real variant is the GENERATED conf
+      (pw_config_generator.py l.266-275) = F-348 (HIGH; re-rate
+      Critical if a generated conf is found active on the Pi). GM
+      restart with PW running = F-320 E (US-159 G5/G5a, O-12 open).
+      Amps-on NB: place F-348 on the list -> row 21 (US-174 entry).
+    - QE Q4 latch method r1
+      (/tmp/cm-relay/F-320D/frozen/qe-F320D-Q4-r1-f79c7a5a, sha256
+      f79c7a5a): the service tier latches the watchdog by a REAL node
+      removal, in a separate, isolated destructive step; a test-only
+      trip RPC is REJECTED. AE RELEASED as written with NB1-NB3
+      (/tmp/cm-relay/F-320D/frozen/ae-F320D-Q4-release-r1-1e8c1fb3,
+      sha256 1e8c1fb3): NB1 one refused open_gate between latch and
+      unlatch in L1 (all 8 Mults still 0.0, gate closed); NB2 if L2 is
+      not feasible, L1 + the Rust unlatch-writes-no-Mult test suffice,
+      provided the L1 read-back covers all 16 values (Mult and Add) at
+      exactly 0.0; NB3 fact correction (only GENERATED confs carry
+      non-zero defaults, F-348). Relayed to worker-3 in the final
+      batch with Architect a9ec4ed5 (Q1/Q3) and 916c7e50 + 9b15c61a
+      (Q2).
+    - QE Q1-Q6 notes
+      /tmp/cm-relay/F-320D/frozen/qe-F320D-notes-Q1-Q6-r1-ae15808b
+      (sha256 ae15808b): 2 required test changes (Q1 relatch guard, Q3
+      L2 link precheck; AE agrees). Q4 6-decimal read-back: AE ruled
+      YES with C1-C3
+      (/tmp/cm-relay/F-320D/frozen/ae-F320D-Q4-pctf-r1-70541687,
+      sha256 70541687): C1 read back via `pw-cli enum-params` on the
+      convolver node, never pw-dump (F-349); C2 strict string match
+      "Float 0.000000" on all 16 values, wrong count fails; C3 PR-body
+      note "exactly 0.0" = |v| < 5e-7 (about -126 dB). 576db48e meets
+      C1 + C2; C3 OPEN until the F-320 D PR body carries it. The
+      bit-exact raw-pod reader (F-351 AC1, US-159 G11 (f)) stays
+      required for GM's runtime confirmed close, not for this PR.
+    - UX latched-refusal wording r1
+      /tmp/cm-relay/F-320D/frozen/ux-F320D-latched-refusal-r1-ba7f08ac
+      (sha256 ba7f08ac, released). Item 2 tooltip text, verbatim:
+      "Gate not opened: the audio safety watchdog has tripped, so the
+      gate stays closed and no gain was changed. It must be reset
+      before the gate can open (see "Latch behavior" in the safety
+      manual)." Shown by error code or reason field, never by string
+      match; style c-danger in gate-status. If the GM gives no code or
+      reason field, the mapping (GM error code wire-format + venue.js)
+      joins the US-152 bundle below and the GM string is shown as is
+      meanwhile (UX: acceptable).
+    - US-152 PREREQUISITE BUNDLE (no new ID; UX decides whether it
+      needs its own story, next free US-183): (a) WEB-UI UNLATCH
+      CONTROL: origin/main src/web-ui has none (git grep -i unlatch: 0
+      hits), yet US-152 AC "Unlatches the watchdog via the UI" assumes
+      one. (b) UX ba7f08ac item 3, verbatim: "Web UI: show the
+      watchdog latch in the Audio Gate section (indicator "LATCHED"),
+      and while it is latched disable OPEN GATE with the item-2 text
+      as its tooltip. Bundle this with the existing "web-UI unlatch
+      control" backlog item." (c) the item-2 code mapping, if needed
+      (above).
+    - DOCS (TW): ride IN the F-320 D PR as one TW commit, incl. the
+      CLAUDE.md "Safety Rules" F-320 line (goes stale at merge). r1
+      70079c2b -> r1b 17a1a605 (r1 + AE E1), AE-released by sha, with
+      the CM to freeze. r2 adds F-477, the service-destructive
+      test-tier docs and the F-320 AC1 CI evidence; the AE reviews r2
+      as a delta. TW post-merge follow-up (not touched by the PR):
+      safety.md l.491, l.596-598; F-341.md; status.md; US-159.md;
+      US-127.md (watchdog.unlatch()); rpc docs (watchdog_unlatched
+      event has no gains; watchdog_status has no pre_mute_gains;
+      open_gate refused while latched). Out of scope (worker-3):
+      web-ui app/audio_mute.py _pre_mute_gains belongs to F-439.
+    - TEST-TIER TEAM DOCS (QE owner and writer; TW does not edit team
+      files): the service-destructive tier (QE Q4 f79c7a5a) gets rows
+      in worker.md (l.306 directory/tier table) and
+      quality-engineer.md plus testing-process.md §3.9; they ride IN
+      the F-320 D PR (worker-3 applies the QE file + sha256; the QE
+      does not edit the branch), sent once the test form is final.
+      F-475 stays a separate small QE docs PR on main (#42 precedent).
 - **F-341** signal-gen pre-flight #6 replacement. MEDIUM (AE):
   pre-flight #6 only VERIFIES the -20 dBFS signal-gen cap, which stays
   enforced in code and immutable after start; it would be High if an
@@ -6622,6 +6733,24 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     s1d (worker-3 writer; three edits: l.43 record fix per the QE,
     "(draft)" removed, the leftover fragment removed; the QE
     re-checks, the TW confirms). The CM sends the s1d sha.
+  - v314 PUSHED (CM): chore/backlog =
+    0f61d45e39272d06d2412fb9ca86c496123a287e (parent 6bde269b, +62/-0;
+    PM verified ls-remote; content sha1 7fe07466 = v314). v315 is
+    built on it.
+  - #63 BODY s1d LIVE (CM):
+    /tmp/cm-relay/PR63/frozen/pr63-body-s1d-457fc4d9 (QE approved, TW
+    confirmed). Head unchanged 01ad0a3a.
+  - #63 C5 CLOSED (QE): addendum /tmp/pr63-qe-C5-close-r1.md (sha256
+    7c302f72 verified at PM read), frozen
+    /tmp/cm-relay/PR63/frozen/qe-C5-close-r1-7c302f72 and posted on
+    the PR. Counts at 01ad0a3a checked against baseline run
+    40413648491 at 3b190d6a (#68 head, code-identical to ff55d0c8);
+    excerpt pr63-c5-excerpt-r1-dd1cc448. CI 40557036296 GREEN. With C4
+    MET (c4d57759) all QE conditions on #63 are closed. Body s1e
+    8dac3c13 QE-released, TW confirmed; then merged (see MERGE CHAIN:
+    #63 MERGED at c1e1db03).
+    - QE notes from C5: the test_full_session_api XPASS -> F-262
+      repeat sighting (no new ID); the excerpt filter lead -> F-476.
   - US-173 STATUS AND CLOSURE EVIDENCE LIST (PM-owned, per PO e567159d
     items 1 and 3; v313). Status: OPEN after #63 merges. Evidence the
     PM collects before the PO closes it: (1) AC3 b-e re-run PASS on
@@ -7470,6 +7599,92 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   starts only after F-390/F-391 and builds on them, because it is the
   same file (L-046). Its Pi run is also gated by US-173 H, F-341 AC3,
   D-070 and the amps-on list.
+  - F-348 PLACEMENT (v315; PO single writer):
+    /tmp/po-drafts/F-348-placement-ruling.txt, sha256 c06db0a8 (PM
+    read-only copy
+    /tmp/pm-backlog/frozen-src/po-F348-placement-ruling-c06db0a8.txt).
+    Inputs AE 39115180, Architect 541ceb72, questions 245e4e43, row-21
+    766faf2f. RELEASED by the AE
+    (/tmp/cm-relay/F-348/ae-F348-placement-ruling-c06db0a8-release-r1.txt,
+    sha256 b08bae03) and the Architect
+    (/tmp/cm-relay/F-348/frozen/arch-F348-c06db0a8-release-r1-9b424943,
+    sha256 9b424943; record only, incl. the test-scope NB). F-348a /
+    F-348b are sub-IDs of F-348, not new F-numbers.
+    - 1. Merge chain UNCHANGED; F-348 does not join #63 -> F-465 ->
+      F-341 -> F-439 -> #66.
+    - 2. NEW 174c PRECONDITION "measure-only run": on main
+      MeasurementSession runs filter_gen -> _run_deploy automatically
+      (session.py l.436-441), so any 174c session run is a measurement
+      DEPLOY, banned by row 21 with amps on. AC: a measurement run
+      stops after filter generation into the output dir; never reaches
+      _run_deploy or deploy_pw_config, never writes into
+      pipewire.conf.d, never reloads the convolver; enforced in code.
+      Test (AE b08bae03 NB1/NB2, Architect): on normal end, abort and
+      error, no deploy_pw_config, no deploy_filters (no WAV into
+      /etc/pi4audio/coeffs), no write under pipewire.conf.d, no
+      convolver reload or destroy; runs NON-MOCK with
+      PI4AUDIO_PW_CONF_DIR and the coeffs dir redirected to temp dirs
+      (in mock mode _deploy_sync is dry_run, so the test would pass
+      trivially); mutation (re-chain deploy) fails it. Joins 174c's
+      gates (full amps-on list, US-173 H, F-341 AC3).
+    - 3. F-348 fix pulled ahead of 174d, carved out of US-159 as two
+      PRs (US-159 keeps G12/G13 as regression requirements). F-348a =
+      G12 in full (Python generator + activation never writes a conf),
+      AFTER the F-439 PR (shared _activate_profile_impl); tests T34.
+      F-348b = G13 (Rust), AFTER F-320 D (registry.rs) and F-465
+      (venue.rs); tests T32, T33, T35-T37, T46; if large, the AE 2-way
+      minimum first (T46 duplicate-node refusal + T36 discovered-set
+      mismatch refusing open), rest of G13 before any 3-way deploy.
+      Rank: after #66 and F-320 D, alongside the F-444/F-445/F-452 PR.
+      The 174d deploy-gate branch (deploy.py) rebases on F-348a; CM
+      orders merges.
+    - 4. 174d DEPLOY GATE: no room-correction deploy with amps on
+      until ALL hold: F-348a merged; F-348b merged (AE 2-way minimum
+      at least; full G13 before any 3-way); F-346 / US-159 G8c R-b in
+      place (reload only when Closed); an AE file confirming row 21's
+      interim rule can be lifted for 2-way + the TW safety.md update
+      (mirror rule). Until then row 21 stands (766faf2f).
+    - 5. Owner line (team-lead), verbatim: "room correction is not
+      blocked by this. Measurement can go ahead once a small "measure
+      only, never install" change lands. Installing the new filters
+      waits for two safety fixes, which are built in parallel. The
+      order of the current merges does not change."
+    - 6. Repo records (F-348.md Status; US-174.md Depends on, 174c,
+      174d) go in the post-#63 docs PR (PM patch ddf0b414, stacked on
+      TW 8ad855c1).
+  - MEASURE-ONLY RUN STAFFING (CM): worker-4, branch
+    fix/F-348-measure-only-run on ff55d0c8, briefed. Architect
+    boundary ruling
+    /tmp/cm-relay/F-348/frozen/arch-F348-item2-boundary-w4-r1-eefb0c27
+    (sha256 eefb0c27 verified): two files (session.py,
+    test_measurement_session.py); deploy off with no opt-in; no change
+    to routes.py or measure.js; existing tests edited assertion-only,
+    listed by name. The NON-MOCK test run gets its own CM clearance
+    (df + uptime readings).
+  - AMPS-ON ROW 21 (F-348; TW single writer, option B, interim "F-348
+    rule"): TW draft cbe69353; AE release with edits
+    /tmp/cm-relay/F-348/ae-F348-amps-on-cbe69353-release-B-edits-r1.txt
+    (sha256 766faf2f verified); patch 910dfca4 AE RELEASED as is
+    (/tmp/cm-relay/F-348/frozen/ae-F348-row21-release-r1-3f9bcd96).
+    Lead-in becomes 17 rows: 1-14, 19-21. Row text, verbatim, MIRROR
+    ONLY AFTER MERGE: "| 21 | F-348 | No generated filter-chain conf
+    can bring the gains up behind a closed gate. A generated conf
+    writes the venue gains as its Mult defaults, and they take effect
+    at the next PipeWire restart (F-348). Holds when F-348 is closed,
+    or when the F-348 rule below is followed. Row 14's interim
+    alternative does not cover F-348 |".
+    - AE NB (766faf2f), carried by TW records batch 8ad855c1 (AE
+      release
+      /tmp/cm-relay/F-348/frozen/ae-F348-records-release-r1-00c9a089):
+      F-348.md "Found in" lists all four web-UI conf writers (profile
+      activation; filter rollback; filter deploy, filter_routes.py
+      _run_deploy l.471/522; measurement DEPLOY, session.py
+      l.1201/1292), ACs cover filter deploy and measurement DEPLOY;
+      status.md 10(a)/(c)(1) matches the safety.md F-348 rule.
+    - CONSEQUENCE for US-174 (AE via TW; PO c06db0a8 answers it):
+      under the interim F-348 rule the room-correction deploy to
+      pipewire.conf.d is unavailable until F-348a + F-348b land;
+      measurement goes ahead via the measure-only run.
 - **US-178** Measurement flow deploys via 174d sets (Architect,
   2026-10-26; P1, PO ruling 2026-10-26: directly after US-174d, ranked
   ABOVE US-177, design principle 6, one button per venue; PO wording:
@@ -8554,6 +8769,21 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     VOID at 6931c372, FOR THE RECORD ONLY: 1ae4c8c3 stands and the PO
     confirmed it, so this S2 is discarded. Releases the S2-6 hold
     above.
+  - XPASS SIGHTING (QE, #63 C5; no new ID): test_full_session_api
+    XPASS again in run 40557036296 at #63 head 01ad0a3a
+    (service-integration 76 passed / 2 skipped / 2 xfailed / 1
+    xpassed). Not new: already in run 40236821737 (CM). Earlier XPASS
+    40314977506, 40320048783; XFAIL 40333713247; XPASS since
+    40356547804 (worker-1). Supports the closure note: make the marker
+    strict or remove it.
+  - R5 AC-LINES (PM answer to the CM for worker-4's min/max/spread
+    compile; relayed): NOT READY. No counted 10-run series exists. At
+    4724e65d: S1 runs 1-3 only (excerpts d3adfedb, 9741ab83; run 3
+    informational), CLOSED and not counted (QE 69ebc46f). At 6931c372:
+    S2 4/10 PASS + 2 VOID, DISCARDED (QE d3bf5f5c; PO 1ae4c8c3). The
+    counted series restarts at 0/10 at the #66 head after the last
+    chain PR; the CM extracts and freezes the per-run AC lines per run
+    (R5 rule), and worker-4 compiles from those.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -16642,6 +16872,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       console errors, so G5's console.warn never shows in these logs."
       PM: the US-179 record carries this as a test-gap note on the
       clock-glitch claim, not as a new ID.
+  - QE PLAN COMMENTS (QE accounting):
+    /tmp/f468-qe-plan-r1-comments-r1.md (sha256 390b9cd8 verified at
+    PM read) on plan r1 b5774fea: ACCEPTED with T1-T5. T1 R0 order
+    fix, drop the "diagnosis wrong, stop" branch. T2 observable settle
+    condition, no fixed sleep; R0 red at 493da78d must be an
+    ASSERTION; a base timeout = VOID. T3 R0 post-fix asserts. T4 U1
+    e/f + mutation "superseded path throws without closing its own
+    ctx". T5 clearance view; 20-run K3 series after the R6a end line,
+    from 0.
+    - CLOSURE EVIDENCE (QE, verbatim list): R0 red at 493da78d
+      (assertion); R0 and U1 green at the fix; every listed mutation
+      killed (a table of mutation -> failing test); 20/20 clean runs
+      in a row, as an evidence file.
 - **F-469** HIGH: Pi 5 USBStreamer driver ERR at quantum 256 (PR63 S1
   G6); Live-mode track, outside US-173 (filed 2026-10-27; ID free
   across main, all origin/* and local branches at PM read; full record
@@ -16794,6 +17037,27 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   C4 E1 mismatch). Dup check: no existing entry (grep
   configurationRevision / normalis / carry-over in v313).
   - Next free -> F-476.
+- **F-476** LOW (owner QE; filed 2026-10-27; ID free across main, all
+  origin/* and local branches and the CM relay files at PM read): the
+  QE CI-excerpt filter's `={5,} ` lead misses pytest summary lines
+  that start with only "==" (long summaries); change the lead to
+  `={2,} ` in the excerpt recipe. Source: QE C5 addendum 7c302f72 l.23
+  (the QE read the "=="-led service-integration summary from the full
+  log l.7950). Dup check: no existing entry (grep "={5,}", excerpt
+  recipe/filter in v314).
+- **F-477** LOW (owner TW; docs-only, not a gate; filed 2026-10-27; ID
+  free across main, all origin/* and local branches and the CM relay
+  files at PM read): safety.md "Layer 4: Filter-Chain Watchdog
+  (T-044-4)" (origin/main l.570-587) says the watchdog "monitors 6
+  critical nodes" (4 of them gain nodes) and the mute sets Mult on
+  "all 4 gain nodes". The code (watchdog.rs MONITORED_NODES, at F-320
+  D 8d296824) monitors 2 nodes, pi4audio-convolver and
+  pi4audio-convolver-out, and mutes 8 gain params on the convolver
+  node. Dup check: no existing entry (grep Layer 4 / 6 critical nodes
+  / all 4 gain nodes / MONITORED_NODES in v314). Vehicle (TW): F-320 D
+  docs r2, in the F-320 D PR. No F-477.md or index row; the PM marks
+  it fixed here when the F-320 D PR merges.
+  - Next free -> F-478.
 
 ## Open PRs (2026-10-24, per CM)
 
