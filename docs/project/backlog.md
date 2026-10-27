@@ -985,6 +985,11 @@ priority!"
       unchanged: #63 S1 first, then F-439.
     - PM cross-ref: the F-341 entry's "Order: #63 -> F-465 -> F-341
       commit (3) -> F-341 merge" now continues -> F-439 -> #66.
+  - ROW 20 UPDATE (CM, v314): the AE RELEASED e1c5b698 ("AE RELEASE
+    e1c5b698"); no longer pending. TW F-410 batch r3 ecc9e9fc is ready
+    on the 01ad0a3a base. Both land together in the post-#63 docs PR
+    on main (one Rule 13 round). Rows 19 and 20 stay unmirrored until
+    that safety.md text merges (mirror rule).
 
 ## Reserved IDs
 
@@ -1143,6 +1148,9 @@ free on main, all origin/* and local branches at PM read when each was
 filed, filed in this version, see P3; F-450, F-460 and F-474 RETIRED,
 never reused; F-475 confirmed free at v313 build): F-475, US-183,
 D-072, T66.
+Next free (v314; supersedes the line above; F-475 confirmed free on
+main, all origin/* and local branches and the CM relay files at PM
+read, filed in this version, see P3): F-476, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -6593,6 +6601,27 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       backlog.md on any ref (v312 = 9b83e104 = chore/backlog head,
       verified), and none has a defects/*.md on any origin ref. PM
       proposed building v313 now on 9b83e104 (CM go requested).
+  - v313 PUSHED (CM): chore/backlog =
+    6bde269b83bff3ff891de15e678d09797a404f71 (parent 9b83e104,
+    +2930/-0; PM verified by ls-remote, backlog.md content sha1
+    c0c84ef9 = v313). v314 is built on it.
+  - #63 QE-A6 (QE): /tmp/pr63-qe-A6-drvD1-mismatch-r1.md, sha256
+    58019c3c. The E1 drvPath mismatch comes from self.rev in
+    configurationRevision, so it cannot settle C4; E2/E3 MATCH.
+    Proposed a revision-normalised eval E1-N (worker-3) plus the
+    Architect ruling. Carry-over item -> F-475.
+  - #63 ARCHITECT RULING 474cbfef (QE accepts): checks E1c and E1'
+    replace the QE E1-N from A6 58019c3c; worker-3 ran them, result
+    04381c33.
+  - #63 C4 MET (QE; CM record): /tmp/pr63-qe-C4-close-r1.md, sha256
+    c4d57759, frozen
+    /tmp/cm-relay/PR63/frozen/qe-C4-close-r1-c4d57759, posted on the
+    PR. E1' == DRV_D1: the S1 evidence carries over in full, no Pi
+    re-run, no head change. STILL OPEN before merge: C5 (CI
+    40557036296 test-and-build in progress; QE count check) and body
+    s1d (worker-3 writer; three edits: l.43 record fix per the QE,
+    "(draft)" removed, the leftover fragment removed; the QE
+    re-checks, the TW confirms). The CM sends the s1d sha.
   - US-173 STATUS AND CLOSURE EVIDENCE LIST (PM-owned, per PO e567159d
     items 1 and 3; v313). Status: OPEN after #63 merges. Evidence the
     PM collects before the PO closes it: (1) AC3 b-e re-run PASS on
@@ -14776,6 +14805,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (worker-1): seen on every `nix eval` of BOTH mugge-pi5-deploy and
   mugge-deploy, sometimes with a "read-only, set multiple times"
   error. Not blocking; not US-163 scope. Owner: Architect.
+  Seen again 2026-10-27 (QE, #63 C4 evals): on every pi5 eval. No new
+  ID (v314).
 - US-170: Pi 4 allowlist and configurationRevision (AC1); Pi 4 WP ALSA
   rule; drvPath pin removal.
 - **F-375** (SecSpec, LOW; F-318 follow-up, 2026-10-25) Consider
@@ -15437,6 +15468,21 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     title, for the PO to confirm or replace: "Interim: MUTE closes the
     gate, UNMUTE gain restore removed (AC1-AC4 via F-320 F); AC5-AC15
     open". Not applied to the story file until the PO confirms.
+    - PO RULING (v314; /tmp/po-drafts/PO-v313-rulings-US160-F469.txt,
+      sha256 133d4ad4 verified at PM read; replaces the PM draft title
+      above): AMEND. The split stands; AC1-AC4 are ticked only when
+      the F-439 PR merges. Title, verbatim: "Mode changes and
+      measurement exits keep the gate Closed (AC5-AC15); interim
+      UNMUTE fix AC1-AC4 via F-320 F". Status line, verbatim: "AC1-AC4
+      delivered by the F-439 PR (F-320 F, worker-3); AC5-AC15 open";
+      the AE veto and UX-review notes stay.
+    - VEHICLE (CM, v314): US-160.md and the stories-index row are NOT
+      edited on chore/backlog (it forks from main at c34f7da7; #63
+      adds a stories-index row). They go in the post-#63 docs PR on
+      main with TW e1c5b698 and ecc9e9fc. The PM is the single writer
+      of the US-160 content (the TW only confirms), built on main
+      after #63 merges, on the base sha the CM names, sent as file +
+      sha256.
   - F-439 PR EVIDENCE LIST (PM cross-ref, v313): QE 6e0e16b1 T1-T6; QE
     d3bf5f5c §2 statement that the virtual_gate_open precondition did
     not fail in any of its CI runs; PO 123cb139 conditions 1-4
@@ -16670,6 +16716,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     Vocal Mode User Acceptance Test", stories-index l.41 on
     origin/main; it has no backlog entry), ranked below US-172, F-465
     and F-341. The PO may name another story.
+    - PO CONFIRMED (v314; 133d4ad4 item 2): F-469 stays under US-030,
+      ranked below US-172, F-465 and F-341 (e567159d item 4). Recorded
+      as a US-030 BLOCKER: US-030 cannot pass "no audible artifacts"
+      while the driver logs ERR at quantum 256.
+    - Backlog line only (PO, not a ruling): US-030 is stale (it still
+      says Pi 4B, Loopback and D-011). Its rewrite for Pi 5 / D-040
+      waits until Live mode is the active priority.
 - **F-470** Unused-import warning at
   src/signal-gen/src/file_playback.rs:15 (filed 2026-10-27; ID free
   across main, all origin/* and local branches at PM read; full record
@@ -16732,6 +16785,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   evidence c446e8cb, F1-F3, tests (a)-(c), PO placement 123cb139, test
   form r2 8ab9077f released by AE 262206c3) is recorded under F-410.
   PR bodies say "F-410 (filed as F-474)".
+- **F-475** LOW (owner QE; filed 2026-10-27; ID free across main, all
+  origin/* and local branches and the CM relay files at PM read):
+  testing-process.md must say that carry-over checks on pi5 configs
+  compare drvPaths with configurationRevision neutralised. self.rev is
+  embedded in the toplevel, so raw drvPath equality across commits
+  always fails. Source: QE A6 58019c3c and Architect 474cbfef §5 (#63
+  C4 E1 mismatch). Dup check: no existing entry (grep
+  configurationRevision / normalis / carry-over in v313).
+  - Next free -> F-476.
 
 ## Open PRs (2026-10-24, per CM)
 
