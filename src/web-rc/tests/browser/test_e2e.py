@@ -57,6 +57,7 @@ HOLD_METERS_JS = """((n) => {
   };
 })(%d);
 """
+OPENING = "Opening the audio devices…"
 
 
 @pytest.fixture()
@@ -246,4 +247,39 @@ def test_open_race_newest_open_wins(room_page, page_url):  # noqa: F811
     assert state["others"] == ["closed"], state
     assert state["mics"] == ["ended"], state
     assert state["openError"] == "" and state["opening"] == "", state
+    assert errors == []
+
+
+def test_open_status_line_follows_the_newest_open(room_page, page_url):  # noqa: F811
+    """UX ed62580f: "Opening the audio devices..." shows while an open is in
+    flight; a superseded open neither clears it nor sets an error.
+    """
+    page, errors = room_page
+    page.add_init_script(HOLD_METERS_JS % 2)
+    page.goto(page_url)
+    page.wait_for_function("window.__webrcApp !== undefined")
+    status = page.locator("#open-status")
+    expect(status).to_be_hidden()
+
+    page.click("#open")
+    page.wait_for_function("window.__hold.reached === 1")
+    expect(status).to_have_text(OPENING)
+    page.click("#open")
+    page.wait_for_function("window.__hold.reached === 2")
+
+    page.evaluate("window.__hold.release(0)")
+    page.wait_for_function("window.__room.live[0].state === 'closed'")
+    # Let the page handle that rejection and render, then read once: a
+    # retrying expect could pass before the render.
+    page.evaluate("""() => new Promise((r) =>
+        requestAnimationFrame(() => requestAnimationFrame(r)))""")
+    shown = page.evaluate("""() => ["open-status", "rate-refusal"].map((id) => {
+        const e = document.getElementById(id);
+        return e.hidden ? null : e.textContent; })""")
+    assert shown == [OPENING, None], shown   # the newer open is still going
+
+    page.evaluate("window.__hold.release(1)")
+    page.wait_for_function(
+        "window.__webrcApp.io.ctx === window.__room.live[1]")
+    expect(status).to_be_hidden()
     assert errors == []

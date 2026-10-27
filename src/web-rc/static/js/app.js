@@ -23,6 +23,8 @@ import {
 } from "./view.js";
 
 const TICK_MS = 250;
+// UX ed62580f: shown while the newest open is in flight (F-468).
+const OPENING_TEXT = "Opening the audio devices…";
 const AUDIO_TYPES = new Set(["noise-start", "sweep-start", "gain", "output-stop",
   "meter-calibration", "resume", "record", "record-cancel"]);
 
@@ -49,6 +51,7 @@ export class App {
     this.rc = rc || null;
     this.pipelineError = "";
     this.openError = "";
+    this.opening = false;
     this.reportError = "";
     this.devicesKey = null;
     this.devices = [];
@@ -136,6 +139,7 @@ export class App {
     this.devicesKey = key;
     if (this.io.isOpen) {
       this.apply(this.flow.deviceChange(null));
+      this.opening = false;       // the close cancels an open in flight
       await this.io.close();
       this.flow.setAudio(null);
     }
@@ -148,16 +152,20 @@ export class App {
     const sinkId = this.$("sink").value;
     const switched = this.flow.audio !== null;
     if (switched) this.apply(this.flow.deviceChange(null));
+    this.opening = true;
+    this.queueRender();
     try {
       await this.io.open({ micId, sinkId });
     } catch (e) {
       if (isSuperseded(e)) return;   // the newer open owns the outcome (F-468)
+      this.opening = false;
       this.flow.setAudio(null);
       this.openError = "Can't open the audio devices: " +
         String(e && e.message || e);
       this.queueRender();
       return;
     }
+    this.opening = false;
     this.openError = "";
     if (switched) this.apply(this.flow.deviceChange(this.io.info()));
     else this.flow.setAudio(this.io.info());
@@ -336,6 +344,7 @@ export class App {
     $("sink").disabled = !("setSinkId" in AudioContext.prototype);
     const lines = $("rate-lines");
     lines.replaceChildren(...vm.setup.rateLines.map((l) => this._li(l)));
+    text("open-status", this.opening ? OPENING_TEXT : "");
     text("rate-refusal", vm.setup.rateRefusal || this.openError || "");
     this._channelOptions(vm.setup.channels, vm.setup.channel);
     for (const r of this.doc.querySelectorAll('input[name="role"]')) {
