@@ -1092,6 +1092,9 @@ this version, see P3): F-429, US-183, D-072, T66.
 Next free (v311; supersedes the line above; F-429 confirmed free on
 main, all origin/* and local branches at PM read, filed in this
 version, see P3): F-430, US-183, D-072, T66.
+Next free (v312; supersedes the line above; F-430 confirmed free on
+main, all origin/* and local branches at PM read, filed in this
+version, see P3): F-431, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -7736,6 +7739,26 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   as PASSED, not XPASS; at 4724e65d the test (test_measurement.py
   l.176) carries no xfail marker, so the XPASS applies to main/#68,
   and the F-262 branch already drops the marker.
+  UPDATE (QE ruling r1, 2026-10-27, after the #68 merge):
+  /tmp/cm-relay/F-262/R5/frozen/qe-R5-main-moved-ruling-r1-69ebc46f.md
+  (sha256 69ebc46f, verified at PM read; frozen and posted on #66 by
+  the CM, issuecomment-6429973666). Verbatim: "## 1. The 4724e65d
+  series does not carry over. Run a new series of 10 at the updated
+  head." and "This is mechanical, not a judgement call." Runs 1-2
+  (1.13 / 1.14 dB) stay in the ledger as series S1 @4724e65d, CLOSED,
+  not counted. Run 3 finishes and is logged INFORMATIONAL (if RED:
+  excerpt to the QE and PM before the first S2 dispatch). Order for
+  S2: run 3, then update-branch, then the PR CI at the new head, then
+  the A1 check; rules abfd33d7 + ebd890d0 unchanged; if main moves
+  again during S2, section A applies again. #66 needs 10 more dispatch
+  runs.
+  UPDATE (CM, 2026-10-27): R5 run 3 40417632569 @4724e65d SUCCESS at
+  1.14 dB, logged INFORMATIONAL in S1 (closed per QE 69ebc46f), not
+  counted. #66 update-branch: head
+  6931c3727d038aabf5cce94ed0908e3094179ea3 (PM: parents 4724e65d and
+  main ff55d0c8, ls-remote verified); A1 OK (CM). PR CI 40423191144
+  running at this version; series S2 (10 runs) starts at 6931c372 once
+  it is green.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -8213,6 +8236,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   message." Architect, verbatim: "unmute should be a no-op on the
   gains (state only) while the gate is closed, and the gate open
   should apply the unmuted values. Not in this PR's scope."
+  UPDATE (PM, 2026-10-27): record file. Writer: the TW (single writer,
+  PM answer to the TW); defects/F-410.md plus an index row from this
+  entry (l.8171-8215 at 01d92b86), carrying P2 (AE) and the AE
+  severity note above. TW batch on base ff55d0c8 with the #69 items
+  (see F-394); queued at lowest priority (team-lead, via CM). The CM
+  cites the batch as fb386d1f (PM: not located as a file or commit at
+  PM read; the TW patch /tmp/tw-f410-nb-ff55d0c8.patch has sha256
+  97599e15).
 - **F-411** Correction under-corrects near the closed-loop band edge
   (mock-room Left, 272.6 Hz: room +3.95 dB, FIR -0.71 dB) (AE,
   2026-10-26; title verbatim from the AE; severity Medium, AE; no
@@ -10076,6 +10107,37 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     #66 (F-262) is behind main and needs update-branch, which voids
     its approvals; F-384 (0af057ba) and US-179 sit on 4724e65d (PM
     cross-ref: 4724e65d is not a descendant of 55d90806).
+  - #69 (CM, 2026-10-26): the TW's #68 after-merge docs batch (N1 +
+    N2), branch docs/F-394-postmerge, head e2dda5ed (PM: parent
+    55d90806; 4 docs files, +57/-6: development.md, defects-index.md,
+    F-270.md, F-394.md). Docs-only, CI-exempt; bundle
+    /tmp/pr69-review-e2dda5ed/.
+  - #69 VERDICTS at e2dda5ed (frozen in /tmp/cm-relay/PR69/frozen/,
+    shas verified at PM read; posted by the CM): AD c7562524, AE
+    6e269058, Architect 012b95fa, SecSpec 746f151b, TW 1afe5326, UX
+    b61f55be (verbatim: "**APPROVE. No concerns in my domain.**"), QE
+    qe-ec867ae4.md (verbatim: "## Verdict: APPROVE. No BLOCKING
+    findings."). 7 of 7.
+  - #69 MERGED (CM): main = ff55d0c837105f100870de7a08612c988c504d6a,
+    2026-10-26T23:42:49Z (PM: parents 55d90806 and e2dda5ed). No job
+    failed: ci-gate SUCCESS, test-and-build SKIPPED (docs-only). Owner
+    standing merge consent.
+  - #69 NON-BLOCKING ITEMS for the TW's next batch (CM; none was a
+    merge condition): (1) F-410 has no defect file or index row
+    (Architect N1, AD L1, TW; AD verbatim: "F-394.md:7 cites "F-410
+    (unmute behind a closed gate)", but there is no defects/F-410.md
+    and no index row at e2dda5ed."); PM: F-410 is allocated (v265),
+    the only use of the ID across main and all branches, and F-394.md
+    says "PM backlog". (2) AD Nit 1: AC (v) text in F-394.md is not
+    annotated inline as superseded. (3) AD Nit 2: "passed since CI run
+    40356547804" is not evidenced in the bundle. (4) QE N1, verbatim:
+    "CI 40356547804 ran at 51fae218, which is *before* 0cb35f0c."; fix
+    wording (CM): "worked around in 51fae218, fixed at source in
+    0cb35f0c". (5) QE N2 (optional): cite QE ruling 8251397b next to
+    CI 40398705324. (6) AE NB1/NB2 (optional wording): Q2b says the Pi
+    never-open_gate rule is unchanged; spell out the "hard condition".
+    (7) SecSpec (optional): reference its two #68 LOWs (PM cross-ref:
+    F-421, F-422) next to F-410.
 - **F-395** Gain readback is blind on a suspended node (P1; AE co-owns
   per A5; PM provisional ID, AE to confirm; Gate-2 r6b (ii-c), via CM
   2026-10-26): on a suspended node, the gain readers in the r6b matrix
@@ -11229,6 +11291,22 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     R6d data run (per 3100a728 R7, AE release 7cda69e8), local only;
     running at the CM's last report. Step 3 waits for the AE's release
     on the numbers.
+  - F-383 R6d RULING (CM, 2026-10-27): Architect ruling r1
+    /tmp/cm-relay/F-383/frozen/arch-F383-R6d-ruling-r1-9c6eb136.txt
+    (sha256 9c6eb136, verified at PM read). AE release
+    ae-F383-R6d-release-7b6c73a7.txt (sha256 7b6c73a7), verbatim:
+    "PART A: RELEASED as written (A1-A5). Step 3 (F1-64 + A1b) may
+    start." and "PART B: AGREED to the D6 data run first, and I lean
+    to option (a)." Part B is open and waits on D6; the D6 brief is B2
+    + addendum arch-F383-D6-addendum-r1-f308d0be.txt (sha256 f308d0be;
+    AE-released per CM). worker-7 runs D6 detached.
+  - F-383 STEP 3 (CM, 2026-10-27): fence = worker-7 plan r1
+    w7-F383-step3-plan-r1-e3a02a4d.md (sha256 e3a02a4d), on a new
+    stacked branch fix/F-383-step3-subsonic-f1 from 0af057ba (worktree
+    .claude/worktrees/fix-F-383-step3), not pushed. Fence Q1 answer:
+    Architect r2 arch-F383-step3-Q1-r2-1a8e02ee.txt (sha256 1a8e02ee),
+    adds a C1 pin test; awaits the AE's release, and the commit waits
+    on that. A3 one-liner filed as F-430.
 - **F-385** (P1; AE-owned, Architect co-review; 2026-10-25) "D-031
   subsonic vs crossover phase interaction". Origin: F-374, where
   the sat's mandatory 80 Hz subsonic gives 29.7 deg at fc, the whole
@@ -12873,6 +12951,54 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     worker-6 acks 10bc34bf, 1f5a4d8c and the AE onset-clock condition
     by sha. No more re-sends (the CM re-sent once); if the next report
     has no ack, team-lead escalates to the owner.
+  - US-179 RE-BRIEF (team-lead ruling, via CM, 2026-10-27): one
+    context-reset re-brief
+    /tmp/cm-relay/US-179/frozen/w6-handover-rebrief-r1-3ae67f4c.txt
+    (sha256 3ae67f4c, verified at PM read): 10bc34bf, 1f5a4d8c, the AE
+    clock condition (message only, given as the CM's record) and the
+    different-context fail-closed test. worker-6 acks by sha and sends
+    an onset answer file; feature work paused until then; no ack goes
+    to the owner via team-lead. ab1bab02 (P1/AC8b and analyze, parent
+    55fc45b0, 9 files under src/web-rc) cannot pass on main: it needs
+    the #66 API (MAX_CUT_DB) (CM).
+  - US-179 RECORD CHECK (team-lead ask, PM, 2026-10-27): 1f5a4d8c IS
+    the AE's release of UX 10bc34bf, verbatim: "RELEASE 10bc34bf. No
+    objections." E6 f4cb8a41 is released by the AE (8d8aeca2, verbatim
+    "RELEASE f4cb8a41. No objections.") and by UX (1d515f31). The
+    re-brief 3ae67f4c is correct. UX was told and confirmed both files
+    independently.
+  - US-179 worker-6 FLAGS (CM): to UX for a ruling, the
+    repeatability-rejection wording and the filename format. FYI to
+    the AE and the Architect: the shared gate's closed loop checks the
+    pre-subsonic CorrectionFilter, not the WAV bytes; P1 covers the
+    bytes. Known gap: the app.js cal-text and startFrame lines are
+    covered only by the coming E2E. Process note: worker-6 disclosed
+    one text-edit run with system python3 instead of nix develop,
+    before compaction, no effect on outputs.
+  - US-179 UX RULING
+    /tmp/cm-relay/US-179/frozen/ux-w6-reject-filename-1683b0fb.md
+    (sha256 1683b0fb, verified at PM read). Filename, verbatim:
+    "Accepted, with one condition: {n} must be the channel exactly as
+    the UI labels it, so the file matches what the user saw."
+    (1-based, not channel_index; left/right if the UI shows
+    Left/Right.) X is shown with one decimal, ROUNDED UP. UX: "No AE
+    release is needed: neither text touches gain or safety wording."
+  - US-179 UX FOLLOW-UP ux-w6-reject-followup-09da95d8.md (sha256
+    09da95d8; relayed by the CM): 1683b0fb stands with two changes;
+    Q1, no extra button, final text verbatim: 'Measurement not used:
+    the two sweeps differ by up to <X> dB between <lo> and <hi> Hz
+    (limit 1.0 dB). Keep the microphone still and the room quiet, then
+    restart.' Q2 non-finite text verbatim: 'Measurement not used: the
+    two sweeps could not be compared between <lo> and <hi> Hz.
+    Restart; if this happens again, check the microphone connection.'
+  - US-179 ONSET r2 (CM, 2026-10-27): head 1666db80 pushed (PM: parent
+    ab1bab02, ls-remote verified). AE release
+    ae-US179-onset-r2-release-10259227.txt (sha256 10259227) of
+    worker-6 onset answer r2 76539cf0 REPLACES d7ffcfb6 as the record,
+    verbatim: "1666db80 is the first commit that meets my condition,
+    so the US-179 PR must be reviewed at a head that contains it." PM
+    cross-ref: no worker-6 ack file for 3ae67f4c in frozen/ at PM
+    read; the push resumed under the team-lead ack rule.
 - **US-180** Re-measure after the US-179 filters are loaded elsewhere
   (PO, 2026-10-26; P3, follow-up of US-179, from r8 "Follow-up
   stories", verbatim: "re-measure after the filters are loaded
@@ -13669,6 +13795,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   surprises anyone who runs `local-demo.sh env` outside nix. It should
   fail with a message instead." PM cross-ref: on main 55d90806 the
   checks are l.121 and l.125, the nix build calls l.123 and l.127.
+- **F-430** Subsonic stage hump +0.2 dB (Architect, F-383 R6d ruling
+  r1 9c6eb136 A3, via CM, 2026-10-27; not gating; no P-level given; ID
+  allocated by the PM, free across main and all branches at PM read),
+  backlog one-liner verbatim: "subsonic stage hump +0.2 dB at 20/48,
+  truncation of the LF ringing; check whether it can be reduced". A3,
+  verbatim: "Its shape points to the n-tap truncation of the LF
+  ringing, not to F1's grid/floor fix."
 
 ## Open PRs (2026-10-24, per CM)
 
