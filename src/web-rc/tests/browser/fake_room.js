@@ -22,12 +22,14 @@
 //   { sinkLabel, channel, taps: [[samples, gain], ...], noiseRms }
 // The script adds: sinkId (resolved from sinkLabel), contexts (the opts of
 // every AudioContext the page made), live (those contexts themselves, in
-// the same order), heard (contexts given the room).
+// the same order), streams (every getUserMedia stream), heard (contexts
+// given the room).
 
 (() => {
   const room = window.__room;
   room.contexts = [];
   room.live = [];
+  room.streams = [];
   room.heard = 0;
   const RATE = 48000;
   const md = navigator.mediaDevices;
@@ -35,6 +37,7 @@
   const gum = md.getUserMedia.bind(md);
   md.getUserMedia = async (constraints) => {
     const stream = await gum(constraints);
+    room.streams.push(stream);
     for (const track of stream.getAudioTracks()) {
       const settings = track.getSettings.bind(track);
       track.getSettings = () => ({ ...settings(), sampleRate: RATE });

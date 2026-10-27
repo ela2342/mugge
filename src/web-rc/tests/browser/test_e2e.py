@@ -40,21 +40,22 @@ CAL_TEXT = (
     "10\t0.0\n90\t0.0\n110\t{s:.1f}\n20000\t{s:.1f}\n".format(s=CAL_STEP_DB))
 
 
-# F-468: holds the first meter worklet addModule() until __hold.release().
-HOLD_FIRST_METER_JS = """(() => {
+# F-468: holds the first `n` meter worklet addModule() calls, the k-th until
+# __hold.release(k); __hold.reached counts the calls held so far.
+HOLD_METERS_JS = """((n) => {
   const add = AudioWorklet.prototype.addModule;
-  window.__hold = { reached: false, release: null };
+  const releases = [];
+  window.__hold = { reached: 0, release: (k) => releases[k]() };
   AudioWorklet.prototype.addModule = function (url, ...rest) {
-    if (window.__hold.reached || !String(url).endsWith("/meter-worklet.js")) {
+    if (window.__hold.reached >= n || !String(url).endsWith("/meter-worklet.js")) {
       return add.call(this, url, ...rest);
     }
-    window.__hold.reached = true;
+    window.__hold.reached += 1;
     return new Promise((resolve, reject) => {
-      window.__hold.release = () => add.call(this, url, ...rest).then(
-        resolve, reject);
+      releases.push(() => add.call(this, url, ...rest).then(resolve, reject));
     });
   };
-})();
+})(%d);
 """
 
 
@@ -204,13 +205,13 @@ def test_open_race_newest_open_wins(room_page, page_url):  # noqa: F811
     page, errors = room_page
     # Playwright's routing does not see worklet module fetches: hold the
     # first meter addModule() in the page instead.
-    page.add_init_script(HOLD_FIRST_METER_JS)
+    page.add_init_script(HOLD_METERS_JS % 1)
     page.goto(page_url)
     page.wait_for_function("window.__webrcApp !== undefined")
 
     # addModule() comes after getUserMedia: the mic is granted once held.
     page.click("#open")
-    page.wait_for_function("window.__hold.reached")
+    page.wait_for_function("window.__hold.reached === 1")
     page.evaluate(
         "navigator.mediaDevices.dispatchEvent(new Event('devicechange'))")
     expect(page.locator("#sink option", has_text=SINK)).to_have_count(1)
@@ -221,19 +222,28 @@ def test_open_race_newest_open_wins(room_page, page_url):  # noqa: F811
     page.wait_for_function("(id) => window.__webrcApp.io.sinkId === id",
                            arg=sink_id)
 
-    page.evaluate("window.__hold.release()")
+    page.evaluate("window.__hold.release(0)")
     # The first open is done once it has committed or closed its context.
     page.wait_for_function("""() => { const c = window.__room.live[0];
         return window.__webrcApp.io.ctx === c || c.state === "closed"; }""")
     page.wait_for_function("window.__webrcApp.flow.audio !== null")
     state = page.evaluate("""() => { const app = window.__webrcApp;
-        const io = app.io, live = window.__room.live;
+        const io = app.io, room = window.__room, live = room.live;
+        const text = (id) => { const e = document.getElementById(id);
+            return e && !e.hidden ? e.textContent : ""; };
         return { sinkId: io.sinkId, rate: io.ctx && io.ctx.sampleRate,
                  newest: io.ctx === live[live.length - 1],
                  others: live.filter((c) => c !== io.ctx).map((c) => c.state),
+                 mics: room.streams.filter((s) => s !== io.stream).map(
+                     (s) => s.getTracks().map((t) => t.readyState).join()),
                  flowSink: app.flow.audio.sinkId,
-                 openError: app.openError }; }""")
-    assert state == {"sinkId": sink_id, "rate": RATE, "newest": True,
-                     "others": ["closed"], "flowSink": sink_id,
-                     "openError": ""}, state
+                 openError: text("rate-refusal"),
+                 opening: text("open-status") }; }""")
+    # QE 390b9cd8 T3, in order: the newer choice, no leaked context, no
+    # leaked mic, no error text.
+    assert (state["sinkId"], state["rate"]) == (sink_id, RATE), state
+    assert state["newest"] and state["flowSink"] == sink_id, state
+    assert state["others"] == ["closed"], state
+    assert state["mics"] == ["ended"], state
+    assert state["openError"] == "" and state["opening"] == "", state
     assert errors == []

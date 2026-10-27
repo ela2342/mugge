@@ -281,7 +281,8 @@ export async function test_resume_reports_once_running() {
  * call; "suspend1", "meter1", "output1", ... per context made. A step in
  * `held` waits for release(name), one in `fail` then rejects; reached(name)
  * resolves once an open is at that step, hit(name) tells whether one was.
- * The order is the test's, not a clock's.
+ * `log` records "stopN" (stream N's track) and "closeN" (context N) in
+ * call order. The order is the test's, not a clock's.
  */
 async function withDevices({ held = [], fail = [] }, fn) {
   const steps = new Map();
@@ -301,7 +302,7 @@ async function withDevices({ held = [], fail = [] }, fn) {
     if (held.includes(name)) await s.gate;
     if (fail.includes(name)) throw new Error(name + " failed");
   };
-  const streams = [], contexts = [];
+  const streams = [], contexts = [], log = [];
   class FakeContext {
     constructor(opts) {
       this.n = contexts.push(this);
@@ -314,7 +315,7 @@ async function withDevices({ held = [], fail = [] }, fn) {
       };
     }
     async suspend() { await pass("suspend" + this.n); this.state = "suspended"; }
-    async close() { this.state = "closed"; }
+    async close() { log.push("close" + this.n); this.state = "closed"; }
     createMediaStreamSource() { return { connect() {} }; }
     addEventListener() {}
     setSinkId() {}
@@ -325,12 +326,13 @@ async function withDevices({ held = [], fail = [] }, fn) {
   const md = navigator.mediaDevices;
   const saved = [md.getUserMedia, window.AudioContext, window.AudioWorkletNode];
   md.getUserMedia = async () => {
+    const n = streams.length + 1;
     const track = {
-      stopped: false, label: "", stop() { this.stopped = true; },
+      stopped: false, label: "", stop() { log.push("stop" + n); this.stopped = true; },
       addEventListener() {}, getSettings: () => ({ sampleRate: 48000 }),
     };
     const stream = { track, getTracks: () => [track], getAudioTracks: () => [track] };
-    const n = streams.push(stream);
+    streams.push(stream);
     await pass("gum" + n);
     return stream;
   };
@@ -338,7 +340,7 @@ async function withDevices({ held = [], fail = [] }, fn) {
   window.AudioWorkletNode = FakeNode;
   try {
     await fn({ reached: (name) => step(name).reached, release: (name) => step(name).go(),
-      hit: (name) => !!(steps.has(name) && steps.get(name).hit), streams, contexts });
+      hit: (name) => !!(steps.has(name) && steps.get(name).hit), streams, contexts, log });
   } finally {
     [md.getUserMedia, window.AudioContext, window.AudioWorkletNode] = saved;
   }
@@ -347,14 +349,29 @@ async function withDevices({ held = [], fail = [] }, fn) {
 /** The rejection of `p`, or null if it resolves. */
 const rejection = (p) => p.then(() => null, (e) => e);
 
+/** `p`, with its settling logged as `name` (QE 390b9cd8 T4f). */
+const logged = (log, name, p) => p.then(
+  (v) => { log.push(name); return v; },
+  (e) => { log.push(name); throw e; });
+
+/** T4f: the superseded open cleaned up after itself before it rejected. */
+function cleanedUpFirst(log, n, at) {
+  const settled = log.indexOf(at);
+  assert(settled >= 0, at + " settled");
+  for (const step of ["stop" + n, "close" + n]) {
+    const i = log.indexOf(step);
+    assert(i >= 0 && i < settled, step + " before " + at + ": " + log.join());
+  }
+}
+
 /**
  * Run 11: the older open, held at `at`, finishes after the newer one; it
  * stops there, before its `next` step.
  */
 async function olderFinishesLast(at, next) {
-  await withDevices({ held: [at] }, async ({ reached, release, hit, streams, contexts }) => {
+  await withDevices({ held: [at] }, async ({ reached, release, hit, streams, contexts, log }) => {
     const io = new AudioIO();
-    const first = io.open({ sinkId: "" });
+    const first = logged(log, "settled1", io.open({ sinkId: "" }));
     await reached(at);
     await io.open({ sinkId: "room" });
     eq(io.ctx, contexts[1], "the newer open has committed");
@@ -362,6 +379,7 @@ async function olderFinishesLast(at, next) {
     const e = await rejection(first);
     assert(isSuperseded(e), "the older open rejects SupersededError, got " + e);
     eq(hit(next), false, "the older open stops at once, before " + next);
+    cleanedUpFirst(log, 1, "settled1");
     eq(io.ctx, contexts[1], "the newer context stays");
     eq(io.sinkId, "room", "the newer choice stays");
     eq(contexts[0].state, "closed", "the older context is closed");
@@ -402,13 +420,14 @@ export async function test_f468_older_open_finishing_first_does_not_commit() {
 }
 
 export async function test_f468_close_cancels_an_open_in_flight() {
-  await withDevices({ held: ["meter1"] }, async ({ reached, release, streams, contexts }) => {
+  await withDevices({ held: ["meter1"] }, async ({ reached, release, streams, contexts, log }) => {
     const io = new AudioIO();
-    const p = io.open({ sinkId: "room" });
+    const p = logged(log, "settled1", io.open({ sinkId: "room" }));
     await reached("meter1");
     await io.close();
     release("meter1");
     assert(isSuperseded(await rejection(p)), "the open is superseded");
+    cleanedUpFirst(log, 1, "settled1");
     eq(io.ctx, null, "nothing committed after the close");
     eq(io.isOpen, false);
     eq(contexts[0].state, "closed");
@@ -482,5 +501,26 @@ export async function test_f468_module_errors_of_a_superseded_open_are_supersede
     assert(isSuperseded(e), "superseded, not the module error: " + e);
     eq(contexts[0].state, "closed");
     eq(io.ctx, contexts[1]);
+  });
+}
+
+export async function test_f468_three_opens_the_middle_one_finishing_last() {
+  // QE 390b9cd8 T4e.
+  await withDevices({ held: ["meter1", "meter2"] }, async ({ reached, release, streams, contexts }) => {
+    const io = new AudioIO();
+    const first = io.open({ sinkId: "a" });
+    await reached("meter1");
+    const second = io.open({ sinkId: "b" });
+    await reached("meter2");
+    await io.open({ sinkId: "c" });
+    eq(io.ctx, contexts[2], "the newest open has committed");
+    release("meter1");
+    assert(isSuperseded(await rejection(first)), "the first open is superseded");
+    release("meter2");
+    assert(isSuperseded(await rejection(second)), "the middle open is superseded");
+    eq(io.ctx, contexts[2], "the newest context stays");
+    eq(io.sinkId, "c");
+    eq(contexts.map((c) => c.state).join(), "closed,closed,suspended");
+    eq(streams.map((s) => s.track.stopped).join(), "true,true,false");
   });
 }
