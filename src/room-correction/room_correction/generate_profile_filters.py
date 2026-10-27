@@ -27,6 +27,7 @@ from .combine import combine_filters
 from .correction import CorrectionFilter
 from .crossover import (
     LINKWITZ_RILEY,
+    derive_subsonic,
     generate_bandpass_filter,
     generate_crossover_filter,
     generate_subsonic_filter,
@@ -180,6 +181,41 @@ def _generate_channel_crossover(
     )
 
 
+# -- Subsonic derivation inputs (F-383 C4) ---------------------------------
+
+def _channel_hp_edge(spk_cfg: dict, crossover_freqs: List[float]) -> Optional[float]:
+    """The channel's crossover HP edge fc_hp, as _generate_channel_crossover() designs it."""
+    filter_type = spk_cfg.get("filter_type", "highpass")
+    if filter_type == "highpass":
+        return crossover_freqs[-1] if crossover_freqs else 80.0
+    if filter_type == "bandpass":
+        return _resolve_bandpass_edges(spk_cfg, crossover_freqs)[0]
+    return None
+
+
+def _channel_lp_edge(spk_cfg: dict, crossover_freqs: List[float]) -> Optional[float]:
+    """The channel's crossover LP edge, as _generate_channel_crossover() designs it."""
+    filter_type = spk_cfg.get("filter_type", "highpass")
+    if filter_type == "lowpass":
+        return crossover_freqs[0] if crossover_freqs else 80.0
+    if filter_type == "bandpass":
+        return _resolve_bandpass_edges(spk_cfg, crossover_freqs)[1]
+    return None
+
+
+def _log_derivation(spk_key, m, fc_hp, partner_s, derivation) -> None:
+    if derivation.moved:
+        log.info(
+            "%s: subsonic corner %s -> %s Hz (%s; fc_hp %s, s %s); NB-C4a margin "
+            "%+.2f dB at %.1f Hz, L2' att(m/2) %.1f dB, att(m/4) %.1f dB",
+            spk_key, m, derivation.corner_hz, derivation.reason, fc_hp, partner_s,
+            derivation.c4a_margin_db, derivation.c4a_margin_hz,
+            derivation.l2_half_db, derivation.l2_quarter_db)
+    else:
+        log.info("%s: subsonic corner %s Hz kept (%s; fc_hp %s, s %s)",
+                 spk_key, m, derivation.reason, fc_hp, partner_s)
+
+
 # -- Channel factors (F-383 C3, D1) ----------------------------------------
 
 class ChannelFactors(NamedTuple):
@@ -230,40 +266,69 @@ def channel_factors(
                 f"correction for {spk_key!r} is {type(value).__name__}, not a "
                 f"CorrectionFilter; build it with correction_from_measurement()")
 
-    # Pre-generate subsonic filters (deduplicated by frequency)
-    subsonic_cache: Dict[float, np.ndarray] = {}
+    # Subsonic FIRs, deduplicated by (corner, slope) (m3 of 41fd1486)
+    subsonic_cache: Dict[Tuple[float, float], np.ndarray] = {}
+
+    def make_subsonic(hpf_freq, subsonic_slope):
+        key = (hpf_freq, subsonic_slope)
+        if key not in subsonic_cache:
+            subsonic_cache[key] = generate_subsonic_filter(
+                hpf_freq=hpf_freq,
+                slope_db_per_oct=subsonic_slope,
+                n_taps=n_taps,
+                sr=sr,
+            )
+        return subsonic_cache[key]
 
     dirac = np.zeros(n_taps)
     dirac[0] = 1.0
 
+    xos = {
+        spk_key: _generate_channel_crossover(
+            spk_cfg, crossover_freqs, slope, n_taps, sr, alignment)
+        for spk_key, spk_cfg in speakers.items()
+    }
+    hp_edges = {k: _channel_hp_edge(c, crossover_freqs) for k, c in speakers.items()}
+    lp_edges = {k: _channel_lp_edge(c, crossover_freqs) for k, c in speakers.items()}
+
+    # Subsonic HPF (from identity mandatory_hpf_hz), corner by rule R4.  A
+    # partner's LP edge is above its own HP edge, so deriving in rising HP
+    # edge order settles every partner's corner first.
+    subsonics: Dict[str, Optional[np.ndarray]] = {}
+    corners: Dict[str, Optional[float]] = {}
+    order = sorted(speakers, key=lambda k: (hp_edges[k] is not None, hp_edges[k] or 0.0))
+    for spk_key in order:
+        identity = identities.get(speakers[spk_key].get("identity", ""), {})
+        fc_hp = hp_edges[spk_key]
+        partner_s = None
+        if fc_hp is not None:
+            partner_corners = [
+                corners[k] for k in speakers
+                if k != spk_key and lp_edges[k] == fc_hp and corners[k] is not None]
+            partner_s = max(partner_corners, default=None)
+        derivation = derive_subsonic(
+            identity.get("mandatory_hpf_hz"),
+            fc_hp,
+            xos[spk_key],
+            slope_db_per_oct=max(slope, 24.0),
+            partner_subsonic_hz=partner_s,
+            n_taps=n_taps,
+            sr=sr,
+            channel=spk_key,
+            make_subsonic=make_subsonic,
+        )
+        subsonics[spk_key] = None if derivation is None else derivation.fir
+        corners[spk_key] = None if derivation is None else derivation.corner_hz
+        if derivation is not None:
+            _log_derivation(spk_key, identity["mandatory_hpf_hz"], fc_hp, partner_s, derivation)
+
     factors: Dict[str, ChannelFactors] = {}
 
     for spk_key, spk_cfg in speakers.items():
-        # 1. Crossover
-        xo = _generate_channel_crossover(
-            spk_cfg, crossover_freqs, slope, n_taps, sr, alignment,
-        )
-
-        # 2. Correction (or dirac placeholder)
         correction = correction_filters[spk_key].fir if spk_key in correction_filters else dirac
-
-        # 3. Subsonic HPF (from identity mandatory_hpf_hz)
-        id_name = spk_cfg.get("identity", "")
-        identity = identities.get(id_name, {})
-        hpf_hz = identity.get("mandatory_hpf_hz")
-        subsonic = None
-        if hpf_hz is not None:
-            if hpf_hz not in subsonic_cache:
-                subsonic_cache[hpf_hz] = generate_subsonic_filter(
-                    hpf_freq=hpf_hz,
-                    slope_db_per_oct=max(slope, 24.0),
-                    n_taps=n_taps,
-                    sr=sr,
-                )
-            subsonic = subsonic_cache[hpf_hz]
-
         factors[spk_key] = ChannelFactors(
-            correction, xo, subsonic, spk_cfg.get("filter_type", "highpass"))
+            correction, xos[spk_key], subsonics[spk_key],
+            spk_cfg.get("filter_type", "highpass"))
 
     return factors
 

@@ -44,6 +44,26 @@ def rfft_magnitude(signal, n_fft=None):
     return freqs, np.abs(spectrum)
 
 
+def h1_passband_peak_db(freqs, gains_db, mandatory_hpf_hz, sr=SAMPLE_RATE):
+    """
+    The H1 passband reference of a channel (AE ruling H1, F-262).
+
+    The peak gain over [mandatory_hpf_hz, min(20 kHz, 0.95 * Nyquist)]: the
+    channel's own passband level for HP, LP, BP and fullrange channels alike.
+    One definition for verify_mandatory_hpf and the subsonic derivation's
+    L2' gate (F-383 Q-C4b).
+
+    Returns (peak_db, low_hz, high_hz); peak_db is None if no bin of freqs
+    lies in the band.
+    """
+    low = float(mandatory_hpf_hz)
+    high = min(20000.0, 0.95 * sr / 2.0)
+    mask = (freqs >= low) & (freqs <= high)
+    if not np.any(mask):
+        return None, low, high
+    return float(np.max(np.asarray(gains_db)[mask])), low, high
+
+
 def to_minimum_phase(ir):
     """
     Convert an impulse response to minimum-phase using the real cepstrum method.

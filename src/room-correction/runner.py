@@ -64,6 +64,37 @@ def load_room_config(config_path):
         return yaml.safe_load(f)
 
 
+def derive_subsonic_filters(channels_cfg, crossover_filters, xo_freq, n_taps, sr):
+    """Per channel with a mandatory_hpf_hz, its crossover.derive_subsonic() result.
+
+    Corner by rule R4 (F-383 C4): the highpass channels' crossover partners
+    are the lowpass channels, whose corners are never moved (no HP edge).
+    The subsonic slope stays at the default 24 dB/oct (m5 of 41fd1486).
+    """
+    lowpass_corners = [
+        ch_cfg.get('speaker_identity', {}).get('mandatory_hpf_hz')
+        for ch_cfg in channels_cfg.values()
+        if ch_cfg.get('type', 'highpass') == 'lowpass'
+    ]
+    partner_s = max((c for c in lowpass_corners if c is not None), default=None)
+    derivations = {}
+    for ch_name, ch_cfg in channels_cfg.items():
+        speaker_identity = ch_cfg.get('speaker_identity', {})
+        is_hp = ch_cfg.get('type', 'highpass') == 'highpass'
+        derivation = crossover.derive_subsonic(
+            speaker_identity.get('mandatory_hpf_hz'),
+            xo_freq if is_hp else None,
+            crossover_filters[ch_name],
+            partner_subsonic_hz=partner_s if is_hp else None,
+            n_taps=n_taps,
+            sr=sr,
+            channel=ch_name,
+        )
+        if derivation is not None:
+            derivations[ch_name] = derivation
+    return derivations
+
+
 def run_full_pipeline(args):
     """
     Run the complete room correction pipeline.
@@ -216,25 +247,20 @@ def run_full_pipeline(args):
     print(f"  Time: {time.time()-t0:.1f}s")
 
     # --- Stage 5b: Generate subsonic protection filters (mandatory HPF) ---
-    subsonic_filters = {}
-    has_subsonic = False
-    for ch_name, ch_cfg in channels_cfg.items():
-        speaker_identity = ch_cfg.get('speaker_identity', {})
-        if speaker_identity.get('mandatory_hpf_hz') is not None:
-            hpf_freq = speaker_identity['mandatory_hpf_hz']
-            subsonic = crossover.generate_subsonic_filter(
-                hpf_freq=hpf_freq,
-                n_taps=n_taps,
-                sr=sr,
-            )
-            subsonic_filters[ch_name] = subsonic
-            has_subsonic = True
+    derivations = derive_subsonic_filters(channels_cfg, crossover_filters, xo_freq, n_taps, sr)
+    subsonic_filters = {ch: d.fir for ch, d in derivations.items()}
 
-    if has_subsonic:
+    if derivations:
         print("\n[5b] Generating subsonic protection filters (mandatory HPF protection)...")
-        for ch_name, subsonic in subsonic_filters.items():
+        for ch_name, derivation in derivations.items():
             hpf_freq = channels_cfg[ch_name]['speaker_identity']['mandatory_hpf_hz']
-            print(f"  {ch_name}: subsonic HPF at {hpf_freq}Hz (mandatory HPF protection)")
+            if derivation.moved:
+                print(f"  {ch_name}: subsonic HPF at {derivation.corner_hz}Hz, moved from "
+                      f"{hpf_freq}Hz ({derivation.reason}; NB-C4a margin "
+                      f"{derivation.c4a_margin_db:+.1f}dB, L2' {derivation.l2_half_db:.1f}dB)")
+            else:
+                print(f"  {ch_name}: subsonic HPF at {hpf_freq}Hz (mandatory HPF protection; "
+                      f"{derivation.reason})")
 
     # --- Stage 6: Combine correction + crossover ---
     print("\n[6/7] Combining correction + crossover filters...")

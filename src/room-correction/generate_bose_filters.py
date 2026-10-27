@@ -24,7 +24,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
-from room_correction.crossover import generate_crossover_filter, generate_subsonic_filter
+from room_correction.crossover import derive_subsonic, generate_crossover_filter
 from room_correction.combine import combine_filters
 from room_correction.export import export_filter, export_all_filters
 from room_correction.verify import verify_d009, verify_minimum_phase, verify_format, print_report
@@ -120,12 +120,16 @@ def generate_bose_filters(output_dir=OUTPUT_DIR, profile_path=PROFILE_PATH, time
 
     # Subsonic protection highpass (for subs only)
     print("Generating subsonic protection filter...")
-    subsonic = generate_subsonic_filter(
-        hpf_freq=SUBSONIC_HPF_HZ,
+    # The sub is lowpass (no HP edge), so rule R4 keeps the corner (F-383 C4).
+    subsonic = derive_subsonic(
+        SUBSONIC_HPF_HZ,
+        None,
+        None,
         slope_db_per_oct=slope,
         n_taps=n_taps,
         sr=SAMPLE_RATE,
-    )
+        channel="sub",
+    ).fir
 
     # --- Dirac (flat) correction placeholder ---
     # No room correction yet — use a unit impulse as the "correction" filter.

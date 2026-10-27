@@ -326,18 +326,16 @@ def verify_mandatory_hpf(filter_path, mandatory_hpf_hz, min_attenuation_db=18.0)
 
     # Passband reference: peak gain from the HPF frequency up. A mean over a
     # fixed window lands in the crossover stopband of LP subs and HF drivers.
-    passband_low = float(mandatory_hpf_hz)
-    passband_high = min(20000.0, 0.95 * sr / 2.0)
-    passband_mask = (freqs >= passband_low) & (freqs <= passband_high)
+    passband_peak, passband_low, passband_high = dsp_utils.h1_passband_peak_db(
+        freqs, gains_db, mandatory_hpf_hz, sr=sr)
 
-    if not np.any(passband_mask):
+    if passband_peak is None:
         return VerificationResult(
             "Mandatory HPF", False,
             f"No passband bins between {passband_low}Hz and {passband_high}Hz",
             {},
         )
 
-    passband_peak = float(np.max(gains_db[passband_mask]))
     attenuation = passband_peak - gain_at_check
 
     passed = attenuation >= min_attenuation_db

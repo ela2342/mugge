@@ -16,9 +16,13 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from room_correction import dsp_utils
 from room_correction.combine import combine_filters
-from room_correction.verify import load_filter
+from room_correction.crossover import derive_subsonic
+from room_correction.verify import load_filter, verify_mandatory_hpf
 from room_correction.generate_profile_filters import (
     COMBINE_MARGIN_DB,
+    DEFAULT_SLOPE_DB_PER_OCT,
+    LINKWITZ_RILEY,
+    _channel_hp_edge,
     _generate_channel_crossover,
     _normalize_crossover_freqs,
     _resolve_bandpass_edges,
@@ -737,28 +741,69 @@ class TestMarkaudioProtectionPresent(unittest.TestCase):
     The HPF costs crossover phase at 200 Hz (F-385).  This test guards
     against "fixing" that by dropping the protection; it deliberately
     asserts nothing about phase or sum.
+
+    Under F-383 C4.1 (Architect ruling 41fd1486 Q-C4d, AE NB-1 of 92386ab9)
+    the sat's subsonic corner moves from m = 80 Hz to fc/5 = 40 Hz: on a
+    channel with a crossover HP, D-031 is judged on the product.  The
+    subsonic's own cut is therefore measured one octave below its corner
+    (20 Hz), not below m (40 Hz, where it now contributes only ~0.2 dB),
+    and the protection at 40 Hz is asserted on the product instead.
     """
+
+    PRODUCT_MIN_ATT_AT_40_DB = 50.0  # NB-1 (measured 56 dB)
 
     def test_sat_subsonic_cuts_one_octave_below_corner(self):
         profile, identities = _load_profile_with_identities(MARKAUDIO_PROFILE)
-        sat_identity = profile["speakers"]["sat_left"]["identity"]
+        sat_cfg = profile["speakers"]["sat_left"]
+        sat_identity = sat_cfg["identity"]
         hpf_hz = identities[sat_identity].get("mandatory_hpf_hz")
         self.assertIsNotNone(hpf_hz)
+
+        # d1: moved, not dropped
+        crossover_freqs = _normalize_crossover_freqs(profile)
+        slope = profile["crossover"].get("slope_db_per_oct", DEFAULT_SLOPE_DB_PER_OCT)
+        derivation = derive_subsonic(
+            hpf_hz,
+            _channel_hp_edge(sat_cfg, crossover_freqs),
+            _generate_channel_crossover(
+                sat_cfg, crossover_freqs, slope, 16384, 48000, LINKWITZ_RILEY),
+            slope_db_per_oct=max(slope, 24.0),
+            channel="sat_left",
+        )
+        self.assertIsNotNone(derivation)
+        self.assertTrue(derivation.moved)
+        self.assertEqual(derivation.corner_hz, 40.0)
 
         unprotected = copy.deepcopy(identities)
         unprotected[sat_identity]["mandatory_hpf_hz"] = None
         with tempfile.TemporaryDirectory() as d:
             protected_sat = _exported_sat(profile, identities, d)
+            # d3: the shipped product passes the D-031 check at m
+            hpf_check = verify_mandatory_hpf(os.path.join(d, "combined_sat_left.wav"), hpf_hz)
         with tempfile.TemporaryDirectory() as d:
             unprotected_sat = _exported_sat(profile, unprotected, d)
+        self.assertTrue(hpf_check.passed, hpf_check.message)
 
+        # d2: the subsonic's own cut, one octave below its corner
         n_fft = 1 << 17
         freqs, protected_mag = dsp_utils.rfft_magnitude(protected_sat, n_fft=n_fft)
         _, unprotected_mag = dsp_utils.rfft_magnitude(unprotected_sat, n_fft=n_fft)
-        i = np.argmin(np.abs(freqs - hpf_hz / 2))
+        i = np.argmin(np.abs(freqs - derivation.corner_hz / 2))
         cut_db = 20 * np.log10(unprotected_mag[i] / protected_mag[i])
         print(f"markaudio sat protection at {freqs[i]:.1f} Hz: {cut_db:.2f} dB cut")
         self.assertGreaterEqual(cut_db, PROTECTION_MIN_CUT_DB)
+
+        # NB-1 and d3 (L2'): the product's attenuation re the H1 peak
+        gains_db = 20 * np.log10(np.maximum(protected_mag, 1e-30))
+        peak_db, _, _ = dsp_utils.h1_passband_peak_db(freqs, gains_db, hpf_hz)
+
+        def att(hz):
+            return peak_db - gains_db[np.argmin(np.abs(freqs - hz))]
+
+        print(f"markaudio sat product: att(40 Hz) {att(40.0):.1f} dB, "
+              f"att(m/4) {att(hpf_hz / 4):.1f} dB re the H1 peak")
+        self.assertGreaterEqual(att(40.0), self.PRODUCT_MIN_ATT_AT_40_DB)
+        self.assertGreaterEqual(att(hpf_hz / 4), att(hpf_hz / 2))
 
 
 

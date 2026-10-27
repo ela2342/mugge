@@ -22,6 +22,7 @@ byte-identical.
 """
 
 import numbers
+from typing import NamedTuple, Optional
 
 import numpy as np
 import scipy.signal
@@ -258,6 +259,180 @@ def generate_subsonic_filter(
         subsonic_filter, design, _LR_LOG_FLOOR,
         f"subsonic {hpf_freq} Hz {slope_db_per_oct} dB/oct", sr=sr)
     return subsonic_filter
+
+
+# -- Subsonic corner derivation (F-383 C4) ----------------------------------
+
+# C4.1: on a channel with a crossover HP the subsonic corner may sit at
+# <= fc_hp / 5; the protection is judged on the product (D-031 unchanged).
+SUBSONIC_CORNER_RATIO = 5.0
+
+# NB-C4a grid: 1/12 octave from 10 Hz up to m (AE a2 of 41fd1486).
+NB_C4A_LOW_HZ = 10.0
+NB_C4A_STEPS_PER_OCT = 12
+
+# L2' (Part B 9e5eb913): att(m/2) re the H1 peak, and att(m/4) >= att(m/2).
+L2_MIN_HALF_DB = 18.0
+
+_DERIVE_N_FFT = 1 << 17
+_DERIVE_DB_FLOOR = 1e-30
+
+
+class SubsonicDerivationError(ValueError):
+    """A moved subsonic corner fails NB-C4a or L2' (NB-C4b: a STOP)."""
+
+
+class SubsonicDerivation(NamedTuple):
+    """The subsonic factor derive_subsonic() chose for one channel.
+
+    The gate fields are None when the corner was not moved.
+    """
+
+    corner_hz: float
+    fir: np.ndarray
+    moved: bool
+    reason: str
+    c4a_margin_db: Optional[float]
+    c4a_margin_hz: Optional[float]
+    l2_half_db: Optional[float]
+    l2_quarter_db: Optional[float]
+
+
+def subsonic_corner(mandatory_hpf_hz, hp_edge_hz, partner_subsonic_hz=None):
+    """Rule R4 (Architect 62cd5e5c, AE 9973bc8b): (corner_hz, moved, reason).
+
+    m is the identity's mandatory_hpf_hz, fc_hp the channel's crossover HP
+    edge (None for lowpass and fullrange channels) and s the subsonic corner
+    of its crossover partner, the leg whose LP edge is fc_hp (None if the
+    partner has no subsonic).  target = fc_hp/5 if s is None, else
+    max(fc_hp/5, s).  The corner moves to target iff target < m < fc_hp.
+    """
+    m = mandatory_hpf_hz
+    if hp_edge_hz is None:
+        return m, False, "no HP edge"
+    if m >= hp_edge_hz:
+        return m, False, "m >= fc_hp"
+    target = hp_edge_hz / SUBSONIC_CORNER_RATIO
+    if partner_subsonic_hz is not None:
+        target = max(target, partner_subsonic_hz)
+    if target >= m:
+        if partner_subsonic_hz is not None and partner_subsonic_hz >= m:
+            return m, False, "target >= m (s >= m)"
+        return m, False, "target >= m (fc_hp/5 >= m)"
+    if partner_subsonic_hz is not None and partner_subsonic_hz == target:
+        return target, True, "moved to s"
+    return target, True, "moved to fc_hp/5"
+
+
+def _db(x):
+    return 20.0 * np.log10(np.maximum(np.abs(x), _DERIVE_DB_FLOOR))
+
+
+def _response(b, freqs, sr):
+    return scipy.signal.freqz(b, worN=np.atleast_1d(np.asarray(freqs, float)), fs=sr)[1]
+
+
+def derive_subsonic(
+    mandatory_hpf_hz,
+    hp_edge_hz,
+    hp_filter,
+    slope_db_per_oct=24.0,
+    partner_subsonic_hz=None,
+    n_taps=16384,
+    sr=SAMPLE_RATE,
+    channel="",
+    make_subsonic=None,
+):
+    """
+    Derive a channel's subsonic factor from its identity corner (F-383 C4).
+
+    The one derivation for every combine caller (C4.2).  The corner follows
+    subsonic_corner() (rule R4).  A moved corner is gated on the product
+    P = hp_filter * subsonic(corner), evaluated exactly with freqz:
+
+    - NB-C4a: |ref| - |P| >= 0 dB on the 1/12-octave grid from 10 Hz to m,
+      where ref is the subsonic at m with the same slope;
+    - L2': att_P(m/2) >= 18 dB re P's H1 peak, and att_P(m/4) >= att_P(m/2).
+
+    A failing gate raises; no other corner is tried and fc is never touched
+    (NB-C4b).  The function is pure; make_subsonic(hpf_freq, slope) lets a
+    caller cache the subsonic FIRs (default: generate_subsonic_filter).
+
+    Parameters
+    ----------
+    mandatory_hpf_hz : float or None
+        The identity's protection corner m.  None returns None.
+    hp_edge_hz : float or None
+        The channel's crossover HP edge fc_hp; None if it has none.
+    hp_filter : np.ndarray or None
+        The channel's crossover FIR; needed only if the corner moves.
+    slope_db_per_oct : float
+        Subsonic slope, as for generate_subsonic_filter().
+    partner_subsonic_hz : float or None
+        The crossover partner's subsonic corner s (R4).
+    channel : str
+        Channel name for the raise message.
+
+    Returns
+    -------
+    SubsonicDerivation or None
+
+    Raises
+    ------
+    SubsonicDerivationError
+        If a moved corner fails NB-C4a or L2'.  The message names the
+        channel, m, the corner, the check, the frequency and the margin.
+    """
+    if mandatory_hpf_hz is None:
+        return None
+    if make_subsonic is None:
+        def make_subsonic(hpf_freq, slope):
+            return generate_subsonic_filter(
+                hpf_freq=hpf_freq, slope_db_per_oct=slope, n_taps=n_taps, sr=sr)
+
+    m = mandatory_hpf_hz
+    corner, moved, reason = subsonic_corner(m, hp_edge_hz, partner_subsonic_hz)
+    fir = make_subsonic(corner, slope_db_per_oct)
+    if not moved:
+        return SubsonicDerivation(corner, fir, False, reason, None, None, None, None)
+    if hp_filter is None:
+        raise ValueError(f"{channel}: a moved subsonic corner needs the channel's HP filter")
+
+    def stop(check, freq, margin, detail):
+        raise SubsonicDerivationError(
+            f"{channel}: subsonic corner moved from m {m} Hz to {corner} Hz fails "
+            f"{check} at {freq:.1f} Hz, margin {margin:+.2f} dB ({detail}). "
+            f"STOP (NB-C4b): no other corner is tried.")
+
+    ref = make_subsonic(m, slope_db_per_oct)
+    steps = np.arange(0, int(np.floor(NB_C4A_STEPS_PER_OCT * np.log2(m / NB_C4A_LOW_HZ))) + 1)
+    grid = np.unique(np.append(NB_C4A_LOW_HZ * 2.0 ** (steps / NB_C4A_STEPS_PER_OCT), m))
+    margins = _db(_response(ref, grid, sr)) - _db(
+        _response(hp_filter, grid, sr) * _response(fir, grid, sr))
+    i = int(np.argmin(margins))
+    c4a_margin_db, c4a_margin_hz = float(margins[i]), float(grid[i])
+    if c4a_margin_db < 0.0:
+        stop("NB-C4a", c4a_margin_hz, c4a_margin_db,
+             f"product above the subsonic at m, {slope_db_per_oct} dB/oct")
+
+    product = np.fft.rfft(hp_filter, _DERIVE_N_FFT) * np.fft.rfft(fir, _DERIVE_N_FFT)
+    freqs = np.fft.rfftfreq(_DERIVE_N_FFT, d=1.0 / sr)
+    peak_db, _, _ = dsp_utils.h1_passband_peak_db(freqs, _db(product), m, sr=sr)
+    if peak_db is None:
+        raise ValueError(f"{channel}: no H1 passband bins above m {m} Hz")
+
+    def att(freq):
+        return peak_db - float(_db(_response(hp_filter, freq, sr) * _response(fir, freq, sr))[0])
+
+    l2_half_db, l2_quarter_db = att(m / 2.0), att(m / 4.0)
+    if l2_half_db < L2_MIN_HALF_DB:
+        stop("L2'", m / 2.0, l2_half_db - L2_MIN_HALF_DB,
+             f"att(m/2) {l2_half_db:.1f} dB re the H1 peak, required >= {L2_MIN_HALF_DB} dB")
+    if l2_quarter_db < l2_half_db:
+        stop("L2'", m / 4.0, l2_quarter_db - l2_half_db,
+             f"att(m/4) {l2_quarter_db:.1f} dB < att(m/2) {l2_half_db:.1f} dB")
+    return SubsonicDerivation(corner, fir, True, reason, c4a_margin_db, c4a_margin_hz,
+                              l2_half_db, l2_quarter_db)
 
 
 def _normalise_to_target(fir, target_fn, lo, hi, sr):
