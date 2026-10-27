@@ -8,7 +8,8 @@ web-ui state.
 
 L1 (QE f79c7a5a, AE 1e8c1fb3 NB1/NB2): remove pi4audio-convolver-out,
     wait for the latch, check open_gate is refused, unlatch, then all 16
-    gain values (8 x Mult, 8 x Add) are exactly 0.0, get_gate is closed and
+    gain values (8 x Mult, 8 x Add) print exactly "Float 0.000000" (strict
+    string match, see ZERO_LINE), get_gate is closed and
     the watchdog is not latched.  A relatch (watchdog_mute event) between
     the unlatch and the read-back is a FAIL, because its mute would hide
     what the unlatch wrote (QE ae15808b Q1).
@@ -20,7 +21,7 @@ L2: remove both convolver nodes, recreate them in a separate PipeWire
     the tone playing: unlatch (same relatch guard), check the tone ->
     convolver and convolver-out -> hw-out links exist, then hw-out stays at
     the floor for 2 s and
-    all 16 values are 0.0.  Positive control: Close Gate -> Open Gate (the
+    all 16 values still print 0.000000.  Positive control: Close Gate -> Open Gate (the
     only way back, AE 55f1a1b2 cond 2) brings the tone to hw-out.
 
 Red at base ff55d0c8 by construction: unlatch writes the watchdog's
@@ -119,8 +120,14 @@ def _wait(predicate, timeout: float):
         time.sleep(0.1)
 
 
-def _read_gains() -> dict[str, float]:
-    """Read all 16 gain values (Mult and Add) from the live convolver node."""
+def _read_gains() -> dict[str, str]:
+    """Read all 16 gain values (Mult and Add) from the live convolver node.
+
+    Source is ``pw-cli enum-params <id> Props``, never pw-dump, which prints
+    NaN, -Inf and subnormals as 0.000000 (F-349; AE 70541687 C1).  Returns
+    the raw stripped value line per param, unparsed; FAIL unless exactly the
+    16 expected gain_* params are found, each once.
+    """
     ids = _node_ids(CONVOLVER)
     if len(ids) != 1:
         pytest.fail(f"expected one {CONVOLVER} node, found {ids}", pytrace=False)
@@ -128,27 +135,42 @@ def _read_gains() -> dict[str, float]:
                          capture_output=True, text=True, timeout=10)
     if out.returncode != 0:
         pytest.fail(f"pw-cli enum-params {ids[0]} failed: {out.stderr}", pytrace=False)
-    values: dict[str, float] = {}
+    values: dict[str, str] = {}
+    duplicates = []
     pending = None
     for line in out.stdout.splitlines():
-        key = re.search(r'String\s+"(\w+:(?:Mult|Add))"', line)
+        key = re.search(r'String\s+"(gain_\w+:(?:Mult|Add))"', line)
         if key:
             pending = key.group(1)
             continue
-        value = re.search(r"Float\s+(\S+)", line)
-        if pending and value:
-            values[pending] = float(value.group(1))
+        if pending:
+            if pending in values:
+                duplicates.append(pending)
+            values[pending] = line.strip()
         pending = None
-    missing = [k for k in GAIN_KEYS if k not in values]
-    if missing:
-        pytest.fail(f"gain values not read back for {missing}: {values}", pytrace=False)
+    if duplicates or set(values) != set(GAIN_KEYS):
+        pytest.fail(
+            f"gain params read back are not exactly the 16 expected: "
+            f"missing={sorted(set(GAIN_KEYS) - set(values))} "
+            f"extra={sorted(set(values) - set(GAIN_KEYS))} duplicates={duplicates} "
+            f"read={values}", pytrace=False)
     return {k: values[k] for k in GAIN_KEYS}
+
+
+# Strict string match, never parsed to float: nan, inf and -0.000000 all
+# FAIL.  At pw-cli's %f resolution this means |v| < 5e-7, about -126 dB
+# (AE 70541687 C2/C3).
+ZERO_LINE = "Float 0.000000"
+
+
+def _not_zero(gains: dict[str, str]) -> dict[str, str]:
+    return {k: v for k, v in gains.items() if v != ZERO_LINE}
 
 
 def _assert_all_zero(when: str) -> None:
     gains = _read_gains()
-    assert all(v == 0.0 for v in gains.values()), (
-        f"{when}: gain values not all exactly 0.0: {gains}")
+    bad = _not_zero(gains)
+    assert not bad, f"{when}: gain values not {ZERO_LINE!r} (raw lines): {bad}"
 
 
 def _destroy_nodes(name: str) -> list[int]:
@@ -247,8 +269,8 @@ def _unlatch_and_read_back(when: str) -> None:
     for event in gm.events:
         if event.get("event") == "watchdog_unlatched":
             assert event == {"type": "event", "event": "watchdog_unlatched"}, event
-    assert all(v == 0.0 for v in gains.values()), (
-        f"{when}: gain values not all exactly 0.0: {gains}")
+    bad = _not_zero(gains)
+    assert not bad, f"{when}: gain values not {ZERO_LINE!r} (raw lines): {bad}"
     assert gate.get("ok") and gate.get("gate_open") is False, f"{when}: gate not closed: {gate}"
     assert status.get("ok") and status["watchdog"]["latched"] is False, (
         f"{when}: still latched after unlatch: {status}")
