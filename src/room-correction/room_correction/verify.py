@@ -604,6 +604,108 @@ def verify_minimum_phase_residual(filter_path,
     )
 
 
+# F-383 C3 (Architect ace87e0d, AE ce9bbea7). A correct channel sits near
+# -44 dB (the truncation of the exact product, bounded by the tail gate);
+# gross errors and factor shifts of about 10 samples at sub frequencies
+# score above -30 dB.
+COMPOSITION_MAX_RESIDUAL_DB = -30.0
+# G<=1 (D-009): the combine scalar and the uniform trim only cut.
+COMPOSITION_MAX_GAIN = 1.0 + 1e-3
+# Which row gates the cascade channels (is_cascade). "residual": the
+# residual row gates and carries the composition numbers in
+# details["composition"]. The step-4 combine commit removes this switch.
+CASCADE_GATE_ROW = "residual"
+
+
+def verify_minimum_phase_composition(filter_path, factors,
+                                     max_residual_db=COMPOSITION_MAX_RESIDUAL_DB,
+                                     max_tail_db=MIN_PHASE_MAX_TAIL_DB,
+                                     decay_floor_db=MIN_PHASE_TAIL_DECAY_FLOOR_DB):
+    """
+    Minimum-phase gate for a cascade channel (F-383 C3, Architect ace87e0d).
+
+    S is the filter, R the exact product of factors (the arrays combine
+    multiplies: correction, crossover, subsonic), cut to len(S), and g the
+    least-squares scale of R onto S. Passes if all hold:
+    - polarity: g > 0;
+    - boost: g <= COMPOSITION_MAX_GAIN;
+    - residual: the energy of (S - g*R) is at most max_residual_db
+      relative to the energy of S;
+    - tail and decay as in verify_minimum_phase_residual().
+    The cepstral residual is logged in the details, never gated.
+
+    What it proves: S equals, within the residual, the exact product of
+    the factors, which are each minimum phase (A1a correction, A1b
+    generators). It does not prove the level beyond g <= 1; the level
+    stays with the D-009 and gain rows.
+    """
+    from . import closed_loop
+
+    name = "Minimum Phase (composition)"
+    data, _ = load_filter(filter_path)
+    if not np.any(data):
+        return VerificationResult(name, False, "Filter is all zeros", {})
+    product = np.asarray(factors[0], dtype=np.float64)
+    for factor in factors[1:]:
+        product = dsp_utils.convolve_fir(product, factor)
+    ref = np.zeros(len(data))
+    n = min(len(data), len(product))
+    ref[:n] = product[:n]
+    ref_energy = float(np.dot(ref, ref))
+    if ref_energy == 0:
+        return VerificationResult(name, False, "Product of the factors is all zeros", {})
+    g = float(np.dot(data, ref) / ref_energy)
+    composition_db = float(10.0 * np.log10(
+        max(np.sum((data - g * ref) ** 2) / np.sum(data ** 2), 1e-30)))
+    gain_db = float(20.0 * np.log10(max(abs(g), 1e-30)))
+    residual_db = closed_loop.minimum_phase_residual_db(data)
+    tail_db = closed_loop.tail_energy_db(data)
+    n_tail = max(1, int(round(len(data) * 0.05)))
+    prev_db = _window_energy_db(data, len(data) - 2 * n_tail, len(data) - n_tail)
+    decaying = tail_db <= decay_floor_db or tail_db <= prev_db
+
+    failed = []
+    if not g > 0:
+        failed.append("polarity")
+    if g > COMPOSITION_MAX_GAIN:
+        failed.append("boost")
+    if not composition_db <= max_residual_db:
+        failed.append("residual")
+    if not tail_db <= max_tail_db:
+        failed.append("tail")
+    if not decaying:
+        failed.append("rising tail")
+    message = (
+        f"Residual vs exact product: {composition_db:.1f}dB (limit {max_residual_db}dB), "
+        f"g {gain_db:+.2f}dB{' INVERTED' if g < 0 else ''} (g > 0, limit "
+        f"{COMPOSITION_MAX_GAIN}), last 5% energy: {tail_db:.1f}dB (limit {max_tail_db}dB), "
+        f"90-95%: {prev_db:.1f}dB ({'decaying' if decaying else 'RISING'}), "
+        f"cepstral residual {residual_db:.1f}dB (log only)"
+    )
+    if failed:
+        message = f"FAIL {', '.join(failed)}: {message}"
+    return VerificationResult(
+        name, not failed, message,
+        {"composition_db": composition_db, "g": g, "g_db": gain_db,
+         "residual_db": residual_db, "tail_db": tail_db,
+         "tail_prev_db": prev_db, "tail_decaying": decaying, "failed": failed},
+    )
+
+
+def _minimum_phase_row(path, factors):
+    """The gating minimum-phase row of one 'fir' file (CASCADE_GATE_ROW)."""
+    residual = verify_minimum_phase_residual(path)
+    if factors is None:
+        return residual
+    composition = verify_minimum_phase_composition(path, factors)
+    if CASCADE_GATE_ROW == "composition":
+        return composition
+    residual.details["composition"] = {
+        **composition.details, "passed": composition.passed,
+        "message": composition.message}
+    return residual
+
+
 def verify_wav_subtype(filter_path, expected_subtype="FLOAT"):
     """Check the WAV sample format (float32 = soundfile subtype 'FLOAT')."""
     info = sf.info(filter_path)
@@ -628,7 +730,8 @@ def verify_dirac(filter_path):
 
 
 def run_venue_checks(output_dir, expected_files, mandatory_hpf_hz=None,
-                     expected_taps=16384, expected_sr=SAMPLE_RATE):
+                     expected_taps=16384, expected_sr=SAMPLE_RATE,
+                     composition_inputs=None):
     """
     Check the WAV set a venue config expects.
 
@@ -643,6 +746,11 @@ def run_venue_checks(output_dir, expected_files, mandatory_hpf_hz=None,
     mandatory_hpf_hz : dict, optional
         Filename -> mandatory HPF frequency (from the speaker identity);
         adds verify_mandatory_hpf() for those files.
+    composition_inputs : dict, optional
+        Filename -> factors (generate_profile_filters.
+        composition_inputs_by_file) for the cascade channels. Those files
+        also get verify_minimum_phase_composition(); CASCADE_GATE_ROW says
+        which of the two rows gates.
 
     Returns
     -------
@@ -651,6 +759,10 @@ def run_venue_checks(output_dir, expected_files, mandatory_hpf_hz=None,
     import os
 
     mandatory_hpf_hz = mandatory_hpf_hz or {}
+    composition_inputs = composition_inputs or {}
+    unknown = sorted(f for f in composition_inputs if expected_files.get(f) != "fir")
+    if unknown:
+        raise ValueError(f"composition inputs for files that are not 'fir': {unknown}")
     results = []
     for filename, kind in sorted(expected_files.items()):
         path = os.path.join(output_dir, filename)
@@ -667,7 +779,7 @@ def run_venue_checks(output_dir, expected_files, mandatory_hpf_hz=None,
             checks.append(verify_dirac(path))
         elif kind == "fir":
             checks.append(verify_d009(path, margin_db=VENUE_D009_MARGIN_DB))
-            checks.append(verify_minimum_phase_residual(path))
+            checks.append(_minimum_phase_row(path, composition_inputs.get(filename)))
             if filename in mandatory_hpf_hz:
                 checks.append(verify_mandatory_hpf(path, mandatory_hpf_hz[filename]))
         else:
@@ -677,6 +789,9 @@ def run_venue_checks(output_dir, expected_files, mandatory_hpf_hz=None,
             result.name = f"{result.name} ({filename})"
             if result.name.startswith("Minimum Phase"):
                 log.info("%s: %s", result.name, result.message)
+                if "composition" in result.details:
+                    log.info("%s composition (log only): %s", result.name,
+                             result.details["composition"]["message"])
             results.append(result)
 
     all_passed = bool(results) and all(r.passed for r in results)
@@ -784,7 +899,8 @@ def verify_closed_loop(measured_ir, correction, band_hz, target_curve="flat",
 def run_correction_gate(output_dir, expected_files, closed_loop_inputs=None,
                         mandatory_hpf_hz=None, expected_taps=16384,
                         expected_sr=SAMPLE_RATE, target_curve="flat",
-                        target_phon=None, reference_phon=80.0):
+                        target_phon=None, reference_phon=80.0,
+                        composition_inputs=None):
     """
     The shared gate (F-262 S6): run_venue_checks() plus verify_closed_loop().
 
@@ -794,6 +910,8 @@ def run_correction_gate(output_dir, expected_files, closed_loop_inputs=None,
         Filename -> (measured IR, CorrectionFilter, profile speaker dict)
         for every 'fir' file that carries a room correction. Files without one (crossover-only)
         get the run_venue_checks() set only.
+    composition_inputs : dict, optional
+        Filename -> factors for the cascade channels, see run_venue_checks().
 
     Returns
     -------
@@ -806,7 +924,8 @@ def run_correction_gate(output_dir, expected_files, closed_loop_inputs=None,
 
     _, results = run_venue_checks(
         output_dir, expected_files, mandatory_hpf_hz=mandatory_hpf_hz,
-        expected_taps=expected_taps, expected_sr=expected_sr)
+        expected_taps=expected_taps, expected_sr=expected_sr,
+        composition_inputs=composition_inputs)
     for filename, (measured_ir, correction, speaker) in sorted(closed_loop_inputs.items()):
         result = verify_closed_loop(
             measured_ir, correction, closed_loop_band(speaker), target_curve=target_curve,

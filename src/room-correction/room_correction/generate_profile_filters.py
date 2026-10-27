@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 import os
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, NamedTuple, Optional, Tuple
 
 import numpy as np
 
@@ -180,6 +180,126 @@ def _generate_channel_crossover(
     )
 
 
+# -- Channel factors (F-383 C3, D1) ----------------------------------------
+
+class ChannelFactors(NamedTuple):
+    """The factors combine_filters() multiplies for one speaker channel."""
+
+    correction: np.ndarray
+    crossover: np.ndarray
+    subsonic: Optional[np.ndarray]
+    filter_type: str
+
+
+def is_cascade(filter_type: str, subsonic) -> bool:
+    """True if the channel is a crossover LP cascaded with a subsonic HPF.
+
+    A bandpass contains the crossover LP, so bandpass + subsonic is a cascade
+    too (Architect ace87e0d).  The role comes from the profile filter_type
+    and the identity subsonic, never from the WAV.
+    """
+    return filter_type in ("lowpass", "bandpass") and subsonic is not None
+
+
+def channel_factors(
+    profile: dict,
+    identities: dict,
+    correction_filters: Optional[Dict[str, CorrectionFilter]] = None,
+    n_taps: int = DEFAULT_N_TAPS,
+    sr: int = SAMPLE_RATE,
+) -> Dict[str, ChannelFactors]:
+    """Per speaker key, the factors generate_profile_filters() combines.
+
+    The one source of the factors for both the generator and the
+    composition gate (verify.verify_minimum_phase_composition).  Arguments
+    and exceptions as for generate_profile_filters().
+    """
+    validate_profile_crossover(profile)
+    crossover_freqs = _normalize_crossover_freqs(profile)
+    crossover_cfg = profile.get("crossover")
+    slope = (crossover_cfg or {}).get(
+        "slope_db_per_oct", DEFAULT_SLOPE_DB_PER_OCT)
+    alignment = None if crossover_cfg is None else LINKWITZ_RILEY
+    speakers = profile.get("speakers", {})
+
+    if correction_filters is None:
+        correction_filters = {}
+    for spk_key, value in correction_filters.items():
+        if not isinstance(value, CorrectionFilter):
+            raise TypeError(
+                f"correction for {spk_key!r} is {type(value).__name__}, not a "
+                f"CorrectionFilter; build it with correction_from_measurement()")
+
+    # Pre-generate subsonic filters (deduplicated by frequency)
+    subsonic_cache: Dict[float, np.ndarray] = {}
+
+    dirac = np.zeros(n_taps)
+    dirac[0] = 1.0
+
+    factors: Dict[str, ChannelFactors] = {}
+
+    for spk_key, spk_cfg in speakers.items():
+        # 1. Crossover
+        xo = _generate_channel_crossover(
+            spk_cfg, crossover_freqs, slope, n_taps, sr, alignment,
+        )
+
+        # 2. Correction (or dirac placeholder)
+        correction = correction_filters[spk_key].fir if spk_key in correction_filters else dirac
+
+        # 3. Subsonic HPF (from identity mandatory_hpf_hz)
+        id_name = spk_cfg.get("identity", "")
+        identity = identities.get(id_name, {})
+        hpf_hz = identity.get("mandatory_hpf_hz")
+        subsonic = None
+        if hpf_hz is not None:
+            if hpf_hz not in subsonic_cache:
+                subsonic_cache[hpf_hz] = generate_subsonic_filter(
+                    hpf_freq=hpf_hz,
+                    slope_db_per_oct=max(slope, 24.0),
+                    n_taps=n_taps,
+                    sr=sr,
+                )
+            subsonic = subsonic_cache[hpf_hz]
+
+        factors[spk_key] = ChannelFactors(
+            correction, xo, subsonic, spk_cfg.get("filter_type", "highpass"))
+
+    return factors
+
+
+def composition_inputs_by_file(
+    profile: dict,
+    identities: dict,
+    filenames: Dict[str, str],
+    correction_filters: Optional[Dict[str, CorrectionFilter]] = None,
+    n_taps: int = DEFAULT_N_TAPS,
+    sr: int = SAMPLE_RATE,
+) -> Dict[str, Tuple[np.ndarray, ...]]:
+    """Filename -> factors, for the cascade channels (is_cascade()) only.
+
+    filenames maps profile speaker key -> exported filename.  The factors
+    are recomputed with channel_factors() from the same profile, identities
+    and corrections the filters were generated from.  Feeds the
+    composition_inputs of verify.run_correction_gate().
+
+    Raises
+    ------
+    ValueError
+        If a filename maps to a speaker key the profile does not have.
+    """
+    speakers = profile.get("speakers") or {}
+    unknown = sorted(k for k in filenames if k not in speakers)
+    if unknown:
+        raise ValueError(f"filenames for speakers the profile does not have: {unknown}")
+    factors = channel_factors(profile, identities, correction_filters, n_taps=n_taps, sr=sr)
+    return {
+        filenames[k]: (f.correction, f.crossover, f.subsonic)
+        for k, f in factors.items()
+        if k in filenames and is_cascade(f.filter_type, f.subsonic)
+    }
+
+
 # -- Main pipeline ----------------------------------------------------------
 
 def generate_profile_filters(
@@ -231,61 +351,18 @@ def generate_profile_filters(
     without ``type`` is Linkwitz-Riley; a profile without a crossover
     section keeps the legacy knee.
     """
-    validate_profile_crossover(profile)
-    crossover_freqs = _normalize_crossover_freqs(profile)
-    crossover_cfg = profile.get("crossover")
-    slope = (crossover_cfg or {}).get(
-        "slope_db_per_oct", DEFAULT_SLOPE_DB_PER_OCT)
-    alignment = None if crossover_cfg is None else LINKWITZ_RILEY
-    speakers = profile.get("speakers", {})
-
-    if correction_filters is None:
-        correction_filters = {}
-    for spk_key, value in correction_filters.items():
-        if not isinstance(value, CorrectionFilter):
-            raise TypeError(
-                f"correction for {spk_key!r} is {type(value).__name__}, not a "
-                f"CorrectionFilter; build it with correction_from_measurement()")
-
-    # Pre-generate subsonic filters (deduplicated by frequency)
-    subsonic_cache: Dict[float, np.ndarray] = {}
-
-    dirac = np.zeros(n_taps)
-    dirac[0] = 1.0
+    factors = channel_factors(profile, identities, correction_filters, n_taps=n_taps, sr=sr)
 
     combined_filters: Dict[str, np.ndarray] = {}
 
-    for spk_key, spk_cfg in speakers.items():
-        # 1. Crossover
-        xo = _generate_channel_crossover(
-            spk_cfg, crossover_freqs, slope, n_taps, sr, alignment,
-        )
-
-        # 2. Correction (or dirac placeholder)
-        correction = correction_filters[spk_key].fir if spk_key in correction_filters else dirac
-
-        # 3. Subsonic HPF (from identity mandatory_hpf_hz)
-        id_name = spk_cfg.get("identity", "")
-        identity = identities.get(id_name, {})
-        hpf_hz = identity.get("mandatory_hpf_hz")
-        subsonic = None
-        if hpf_hz is not None:
-            if hpf_hz not in subsonic_cache:
-                subsonic_cache[hpf_hz] = generate_subsonic_filter(
-                    hpf_freq=hpf_hz,
-                    slope_db_per_oct=max(slope, 24.0),
-                    n_taps=n_taps,
-                    sr=sr,
-                )
-            subsonic = subsonic_cache[hpf_hz]
-
+    for spk_key, f in factors.items():
         # 4. Combine
         combined = combine_filters(
-            correction_filter=correction,
-            crossover_filter=xo,
+            correction_filter=f.correction,
+            crossover_filter=f.crossover,
             n_taps=n_taps,
             margin_db=COMBINE_MARGIN_DB,
-            subsonic_filter=subsonic,
+            subsonic_filter=f.subsonic,
         )
 
         combined_filters[spk_key] = combined

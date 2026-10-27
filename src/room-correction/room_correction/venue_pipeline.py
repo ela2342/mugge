@@ -76,7 +76,7 @@ from .correction import (  # noqa: F401
     require_correctable,
 )
 from .export import export_filter
-from .generate_profile_filters import generate_profile_filters
+from .generate_profile_filters import composition_inputs_by_file, generate_profile_filters
 
 
 SAMPLE_RATE = dsp_utils.SAMPLE_RATE
@@ -153,6 +153,9 @@ class VenueFilterResult:
     # for verify.run_correction_gate().
     closed_loop_inputs: Dict[str, Tuple[np.ndarray, CorrectionFilter, dict]] = field(
         default_factory=dict)
+    # F-383 C3: filename -> factors of each cascade channel, for
+    # verify.run_correction_gate(composition_inputs=...).
+    composition_inputs: Dict[str, Tuple[np.ndarray, ...]] = field(default_factory=dict)
 
 
 def _channel_number(venue_key: str) -> int:
@@ -300,6 +303,9 @@ def generate_venue_filters(
             bundle.speaker_files[k]: (np.asarray(acoustic_irs[k], dtype=np.float64),
                                       shaped[k], speakers[k])
             for k in speakers},
+        composition_inputs=composition_inputs_by_file(
+            bundle.profile, bundle.identities, bundle.speaker_files,
+            correction_filters=shaped, n_taps=n_taps, sr=sr),
     )
 
 

@@ -1068,7 +1068,9 @@ class MeasurementSession:
         from room_correction.correction import (
             correction_from_measurement, require_correctable,
         )
-        from room_correction.generate_profile_filters import generate_profile_filters
+        from room_correction.generate_profile_filters import (
+            composition_inputs_by_file, generate_profile_filters,
+        )
         from room_correction.export import export_filter
         from room_correction.verify import (
             gate_summary, mandatory_hpf_by_file, run_correction_gate,
@@ -1197,7 +1199,10 @@ class MeasurementSession:
                 filenames[k]: (measured_irs[k], c, profile["speakers"][k])
                 for k, c in (correction_filters or {}).items()},
             mandatory_hpf_hz=mandatory_hpf_by_file(profile, identities, filenames),
-            expected_taps=n_taps, expected_sr=sr, target_curve=target_curve)
+            expected_taps=n_taps, expected_sr=sr, target_curve=target_curve,
+            composition_inputs=composition_inputs_by_file(
+                profile, identities, filenames,
+                correction_filters=correction_filters, n_taps=n_taps, sr=sr))
         verifications = []
         for name in sorted(output_paths):
             ch_result = {"channel": name,

@@ -345,7 +345,8 @@ def run_venue_pipeline(args):
             stage.path, bundle.expected_files(),
             closed_loop_inputs=result.closed_loop_inputs,
             mandatory_hpf_hz=bundle.mandatory_hpf_by_file(),
-            target_curve=bundle.profile.get("target_curve", "flat"))
+            target_curve=bundle.profile.get("target_curve", "flat"),
+            composition_inputs=result.composition_inputs)
         missing = set(bundle.expected_files()) - set(paths)
         if missing:
             print(f"Missing outputs: {sorted(missing)}", file=sys.stderr)
