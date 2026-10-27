@@ -2,13 +2,14 @@
 # 2-way active crossover at 200Hz, LR4-equivalent (24 dB/oct) as FIR.
 #
 # Single sub configuration -- AUX2 only. AUX3 (sub2 slot) is spare,
-# handled at the venue config level (dirac.wav, permanently muted).
+# handled at the venue config level (zero.wav, all-zero FIR = muted;
+# a dirac.wav would pass audio through).
 #
 # Channel assignment (USBStreamer AUX0-AUX7):
 #   AUX0 = Markaudio CHN-50P Left  (HPF 200Hz LR4 min-phase FIR)
 #   AUX1 = Markaudio CHN-50P Right (HPF 200Hz LR4 min-phase FIR)
 #   AUX2 = Dayton Ultimax UMII18-22 (LPF 200Hz LR4 min-phase FIR, mono sum L+R)
-#   AUX3 = spare (not defined in this profile -- venue config assigns dirac.wav)
+#   AUX3 = spare (not defined in this profile -- venue config assigns zero.wav)
 #   AUX4 = HP Left          (monitoring -- not in profile)
 #   AUX5 = HP Right         (monitoring -- not in profile)
 #   AUX6 = IEM Left         (singer IEM -- not in profile)

@@ -1,7 +1,8 @@
 # Venue config: Markaudio CHN-50P mains + Dayton Ultimax UMII18-22 sub.
 #
 # 200Hz crossover, LR4-equivalent (24 dB/oct) minimum-phase FIR.
-# Single sub on ch 3 (AUX2). Ch 4 (AUX3) is spare, permanently muted.
+# Single sub on ch 3 (AUX2). Ch 4 (AUX3) is spare, muted: zero.wav (all-zero
+# FIR; a dirac.wav would pass audio through).
 #
 # Speaker profile: configs/speakers/profiles/2way-200hz-markaudio-ultimax.yml
 # Sub identity: configs/speakers/identities/dayton-ultimax-umii18-22-sealed-120l.yml
@@ -16,10 +17,16 @@
 # Gain values:
 #   Mains (-60 dB): production default from C-005 (thermal safety).
 #   Sub (-64 dB): production default from C-005.
-#   Spare (-120 dB): belt-and-suspenders mute per Architect guidance.
-#     The D-063 audio gate (Mult=0.0) is the primary mute mechanism,
-#     but -120 dB gain ensures the spare channel stays silent even if
-#     the gate is accidentally opened.
+#   Spare (-120 dB): zero.wav (all-zero FIR) IS the mute: for any finite
+#     input the channel outputs silence whatever the gain or gate state.
+#     NaN input is not covered (0 x NaN is NaN, F-349); that case stays
+#     bounded by the amp level cap H. -120 dB is a
+#     second layer (belt-and-suspenders, per Architect guidance), together
+#     with the D-063 audio gate (Mult=0.0). A dirac.wav is NOT a mute; it
+#     passes audio through.
+#     `coefficients:` is metadata: the convolver always loads
+#     /etc/pi4audio/coeffs/combined_sub2_lp.wav, which the venue WAV set
+#     (configs/coeffs/markaudio-ultimax-200hz/) ships as a copy of zero.wav.
 #   HP/IEM (0 dB): unity gain, dirac passthrough.
 
 name: "markaudio-ultimax-200hz"
@@ -41,7 +48,7 @@ channels:
   4_sub2_lp:
     gain_db: -120
     delay_ms: 0
-    coefficients: "dirac.wav"
+    coefficients: "zero.wav"
   5_eng_l:
     gain_db: 0
     delay_ms: 0

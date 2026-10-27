@@ -49,6 +49,8 @@ N_TAPS = 16384
 RC_DIR = Path(__file__).resolve().parents[1]
 REPO_ROOT = RC_DIR.parents[1]
 VENUE = REPO_ROOT / "configs" / "venues" / "markaudio-ultimax-200hz.yml"
+# Both venue configs that use this profile (US-173).
+VENUES = [VENUE, REPO_ROOT / "configs" / "venues" / "home-lab-chn50p-ultimax.yml"]
 PROFILE = REPO_ROOT / "configs" / "speakers" / "profiles" / "2way-200hz-markaudio-ultimax.yml"
 
 SCENARIOS = ["home_lab", "small_club", "large_hall", "outdoor_tent"]
@@ -192,9 +194,55 @@ class TestAC1Outputs:
         assert mapping[1] == ("combined_left_hp.wav", "sat_left")
         assert mapping[2] == ("combined_right_hp.wav", "sat_right")
         assert mapping[3] == ("combined_sub1_lp.wav", "sub1")
-        for n in range(4, 9):
+        assert mapping[4] == ("zero.wav", None)
+        for n in range(5, 9):
             assert mapping[n] == ("dirac.wav", None)
         assert bundle.expected_files() == EXPECTED_FILES
+
+    @pytest.mark.parametrize("venue_path", VENUES, ids=lambda p: p.stem)
+    def test_both_venue_configs_load(self, venue_path):
+        b = vp.load_venue_bundle(venue_path, PROFILE)
+        mapping = {c.number: (c.coefficients, c.speaker_key) for c in b.channels}
+        assert mapping[4] == ("zero.wav", None)
+        assert b.expected_files() == EXPECTED_FILES
+
+    @staticmethod
+    def _exported(monkeypatch, result, out):
+        names = []
+        real = vp.export_filter
+
+        def spy(fir, path, **kw):
+            names.append(os.path.basename(path))
+            return real(fir, path, **kw)
+        monkeypatch.setattr(vp, "export_filter", spy)
+        vp.write_venue_filters(result, str(out))
+        return sorted(names)
+
+    def test_nothing_written_for_mute_channel(self, monkeypatch, tmp_path, bundle, home_lab):
+        # Ruling v3 item 2(a): the mute file is the committed
+        # configs/coeffs/zero.wav only; dirac.wav is there because ch 5-8 name it.
+        _, result = home_lab
+        assert "zero.wav" not in result.filters
+        assert "zero.wav" not in bundle.expected_files()
+        assert self._exported(monkeypatch, result, tmp_path) == sorted(EXPECTED_FILES)
+        assert sorted(p.name for p in tmp_path.iterdir()) == sorted(EXPECTED_FILES)
+
+    def test_no_dirac_without_dirac_channel(self, monkeypatch, tmp_path, bundle, home_lab):
+        # Ruling v3 item 2(b): only ch 4 is speakerless (zero.wav), nothing
+        # names dirac.wav, so neither dirac.wav nor anything for ch 4 is written.
+        import copy
+        sim, _ = home_lab
+        venue = copy.deepcopy(bundle.venue)
+        for key in [k for k, v in venue["channels"].items() if v["coefficients"] == "dirac.wav"]:
+            del venue["channels"][key]
+        only_mute = dataclasses.replace(
+            bundle, venue=venue, channels=vp.build_channel_map(venue, bundle.profile))
+        assert [c.number for c in only_mute.channels if c.speaker_key is None] == [4]
+        assert "dirac.wav" not in only_mute.expected_files()
+        result = vp.generate_venue_filters(only_mute, sim.measured_irs)
+        fir_files = sorted(k for k, v in EXPECTED_FILES.items() if v == "fir")
+        assert self._exported(monkeypatch, result, tmp_path) == fir_files
+        assert sorted(p.name for p in tmp_path.iterdir()) == fir_files
 
     def test_every_expected_file_written_float32(self, home_lab_dir):
         assert sorted(p.name for p in home_lab_dir.glob("*.wav")) == sorted(EXPECTED_FILES)
@@ -296,8 +344,23 @@ class TestChannelMapFailsClosed:
 
     def test_speaker_on_dirac_channel(self, bundle):
         venue, profile = self._configs(bundle)
-        profile["speakers"]["sub1"]["channel"] = 3      # venue ch 4 = dirac
-        with pytest.raises(ValueError):
+        del venue["channels"]["3_sub1_lp"]              # else ch 3 fails first
+        profile["speakers"]["sub1"]["channel"] = 4      # venue ch 5 = dirac
+        with pytest.raises(ValueError, match="dirac passthrough"):
+            vp.build_channel_map(venue, profile)
+
+    def test_speaker_on_mute_channel(self, bundle):
+        venue, profile = self._configs(bundle)
+        del venue["channels"]["3_sub1_lp"]              # else ch 3 fails first
+        profile["speakers"]["sub1"]["channel"] = 3      # venue ch 4 = zero.wav
+        with pytest.raises(ValueError, match="muted"):
+            vp.build_channel_map(venue, profile)
+
+    def test_unknown_file_without_speaker(self, bundle):
+        # Only dirac.wav and zero.wav may go without a speaker.
+        venue, profile = self._configs(bundle)
+        venue["channels"]["4_sub2_lp"]["coefficients"] = "combined_sub2_lp.wav"
+        with pytest.raises(ValueError, match="no profile speaker"):
             vp.build_channel_map(venue, profile)
 
     def test_fir_channel_without_speaker(self, bundle):
@@ -956,7 +1019,8 @@ class TestCLI:
                         "--scenario", "home_lab", "--output-dir", str(out))
         assert proc.returncode == 0, proc.stderr
         assert "ch 3 3_sub1_lp: combined_sub1_lp.wav <- sub1" in proc.stdout
-        assert "ch 4 4_sub2_lp: dirac.wav <- passthrough" in proc.stdout
+        assert "ch 4 4_sub2_lp: muted (zero.wav, not generated)" in proc.stdout
+        assert "ch 5 5_eng_l: dirac.wav <- passthrough" in proc.stdout
         assert "RESULT: ALL CHECKS PASSED" in proc.stdout
         assert "Known limit" in proc.stdout
         assert "VERIFY FAILED" not in proc.stderr

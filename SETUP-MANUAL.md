@@ -1904,8 +1904,8 @@ When troubleshooting audio issues, work through the signal path from hardware up
 to application level.
 
 ```bash
-# 1. Check if USBStreamer is recognized by ALSA
-aplay -l
+# 1. Check that ALSA sees the USBStreamer (read-only)
+cat /proc/asound/cards
 # Should list the USBStreamer
 
 # 2. Check PipeWire status
@@ -1921,14 +1921,69 @@ pw-link -l
 # 5. Check GraphManager status
 systemctl --user status pi4audio-graph-manager
 
-# 6. Check audio gate status (D-063: all muted at startup)
+# 6. Check audio gate status (D-063: gate closed and all gains 0 at startup)
 curl -sk https://localhost:8080/api/v1/venue/current | jq
-# If gate is closed, open it via web UI or:
-curl -sk -X POST https://localhost:8080/api/v1/venue/gate/open | jq
+# A closed gate is the safe default, not a fault. Do NOT open the gate as a
+# troubleshooting step. Opening it belongs to the pre-flight in
+# docs/operations/safety.md and only after its checklist passes.
 
-# 7. Test direct ALSA output (bypasses PipeWire entirely)
-speaker-test -D hw:1,0 -c 8 -r 48000 -t sine
+# 7. No direct hardware test (step 1 checks that ALSA sees the USBStreamer)
+# Never play audio straight to the hardware device (speaker-test,
+# aplay -D hw:...). That bypasses PipeWire, and with it the crossover, the
+# D-063 gains and the gate. See docs/operations/safety.md.
 ```
+
+### "No target node available" from pw-play, paplay or a browser
+
+This is expected. mugge never routes playback automatically (F-318):
+WirePlumber refuses to link any playback stream, so no stream can reach
+the USBStreamer past the crossover, the gains and the gate. `pw-play` and
+`paplay` exit with "no target node available"; a browser or other
+desktop app plays nothing.
+
+To make sound, use a path that GraphManager links:
+
+- the web UI Test tab (signal-gen) for test signals. It is the only
+  sanctioned way to check the speakers (amps stay off until the AMPS-ON
+  list holds; until then the test signal proves the digital path only,
+  not the speakers);
+- Mixxx in DJ mode or Reaper in Live mode (select the mode first),
+  started with `pw-jack`. GraphManager creates their links when they
+  appear in the graph.
+
+To confirm that the F-318 block is what stopped the stream:
+
+```bash
+journalctl --user -u wireplumber | grep F-318
+# Expect one line per blocked stream:
+# F-318: denied auto-link of stream node.id=... node.name=... application.name=... to target node.name=...
+```
+
+`application.name` tells you which app was blocked. If there is no F-318
+line, the block is not the cause; continue with "No Sound Output" above.
+
+Never create or remove links by hand with `pw-link`, `jack_connect` or a
+patchbay (qpwgraph, Helvum).
+GraphManager owns every link. On all 8 USBStreamer playback ports the
+only allowed source is `pi4audio-convolver-out`; a hand-made link into the
+USBStreamer bypasses the crossover, the D-063 gains and the gate and can
+send full-scale audio to the amplifiers or the in-ear monitors. `pw-link -l`
+(listing only) is safe. See the F-318 rule in `docs/operations/safety.md`.
+
+### Changing the sound hardware in Mixxx or Reaper does not silence the output
+
+This is expected. Every JACK app runs with `jack.self-connect-mode =
+ignore-external` (`configs/pipewire/80-jack-no-autoconnect.conf`, F-318,
+US-173), so an app cannot connect its own ports to another app's or
+device's ports. The call does nothing and still reports success.
+GraphManager makes the links when the app appears in the graph.
+
+On PipeWire 1.6.2 the same holds when an app removes a link. Changing
+the sound hardware or the outputs in Mixxx's or Reaper's preferences
+does not silence the output: audio keeps flowing through the GraphManager
+links, or resumes as soon as GraphManager re-links the app.
+Do not use an app's audio settings to silence the output: use the app's
+own volume or master fader, and in an emergency the amp power switches.
 
 ### Xruns / Audio Glitches
 
