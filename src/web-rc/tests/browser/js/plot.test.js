@@ -138,6 +138,40 @@ export async function test_draw_repeatability_colours() {
   assert(!columnHas(ok, x(80, 160), h, 0), "and not red");
 }
 
+/** How many columns x0..x1 of row y are white (the limit lines). */
+function whiteIn(ctx, y, x0, x1) {
+  const px = ctx.getImageData(x0, y, x1 - x0, 1).data;
+  let k = 0;
+  for (let i = 0; i < px.length; i += 4) {
+    if (px[i] > 150 && px[i + 1] > 150 && px[i + 2] > 150) k++;
+  }
+  return k;
+}
+
+/** UX 866c44ff: the limit as dashed lines at +-limit, over the band only. */
+export async function test_draw_repeatability_limit_lines() {
+  const w = 300, h = 120;
+  const ctx = canvas(w, h);
+  const freqs = [20, 40, 80, 160, 320, 640];
+  drawRepeatability(ctx, w, h, { freqs, diffDb: freqs.map(() => 0.2),
+    band: [40, 320], limitDb: 1.0 }, COLORS);
+  const pw = w - PAD.left - PAD.right, ph = h - PAD.top - PAD.bottom;
+  const x = (f) => Math.round(logX(f, 20, 640, PAD.left, pw));
+  for (const v of [1, -1]) {
+    const y = Math.round(linY(v, -3, 3, PAD.top, ph));
+    const inside = whiteIn(ctx, y, x(40) + 2, x(320) - 2);
+    const span = x(320) - x(40) - 4;
+    assert(inside > span / 3 && inside < span * 0.9,
+      v + " dB: dashed over the band, " + inside + " of " + span);
+    eq(whiteIn(ctx, y, PAD.left + 1, x(40) - 2), 0, "not below the band");
+    eq(whiteIn(ctx, y, x(320) + 2, PAD.left + pw - 1), 0,
+      "not above the band");
+  }
+  // Nothing white elsewhere: the trace stays in its class colour.
+  eq(whiteIn(ctx, Math.round(linY(0.2, -3, 3, PAD.top, ph)), x(40) + 2,
+    x(320) - 2), 0);
+}
+
 /** AC8c: target, measured and predicted each drawn at its own level. */
 export async function test_draw_prediction_curves() {
   const w = 300, h = 160;

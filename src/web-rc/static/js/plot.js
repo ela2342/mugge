@@ -184,12 +184,27 @@ export function drawImpulse(ctx, w, h, plot, colors) {
   }
 }
 
-/** The AC8a trace, coloured per point by repeatabilityClasses. */
+/** The AC8a trace, coloured per point by repeatabilityClasses, and the limit. */
 export function drawRepeatability(ctx, w, h, plot, colors) {
   const box = freqAxis(frame(ctx, w, h, colors), plot.freqs);
   const lo = -3 * plot.limitDb, hi = 3 * plot.limitDb;
   dbTicks(ctx, box, lo, hi, plot.limitDb, colors);
   freqTicks(ctx, box, colors);
+  // The limit as dashed lines over the checked band, so "over" shows
+  // without the colours (UX 866c44ff).
+  const xa = fx(box, Math.max(plot.band[0], box.fLo));
+  const xb = fx(box, Math.min(plot.band[1], box.fHi));
+  ctx.strokeStyle = colors.line;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 3]);
+  for (const v of [plot.limitDb, -plot.limitDb]) {
+    const y = Math.round(linY(v, lo, hi, box.y0, box.ph)) + 0.5;
+    ctx.beginPath();
+    ctx.moveTo(xa, y);
+    ctx.lineTo(xb, y);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
   const cls = repeatabilityClasses(plot.freqs, plot.diffDb, plot.band,
     plot.limitDb);
   ctx.lineWidth = 1.5;

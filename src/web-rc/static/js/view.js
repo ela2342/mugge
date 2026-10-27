@@ -54,10 +54,11 @@ export const TEXT = Object.freeze({
   // AC11 result plots. No phase and no "coherence" (Architect Q4).
   PLOT_MEASURED: "Measured response, 1/6-octave smoothed (0 dB = the " +
     "correction's reference level)",
-  PLOT_IMPULSE: "Impulse response (0 ms = the sweep left this computer; " +
-    "the peak is at the delay above)",
+  PLOT_IMPULSE: "Impulse response (0 ms = when the sweep was sent to the " +
+    "audio output; the peak is at the delay above)",
   PLOT_PREDICTION: "Predicted response after correction — predicted, not " +
     "measured",
+  PLOT_NO_PREDICTION: "No prediction plot for this channel.",
   LEGEND_TARGET: "Target",
   LEGEND_MEASURED: "Measured",
   LEGEND_PREDICTED: "Predicted",
@@ -188,18 +189,21 @@ export function reportChannels(flow) {
 /** The AC8a trace's caption: what the colours mean, and its band. */
 export function repeatabilityCaption(rep) {
   const limit = rep.limit_db.toFixed(1);
-  return "Repeatability: measurement 1 minus measurement 2. Green: within " +
-    "±" + limit + " dB; red: over " + limit + " dB; grey: outside the " +
-    "checked " + rep.band_hz[0] + "-" + rep.band_hz[1] + " Hz.";
+  return "Repeatability: capture 1 minus capture 2. Green: within ±" +
+    limit + " dB; red: over " + limit + " dB (dashed lines: the limit); " +
+    "grey: outside the checked band (" + rep.band_hz[0] + "-" +
+    rep.band_hz[1] + " Hz).";
 }
 
 /**
  * The result step's plots (AC11): what plot.js draws, with captions.
- * prediction is null when the analysis has no predicted curve.
+ * prediction is null when the analysis has no predicted curve;
+ * noPrediction is then the line shown in its place.
  */
 export function resultPlots(r) {
   if (!r) return null;
   const rep = r.repeatability, p = r.prediction;
+  const curve = !!(p && p.freqs && p.freqs.length > 1);
   return {
     measured: { caption: TEXT.PLOT_MEASURED, freqs: r.measured.freqs,
       db: r.measured.db },
@@ -207,13 +211,14 @@ export function resultPlots(r) {
       sampleRate: LIMITS.REQUIRED_RATE },
     repeatability: { caption: repeatabilityCaption(rep), freqs: rep.freqs,
       diffDb: rep.diff_db, band: rep.band_hz, limitDb: rep.limit_db },
-    prediction: p && p.freqs && p.freqs.length > 1 ? {
+    prediction: curve ? {
       caption: TEXT.PLOT_PREDICTION, freqs: p.freqs,
       measuredDb: p.measured_db, predictedDb: p.predicted_db,
       targetDb: p.target_db,
       legend: { target: TEXT.LEGEND_TARGET, measured: TEXT.LEGEND_MEASURED,
         predicted: TEXT.LEGEND_PREDICTED },
     } : null,
+    noPrediction: curve ? "" : TEXT.PLOT_NO_PREDICTION,
   };
 }
 

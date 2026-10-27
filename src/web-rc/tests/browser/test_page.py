@@ -296,12 +296,19 @@ def test_result_step_draws_the_plots(fake_page, page_url):
         "Measured response, 1/6-octave smoothed (0 dB = the correction's "
         "reference level)")
     expect(page.locator("#plot-repeatability-caption")).to_contain_text(
-        "grey: outside the checked 80-16000 Hz.")
+        "grey: outside the checked band (80-16000 Hz).")
     expect(page.locator("#plot-prediction-figure")).to_be_visible()
+    expect(page.locator("#plot-prediction-none")).to_be_hidden()
+    expect(page.locator("#plot-impulse-caption")).to_have_text(
+        "Impulse response (0 ms = when the sweep was sent to the audio "
+        "output; the peak is at the delay above)")
     expect(page.locator("#plot-prediction-caption")).to_have_text(
         "Predicted response after correction — predicted, not measured")
     assert "phase" not in page.text_content("#step-result").lower()
     assert "coheren" not in page.text_content("#step-result").lower()
     page.evaluate(_RESULT_JS, [0, False])
     expect(page.locator("#plot-prediction-figure")).to_be_hidden()
+    expect(page.locator("#plot-prediction-none")).to_be_visible()
+    expect(page.locator("#plot-prediction-none")).to_have_text(
+        "No prediction plot for this channel.")
     assert errors == []

@@ -495,6 +495,8 @@ export class App {
     this._draw("plot-repeatability", drawRepeatability, plots.repeatability,
       colors);
     this.$("plot-prediction-figure").hidden = !plots.prediction;
+    this.$("plot-prediction-none").hidden = !plots.noPrediction;
+    this.$("plot-prediction-none").textContent = plots.noPrediction;
     if (plots.prediction) {
       this._draw("plot-prediction", drawPrediction, plots.prediction, colors);
     }

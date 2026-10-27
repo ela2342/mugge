@@ -282,9 +282,12 @@ export async function test_measure_progress_and_result() {
   eq(p.repeatability.diffDb, c.repeatability.diff_db);
   eq(p.repeatability.band, c.repeatability.band_hz);
   eq(p.repeatability.limitDb, 1.0);
-  eq(p.repeatability.caption, "Repeatability: measurement 1 minus " +
-    "measurement 2. Green: within ±1.0 dB; red: over 1.0 dB; grey: outside " +
-    "the checked 30-200 Hz.");
+  eq(p.repeatability.caption, "Repeatability: capture 1 minus capture 2. " +
+    "Green: within ±1.0 dB; red: over 1.0 dB (dashed lines: the limit); " +
+    "grey: outside the checked band (30-200 Hz).");
+  eq(p.impulse.caption, "Impulse response (0 ms = when the sweep was sent " +
+    "to the audio output; the peak is at the delay above)");
+  eq(p.noPrediction, "", "a curve: no placeholder line");
   eq(p.prediction.freqs, pf);
   eq(p.prediction.measuredDb[0], 4);
   eq(p.prediction.predictedDb[0], 1);
@@ -305,12 +308,17 @@ export async function test_result_plots_without_a_curve() {
   const r = { ...curves(), prediction: { passed: false, freqs: new Float64Array(0) } };
   eq(resultPlots(r).prediction, null);
   eq(resultPlots({ ...r, prediction: null }).prediction, null);
+  // UX 866c44ff: a line in its place, not a gap.
+  eq(resultPlots(r).noPrediction, "No prediction plot for this channel.");
+  eq(resultPlots({ ...r, prediction: null }).noPrediction,
+    TEXT.PLOT_NO_PREDICTION);
   assert(resultPlots(r).measured, "the other plots stay");
 }
 
 /** Architect Q4: the result step names no phase and no coherence. */
 export async function test_result_plots_name_no_phase() {
   const texts = [TEXT.PLOT_MEASURED, TEXT.PLOT_IMPULSE, TEXT.PLOT_PREDICTION,
+    TEXT.PLOT_NO_PREDICTION,
     TEXT.LEGEND_TARGET, TEXT.LEGEND_MEASURED, TEXT.LEGEND_PREDICTED,
     repeatabilityCaption(curves().repeatability)];
   for (const t of texts) {
