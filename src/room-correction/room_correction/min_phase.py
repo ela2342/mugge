@@ -3,17 +3,27 @@ Minimum-phase checks for correction inputs, designed factors and combined
 FIRs (F-383 A2).
 
 minimum_phase_residual_db() compares an FIR with the minimum-phase FIR of a
-reference magnitude: its own |H| by default, or a design magnitude. Its
-settings are fixed here, never taken from the generator under test, so a
-generator's own floor or FFT grid cannot make it pass by construction.
+reference magnitude: its own |H| by default, or a design magnitude. Its FFT
+grid is fixed here, never taken from the generator under test, so a
+generator's own grid cannot make it pass by construction. For a design
+reference the floor is the generator's own design-floor constant (F-383 R6d
+A4): a reference below the floor the generator can realise is float noise.
+
+check_design_residual() is the fail-closed check each crossover generator
+runs on its output against its own design magnitude (F-383 A1b), for
+filters of at least A1B_MIN_TAPS taps (F-383 Q4).
 
 This is not the deployed venue gate. closed_loop.minimum_phase_residual_db()
 and verify.verify_minimum_phase_residual() keep their own settings.
 """
 
+import logging
+
 import numpy as np
 
 from . import dsp_utils
+
+log = logging.getLogger(__name__)
 
 
 SAMPLE_RATE = dsp_utils.SAMPLE_RATE
@@ -22,6 +32,17 @@ TAIL_FRACTION = 0.05
 # within 1 dB of the design's maximum there.
 PASSBAND_BAND_HZ = (20.0, 20000.0)
 PASSBAND_WITHIN_DB = 1.0
+# A1b: a generated factor must match the minimum-phase FIR of its design
+# magnitude to this residual, on a grid of this oversample.
+DESIGN_RESIDUAL_LIMIT_DB = -40.0
+DESIGN_RESIDUAL_OVERSAMPLE = 16
+# A1b is calibrated at the production length (F-383 Q4). Below it the design
+# IR outlasts n and the fade dominates the residual, so A1b does not apply.
+A1B_MIN_TAPS = 16384
+
+
+class MinimumPhaseError(ValueError):
+    """A generated FIR is not the minimum-phase FIR of its design (F-383 A1b)."""
 
 
 def _as_fir(h):
@@ -107,3 +128,32 @@ def tail_peak_db(h, fraction=TAIL_FRACTION):
     n_tail = max(1, int(round(len(h) * fraction)))
     tail = np.max(np.abs(h[-n_tail:]))
     return float(20.0 * np.log10(max(tail / np.max(np.abs(h)), 1e-300)))
+
+
+def check_design_residual(h, design_mag, floor_rel, what, sr=SAMPLE_RATE):
+    """
+    Raise MinimumPhaseError unless h matches its design's minimum-phase FIR.
+
+    The residual is minimum_phase_residual_db() against *design_mag* on the
+    DESIGN_RESIDUAL_OVERSAMPLE grid, with *floor_rel* the generator's own
+    design-floor constant. *what* names the filter in the error. A filter
+    shorter than A1B_MIN_TAPS is not checked.
+
+    Returns
+    -------
+    float or None
+        The residual in dB, when it is <= DESIGN_RESIDUAL_LIMIT_DB; None
+        when the check was skipped.
+    """
+    if len(h) < A1B_MIN_TAPS:
+        log.info("%s: A1b skipped, %d taps < A1B_MIN_TAPS %d", what, len(h), A1B_MIN_TAPS)
+        return None
+    residual = minimum_phase_residual_db(
+        h, design_mag=design_mag, oversample=DESIGN_RESIDUAL_OVERSAMPLE,
+        floor_rel=floor_rel, sr=sr)
+    if not residual <= DESIGN_RESIDUAL_LIMIT_DB:
+        raise MinimumPhaseError(
+            f"{what}: residual vs the minimum-phase FIR of its design is "
+            f"{residual:.1f} dB, above the {DESIGN_RESIDUAL_LIMIT_DB:.0f} dB limit"
+        )
+    return residual

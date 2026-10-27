@@ -26,7 +26,7 @@ import numbers
 import numpy as np
 import scipy.signal
 
-from . import dsp_utils
+from . import dsp_utils, min_phase
 
 
 SAMPLE_RATE = dsp_utils.SAMPLE_RATE
@@ -43,6 +43,10 @@ LR_SLOPES_DB_PER_OCT = (24.0, 48.0)
 # there corrupts the Hilbert-derived phase, so the LR path floors at 1e-20.
 _LR_LOG_FLOOR = 1e-20
 _LEGACY_LOG_FLOOR = 1e-10
+
+# The subsonic designs on a 64x grid at _LR_LOG_FLOOR (F-383 R6d A1, F1-64):
+# its steep knee is not minimum phase on the shared 4x grid at 1e-10.
+SUBSONIC_DESIGN_OVERSAMPLE = 64
 
 
 class CrossoverSpecError(ValueError):
@@ -195,7 +199,8 @@ def generate_subsonic_filter(
     provides a steep highpass rolloff below the specified frequency.
 
     The filter uses a minimum-phase design to avoid pre-ringing, consistent
-    with the rest of the FIR pipeline.
+    with the rest of the FIR pipeline. It is synthesised on an FFT grid of
+    SUBSONIC_DESIGN_OVERSAMPLE x n_taps with the log floor _LR_LOG_FLOOR.
 
     Parameters
     ----------
@@ -219,6 +224,9 @@ def generate_subsonic_filter(
     ------
     ValueError
         If slope_db_per_oct < 24 (insufficient protection).
+    min_phase.MinimumPhaseError
+        If the filter is not the minimum-phase FIR of its design (F-383 A1b;
+        checked when n_taps >= min_phase.A1B_MIN_TAPS).
     """
     if slope_db_per_oct < 24.0:
         raise ValueError(
@@ -226,13 +234,17 @@ def generate_subsonic_filter(
             f"excursion protection, got {slope_db_per_oct}"
         )
 
-    n_fft = dsp_utils.next_power_of_2(n_taps * 4)
+    n_fft = dsp_utils.next_power_of_2(n_taps * SUBSONIC_DESIGN_OVERSAMPLE)
     freqs = np.fft.rfftfreq(n_fft, d=1.0 / sr)
 
-    # Design target magnitude: highpass at hpf_freq
-    magnitude = _design_crossover_magnitude(freqs, hpf_freq, 'highpass', slope_db_per_oct)
+    def design(f):
+        return _design_crossover_magnitude(f, hpf_freq, 'highpass', slope_db_per_oct)
 
-    subsonic_filter = _magnitude_to_min_phase_fir(magnitude, n_fft, n_taps)
+    # Design target magnitude: highpass at hpf_freq
+    magnitude = design(freqs)
+
+    subsonic_filter = _magnitude_to_min_phase_fir(
+        magnitude, n_fft, n_taps, floor=_LR_LOG_FLOOR)
 
     # Normalize: passband (above hpf_freq) should be at unity
     passband_freqs, passband_mag = dsp_utils.rfft_magnitude(subsonic_filter)
@@ -242,6 +254,9 @@ def generate_subsonic_filter(
         if passband_level > 0:
             subsonic_filter /= passband_level
 
+    min_phase.check_design_residual(
+        subsonic_filter, design, _LR_LOG_FLOOR,
+        f"subsonic {hpf_freq} Hz {slope_db_per_oct} dB/oct", sr=sr)
     return subsonic_filter
 
 
@@ -359,6 +374,9 @@ def generate_bandpass_filter(
     ValueError
         If *low_freq* >= *high_freq*, or the alignment or an LR slope is
         unsupported.
+    min_phase.MinimumPhaseError
+        If the filter is not the minimum-phase FIR of its design (F-383 A1b;
+        checked when n_taps >= min_phase.A1B_MIN_TAPS).
     """
     if low_freq >= high_freq:
         raise ValueError(
@@ -387,13 +405,17 @@ def generate_bandpass_filter(
     if lo >= hi:
         lo, hi = low_freq * 1.2, high_freq * 0.8
     if alignment is not None:
-        return _normalise_to_target(fir, band_magnitude, lo, hi, sr)
-    mask = (passband_freqs >= lo) & (passband_freqs <= hi)
-    if np.any(mask):
-        passband_level = np.mean(passband_mag[mask])
-        if passband_level > 0:
-            fir /= passband_level
+        fir = _normalise_to_target(fir, band_magnitude, lo, hi, sr)
+    else:
+        mask = (passband_freqs >= lo) & (passband_freqs <= hi)
+        if np.any(mask):
+            passband_level = np.mean(passband_mag[mask])
+            if passband_level > 0:
+                fir /= passband_level
 
+    min_phase.check_design_residual(
+        fir, band_magnitude, _log_floor(alignment),
+        f"bandpass {low_freq}-{high_freq} Hz", sr=sr)
     return fir
 
 
@@ -444,6 +466,9 @@ def generate_crossover_filter(
     ValueError
         If filter_type is unknown, bandpass parameters are invalid, or the
         alignment or an LR slope is unsupported.
+    min_phase.MinimumPhaseError
+        If the filter is not the minimum-phase FIR of its design (F-383 A1b;
+        checked when n_taps >= min_phase.A1B_MIN_TAPS).
     """
     if filter_type == 'bandpass':
         if crossover_freq_high is None:
@@ -473,9 +498,12 @@ def generate_crossover_filter(
     n_fft = dsp_utils.next_power_of_2(n_taps * 4)
     freqs = np.fft.rfftfreq(n_fft, d=1.0 / sr)
 
+    def design(f):
+        return _design_crossover_magnitude(
+            f, crossover_freq, filter_type, slope_db_per_oct, alignment, sr)
+
     # Design target magnitude
-    magnitude = _design_crossover_magnitude(
-        freqs, crossover_freq, filter_type, slope_db_per_oct, alignment, sr)
+    magnitude = design(freqs)
 
     fir = _magnitude_to_min_phase_fir(
         magnitude, n_fft, n_taps, floor=_log_floor(alignment))
@@ -486,20 +514,18 @@ def generate_crossover_filter(
         lo, hi = 20, crossover_freq * 0.5
 
     if alignment is not None:
-        return _normalise_to_target(
-            fir,
-            lambda f: _design_crossover_magnitude(
-                f, crossover_freq, filter_type, slope_db_per_oct, alignment, sr),
-            lo, hi, sr,
-        )
+        fir = _normalise_to_target(fir, design, lo, hi, sr)
+    else:
+        # Normalize: passband should be at 0dB (unity gain)
+        passband_freqs, passband_mag = dsp_utils.rfft_magnitude(fir)
+        mask = (passband_freqs >= lo) & (passband_freqs <= hi)
 
-    # Normalize: passband should be at 0dB (unity gain)
-    passband_freqs, passband_mag = dsp_utils.rfft_magnitude(fir)
-    mask = (passband_freqs >= lo) & (passband_freqs <= hi)
+        if np.any(mask):
+            passband_level = np.mean(passband_mag[mask])
+            if passband_level > 0:
+                fir /= passband_level
 
-    if np.any(mask):
-        passband_level = np.mean(passband_mag[mask])
-        if passband_level > 0:
-            fir /= passband_level
-
+    min_phase.check_design_residual(
+        fir, design, _log_floor(alignment),
+        f"{filter_type} {crossover_freq} Hz {slope_db_per_oct} dB/oct", sr=sr)
     return fir
