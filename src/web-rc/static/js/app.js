@@ -15,6 +15,10 @@ import {
 } from "./safety.js";
 import { BASE_SEED } from "./crest-plan.js";
 import {
+  MEASURED_DB, MEASURED_FFT, curveToBins, drawImpulse, drawPrediction,
+  drawRepeatability,
+} from "./plot.js";
+import {
   REPORT_FILE, channelLabel, reportChannels, viewModel,
 } from "./view.js";
 
@@ -44,6 +48,7 @@ export class App {
     this.limitText = "";
     this.tuningText = "";
     this._renderQueued = false;
+    this._plotted = null;
   }
 
   start() {
@@ -387,6 +392,7 @@ export class App {
     text("result-uncal", vm.result.uncalibrated);
     $("delay").textContent = vm.result.delay;
     $("prediction").textContent = vm.result.prediction;
+    if (vm.step === STEP.RESULT) this._plots(vm.result.plots);
     $("report").disabled = vm.result.downloads.length === 0;
     text("report-error", this.reportError);
     $("pi-note").textContent = vm.result.piNote;
@@ -457,6 +463,53 @@ export class App {
     const keep = sel.value;
     sel.replaceChildren(...want.map(([v, l]) => new Option(l, v)));
     if (want.some(([v]) => v === keep)) sel.value = keep;
+  }
+
+  /** AC11 plots; redrawn only for a new result or a new page width. */
+  _plots(plots) {
+    const key = [this.flow.run.result, this.$("plot-measured").clientWidth];
+    if (!plots || (this._plotted && key.every((k, i) => k === this._plotted[i]))) {
+      return;
+    }
+    this._plotted = key;
+    const css = getComputedStyle(this.doc.documentElement);
+    const v = (name) => css.getPropertyValue(name).trim();
+    const colors = {
+      bg: v("--bg-spectrum"), grid: v("--border"), label: v("--text-label"),
+      line: v("--text"), ok: v("--safe"), over: v("--danger"),
+      unchecked: v("--text-micro"), target: v("--text-dim"),
+      measured: v("--accent"), predicted: v("--primary"),
+    };
+    const m = plots.measured;
+    const rate = plots.impulse.sampleRate;
+    const renderer = window.PiAudioSpectrumRenderer.create({
+      dbMin: MEASURED_DB[0], dbMax: MEASURED_DB[1], freqLo: m.freqs[0],
+      freqHi: m.freqs[m.freqs.length - 1], fftSize: MEASURED_FFT,
+      sampleRate: rate, peakHold: false, autoRange: false,
+    });
+    renderer.init("plot-measured");
+    renderer.render(curveToBins(m.freqs, m.db, MEASURED_FFT, rate,
+      MEASURED_DB[0]), true);
+    this.$("plot-measured-caption").textContent = m.caption;
+    this._draw("plot-impulse", drawImpulse, plots.impulse, colors);
+    this._draw("plot-repeatability", drawRepeatability, plots.repeatability,
+      colors);
+    this.$("plot-prediction-figure").hidden = !plots.prediction;
+    if (plots.prediction) {
+      this._draw("plot-prediction", drawPrediction, plots.prediction, colors);
+    }
+  }
+
+  _draw(id, draw, plot, colors) {
+    const canvas = this.$(id);
+    const r = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(r.width * dpr);
+    canvas.height = Math.floor(r.height * dpr);
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw(ctx, r.width, r.height, plot, colors);
+    this.$(id + "-caption").textContent = plot.caption;
   }
 
   _channelOptions(channels, current) {

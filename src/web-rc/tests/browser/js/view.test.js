@@ -11,11 +11,22 @@ import {
 } from "../../../static/js/safety.js";
 import {
   REPORT_FILE, TEXT, ackOutputText, capText, channelLabel, micLevelText,
-  portConfirmText, predictionText, reportChannels, targetNotReachedText,
-  viewModel,
+  portConfirmText, predictionText, reportChannels, repeatabilityCaption,
+  resultPlots, targetNotReachedText, viewModel,
 } from "../../../static/js/view.js";
 
 const SR = 48000;
+
+/** The curve fields of an analysis result (webrc_pipeline.analyze). */
+function curves() {
+  const freqs = Float64Array.from([20, 40, 80, 160]);
+  return {
+    measured: { freqs, db: Float64Array.from([-3, 0, 1, -2]) },
+    ir: new Float64Array(64), irStartS: -0.1,
+    repeatability: { ok: true, band_hz: [30, 200], max_abs_db: 0.4,
+      limit_db: 1.0, freqs, diff_db: Float64Array.from([2, 0.4, -0.3, 0.1]) },
+  };
+}
 const OFF = { echoCancellation: false, noiseSuppression: false,
   autoGainControl: false };
 const AUDIO = { outputRate: SR, inputRate: SR, outputChannels: 2,
@@ -240,9 +251,14 @@ export async function test_measure_progress_and_result() {
   eq(viewModel(f).measure.progress, "Computing the filter… This can take up " +
     "to a minute the first time.");
   eq(viewModel(f).stopVisible, false, "no sound while computing");
+  const c = curves();
+  const pf = Float64Array.from([30, 60, 120]);
   f.analysisDone(a[1].token, { fileName: "sub.wav", wavBytes: new Uint8Array(1),
     channel: 1, role: ROLE.SUBWOOFER, delayS: 0.00425, calibrated: false,
-    prediction: { passed: true, band_hz: [30, 200] } });
+    prediction: { passed: true, band_hz: [30, 200], freqs: pf,
+      measured_db: Float64Array.from([4, 0, -4]),
+      predicted_db: Float64Array.from([1, 0, -1]),
+      target_db: Float64Array.from([0, 0, 0]) }, ...c });
   const vm = viewModel(f);
   eq(vm.step, STEP.RESULT);
   eq(vm.result.ready, "Filters ready — download");
@@ -254,11 +270,52 @@ export async function test_measure_progress_and_result() {
   eq(vm.result.prediction, "Predicted residual within 3 dB: PASS — " +
     "predicted, not measured, unverified until re-measured (checked over " +
     "30-200 Hz)");
+  // AC11 plots: the analysis curves as plot.js takes them.
+  const p = vm.result.plots;
+  eq(p.measured.freqs, c.measured.freqs);
+  eq(p.measured.db, c.measured.db);
+  eq(p.measured.caption, TEXT.PLOT_MEASURED);
+  eq(p.impulse.ir, c.ir);
+  eq(p.impulse.startS, -0.1);
+  eq(p.impulse.sampleRate, SR);
+  eq(p.repeatability.freqs, c.repeatability.freqs);
+  eq(p.repeatability.diffDb, c.repeatability.diff_db);
+  eq(p.repeatability.band, c.repeatability.band_hz);
+  eq(p.repeatability.limitDb, 1.0);
+  eq(p.repeatability.caption, "Repeatability: measurement 1 minus " +
+    "measurement 2. Green: within ±1.0 dB; red: over 1.0 dB; grey: outside " +
+    "the checked 30-200 Hz.");
+  eq(p.prediction.freqs, pf);
+  eq(p.prediction.measuredDb[0], 4);
+  eq(p.prediction.predictedDb[0], 1);
+  eq(p.prediction.targetDb[0], 0);
+  eq(JSON.stringify(p.prediction.legend), JSON.stringify(
+    { target: "Target", measured: "Measured", predicted: "Predicted" }),
+    "AC8c: the before curve is the measured one");
   eq(vm.result.downloads.length, 1);
   eq(vm.result.downloads[0].mark, "");
   eq(vm.level.canStart, true, "measure again from the result");
   eq(predictionText({ passed: false }).slice(0, 35),
     "Predicted residual within 3 dB: FAI");
+}
+
+/** AC11: no prediction plot without a predicted curve; no plots, no result. */
+export async function test_result_plots_without_a_curve() {
+  eq(resultPlots(null), null);
+  const r = { ...curves(), prediction: { passed: false, freqs: new Float64Array(0) } };
+  eq(resultPlots(r).prediction, null);
+  eq(resultPlots({ ...r, prediction: null }).prediction, null);
+  assert(resultPlots(r).measured, "the other plots stay");
+}
+
+/** Architect Q4: the result step names no phase and no coherence. */
+export async function test_result_plots_name_no_phase() {
+  const texts = [TEXT.PLOT_MEASURED, TEXT.PLOT_IMPULSE, TEXT.PLOT_PREDICTION,
+    TEXT.LEGEND_TARGET, TEXT.LEGEND_MEASURED, TEXT.LEGEND_PREDICTED,
+    repeatabilityCaption(curves().repeatability)];
+  for (const t of texts) {
+    assert(!/phase|coheren/i.test(t), t);
+  }
 }
 
 /** AC10/E2h: one report entry per filter, as the downloads name them. */

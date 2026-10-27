@@ -6,6 +6,7 @@
 <title>mugge room correction (standalone)</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="web-rc.css">
+<script src="js/spectrum-renderer.js"></script>
 <script type="module" src="js/app.js"></script>
 </head>
 <body class="webrc">
@@ -115,6 +116,22 @@
     <p id="result-uncal" hidden></p>
     <p id="delay"></p>
     <p id="prediction"></p>
+    <figure class="webrc-plot">
+      <figcaption id="plot-measured-caption"></figcaption>
+      <canvas id="plot-measured"></canvas>
+    </figure>
+    <figure class="webrc-plot">
+      <figcaption id="plot-impulse-caption"></figcaption>
+      <canvas id="plot-impulse"></canvas>
+    </figure>
+    <figure class="webrc-plot">
+      <figcaption id="plot-repeatability-caption"></figcaption>
+      <canvas id="plot-repeatability"></canvas>
+    </figure>
+    <figure id="plot-prediction-figure" class="webrc-plot">
+      <figcaption id="plot-prediction-caption"></figcaption>
+      <canvas id="plot-prediction"></canvas>
+    </figure>
     <ul id="downloads" class="webrc-plain"></ul>
     <p><button id="report" type="button">Download report</button></p>
     <p id="report-error" class="webrc-error" hidden></p>

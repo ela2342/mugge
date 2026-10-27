@@ -51,6 +51,16 @@ export const TEXT = Object.freeze({
   COMPUTING: "Computing the filter… This can take up to a minute the first time.",
   PREPARING: "Preparing the sweep…",
   PRE_DEVICE_CHANGE: "measured before a device change",              // E5b D4
+  // AC11 result plots. No phase and no "coherence" (Architect Q4).
+  PLOT_MEASURED: "Measured response, 1/6-octave smoothed (0 dB = the " +
+    "correction's reference level)",
+  PLOT_IMPULSE: "Impulse response (0 ms = the sweep left this computer; " +
+    "the peak is at the delay above)",
+  PLOT_PREDICTION: "Predicted response after correction — predicted, not " +
+    "measured",
+  LEGEND_TARGET: "Target",
+  LEGEND_MEASURED: "Measured",
+  LEGEND_PREDICTED: "Predicted",
 });
 
 /** The role as the setup radios name it (E2a), for the result and report. */
@@ -175,6 +185,38 @@ export function reportChannels(flow) {
   }));
 }
 
+/** The AC8a trace's caption: what the colours mean, and its band. */
+export function repeatabilityCaption(rep) {
+  const limit = rep.limit_db.toFixed(1);
+  return "Repeatability: measurement 1 minus measurement 2. Green: within " +
+    "±" + limit + " dB; red: over " + limit + " dB; grey: outside the " +
+    "checked " + rep.band_hz[0] + "-" + rep.band_hz[1] + " Hz.";
+}
+
+/**
+ * The result step's plots (AC11): what plot.js draws, with captions.
+ * prediction is null when the analysis has no predicted curve.
+ */
+export function resultPlots(r) {
+  if (!r) return null;
+  const rep = r.repeatability, p = r.prediction;
+  return {
+    measured: { caption: TEXT.PLOT_MEASURED, freqs: r.measured.freqs,
+      db: r.measured.db },
+    impulse: { caption: TEXT.PLOT_IMPULSE, ir: r.ir, startS: r.irStartS,
+      sampleRate: LIMITS.REQUIRED_RATE },
+    repeatability: { caption: repeatabilityCaption(rep), freqs: rep.freqs,
+      diffDb: rep.diff_db, band: rep.band_hz, limitDb: rep.limit_db },
+    prediction: p && p.freqs && p.freqs.length > 1 ? {
+      caption: TEXT.PLOT_PREDICTION, freqs: p.freqs,
+      measuredDb: p.measured_db, predictedDb: p.predicted_db,
+      targetDb: p.target_db,
+      legend: { target: TEXT.LEGEND_TARGET, measured: TEXT.LEGEND_MEASURED,
+        predicted: TEXT.LEGEND_PREDICTED },
+    } : null,
+  };
+}
+
 /** The measure step's progress line (W2). */
 export function progressText(flow) {
   const p = flow.run.pending;
@@ -274,6 +316,7 @@ function resultView(flow) {
     delay: r ? delayText(r.delayS) : "",
     uncalibrated: r && !r.calibrated ? UNCAL_RESULT : "",
     prediction: r ? predictionText(r.prediction) : "",
+    plots: resultPlots(r),
     piNote: TEXT.PI_NOTE,
     downloads: flow.downloads().map((d) => ({
       channel: d.channel,

@@ -236,3 +236,72 @@ def test_ack_checkboxes_gate_the_button(fake_page, page_url):
         expect(boxes.nth(i)).not_to_be_checked()
     expect(page.locator("#ack")).to_be_disabled()
     assert errors == []
+
+
+# A result as analyze returns it, set on the flow directly: the plots are
+# drawn from it by app.js with the shipped spectrum-renderer.js (AC11).
+_RESULT_JS = """([level, withPrediction]) => {
+    const app = window.__webrcApp, f = app.flow;
+    const n = 60, freqs = Float64Array.from({ length: n },
+        (_, i) => 20 * Math.pow(1000, i / (n - 1)));
+    const curve = (g) => Float64Array.from(freqs, (x, i) => g(x, i));
+    const ir = new Float64Array(19200);
+    ir[Math.round(0.105 * 48000)] = 0.8;
+    const r = {
+        fileName: "combined_ch1-fullrange-browser-generated.wav",
+        wavBytes: new Uint8Array(4), role: "fullrange", limitHz: 80,
+        channel: 0, delayS: 0.005, calibrated: false,
+        measured: { freqs, db: curve(() => level) },
+        ir, irStartS: -0.1,
+        repeatability: { ok: true, band_hz: [80, 16000], max_abs_db: 0.6,
+            limit_db: 1.0, freqs, diff_db: curve((x) => x < 80 ? 2 : 0.3) },
+        prediction: { passed: true, label: "", band_hz: [80, 16000],
+            freqs: withPrediction ? freqs : new Float64Array(0),
+            measured_db: curve(() => 3), predicted_db: curve(() => 1),
+            target_db: curve(() => 0) },
+    };
+    f.filters.set(0, { ...r, enclosure: "closed", preDeviceChange: false,
+        downloaded: false });
+    f.run.result = r;
+    f.step = "result";
+    app.render();
+    const drawn = (id) => {
+        const c = document.getElementById(id);
+        const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+        let k = 0;
+        for (let i = 0; i < d.length; i += 4) {
+            if (d[i] !== d[0] || d[i + 1] !== d[1] || d[i + 2] !== d[2]) k++;
+        }
+        return { w: c.width, h: c.height, k };
+    };
+    return Object.fromEntries(["plot-measured", "plot-impulse",
+        "plot-repeatability", "plot-prediction"].map((id) => [id, drawn(id)]));
+}"""
+
+
+def test_result_step_draws_the_plots(fake_page, page_url):
+    page, errors = fake_page
+    page.goto(page_url)
+    page.wait_for_function("window.__webrcApp !== undefined")
+    flat = page.evaluate(_RESULT_JS, [-99, True])
+    expect(page.locator("#step-result")).to_be_visible()
+    shown = page.evaluate(_RESULT_JS, [0, True])
+    for plot in shown.values():
+        assert plot["w"] > 100 and plot["h"] > 50, plot
+        assert plot["k"] > 500, plot
+    # The measured magnitude is the renderer's mountain, not just its grid.
+    assert shown["plot-measured"]["k"] > flat["plot-measured"]["k"] + 2000, (
+        shown, flat)
+    expect(page.locator("#plot-measured-caption")).to_have_text(
+        "Measured response, 1/6-octave smoothed (0 dB = the correction's "
+        "reference level)")
+    expect(page.locator("#plot-repeatability-caption")).to_contain_text(
+        "grey: outside the checked 80-16000 Hz.")
+    expect(page.locator("#plot-prediction-figure")).to_be_visible()
+    expect(page.locator("#plot-prediction-caption")).to_have_text(
+        "Predicted response after correction — predicted, not measured")
+    assert "phase" not in page.text_content("#step-result").lower()
+    assert "coheren" not in page.text_content("#step-result").lower()
+    page.evaluate(_RESULT_JS, [0, False])
+    expect(page.locator("#plot-prediction-figure")).to_be_hidden()
+    assert errors == []
