@@ -283,9 +283,10 @@ pub struct WatchdogStatus {
 /// RPC error for `watchdog_unlatch` when the watchdog is not latched.
 pub const NOT_LATCHED_ERROR: &str = "watchdog is not latched";
 
-/// RPC error for `open_gate` while the watchdog is latched (F-320 D).
-pub const OPEN_GATE_LATCHED_ERROR: &str =
-    "watchdog latched: gate stays closed, no gain changed; unlatch first";
+/// RPC error for `open_gate` while the watchdog is latched (F-320 D,
+/// wording UX ba7f08ac).
+pub const OPEN_GATE_LATCHED_ERROR: &str = "watchdog latched: gate stays closed, \
+    no gain changed; send watchdog_unlatch once the missing audio nodes are back";
 
 /// The `watchdog_unlatch` RPC. It gets no graph and no registry handle, so
 /// it cannot write a Mult (F-320 D).
@@ -603,6 +604,7 @@ mod tests {
     fn open_gate_latched_error_says_no_gain_changed() {
         assert!(OPEN_GATE_LATCHED_ERROR.starts_with("watchdog latched"));
         assert!(OPEN_GATE_LATCHED_ERROR.contains("no gain changed"));
+        assert!(OPEN_GATE_LATCHED_ERROR.contains("send watchdog_unlatch"));
     }
 
     #[test]
