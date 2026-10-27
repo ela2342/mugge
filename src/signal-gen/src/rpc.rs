@@ -471,6 +471,11 @@ fn handle_set_freq(req: &RpcRequest, cmd_queue: &CommandQueue) -> HandleResult {
     HandleResult::Ack("set_freq".to_string())
 }
 
+/// Sent if a status response cannot be serialized. It has no `cmd` field;
+/// pi4audio-rpc must still treat it as a failed ack (QE 315d3d5e R2).
+const STATUS_SERIALIZE_FALLBACK: &str =
+    r#"{"type":"ack","ok":false,"error":"internal: failed to serialize status"}"#;
+
 fn handle_status(latest_state: &StateSnapshot, limits: &SafetyLimits) -> HandleResult {
     let is_playing = matches!(
         latest_state.state,
@@ -496,9 +501,8 @@ fn handle_status(latest_state: &StateSnapshot, limits: &SafetyLimits) -> HandleR
         max_level_dbfs: Some(limits.max_level_dbfs()),
         max_level_linear: Some(limits.max_level_linear()),
     };
-    let json = serde_json::to_string(&resp).unwrap_or_else(|_| {
-        r#"{"type":"ack","ok":false,"error":"internal: failed to serialize status"}"#.to_string()
-    });
+    let json = serde_json::to_string(&resp)
+        .unwrap_or_else(|_| STATUS_SERIALIZE_FALLBACK.to_string());
     HandleResult::StatusJson(json)
 }
 
@@ -941,6 +945,52 @@ mod tests {
     // -----------------------------------------------------------------------
     // Status response
     // -----------------------------------------------------------------------
+
+    #[test]
+    fn acks_are_flat_json_objects() {
+        // F-341 (QE e3e9bbe6): pi4audio-rpc's ok test matches ,"ok":true
+        // textually, which is only sound while acks have no nested objects.
+        // If this fails, revisit the R3 match in scripts/pi4audio-rpc.
+        let status = match handle_status(
+            &StateSnapshot {
+                state: PlayState::Playing,
+                signal: SignalType::Sine,
+                channels: 0b0000_0011,
+                level_dbfs: -20.0,
+                frequency: 1000.0,
+                elapsed_secs: 1.5,
+                duration_secs: 10.0,
+                samples_generated: 72000,
+            },
+            &test_limits(),
+        ) {
+            HandleResult::StatusJson(json) => json,
+            _ => panic!("Expected StatusJson"),
+        };
+        let lines = [
+            format_ack("play"),
+            format_error("play", "level_dbfs -10 exceeds cap -20"),
+            STATUS_SERIALIZE_FALLBACK.to_string(),
+            status,
+        ];
+        for line in &lines {
+            let v: Value = serde_json::from_str(line).unwrap();
+            let obj = v.as_object().expect("an ack is a JSON object");
+            assert_eq!(obj["type"], "ack", "{}", line);
+            assert!(line.starts_with(r#"{"type":"ack""#), "{}", line);
+            for (key, val) in obj {
+                assert!(!val.is_object(), "nested object in {}: {}", key, line);
+                if let Some(items) = val.as_array() {
+                    assert!(
+                        items.iter().all(|i| !i.is_object() && !i.is_array()),
+                        "array with an object in {}: {}", key, line
+                    );
+                }
+            }
+        }
+        assert!(lines[3].contains(r#""max_level_dbfs":-20.0"#));
+        assert!(lines[3].contains(r#""max_level_linear":0.1"#));
+    }
 
     #[test]
     fn status_reports_the_cap_from_the_limits() {

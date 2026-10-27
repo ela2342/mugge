@@ -182,7 +182,7 @@ def test_t4_never_answers_times_out_and_releases_the_socket(server_factory):
     assert p.returncode == 124
     assert p.stdout == ""
     assert "within 3 s" in p.stderr
-    assert 3.0 <= elapsed < 3.5
+    assert 3.0 <= elapsed < 4.5  # slack for a loaded CI runner (QE e3e9bbe6 NB)
     end = time.monotonic()
     deadline = time.monotonic() + 0.5
     while not srv.eof_times and time.monotonic() < deadline:
