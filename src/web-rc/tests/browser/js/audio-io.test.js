@@ -208,6 +208,19 @@ export async function test_onset_and_start_frame_are_passed_on() {
   eq(msgs.recorded[0][3], 3, "the meter's clock");
 }
 
+/** AE 42dada94 G1: the clock check's lookback goes in, its result comes out. */
+export async function test_clock_check_is_passed_through() {
+  const { io, msgs, meterOut } = rig();
+  io.clock = io.meter.clock = 3;
+  io.execute({ type: "record", token: 5, frames: 10, lookback: 2400 });
+  eq(JSON.stringify(meterOut.at(-1)),
+    JSON.stringify({ type: "record", id: 5, frames: 10, lookback: 2400 }));
+  const clockGlitch = { before: 1024, after: 1024 };
+  io._onMeterMessage({ type: "recorded", id: 5, startFrame: 1024,
+    samples: new Float32Array(10), clockGlitch });
+  eq(msgs.recorded[0][4], clockGlitch);
+}
+
 /** AE d7ffcfb6: a capture arriving with no meter left is dropped, no throw. */
 export async function test_recorded_without_a_meter_is_dropped() {
   const { io, msgs } = rig();

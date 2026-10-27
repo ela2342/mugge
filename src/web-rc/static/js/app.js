@@ -35,8 +35,14 @@ export class App {
     this.io = io || new AudioIO({
       onMeter: (m) => this.apply(this.flow.meter(this.now(), m)),
       onOutput: (m) => this.apply(this.flow.output(m, this.now())),
-      onRecorded: (id, samples, startFrame, clock) =>
-        this.apply(this.flow.recorded(id, samples, startFrame, clock)),
+      onRecorded: (id, samples, startFrame, clock, glitch) => {
+        // AE 42dada94 G5: log the render clock glitch with its frames.
+        if (glitch) {
+          console.warn("web-rc: render clock glitch in a capture: frame " +
+            glitch.before + " then " + glitch.after);
+        }
+        this.apply(this.flow.recorded(id, samples, startFrame, clock, glitch));
+      },
       onResumed: (token) => this.apply(this.flow.resumed(token)),
       onError: () => this.apply(this.flow.audioError()),
     });

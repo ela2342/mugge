@@ -6,7 +6,8 @@
 //
 // processorOptions: { splOffsetDb } (null without a calibration file).
 // In:  { type: "calibration", splOffsetDb }
-//      { type: "record", id, frames }   start at the next quantum
+//      { type: "record", id, frames, lookback }   start at the next quantum;
+//      lookback = frames before the start that the clock check covers
 //      { type: "record-cancel" }
 // A report with a stop cause also trips stop-latch.js, which stops the output
 // worklet without the main thread (Architect note b). Every process() then
@@ -15,9 +16,12 @@
 //
 // Out: { type: "meter", frame, peakDbfs, rmsDbfs, rmsLastDbfs, quanta, cause }
 //      frame = currentFrame at the end of the reported quanta.
-//      { type: "recorded", id, startFrame, samples }   (samples transferred)
+//      { type: "recorded", id, startFrame, samples, clockGlitch }
+//      (samples transferred). clockGlitch = { before, after }: a currentFrame
+//      step other than +128 from `lookback` frames before startFrame to the
+//      last sample (AE 42dada94 G1), else null.
 
-import { MeterStream, Recorder } from "./meter-core.js";
+import { FrameClock, MeterStream, Recorder } from "./meter-core.js";
 import { stopLatch } from "./stop-latch.js";
 
 class MicMeterProcessor extends AudioWorkletProcessor {
@@ -27,6 +31,7 @@ class MicMeterProcessor extends AudioWorkletProcessor {
     this.stream = new MeterStream(sampleRate, opts.splOffsetDb ?? null);
     this.silence = null;
     this.rec = null;
+    this.clock = new FrameClock();
     // The heartbeat count, +1 per process() call. One meter node per
     // AudioContext (audio-io.js builds it with the context; a new context
     // is a new latch scope). A second meter per context would need one
@@ -37,7 +42,11 @@ class MicMeterProcessor extends AudioWorkletProcessor {
       if (d.type === "calibration") {
         this.stream.setCalibration(d.splOffsetDb ?? null);
       } else if (d.type === "record") {
-        this.rec = { id: d.id, startFrame: null, recorder: new Recorder(d.frames) };
+        // A bad lookback checks the context's whole life (fails closed).
+        const back = Number.isInteger(d.lookback) && d.lookback >= 0
+          ? Math.ceil(d.lookback / 128) : Infinity;
+        this.rec = { id: d.id, startFrame: null, from: null, back,
+          recorder: new Recorder(d.frames) };
       } else if (d.type === "record-cancel") {
         this.rec = null;
       }
@@ -45,6 +54,7 @@ class MicMeterProcessor extends AudioWorkletProcessor {
   }
 
   process(inputs) {
+    this.clock.step(currentFrame);
     let block = inputs[0] && inputs[0][0];
     if (!block) {
       // No input connected this quantum: meter silence, keep the window
@@ -53,13 +63,16 @@ class MicMeterProcessor extends AudioWorkletProcessor {
       block = this.silence;
     }
     if (this.rec) {
-      if (this.rec.startFrame === null) this.rec.startFrame = currentFrame;
+      if (this.rec.startFrame === null) {
+        this.rec.startFrame = currentFrame;
+        this.rec.from = this.clock.n - this.rec.back;
+      }
       const done = this.rec.recorder.push(block);
       if (done) {
-        const { id, startFrame } = this.rec;
+        const { id, startFrame, from } = this.rec;
         this.rec = null;
-        this.port.postMessage({ type: "recorded", id, startFrame, samples: done },
-          [done.buffer]);
+        this.port.postMessage({ type: "recorded", id, startFrame, samples: done,
+          clockGlitch: this.clock.since(from) }, [done.buffer]);
       }
     }
     const report = this.stream.process(block);

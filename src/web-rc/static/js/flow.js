@@ -13,7 +13,7 @@
 //   { type: "meter-calibration", splOffsetDb }
 //   { type: "make-sweep", token, plan }              -> sweepReady()
 //   { type: "resume", token }                        -> resumed()
-//   { type: "record", token, frames }                -> recorded()
+//   { type: "record", token, frames, lookback }      -> recorded()
 //                                                       (+ output "started")
 //   { type: "sweep-start", channel, samples, gain }
 //   { type: "record-cancel" }
@@ -64,6 +64,10 @@ export const FLOW_TEXT = Object.freeze({
   // UX 82b5b616 W1, AE cf32c0a6 (b): a stop during capture 2.
   BOTH_DISCARDED: "Both captures were discarded: the two captures must be " +
     "taken back to back. Press Start level check to measure again.",
+  // UX 7b893ef9, AE 42dada94 G3: a capture with a render clock glitch.
+  CLOCK_GLITCH: "Measurement not used: the audio recording skipped for a " +
+    "moment, so it can't be trusted. This can happen when the computer is " +
+    "busy. Close other apps or browser tabs, then restart.",
 });
 
 /** E5b D4: download name of a filter measured before a device change. */
@@ -524,9 +528,15 @@ export class Flow {
    * it. The output onset relative to it goes to the analysis, which removes
    * it (AE a1736914). Unknown, out of bounds, or counted on another clock
    * than the onset (AE onset clock condition): audio error.
+   * glitch: the meter's clock check, null if clean (AE 42dada94 G1-G3).
+   * A flagged capture, or one with no check, is never used: rejected.
    */
-  recorded(token, samples, startFrame, clock) {
+  recorded(token, samples, startFrame, clock, glitch) {
     if (!this._is(token, "record")) return [];
+    if (glitch !== null) {
+      this.run.capturing = false;   // the recording is over: no cancel
+      return this._abortMeasure("rejected", FLOW_TEXT.CLOCK_GLITCH);
+    }
     const onset = this.run.onsetFrame - startFrame;
     if (this.run.onsetFrame === null || !Number.isInteger(startFrame) ||
         clock == null || clock !== this.run.onsetClock ||
@@ -655,7 +665,9 @@ export class Flow {
     this.run.onsetFrame = null;
     this.run.onsetClock = null;
     return [
-      { type: "record", token, frames },
+      // The clock check starts where the onset may be (MAX_ONSET_S early).
+      { type: "record", token, frames,
+        lookback: Math.round(FLOW.MAX_ONSET_S * LIMITS.REQUIRED_RATE) },
       { type: "sweep-start", channel: this.channel, samples: this.run.played,
         gain: this.run.gain },
     ];

@@ -195,7 +195,8 @@ export class AudioIO {
         break;
       case "record":
         this.recording = cmd.token;
-        this.meter.port.postMessage({ type: "record", id: cmd.token, frames: cmd.frames });
+        this.meter.port.postMessage({ type: "record", id: cmd.token, frames: cmd.frames,
+          lookback: cmd.lookback });
         this._run();
         break;
       case "record-cancel":
@@ -312,7 +313,8 @@ export class AudioIO {
       // After close() there is no meter (and no recording): drop it.
       if (!this.meter || msg.id !== this.recording) return;
       this.recording = null;
-      this.onRecorded(msg.id, msg.samples, msg.startFrame, this.meter.clock);
+      this.onRecorded(msg.id, msg.samples, msg.startFrame, this.meter.clock,
+        msg.clockGlitch);
     }
   }
 

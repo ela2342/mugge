@@ -51,7 +51,7 @@ function ready({ cal = false } = {}) {
  */
 function rec(f, token, samples, onset = 0) {
   eq(f.output({ type: "started", frame: 4096 + onset, clock: 1 }).length, 0);
-  return f.recorded(token, samples, 4096, 1);
+  return f.recorded(token, samples, 4096, 1, null);
 }
 
 /** Tick every 4a item, then acknowledge (UX 64c83e3e). */

@@ -55,7 +55,7 @@ const types = (cmds) => cmds.map((c) => c.type).join(",");
  */
 function rec(f, token, samples, onset = 0) {
   eq(f.output({ type: "started", frame: 4096 + onset, clock: 1 }).length, 0);
-  return f.recorded(token, samples, 4096, 1);
+  return f.recorded(token, samples, 4096, 1, null);
 }
 
 /** A unit sweep stand-in: a sine with fades, RMS about -3 dBFS. */
@@ -648,11 +648,11 @@ export async function test_onset_reaches_the_analysis() {
   const s = settled(f, m[1].token, unitSweep());
   f.output({ type: "started", frame: 1000 + 128, clock: 5 });
   f.output({ type: "started", frame: 5000, clock: 5 });
-  const s2 = f.recorded(s[0].token, new Float32Array(1), 1000, 5);
+  const s2 = f.recorded(s[0].token, new Float32Array(1), 1000, 5, null);
   eq(types(s2), "record,sweep-start");
   eq(f.run.onsetFrame, null, "reset for capture 2");
   f.output({ type: "started", frame: 9999, clock: 5 });
-  const a = f.recorded(s2[0].token, new Float32Array(1), 9999, 5);
+  const a = f.recorded(s2[0].token, new Float32Array(1), 9999, 5, null);
   eq(a[1].request.onsets.join(), "128,0", "one quantum late, then on time");
   eq(a[1].request.captures.length, 2);
 }
@@ -668,30 +668,30 @@ export async function test_unknown_onset_is_an_audio_error() {
       "record,sweep-start", "in bounds: " + onset);
   }
   const bad = [
-    ["no started", (f, t) => f.recorded(t, new Float32Array(1), 4096, 1)],
-    ["no started, frame 0", (f, t) => f.recorded(t, new Float32Array(1), 0, 1)],
+    ["no started", (f, t) => f.recorded(t, new Float32Array(1), 4096, 1, null)],
+    ["no started, frame 0", (f, t) => f.recorded(t, new Float32Array(1), 0, 1, null)],
     ["late", (f, t) => rec(f, t, new Float32Array(1), limit + 1)],
     ["early", (f, t) => rec(f, t, new Float32Array(1), -limit - 1)],
     ["no start frame", (f, t) => {
       f.output({ type: "started", frame: 4096, clock: 1 });
-      return f.recorded(t, new Float32Array(1), undefined, 1);
+      return f.recorded(t, new Float32Array(1), undefined, 1, null);
     }],
     ["bad frame", (f, t) => {
       f.output({ type: "started", frame: 4096.5, clock: 1 });
-      return f.recorded(t, new Float32Array(1), 4096, 1);
+      return f.recorded(t, new Float32Array(1), 4096, 1, null);
     }],
     // AE onset clock condition: frames from two contexts don't compare.
     ["other clock", (f, t) => {
       f.output({ type: "started", frame: 4096, clock: 1 });
-      return f.recorded(t, new Float32Array(1), 4096, 2);
+      return f.recorded(t, new Float32Array(1), 4096, 2, null);
     }],
     ["no recording clock", (f, t) => {
       f.output({ type: "started", frame: 4096, clock: 1 });
-      return f.recorded(t, new Float32Array(1), 4096);
+      return f.recorded(t, new Float32Array(1), 4096, undefined, null);
     }],
     ["no onset clock", (f, t) => {
       f.output({ type: "started", frame: 4096 });
-      return f.recorded(t, new Float32Array(1), 4096, undefined);
+      return f.recorded(t, new Float32Array(1), 4096, undefined, null);
     }],
   ];
   for (const [why, act] of bad) {
@@ -706,8 +706,45 @@ export async function test_unknown_onset_is_an_audio_error() {
   const f = atLevel();
   const s = settled(f, toMeasure(f)[1].token, unitSweep());
   const s2 = rec(f, s[0].token, new Float32Array(1));
-  eq(types(f.recorded(s2[0].token, new Float32Array(1), 4096, 1)),
+  eq(types(f.recorded(s2[0].token, new Float32Array(1), 4096, 1, null)),
     "output-stop,record-cancel", "no onset for capture 2");
+}
+
+/**
+ * AE 42dada94 G2-G4: a capture the meter flagged for a render clock glitch
+ * is never used. It is rejected (not an audio error) with the UX 7b893ef9
+ * text, in either capture, before the onset check; no silent re-capture.
+ * A capture with no clock check fails closed the same way.
+ */
+export async function test_a_clock_glitch_capture_is_not_used() {
+  const TEXT = "Measurement not used: the audio recording skipped for a " +
+    "moment, so it can't be trusted. This can happen when the computer is " +
+    "busy. Close other apps or browser tabs, then restart.";
+  const GLITCH = { before: 627584, after: 627584 };
+  const cases = [
+    ["capture 1", 0, GLITCH, 0],
+    ["capture 2", 1, GLITCH, 0],
+    ["capture 1, bad onset too", 0, GLITCH, 1e6],
+    ["no clock check", 0, undefined, 0],
+  ];
+  for (const [why, before, glitch, onset] of cases) {
+    const f = atLevel();
+    let s = settled(f, toMeasure(f)[1].token, unitSweep());
+    eq(s[0].lookback, FLOW.MAX_ONSET_S * SR, "the check covers the onset bound");
+    for (let i = 0; i < before; i++) s = rec(f, s[0].token, new Float32Array(1));
+    f.output({ type: "started", frame: 4096 + onset, clock: 1 });
+    eq(types(f.recorded(s[0].token, new Float32Array(1), 4096, 1, glitch)),
+      "output-stop", why);
+    eq(f.step, STEP.LEVEL, why);
+    eq(f.notice.cause, "rejected", why);
+    eq(f.notice.text, TEXT, why);
+    eq(FLOW_TEXT.CLOCK_GLITCH, TEXT);
+    eq(f.notice.detail, undefined, why);
+    eq(f.run.captures.length, 0, "discarded: " + why);
+    eq(f.run.pending, null, "no re-capture: " + why);
+    eq(f.canStart, true, "not held: " + why);
+    eq(types(f.startLevel(0)), "noise-start", why);
+  }
 }
 
 /** E4: an auto-STOP during the sweep returns to the level check, discards. */

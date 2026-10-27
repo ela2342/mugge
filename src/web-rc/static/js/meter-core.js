@@ -109,6 +109,34 @@ export class MeterStream {
 }
 
 /**
+ * The render clock check (AE 42dada94 G1): every quantum's currentFrame
+ * must be the last one + 128. step() takes each quantum's currentFrame and
+ * keeps the latest step that was not, with the frames before and after it
+ * and the quantum count it happened at. A non-number frame is a glitch too.
+ */
+export class FrameClock {
+  constructor() {
+    this.n = 0;          // quanta seen
+    this.last = null;
+    this.glitch = null;  // { before, after, at }
+  }
+
+  step(frame) {
+    this.n += 1;
+    if (this.last !== null && frame - this.last !== 128) {
+      this.glitch = { before: this.last, after: frame, at: this.n };
+    }
+    this.last = frame;
+  }
+
+  /** The latest glitch at quantum `n` or later, else null. */
+  since(n) {
+    const g = this.glitch;
+    return g && g.at >= n ? { before: g.before, after: g.after } : null;
+  }
+}
+
+/**
  * Records a fixed number of contiguous mic samples (AC2d, AC7). push()
  * takes every quantum the meter sees and returns the finished Float32Array
  * once `frames` samples are in, else null. offset = index in the first
