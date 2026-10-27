@@ -101,12 +101,21 @@ class TestF344GainWriteNeedsOpenGate:
 
 class TestF352InvalidMultRefused:
 
-    @pytest.mark.parametrize("raw", ["NaN", "Infinity", "1e-40", "1.5"])
-    def test_F352_invalid_value_never_reaches_pw_cli(self, gm, fake_pw, client, raw):
+    @pytest.mark.parametrize(
+        "raw", ["NaN", "Infinity", "-Infinity", "1e-40", "1.5", "-0.5"])
+    def test_F352_invalid_value_never_reaches_pw_cli(
+            self, monkeypatch, gm, fake_pw, client, raw):
+        # config_routes runs its own subprocess calls (quantum); route
+        # them to the fake too, so "no call at all" covers the module.
+        monkeypatch.setattr(config_routes, "subprocess", types.SimpleNamespace(
+            run=fake_pw.run, TimeoutExpired=subprocess.TimeoutExpired,
+            CompletedProcess=subprocess.CompletedProcess))
         resp = _post_gain(client, raw)
         assert fake_pw.writes == [], (
             f"Mult {raw} reached pw-cli as {fake_pw.writes}")
         assert resp.status_code == 422, resp.text
+        # A refused request makes no PipeWire call at all, not even a read.
+        assert fake_pw.calls == [], f"422 for {raw} still ran {fake_pw.calls}"
 
 
 # ---------------------------------------------------------------------------
