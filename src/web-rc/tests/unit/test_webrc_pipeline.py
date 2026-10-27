@@ -12,6 +12,8 @@ conftest.room_correction_root() names.
 import ast
 import importlib.util
 import io
+import math
+import re
 import sys
 from pathlib import Path
 
@@ -329,6 +331,26 @@ class TestRepeatability:
                              LIMIT_HZ)
         assert r["ok"] is ok and r["max_abs_db"] == pytest.approx(shift_db, abs=0.05)
 
+    @pytest.mark.parametrize("worst, shown", [
+        (1.0001, "1.1"), (1.04, "1.1"), (1.1, "1.1"), (1.11, "1.2"),
+        (1.2, "1.2"), (3.95, "4.0"), (12.0, "12.0"),
+        (math.nextafter(1.1, 2.0), "1.1"),    # float noise is not a step up
+        (1.0 + 1e-9, "1.1"),                  # any reject reads above the limit
+    ])
+    def test_rejection_rounds_up(self, wp, worst, shown):
+        """UX 1683b0fb: X rounds UP to 0.1 dB; the band is the checked one."""
+        rep = {"band_hz": [250.0, 500.0], "max_abs_db": worst, "limit_db": 1.0}
+        assert wp.repeatability_text(rep) == (
+            f"Measurement not used: the two sweeps differ by up to {shown} dB "
+            "between 250 and 500 Hz (limit 1.0 dB). Keep the microphone still "
+            "and the room quiet, then measure again.")
+
+    def test_rejection_without_a_number(self, wp):
+        rep = {"band_hz": [30.0, 200.0], "max_abs_db": float("nan"),
+               "limit_db": 1.0}
+        text = wp.repeatability_text(rep)
+        assert "between 30 and 200 Hz" in text and "nan" not in text
+
     def test_only_the_closed_loop_band_gates(self, wp, sweep, run):
         """A difference above 200 Hz shows in the trace, not the verdict."""
         from scipy import signal
@@ -481,8 +503,12 @@ class TestAnalyze:
 
     def test_moved_mic_rejects_the_pair(self, wp, sweep):
         req = _request(sweep, rooms=(_room_ir(), _room_ir(mode_gain_db=4.0)))
-        with pytest.raises(wp.CaptureRejected, match="differ by .* over 30-200 Hz"):
+        with pytest.raises(wp.CaptureRejected) as exc:
             wp.analyze(req)
+        assert re.fullmatch(
+            r"Measurement not used: the two sweeps differ by up to \d+\.\d dB "
+            r"between 30 and 200 Hz \(limit 1\.0 dB\)\. Keep the microphone "
+            r"still and the room quiet, then measure again\.", str(exc.value))
 
     def test_clipped_second_capture_names_it(self, wp, sweep):
         req = _request(sweep)
@@ -562,13 +588,35 @@ class TestAnalyze:
                               wp.decode_filter(plain["wavBytes"]))
 
 
+def _report_channel(wp, **change):
+    ch = {"name": "Output 1", "channel_index": 0, "role": "fullrange",
+          "limit_hz": 20, "enclosure": "closed", "delay_s": 0.0123,
+          "filename": wp.filter_filename(0, "fullrange"),
+          "prediction_label": "Predicted residual within 3 dB: PASS — x",
+          "band_hz": [250.0, 500.0], "calibrated": False}
+    ch.update(change)
+    return ch
+
+
 def test_report_text(wp):
-    text = wp.report_text([{
-        "name": "left", "channel_index": 0, "limit_hz": 20, "enclosure": "closed",
-        "delay_s": 0.0123, "filename": wp.filter_filename(0, "fullrange"),
-        "prediction_label": "Predicted residual within 3 dB: PASS — x",
-        "calibrated": False}], base_seed=174)
+    text = wp.report_text([_report_channel(wp)], base_seed=174)
     assert "browser-generated" in text
     assert wp.REPORT_TEXT in text
     assert "base_seed: 174" in text and "channel_index 0" in text
     assert "16 Hz" in text and "12.3 ms" in text
+    # E2h: the role and the band the AC8c verdict was checked over.
+    assert "  Role: Full-range speaker\n" in text
+    assert "PASS — x (checked over 250-500 Hz)\n" in text
+    # UX 436f962f / AE c5bd03c0: the uncalibrated line, only when uncalibrated.
+    assert ("  Measured uncalibrated: levels in dBFS; the microphone's own "
+            "frequency response is not compensated.\n") in text
+    cal = wp.report_text([_report_channel(
+        wp, role="subwoofer", band_hz=[30.0, 200.0], calibrated=True)], 174)
+    assert "  Role: Subwoofer\n" in cal and "(checked over 30-200 Hz)" in cal
+    assert "Measured uncalibrated" not in cal and "Mic calibration: yes" in cal
+
+
+@pytest.mark.parametrize("role", [None, "", "woofer", "highpass"])
+def test_report_needs_a_role(wp, role):
+    with pytest.raises(ValueError, match="role"):
+        wp.report_text([_report_channel(wp, role=role)], 174)

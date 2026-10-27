@@ -24,6 +24,7 @@ asserts they are equal, so a change upstream fails CI.
 """
 
 import io
+import math
 import os
 import tempfile
 
@@ -66,6 +67,7 @@ REC_MAX_DC_OFFSET = 0.01
 # filter_type key (E2e) and the filename tag (E2h). Never shown in the UI.
 ROLE_FILTER_TYPES = {"fullrange": "highpass", "subwoofer": "lowpass"}
 ROLE_FILE_TAGS = {"fullrange": "fullrange", "subwoofer": "sub"}
+ROLE_LABELS = {"fullrange": "Full-range speaker", "subwoofer": "Subwoofer"}
 
 HPF_RATIO = 0.8               # AC4g/6b, same as safety.js LIMITS.HPF_RATIO
 SWEEP_F_END_HZ = 20000.0      # AC4g
@@ -81,6 +83,12 @@ REPORT_TEXT = (
     "Filters for the mugge Pi (48 kHz). Loading onto the Pi is not "
     "supported yet. Correction not applied or verified acoustically; "
     "re-measure after loading them."
+)
+# UX 436f962f, second half confirmed by the AE (c5bd03c0); calibration.js
+# UNCAL_RESULT shows the same line in the result step.
+UNCAL_REPORT_TEXT = (
+    "Measured uncalibrated: levels in dBFS; the microphone's own frequency "
+    "response is not compensated."
 )
 PREDICTION_LABEL = (
     "Predicted residual within 3 dB: {verdict} — predicted, not measured, "
@@ -349,6 +357,23 @@ def repeatability(ir1, ir2, speaker, limit_hz, sr=SAMPLE_RATE):
     }
 
 
+def repeatability_text(rep):
+    """The AC8a rejection, worded as UX 1683b0fb rules.
+
+    X is the worst difference rounded UP to 0.1 dB, so a reject never
+    reads as within the limit; lo/hi are the band the check used.
+    """
+    lo, hi = rep["band_hz"]
+    worst, limit = rep["max_abs_db"], rep["limit_db"]
+    tail = " Keep the microphone still and the room quiet, then measure again."
+    if not np.isfinite(worst):
+        return (f"Measurement not used: the two sweeps could not be compared "
+                f"between {lo:g} and {hi:g} Hz.{tail}")
+    shown = max(math.ceil(round(worst * 10, 6)) / 10, round(limit + 0.1, 1))
+    return (f"Measurement not used: the two sweeps differ by up to {shown:.1f} "
+            f"dB between {lo:g} and {hi:g} Hz (limit {limit:.1f} dB).{tail}")
+
+
 def predict(wav_bytes, holdout_ir, speaker, sr=SAMPLE_RATE):
     """Predicted residual on the hold-out capture (AC8b, AE b0d0c499 P1).
 
@@ -458,12 +483,7 @@ def analyze(request, sr=SAMPLE_RATE):
 
     rep = repeatability(irs[0], irs[1], speaker, limit_hz, sr=sr)
     if not rep["ok"]:
-        lo, hi = rep["band_hz"]
-        raise CaptureRejected(
-            f"Capture rejected: the two measurements differ by "
-            f"{rep['max_abs_db']:.1f} dB over {lo:g}-{hi:g} Hz (limit "
-            f"{REPEATABILITY_MAX_DB:g} dB). Keep the microphone still and the "
-            f"room quiet, then measure again.")
+        raise CaptureRejected(repeatability_text(rep))
 
     fir, correction = build_filter(irs[0], limit_hz, speaker, sr=sr)
     wav = filter_wav_bytes(fir, sr=sr)
@@ -494,8 +514,9 @@ def analyze(request, sr=SAMPLE_RATE):
 def report_text(channels, base_seed):
     """Plain-text report shipped next to the WAVs.
 
-    channels: list of {name, channel_index, limit_hz, enclosure, delay_s,
-    filename, prediction_label, calibrated}.
+    channels: list of {name, channel_index, role, limit_hz, enclosure,
+    delay_s, filename, prediction_label, band_hz, calibrated}; band_hz is
+    the band the AC8c verdict was checked over (E2h).
     """
     lines = [
         f"mugge standalone room correction ({BROWSER_TAG})",
@@ -505,9 +526,13 @@ def report_text(channels, base_seed):
         f"Noise base_seed: {int(base_seed)}",
     ]
     for ch in channels:
+        if ch["role"] not in ROLE_LABELS:
+            raise ValueError(f"no speaker role for channel {ch['name']!r}")
+        lo, hi = ch["band_hz"]
         lines += [
             "",
             f"Channel {ch['name']} (channel_index {int(ch['channel_index'])})",
+            f"  Role: {ROLE_LABELS[ch['role']]}",
             f"  File: {ch['filename']}",
             f"  Low limit: {float(ch['limit_hz']):g} Hz, subsonic HPF at "
             f"{subsonic_corner_hz(ch['limit_hz']):g} Hz",
@@ -515,6 +540,9 @@ def report_text(channels, base_seed):
             f"  Mic calibration: {'yes' if ch['calibrated'] else 'no'}",
             f"  Delay (audio latency + time of flight): "
             f"{1000 * float(ch['delay_s']):.1f} ms",
-            f"  {ch['prediction_label']}",
+            f"  {ch['prediction_label']} (checked over {float(lo):g}-"
+            f"{float(hi):g} Hz)",
         ]
+        if not ch["calibrated"]:
+            lines.append(f"  {UNCAL_REPORT_TEXT}")
     return "\n".join(lines) + "\n"

@@ -13,7 +13,10 @@ import {
   ROLE, SUB_LIMIT_REFUSAL, changeEnclosure, changeLimit, changeRole,
   checkDeclaration, limitRangeText, parseLimitHz,
 } from "./safety.js";
-import { viewModel } from "./view.js";
+import { BASE_SEED } from "./crest-plan.js";
+import {
+  REPORT_FILE, channelLabel, reportChannels, viewModel,
+} from "./view.js";
 
 const TICK_MS = 250;
 const AUDIO_TYPES = new Set(["noise-start", "sweep-start", "gain", "output-stop",
@@ -35,6 +38,7 @@ export class App {
     this.rc = rc || null;
     this.pipelineError = "";
     this.openError = "";
+    this.reportError = "";
     this.devicesKey = null;
     this.devices = [];
     this.limitText = "";
@@ -226,6 +230,7 @@ export class App {
     on("again", "click", () => this.apply(this.flow.startLevel(this.now())));
     on("plus", "click", () => this.apply(this.flow.stepUp(this.now())));
     on("measure", "click", () => this.apply(this.flow.measure()));
+    on("report", "click", () => this._downloadReport());
 
     // 4e STOP on Esc; 4d page hidden; AC11 unsaved work.
     this.doc.addEventListener("keydown", (e) => {
@@ -253,14 +258,32 @@ export class App {
   _download(channel) {
     const d = this.flow.downloads().find((x) => x.channel === channel);
     if (!d) return;
-    const url = URL.createObjectURL(new Blob([d.bytes], { type: "audio/wav" }));
-    const a = this.doc.createElement("a");
-    a.href = url;
-    a.download = d.name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    this._save(new Blob([d.bytes], { type: "audio/wav" }), d.name);
     this.flow.markDownloaded(channel);
     this.queueRender();
+  }
+
+  /** AC10: the report for every filter so far, made by report_text. */
+  _downloadReport() {
+    this.reportError = "";
+    this._call("report_text", [reportChannels(this.flow), BASE_SEED],
+      (text) => {
+        this._save(new Blob([text], { type: "text/plain" }), REPORT_FILE);
+        return [];
+      },
+      (msg) => {
+        this.reportError = "The report could not be made: " + msg;
+        return [];
+      });
+  }
+
+  _save(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = this.doc.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   // -- rendering ------------------------------------------------------------
@@ -360,8 +383,12 @@ export class App {
     // measure, result
     $("progress").textContent = vm.measure.progress;
     $("ready").textContent = vm.result.ready;
+    $("result-channel").textContent = vm.result.channel;
     text("result-uncal", vm.result.uncalibrated);
+    $("delay").textContent = vm.result.delay;
     $("prediction").textContent = vm.result.prediction;
+    $("report").disabled = vm.result.downloads.length === 0;
+    text("report-error", this.reportError);
     $("pi-note").textContent = vm.result.piNote;
     $("downloads").replaceChildren(...vm.result.downloads.map((d) => {
       const li = this.doc.createElement("li");
@@ -435,7 +462,7 @@ export class App {
   _channelOptions(channels, current) {
     const sel = this.$("channel");
     const want = [["", "Choose…"], ...channels.map((c) => [String(c),
-      "Output " + (c + 1)])];
+      channelLabel(c)])];
     const have = [...sel.options].map((o) => [o.value, o.textContent]);
     if (JSON.stringify(want) !== JSON.stringify(have)) {
       sel.replaceChildren(...want.map(([v, l]) => new Option(l, v)));

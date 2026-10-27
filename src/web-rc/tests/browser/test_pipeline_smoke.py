@@ -95,6 +95,11 @@ async () => {
   }
   let unknown = null;
   try { await rc.call("build_filter", sweep, LIMIT); } catch (e) { unknown = e.kind; }
+  // AC10 report from the result, the way the page builds it.
+  const { reportChannels } = await import("/js/view.js");
+  const filters = new Map([[2, { ...r, enclosure: "closed", calibrated: false,
+    preDeviceChange: false }]]);
+  const report = await rc.call("report_text", reportChannels({ filters }), 174);
   rc.terminate();
   return {
     loadMs, sweepType: sweep.constructor.name, sweepLen: sweep.length,
@@ -103,7 +108,7 @@ async () => {
     gatesOk: r.gates.ok, gates: r.gates.results, repOk: r.repeatability.ok,
     repBand: r.repeatability.band_hz, pred: { ...r.prediction,
       freqs: r.prediction.freqs.length },
-    measuredLen: r.measured.freqs.length, rejected, noRole, unknown,
+    measuredLen: r.measured.freqs.length, rejected, noRole, unknown, report,
   };
 }
 """
@@ -149,6 +154,16 @@ def test_pipeline_runs_offline(page, site_url):
     assert "measurement 1 of 2" in out["rejected"]["message"]
     assert out["noRole"]["kind"] == "error" and "role" in out["noRole"]["message"]
     assert out["unknown"] == "error"
+    report = out["report"]
+    for line in ("Noise base_seed: 174", "Channel Output 3 (channel_index 2)",
+                 "  Role: Subwoofer",
+                 "  File: combined_ch3-sub-browser-generated.wav",
+                 "  Low limit: 40 Hz, subsonic HPF at 32 Hz",
+                 "  Enclosure: closed", "  Mic calibration: no",
+                 f"  {pred['label']} (checked over 30-200 Hz)",
+                 "  Measured uncalibrated: levels in dBFS; the microphone's "
+                 "own frequency response is not compensated."):
+        assert line + "\n" in report, (line, report)
     print(f"Pyodide load {out['loadMs']:.0f} ms")
 
 

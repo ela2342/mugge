@@ -474,6 +474,8 @@ export async function test_measure_two_captures_then_analyze() {
   eq(d.length, 1);
   eq(d[0].name, "sub_ch2.wav");
   eq(d[0].preDeviceChange, false);
+  eq(f.filters.get(f.channel).role, ROLE.SUBWOOFER, "for the report");
+  eq(f.filters.get(f.channel).enclosure, "closed", "for the report");
   assert(f.hasUnsavedWork(), "not downloaded yet");
   f.markDownloaded();
   eq(f.hasUnsavedWork(), false);

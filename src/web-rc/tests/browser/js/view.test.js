@@ -10,8 +10,9 @@ import {
   ROLE, STOP, changeRole, levelNoiseBand, levelNoiseBandLabel, stopMessage,
 } from "../../../static/js/safety.js";
 import {
-  TEXT, ackOutputText, capText, micLevelText, portConfirmText, predictionText,
-  targetNotReachedText, viewModel,
+  REPORT_FILE, TEXT, ackOutputText, capText, channelLabel, micLevelText,
+  portConfirmText, predictionText, reportChannels, targetNotReachedText,
+  viewModel,
 } from "../../../static/js/view.js";
 
 const SR = 48000;
@@ -240,18 +241,57 @@ export async function test_measure_progress_and_result() {
     "to a minute the first time.");
   eq(viewModel(f).stopVisible, false, "no sound while computing");
   f.analysisDone(a[1].token, { fileName: "sub.wav", wavBytes: new Uint8Array(1),
-    calibrated: false, prediction: { passed: true } });
+    channel: 1, role: ROLE.SUBWOOFER, delayS: 0.00425, calibrated: false,
+    prediction: { passed: true, band_hz: [30, 200] } });
   const vm = viewModel(f);
   eq(vm.step, STEP.RESULT);
   eq(vm.result.ready, "Filters ready — download");
+  // E2h: the role next to the channel and base_seed; AC5a channel_index.
+  eq(vm.result.channel, "Output 2: Subwoofer. Noise base_seed 174 " +
+    "(channel_index 1).");
+  eq(vm.result.delay, "Delay (audio latency + time of flight): 4.3 ms");
   eq(vm.result.uncalibrated, UNCAL_RESULT);
   eq(vm.result.prediction, "Predicted residual within 3 dB: PASS — " +
-    "predicted, not measured, unverified until re-measured");
+    "predicted, not measured, unverified until re-measured (checked over " +
+    "30-200 Hz)");
   eq(vm.result.downloads.length, 1);
   eq(vm.result.downloads[0].mark, "");
   eq(vm.level.canStart, true, "measure again from the result");
   eq(predictionText({ passed: false }).slice(0, 35),
     "Predicted residual within 3 dB: FAI");
+}
+
+/** AC10/E2h: one report entry per filter, as the downloads name them. */
+export async function test_report_channels() {
+  const f = new Flow();
+  const pred = (passed, band) => ({ passed, band_hz: band });
+  f.filters.set(0, { fileName: "combined_ch1-fullrange-browser-generated.wav",
+    role: ROLE.FULLRANGE, enclosure: "ported", limitHz: 80, delayS: 0.01,
+    calibrated: true, prediction: pred(false, [250, 500]),
+    preDeviceChange: false });
+  f.filters.set(2, { fileName: "combined_ch3-sub-browser-generated.wav",
+    role: ROLE.SUBWOOFER, enclosure: "closed", limitHz: 20, delayS: 0.02,
+    calibrated: false, prediction: pred(true, [30, 200]),
+    preDeviceChange: true });
+  const r = reportChannels(f);
+  eq(JSON.stringify(r[0]), JSON.stringify({
+    name: "Output 1", channel_index: 0, role: "fullrange", limit_hz: 80,
+    enclosure: "ported", delay_s: 0.01,
+    filename: "combined_ch1-fullrange-browser-generated.wav",
+    prediction_label: "Predicted residual within 3 dB: FAIL — predicted, " +
+      "not measured, unverified until re-measured",
+    band_hz: [250, 500], calibrated: true,
+  }));
+  eq(r[1].name, "Output 3");
+  eq(r[1].channel_index, 2);
+  eq(r[1].role, "subwoofer");
+  eq(r[1].filename, "combined_ch3-sub-browser-generated-measured-before-" +
+    "device-change.wav", "the name the download uses");
+  eq(r[1].calibrated, false);
+  eq(r[1].band_hz.join(), "30,200");
+  eq(channelLabel(7), "Output 8");
+  assert(REPORT_FILE.includes("browser-generated"), "AC10 mark");
+  eq(JSON.stringify(reportChannels(new Flow())), "[]");
 }
 
 export async function test_notice_detail_after_capture_2_stop() {

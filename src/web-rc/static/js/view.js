@@ -5,12 +5,12 @@
 // the UX/AE files named at each one.
 
 import { topStepDbfs } from "./crest.js";
-import { MAX_CHANNELS } from "./crest-plan.js";
+import { BASE_SEED, MAX_CHANNELS } from "./crest-plan.js";
 import {
   CAL_GAIN_NOTE, UNCAL_BANNER, UNCAL_RESULT, unboundText,
   uncalibratedFieldText, uncalibratedReason,
 } from "./calibration.js";
-import { FLOW, STEP } from "./flow.js";
+import { FLOW, STEP, markedName } from "./flow.js";
 import {
   LIMITS, ROLE, capabilityText, checkDeclaration, checkSampleRates,
   levelNoiseBandLabel,
@@ -52,6 +52,20 @@ export const TEXT = Object.freeze({
   PREPARING: "Preparing the sweep…",
   PRE_DEVICE_CHANGE: "measured before a device change",              // E5b D4
 });
+
+/** The role as the setup radios name it (E2a), for the result and report. */
+export const ROLE_LABEL = Object.freeze({
+  [ROLE.FULLRANGE]: "Full-range speaker",
+  [ROLE.SUBWOOFER]: "Subwoofer",
+});
+
+/** The report file next to the WAVs (AC10: marked browser-generated). */
+export const REPORT_FILE = "room-correction-report-browser-generated.txt";
+
+/** An output channel as the setup list labels it (1-based, UX 1683b0fb). */
+export function channelLabel(channel) {
+  return "Output " + (channel + 1);
+}
 
 /**
  * The 4a output item (UX 64c83e3e, 10bc34bf): the text follows the sinkId
@@ -116,11 +130,49 @@ export function rateLines(audio) {
   ];
 }
 
-/** AC8c, from the analysis result's prediction. */
-export function predictionText(prediction) {
+/** AC8c label, from the analysis result's prediction. */
+export function predictionLabel(prediction) {
   if (!prediction) return "";
   return "Predicted residual within 3 dB: " +
     (prediction.passed ? "PASS" : "FAIL") + TEXT.PREDICTED_SUFFIX;
+}
+
+/** The result step's AC8c line: the label and its band (E2h). */
+export function predictionText(prediction) {
+  const band = prediction && prediction.band_hz;
+  return predictionLabel(prediction) +
+    (band ? " (checked over " + band[0] + "-" + band[1] + " Hz)" : "");
+}
+
+/** E2h: the role next to the channel and base_seed (AC5a). */
+export function channelLine(channel, role) {
+  return channelLabel(channel) + ": " + ROLE_LABEL[role] + ". Noise " +
+    "base_seed " + BASE_SEED + " (channel_index " + channel + ").";
+}
+
+/** The delay as the report states it. */
+export function delayText(delayS) {
+  return "Delay (audio latency + time of flight): " +
+    (1000 * delayS).toFixed(1) + " ms";
+}
+
+/**
+ * AC10 report entries, one per filter, for webrc_pipeline.report_text.
+ * The filename is the one the download uses (E5b D4 mark included).
+ */
+export function reportChannels(flow) {
+  return [...flow.filters.entries()].map(([channel, f]) => ({
+    name: channelLabel(channel),
+    channel_index: channel,
+    role: f.role,
+    limit_hz: f.limitHz,
+    enclosure: f.enclosure,
+    delay_s: f.delayS,
+    filename: f.preDeviceChange ? markedName(f.fileName) : f.fileName,
+    prediction_label: predictionLabel(f.prediction),
+    band_hz: f.prediction ? f.prediction.band_hz : null,
+    calibrated: !!f.calibrated,
+  }));
 }
 
 /** The measure step's progress line (W2). */
@@ -218,6 +270,8 @@ function resultView(flow) {
   const r = flow.run.result;
   return {
     ready: flow.filters.size > 0 ? TEXT.READY : "",
+    channel: r ? channelLine(r.channel, r.role) : "",
+    delay: r ? delayText(r.delayS) : "",
     uncalibrated: r && !r.calibrated ? UNCAL_RESULT : "",
     prediction: r ? predictionText(r.prediction) : "",
     piNote: TEXT.PI_NOTE,

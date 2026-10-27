@@ -534,7 +534,8 @@ export class Flow {
   analysisDone(token, result) {
     if (!this._is(token, "analyze")) return [];
     this.filters.set(this.channel, { ...result, role: this.decl.role,
-      preDeviceChange: false, downloaded: false });
+      enclosure: this.decl.enclosure, preDeviceChange: false,
+      downloaded: false });
     this.run.result = result;
     this.run.pending = null;
     this.step = STEP.RESULT;
