@@ -46,18 +46,41 @@ TEST_TAPS = 4096
 # Helpers
 # ---------------------------------------------------------------------------
 
+# F-383 C2a (ruling 1da2c18a): the notch zeros sit inside the unit circle,
+# deep enough for a 35 dB notch.
+NOTCH_DEPTH_DB = 35.0
+
+
+def _notch_zero_radius(pole_radius, depth_db=NOTCH_DEPTH_DB):
+    """Zero radius r for a notch depth_db deep, between the poles and the circle.
+
+    The depth at the notch frequency is about (1 - r) / (1 - p). A zero radius
+    below the pole radius p turns the notch into a peak, so r is derived from p
+    rather than fixed.
+    """
+    return 1.0 - (1.0 - pole_radius) * 10.0 ** (-depth_db / 20.0)
+
+
 def _make_notch_correction(notch_freq, q=8.0, n_taps=TEST_TAPS, sr=SR):
     """Create a correction filter with a deep notch at notch_freq.
 
     The notch serves as a unique spectral fingerprint — if it appears in
     the wrong channel's output, we have cross-contamination.
 
-    Uses scipy.signal.iirnotch for a clean, deep notch that survives the
-    pipeline's D-009 clipping (which only clips boosts, not cuts).
+    Uses the poles of scipy.signal.iirnotch, with the zeros moved inside the
+    unit circle at the same angle (F-383 step 4): combine's A1a check rejects
+    on-circle zeros, which are not minimum phase. The gain matches iirnotch's
+    DC gain. The notch is NOTCH_DEPTH_DB deep at 500-3000 Hz. At 35-55 Hz the
+    4096-tap length (11.7 Hz resolution) limits it to about 10-16 dB, the same
+    as the on-circle notch; the own-notch assertion needs 2 dB. D-009 clipping
+    only clips boosts, so the notch survives the pipeline.
     """
     w0 = notch_freq / (sr / 2)
     w0 = min(w0, 0.99)
-    b, a = scipy.signal.iirnotch(w0, q)
+    b_circle, a = scipy.signal.iirnotch(w0, q)
+    r = _notch_zero_radius(np.sqrt(a[2]))
+    b = np.array([1.0, -2.0 * r * np.cos(np.pi * w0), r * r])
+    b *= np.sum(b_circle) / np.sum(b)
     impulse = np.zeros(n_taps)
     impulse[0] = 1.0
     notch_ir = scipy.signal.lfilter(b, a, impulse)
