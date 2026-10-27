@@ -35,6 +35,17 @@
       '';
     };
 
+    kernel.defconfig = lib.mkOption {
+      type = lib.types.enum [ "bcm2711_defconfig" "bcm2712_defconfig" ];
+      default = "bcm2711_defconfig";
+      description = ''
+        Raspberry Pi kernel defconfig for the "rt" variant (kernel-rt.nix).
+        bcm2711 is the Pi 4 config (4K pages); bcm2712 is the Pi 5 config
+        (16K pages). "rpi-cached" ignores it: the cached kernel is always
+        bcm2711.
+      '';
+    };
+
     kernel.keepNvme = lib.mkOption {
       type = lib.types.bool;
       default = false;

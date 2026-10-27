@@ -12,7 +12,8 @@
 #
 # Prerequisites verified in RPi fork commit a1073743767f (6.12.62):
 #   - arch/arm64/Kconfig selects ARCH_SUPPORTS_RT
-#   - bcm2711_defconfig sets CONFIG_EXPERT=y (required by PREEMPT_RT)
+#   - bcm2711_defconfig sets CONFIG_EXPERT=y (required by PREEMPT_RT),
+#     and so does bcm2712_defconfig (mugge.board.kernel.defconfig)
 #
 # D-013: PREEMPT_RT is mandatory for this project.
 # D-022: V3D ABBA deadlock fix (upstream commit 09fb2c6f4093, issue
@@ -90,6 +91,9 @@ let
       argsOverride = {
         # Pin to 6.12.62 source (includes V3D fix, D-022)
         version = "6.12.62-1+rpt1";
+        # nixpkgs maps linux_rpi4 to bcm2711_defconfig; the board may pick
+        # bcm2712 (US-172 R6a). LOCALVERSION is blanked by nixpkgs either way.
+        defconfig = board.kernel.defconfig;
         modDirVersion = "6.12.62";
         src = rpiKernelSrc;
 

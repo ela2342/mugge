@@ -8,7 +8,8 @@
 #
 # nixos-hardware is not used for the Pi 5 (architect ruling): the kernel is
 # either the cached nixpkgs linux_rpi4 (bcm2711_defconfig, which boots the
-# Pi 5 with 4K pages) or our RT build of the same defconfig (kernel-rt.nix).
+# Pi 5 with 4K pages) or our RT build (kernel-rt.nix) with the Pi 5
+# bcm2712_defconfig (16K pages, US-172 R6a).
 { lib, ... }:
 
 {
@@ -21,6 +22,8 @@
     name = "pi5";
     # Keep the NVMe driver: the Pi 5 has a PCIe connector for an NVMe HAT.
     kernel.keepNvme = true;
+    # US-172 R6a: the Pi 5 kernel config for the RT build (16K pages).
+    kernel.defconfig = "bcm2712_defconfig";
     # RP1 Ethernet (Cadence GEM). DHCP is matched on the driver, not on the
     # interface name: record the observed name after first boot.
     net.matchDriver = "macb";
