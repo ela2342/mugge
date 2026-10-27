@@ -658,43 +658,15 @@ fn dispatch_rpc_command(
         }
 
         rpc::RpcCommand::WatchdogUnlatch { reply } => {
-            let mut wd = watchdog_state.borrow_mut();
-            match wd.unlatch() {
-                Some(gains) => {
-                    // Drop the borrow before accessing the graph (may need
-                    // to look up node IDs for gain restoration).
-                    drop(wd);
-
-                    info!("Watchdog unlatch: restoring {} gain values", gains.len());
-
-                    // Restore pre-mute gain values via native PW API.
-                    // Gain builtins are params on the convolver node.
-                    let g = graph.borrow();
-                    let mut restored = 0usize;
-                    if let Some(convolver) = g.node_by_name(watchdog::CONVOLVER_NODE_NAME) {
-                        for (name, mult) in &gains {
-                            let prefixed = format!("{}:Mult", name);
-                            if reg_handle.set_node_param_mult(convolver.id, &prefixed, *mult as f32) {
-                                info!("Watchdog unlatch: restored {} to Mult={}", prefixed, mult);
-                                restored += 1;
-                            } else {
-                                log::warn!("Watchdog unlatch: failed to restore {}", prefixed);
-                            }
-                        }
-                    } else {
-                        log::warn!("Watchdog unlatch: convolver node not in graph, skipping restore");
-                    }
-                    drop(g);
-
-                    let _ = event_tx.send(GraphEvent::WatchdogUnlatched {
-                        restored_gains: restored,
-                    });
+            // F-320 D: unlatch writes no Mult and leaves the gate closed.
+            let result = watchdog::handle_unlatch(&mut watchdog_state.borrow_mut());
+            match result {
+                Ok(()) => {
+                    let _ = event_tx.send(GraphEvent::WatchdogUnlatched);
                     let _ = reply.send(RpcResult::Ok);
                 }
-                None => {
-                    let _ = reply.send(RpcResult::Error(
-                        "watchdog is not latched".to_string(),
-                    ));
+                Err(e) => {
+                    let _ = reply.send(RpcResult::Error(e));
                 }
             }
         }
@@ -764,6 +736,14 @@ fn dispatch_rpc_command(
         }
 
         rpc::RpcCommand::OpenGate { reply } => {
+            // F-320 D: refused while the watchdog is latched, before any
+            // other check and before any Mult write.
+            if let Err(e) = watchdog::open_gate_allowed(&watchdog_state.borrow()) {
+                log::warn!("open_gate refused: {}", e);
+                let _ = reply.send(RpcResult::Error(e));
+                return;
+            }
+
             let gains = pending_gains.borrow().clone();
             if gains.is_empty() {
                 let _ = reply.send(RpcResult::Error("no venue loaded".to_string()));

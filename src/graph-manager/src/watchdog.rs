@@ -13,6 +13,9 @@
 //! - Mute is LATCHED: once triggered, stays muted until explicit unlatch
 //! - Unlatch requires an RPC command (`watchdog_unlatch`)
 //! - The watchdog never increases gain — it only sets Mult to 0.0
+//! - Unlatch writes no Mult: gains stay at 0.0 and the gate stays closed.
+//!   The only way back to the venue gains is `open_gate`, which is refused
+//!   while latched (F-320 D)
 //!
 //! ## Monitored nodes (2)
 //!
@@ -133,9 +136,6 @@ pub struct Watchdog {
     latched: bool,
     /// Node names that were missing when the latch was triggered.
     missing_at_latch: Vec<String>,
-    /// Pre-mute Mult values stored for unlatch restoration.
-    /// Key: gain node name, Value: Mult value before mute.
-    pre_mute_gains: Vec<(String, f64)>,
 }
 
 impl Watchdog {
@@ -145,7 +145,6 @@ impl Watchdog {
             armed: false,
             latched: false,
             missing_at_latch: Vec::new(),
-            pre_mute_gains: Vec::new(),
         }
     }
 
@@ -162,11 +161,6 @@ impl Watchdog {
     /// Node names that were missing when the latch was triggered.
     pub fn missing_at_latch(&self) -> &[String] {
         &self.missing_at_latch
-    }
-
-    /// Pre-mute gain values (for unlatch restoration).
-    pub fn pre_mute_gains(&self) -> &[(String, f64)] {
-        &self.pre_mute_gains
     }
 
     /// Check the graph state and determine what action to take.
@@ -250,27 +244,22 @@ impl Watchdog {
         }
     }
 
-    /// Store pre-mute gain values (called by the mute executor before zeroing).
-    pub fn store_pre_mute_gains(&mut self, gains: Vec<(String, f64)>) {
-        self.pre_mute_gains = gains;
-    }
-
-    /// Unlatch the safety mute, returning the pre-mute gains for restoration.
+    /// Unlatch the safety mute. Returns `false` if it was not latched.
     ///
-    /// Returns `None` if not latched. Returns `Some(gains)` with the stored
-    /// pre-mute values if latched. The caller is responsible for restoring
-    /// the Mult values via PW API calls.
-    pub fn unlatch(&mut self) -> Option<Vec<(String, f64)>> {
+    /// Restores nothing (F-320 D): the gains stay at 0.0 and the gate stays
+    /// closed until an explicit `open_gate`.
+    pub fn unlatch(&mut self) -> bool {
         if !self.latched {
-            return None;
+            return false;
         }
 
         self.latched = false;
-        let gains = std::mem::take(&mut self.pre_mute_gains);
         self.missing_at_latch.clear();
 
-        log::warn!("WATCHDOG: Safety mute UNLATCHED — restoring {} gain values", gains.len());
-        Some(gains)
+        log::warn!(
+            "WATCHDOG: Safety mute UNLATCHED — gains stay 0, gate stays closed; reopen via open_gate",
+        );
+        true
     }
 
     /// Get the current watchdog status for RPC responses.
@@ -279,7 +268,6 @@ impl Watchdog {
             armed: self.armed,
             latched: self.latched,
             missing_nodes: self.missing_at_latch.clone(),
-            pre_mute_gains: self.pre_mute_gains.clone(),
         }
     }
 }
@@ -290,7 +278,34 @@ pub struct WatchdogStatus {
     pub armed: bool,
     pub latched: bool,
     pub missing_nodes: Vec<String>,
-    pub pre_mute_gains: Vec<(String, f64)>,
+}
+
+/// RPC error for `watchdog_unlatch` when the watchdog is not latched.
+pub const NOT_LATCHED_ERROR: &str = "watchdog is not latched";
+
+/// RPC error for `open_gate` while the watchdog is latched (F-320 D).
+pub const OPEN_GATE_LATCHED_ERROR: &str =
+    "watchdog latched: gate stays closed, no gain changed; unlatch first";
+
+/// The `watchdog_unlatch` RPC. It gets no graph and no registry handle, so
+/// it cannot write a Mult (F-320 D).
+pub fn handle_unlatch(wd: &mut Watchdog) -> Result<(), String> {
+    if wd.unlatch() {
+        Ok(())
+    } else {
+        Err(NOT_LATCHED_ERROR.to_string())
+    }
+}
+
+/// Precondition for `open_gate`: refused while the watchdog is latched.
+/// Checked before anything else in the `open_gate` handler, so no Mult is
+/// written while latched (F-320 D).
+pub fn open_gate_allowed(wd: &Watchdog) -> Result<(), String> {
+    if wd.is_latched() {
+        Err(OPEN_GATE_LATCHED_ERROR.to_string())
+    } else {
+        Ok(())
+    }
 }
 
 // ===========================================================================
@@ -518,36 +533,76 @@ mod tests {
     // Unlatch
     // -----------------------------------------------------------------------
 
-    #[test]
-    fn unlatch_clears_latch_and_returns_gains() {
+    /// An armed watchdog latched by losing pi4audio-convolver-out.
+    fn latched_watchdog() -> Watchdog {
         let mut wd = armed_watchdog();
         let mut g = graph_all_present();
         g.remove_node(200);
         let _ = wd.check(&g);
-
-        wd.store_pre_mute_gains(vec![
-            ("gain_left_hp".to_string(), 0.001),
-            ("gain_right_hp".to_string(), 0.001),
-            ("gain_sub1_lp".to_string(), 0.000631),
-            ("gain_sub2_lp".to_string(), 0.000631),
-            ("gain_hp_l".to_string(), 1.0),
-            ("gain_hp_r".to_string(), 1.0),
-            ("gain_iem_l".to_string(), 1.0),
-            ("gain_iem_r".to_string(), 1.0),
-        ]);
-
-        let gains = wd.unlatch();
-        assert!(!wd.is_latched());
-        assert!(gains.is_some());
-        let gains = gains.unwrap();
-        assert_eq!(gains.len(), 8);
-        assert_eq!(gains[0], ("gain_left_hp".to_string(), 0.001));
+        assert!(wd.is_latched());
+        wd
     }
 
     #[test]
-    fn unlatch_when_not_latched_returns_none() {
+    fn unlatch_clears_latch_and_missing_nodes() {
+        let mut wd = latched_watchdog();
+        assert!(wd.unlatch());
+        assert!(!wd.is_latched());
+        assert!(wd.missing_at_latch().is_empty());
+    }
+
+    #[test]
+    fn unlatch_when_not_latched_returns_false() {
         let mut wd = Watchdog::new();
-        assert!(wd.unlatch().is_none());
+        assert!(!wd.unlatch());
+    }
+
+    #[test]
+    fn handle_unlatch_on_latched_clears_latch() {
+        let mut wd = latched_watchdog();
+        assert_eq!(handle_unlatch(&mut wd), Ok(()));
+        assert!(!wd.is_latched());
+    }
+
+    #[test]
+    fn handle_unlatch_when_not_latched_is_the_rpc_error() {
+        let mut wd = armed_watchdog();
+        assert_eq!(
+            handle_unlatch(&mut wd),
+            Err("watchdog is not latched".to_string()),
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // open_gate precondition (F-320 D)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn open_gate_refused_while_latched() {
+        let wd = latched_watchdog();
+        assert_eq!(
+            open_gate_allowed(&wd),
+            Err(OPEN_GATE_LATCHED_ERROR.to_string()),
+        );
+    }
+
+    #[test]
+    fn open_gate_allowed_after_unlatch() {
+        let mut wd = latched_watchdog();
+        handle_unlatch(&mut wd).unwrap();
+        assert_eq!(open_gate_allowed(&wd), Ok(()));
+    }
+
+    #[test]
+    fn open_gate_allowed_when_never_latched() {
+        assert_eq!(open_gate_allowed(&Watchdog::new()), Ok(()));
+        assert_eq!(open_gate_allowed(&armed_watchdog()), Ok(()));
+    }
+
+    #[test]
+    fn open_gate_latched_error_says_no_gain_changed() {
+        assert!(OPEN_GATE_LATCHED_ERROR.starts_with("watchdog latched"));
+        assert!(OPEN_GATE_LATCHED_ERROR.contains("no gain changed"));
     }
 
     #[test]
@@ -597,6 +652,13 @@ mod tests {
         assert!(json.contains("\"armed\":false"));
     }
 
+    #[test]
+    fn status_has_no_gain_table() {
+        let v = serde_json::to_value(latched_watchdog().status()).unwrap();
+        let keys: Vec<&String> = v.as_object().unwrap().keys().collect();
+        assert_eq!(keys, ["armed", "latched", "missing_nodes"]);
+    }
+
     // -----------------------------------------------------------------------
     // Missing node tracking
     // -----------------------------------------------------------------------
@@ -613,26 +675,6 @@ mod tests {
         assert!(missing.contains(&"pi4audio-convolver".to_string()));
         assert!(missing.contains(&"pi4audio-convolver-out".to_string()));
         assert_eq!(missing.len(), 2);
-    }
-
-    // -----------------------------------------------------------------------
-    // Pre-mute gain storage
-    // -----------------------------------------------------------------------
-
-    #[test]
-    fn pre_mute_gains_stored_and_cleared_on_unlatch() {
-        let mut wd = armed_watchdog();
-        let mut g = graph_all_present();
-        g.remove_node(200);
-        let _ = wd.check(&g);
-
-        wd.store_pre_mute_gains(vec![
-            ("gain_left_hp".to_string(), 0.001),
-        ]);
-        assert_eq!(wd.pre_mute_gains().len(), 1);
-
-        wd.unlatch();
-        assert!(wd.pre_mute_gains().is_empty());
     }
 
     // -----------------------------------------------------------------------

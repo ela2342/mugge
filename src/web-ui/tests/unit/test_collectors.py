@@ -1072,7 +1072,6 @@ _GM_WATCHDOG_OK = {
     "watchdog": {
         "latched": False,
         "missing_nodes": [],
-        "pre_mute_gains": [],
     },
 }
 
@@ -1081,7 +1080,6 @@ _GM_WATCHDOG_LATCHED = {
     "watchdog": {
         "latched": True,
         "missing_nodes": ["pi4audio-convolver", "pi4audio-convolver-out"],
-        "pre_mute_gains": [["gain_left_hp", 0.001], ["gain_right_hp", 0.001]],
     },
 }
 
