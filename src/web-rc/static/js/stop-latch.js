@@ -17,10 +17,12 @@
 // before an output was armed does not stop it, but a cause still held trips
 // the new epoch, because the meter re-reports it every quantum.
 //
-// Heartbeat (r2 A4): the meter writes currentFrame here every process(),
-// after it has evaluated its stop conditions. A new output plays nothing
-// until it has seen a beat written after its construction, and it stops if
-// the beats go stale (OutputGate).
+// Heartbeat (r2 A4): the meter writes its beat count here every process(),
+// after it has evaluated its stop conditions: its own counter, +1 per call,
+// not currentFrame (Architect 3fb4cd0c B1: the browser can stamp two quanta
+// with the same frame). A new output plays nothing until it has seen a beat
+// written after its construction, and it stops if the beats go stale
+// (OutputGate).
 //
 // Scope (r2 A5): this state lives only as long as the AudioContext. A new
 // context starts with an empty latch; nothing may rely on trip memory
@@ -37,7 +39,7 @@ export class StopLatch {
     this.epoch = 0;
     this.trippedEpoch = 0;
     this.cause = null;
-    this.beatFrame = null;    // the last good beat, null = never written
+    this.beatCount = null;    // the last good beat, null = never written
     this.beatFault = false;   // a non-finite or non-increasing beat was written
   }
 
@@ -63,13 +65,13 @@ export class StopLatch {
   }
 
   /** The meter's heartbeat. A bad beat is a fault for the whole scope. */
-  beat(frame) {
-    if (!Number.isFinite(frame) ||
-        (this.beatFrame !== null && !(frame > this.beatFrame))) {
+  beat(count) {
+    if (!Number.isFinite(count) ||
+        (this.beatCount !== null && !(count > this.beatCount))) {
       this.beatFault = true;
       return;
     }
-    this.beatFrame = frame;
+    this.beatCount = count;
   }
 }
 
@@ -82,7 +84,7 @@ export class OutputGate {
   constructor(latch) {
     this.latch = latch;
     this.epoch = latch.arm();
-    this.lastBeat = latch.beatFrame;  // beats up to here predate this node
+    this.lastBeat = latch.beatCount;  // beats up to here predate this node
     this.fresh = false;
     this.quiet = 0;
     this.cause = null;                // the stop cause, once stopped
@@ -96,7 +98,7 @@ export class OutputGate {
   check() {
     if (this.cause !== null) return { stop: false, play: true };
     const l = this.latch;
-    const b = l.beatFrame;
+    const b = l.beatCount;
     let beatBad = l.beatFault;
     if (!beatBad) {
       if (b !== null && (this.lastBeat === null || b > this.lastBeat)) {

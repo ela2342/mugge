@@ -10,7 +10,8 @@
 //      { type: "record-cancel" }
 // A report with a stop cause also trips stop-latch.js, which stops the output
 // worklet without the main thread (Architect note b). Every process() then
-// writes the heartbeat (latch r2 A4), after the stop conditions.
+// writes the heartbeat (latch r2 A4), after the stop conditions: a count of
+// process() calls (Architect 3fb4cd0c B1), not currentFrame.
 //
 // Out: { type: "meter", frame, peakDbfs, rmsDbfs, rmsLastDbfs, quanta, cause }
 //      frame = currentFrame at the end of the reported quanta.
@@ -26,6 +27,11 @@ class MicMeterProcessor extends AudioWorkletProcessor {
     this.stream = new MeterStream(sampleRate, opts.splOffsetDb ?? null);
     this.silence = null;
     this.rec = null;
+    // The heartbeat count, +1 per process() call. One meter node per
+    // AudioContext (audio-io.js builds it with the context; a new context
+    // is a new latch scope). A second meter per context would need one
+    // counter per scope in stop-latch.js, never one per node.
+    this.beats = 0;
     this.port.onmessage = (e) => {
       const d = e.data || {};
       if (d.type === "calibration") {
@@ -63,7 +69,8 @@ class MicMeterProcessor extends AudioWorkletProcessor {
         type: "meter", frame: currentFrame + block.length, ...report,
       });
     }
-    stopLatch.beat(currentFrame);
+    this.beats += 1;
+    stopLatch.beat(this.beats);
     return true;
   }
 }

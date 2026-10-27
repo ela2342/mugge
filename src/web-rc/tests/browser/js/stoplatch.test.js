@@ -70,18 +70,18 @@ export async function test_latch_older_epoch_is_stopped() {
 /** A4: a beat that is not finite or not strictly increasing is a fault. */
 export async function test_latch_bad_beats_fault() {
   const good = new StopLatch();
-  for (const f of [0, 128, 256, 100000]) good.beat(f);
+  for (const n of [1, 2, 3, 4]) good.beat(n);
   eq(good.beatFault, false);
-  eq(good.beatFrame, 100000);
-  for (const [bad, why] of [[NaN, "NaN"], [Infinity, "infinite"], [256, "repeated"],
-    [255, "decreasing"], [undefined, "unwritten"]]) {
+  eq(good.beatCount, 4);
+  for (const [bad, why] of [[NaN, "NaN"], [Infinity, "infinite"], [2, "repeated"],
+    [1, "decreasing"], [undefined, "unwritten"]]) {
     const l = new StopLatch();
-    l.beat(128);
-    l.beat(256);
+    l.beat(1);
+    l.beat(2);
     l.beat(bad);
     eq(l.beatFault, true, why);
-    eq(l.beatFrame, 256, why + ": not stored");
-    l.beat(384);
+    eq(l.beatCount, 2, why + ": not stored");
+    l.beat(3);
     eq(l.beatFault, true, why + ": the fault holds");
   }
 }
@@ -98,9 +98,10 @@ function checks(gate, n, beat) {
   return r;
 }
 
-function counter(start = 0) {
-  let f = start - Q;
-  return () => (f += Q);
+/** The meter's beat count: +1 per quantum (Architect 3fb4cd0c B1). */
+function counter(start = 1) {
+  let n = start - 1;
+  return () => (n += 1);
 }
 
 /** C5: no beat after construction -> zeros; four quiet quanta -> stop. */
@@ -149,10 +150,10 @@ export async function test_gate_bad_beat_stops_at_once() {
     const l = new StopLatch();
     const g = new OutputGate(l);
     checks(g, 3, counter());
-    const last = l.beatFrame;
+    const last = l.beatCount;
     if (bad === "repeat") l.beat(last);
     else if (bad === "decrease") l.beat(last - 1);
-    else if (bad === "reader") l.beatFrame = last - Q; // written past beat()
+    else if (bad === "reader") l.beatCount = last - 1; // written past beat()
     else l.beat(bad);
     const r = g.check();
     eq(r.stop, true, String(bad));

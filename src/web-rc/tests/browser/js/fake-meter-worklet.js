@@ -1,6 +1,7 @@
 // fake-meter-worklet.js -- a test stand-in for the meter's side of
-// stop-latch.js (latch r2 A4, C1, C5): writes the heartbeat and trips the
-// latch on a schedule, so the output worklet can be tested without a mic.
+// stop-latch.js (latch r2 A4, C1, C5): writes the heartbeat (a count, +1
+// per call, as the meter does) and trips the latch on a schedule, so the
+// output worklet can be tested without a mic.
 // It imports the same stop-latch.js URL as the real worklets, so it shares
 // their module instance.
 //
@@ -20,6 +21,7 @@ class FakeMeter extends AudioWorkletProcessor {
     this.until = o.until ?? Infinity;
     this.tripAt = o.trip || null;
     this.bad = o.bad || null;
+    this.beats = 0;
   }
 
   process() {
@@ -27,9 +29,10 @@ class FakeMeter extends AudioWorkletProcessor {
     const t = this.tripAt;
     if (t && f >= t.at && f < (t.until ?? Infinity)) stopLatch.trip(t.cause);
     if (f >= this.from && f < this.until) {
-      let v = f;
+      let v = ++this.beats;
       if (this.bad && f >= this.bad.at) {
-        v = { nan: NaN, repeat: stopLatch.beatFrame, decrease: f - 1000 }[this.bad.kind];
+        v = { nan: NaN, repeat: stopLatch.beatCount,
+          decrease: stopLatch.beatCount - 1 }[this.bad.kind];
       }
       stopLatch.beat(v);
     }
