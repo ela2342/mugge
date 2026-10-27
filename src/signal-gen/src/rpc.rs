@@ -104,6 +104,10 @@ pub struct StatusResponse {
     /// `status` ack only; state broadcasts leave it out.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_level_dbfs: Option<f64>,
+    /// The exact linear value `hard_clip()` compares against (F-341, AE
+    /// 5d7f449a); `max_level_dbfs` is its readable form. Status ack only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_level_linear: Option<f32>,
 }
 
 /// Async event broadcast.
@@ -490,6 +494,7 @@ fn handle_status(latest_state: &StateSnapshot, limits: &SafetyLimits) -> HandleR
         },
         samples_generated: latest_state.samples_generated,
         max_level_dbfs: Some(limits.max_level_dbfs()),
+        max_level_linear: Some(limits.max_level_linear()),
     };
     let json = serde_json::to_string(&resp).unwrap_or_else(|_| {
         r#"{"type":"ack","ok":false,"error":"internal: failed to serialize status"}"#.to_string()
@@ -563,6 +568,7 @@ pub fn format_state_broadcast(snap: &StateSnapshot) -> String {
         },
         samples_generated: snap.samples_generated,
         max_level_dbfs: None,
+        max_level_linear: None,
     };
     serde_json::to_string(&resp).unwrap_or_default()
 }
@@ -944,6 +950,7 @@ mod tests {
         let req = parse_line(r#"{"cmd":"status"}"#).unwrap();
         for (limits, want) in [
             (SafetyLimits::from_dbfs(-30.0), -30.0),
+            (SafetyLimits::from_dbfs(-20.0), -20.0),
             (SafetyLimits::from_linear(0.05), -26.02),
         ] {
             let result = handle_request(
@@ -953,6 +960,12 @@ mod tests {
                 HandleResult::StatusJson(json_str) => {
                     let v: Value = serde_json::from_str(&json_str).unwrap();
                     assert_eq!(v["max_level_dbfs"], want);
+                    // The linear cap, bit for bit, and the dBFS value is its
+                    // rounded readable form (AE 5d7f449a).
+                    let lin = v["max_level_linear"].as_f64().unwrap() as f32;
+                    assert_eq!(lin.to_bits(), limits.max_level_linear().to_bits());
+                    let db = (20.0 * (lin as f64).log10() * 100.0).round() / 100.0;
+                    assert_eq!(v["max_level_dbfs"].as_f64().unwrap(), db);
                 }
                 _ => panic!("Expected StatusJson"),
             }
@@ -992,6 +1005,10 @@ mod tests {
                 assert_eq!(v["duration"], 10.0);
                 assert_eq!(v["samples_generated"], 72000);
                 assert_eq!(v["max_level_dbfs"], -20.0);
+                assert_eq!(
+                    (v["max_level_linear"].as_f64().unwrap() as f32).to_bits(),
+                    test_limits().max_level_linear().to_bits()
+                );
                 // Capture fields should NOT be present.
                 assert!(v.get("recording").is_none());
                 assert!(v.get("capture_peak_dbfs").is_none());
@@ -1103,6 +1120,7 @@ mod tests {
         // F-341: the cap is reported in the status ack only, so broadcasts
         // keep their pre-F-341 shape.
         assert!(v.get("max_level_dbfs").is_none());
+        assert!(v.get("max_level_linear").is_none());
     }
 
     // -----------------------------------------------------------------------
