@@ -21,12 +21,12 @@ gig-capable.** Evidence: `docs/lab-notes/US-163-pi5-bootstrap.md`.
 **No amps, headphones or IEM, and no signal-gen measurement use,** until
 every Pi 5 row of the AMPS-ON PRECONDITION LIST (Pi 5) below holds. The
 PM keeps the list in the backlog, using the same item numbers; if the
-backlog adds an item, this table must be updated too. The list has 16
-rows: 1-14, 19 and 20 (rows 15-18 are reserved for the US-174d PR, not
-merged yet). On the Pi 5, rows 1-3, 5-14, 19 and 20 must ALL hold; row 4 applies to the
-Pi 4 only. For a defect row, "holds" means the defect is closed and its
-fix verified on the Pi 5, unless the row itself names an alternative
-(row 14).
+backlog adds an item, this table must be updated too. The list has 17
+rows: 1-14 and 19-21 (rows 15-18 are reserved for the US-174d PR, not
+merged yet). On the Pi 5, rows 1-3, 5-14 and 19-21 must ALL hold; row 4
+applies to the Pi 4 only. For a defect row, "holds" means the defect is
+closed and its fix verified on the Pi 5, unless the row itself names an
+alternative (rows 14 and 21).
 
 | # | Item | What must hold, and why |
 |---|------|-------------------------|
@@ -46,6 +46,7 @@ fix verified on the Pi 5, unless the row itself names an alternative
 | 14 | Gate-authority defects (AD M4) | F-338, F-339, F-320, F-314, F-325 and F-349 are closed, or each has an interim operating rule in the merged safety.md (planned in PR #45, paused since 2026-10-26; until it merges, the rules in this row and in the Pi 5 rules below apply) that is followed. For F-314, F-349, F-338 and F-339 the interim rule must be AE-accepted. For F-338 and F-339 it must not rely on the web-UI Close Gate or on a CloseGate success reply: the emergency stop is the amp power switches (including the HP/IEM amps); a person at the switches the whole time the amps are on. After any gate close, mute or GraphManager restart, reading the gains does not prove "muted" yet. Switch the amps off, including the headphone/IEM amps, and headphones/IEMs not worn, and keep them off until PipeWire is restarted or the Pi is cold power-cycled, with all 16 gains verified at their boot values (safety.md, Gains at boot) and the gate closed. A gains reading counts only if the filter-chain node and its output node were idle or running immediately before and after the reading (states logged with it); a reading on a suspended node shows 0 whatever the real gain is and proves nothing (F-395, Gate-2 r6b). Once the live readback is proven on the Pi, this goes back to: "muted" is proven only by all 16 gains reading exactly 0.000000 via `pw-cli enum-params` on a node that is idle or running. That interim covers supervised sessions only; before any gig or unattended use, F-338 and F-339 are closed. For any own-speaker venue (e.g. CHN-50P), F-321 and F-322 are also closed |
 | 19 | F-465 | F-465 fixed and AC3 b-e passed on that generation; see F-465 rule |
 | 20 | F-410, F-320 D | While the D-063 gate is closed, no action other than Open Gate raises any Mult: the web UI unmute never restores gains behind a closed gate (F-410, closes with the F-439 / F-320 F PR), and the GM watchdog unlatch writes no Mult (F-320 D). Both must be fixed; no interim operating rule counts; AE acceptance required |
+| 21 | F-348 | No generated filter-chain conf can bring the gains up behind a closed gate. A generated conf writes the venue gains as its Mult defaults, and they take effect at the next PipeWire restart (F-348). Holds when F-348 is closed, or when the F-348 rule below is followed. Row 14's interim alternative does not cover F-348 |
 
 Until the list is closed, these rules apply on the Pi 5:
 
@@ -169,7 +170,7 @@ Until the list is closed, these rules apply on the Pi 5:
   headphones/IEMs not worn; report. (Section 5 check 10 is added by PR #45,
   paused; until then this paragraph is the rule.)
 - **Gate:** the GraphManager gate boots closed. Do not open it while any
-  Pi 5 row (1-3, 5-14, 19, 20) of the list above is open.
+  Pi 5 row (1-3, 5-14, 19-21) of the list above is open.
 - **F-465 rule (no venue armed):** the GraphManager service has no venues
   directory, so it cannot arm a venue. Without a venue the gate cannot
   open and the gains stay 0: the gap blocks audio, it does not make
@@ -186,6 +187,21 @@ Until the list is closed, these rules apply on the Pi 5:
   So a closed gate is not silent after an unlatch. If the watchdog
   latches: unlatch, then `close_gate`, then confirm all 8 Mults read 0
   (read as in "Gains at boot") before anything else.
+- **F-348 rule (generated convolver conf):** until F-348 is fixed, a
+  generated `~/.config/pipewire/pipewire.conf.d/30-filter-chain-convolver.conf`
+  comes up at the next PipeWire restart with the venue gains as its
+  defaults, while the gate reads closed. "Gains at boot" catches this
+  only at boot, not after a mid-session restart. So: (1) do not activate
+  a speaker profile, run a filter rollback, deploy filters, or run the
+  measurement DEPLOY step from the web UI, and do not call
+  room_correction's `deploy_pw_config` by hand; all of these write that
+  file. (2) Before any PipeWire restart, confirm that the file either
+  does not exist, or that it is the shipped conf and all 8 gain Mult
+  defaults in it read 0.0. If not, do not restart, keep the amps off,
+  and have it removed in a CM CHANGE session. (3) After the restart,
+  pass the "Gains at boot" read, and confirm in pw-dump that there is
+  exactly one pi4audio-convolver node, before the amps go on and before
+  headphones or IEM go back in.
 - **Outputs:** the WirePlumber allowlist disables every ALSA card except the
   USBStreamer (and the UMIK-1 capture). The HiFiBerry DAC+ HAT is blocked on
   2 layers (allowlist and module blacklist). The third layer
