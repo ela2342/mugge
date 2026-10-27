@@ -280,6 +280,64 @@ pub fn load_default_venue(
 }
 
 // ---------------------------------------------------------------------------
+// Startup venue state (US-123 restore, US-113 default, D-063 gate)
+// ---------------------------------------------------------------------------
+
+/// Venue state GM starts with.
+#[derive(Debug, PartialEq)]
+pub struct StartupVenue {
+    pub active_venue: Option<String>,
+    pub pending_gains: Vec<(String, f64)>,
+    /// D-063: always closed at startup; only `open_gate` opens it.
+    pub gate_open: bool,
+}
+
+/// Resolve the startup venue: the persisted venue (US-123), else the
+/// opt-in default (US-113). A venue is active only if its profile loads
+/// (F-465): on a lookup failure the venue is `None` and the persisted
+/// file is left as it is. Gains stay pending; nothing is applied here.
+pub fn resolve_startup_venue(
+    venues_dir: &Path,
+    state_dir: &Path,
+    default_name: Option<&str>,
+) -> StartupVenue {
+    let mut venue = None;
+    let mut gains = Vec::new();
+    match load_persisted_venue(state_dir) {
+        Some(name) => match find_venue(venues_dir, &name) {
+            Ok(profile) => {
+                gains = venue_gains(&profile);
+                venue = Some(name);
+            }
+            Err(e) => log::warn!("US-123: persisted venue '{}' not found: {} — starting with no venue", name, e),
+        },
+        None => match load_default_venue(default_name, venues_dir, state_dir) {
+            Ok(None) => log::info!("US-113: no persisted venue and {} unset — starting with no venue", DEFAULT_VENUE_ENV),
+            Ok(Some(name)) => match find_venue(venues_dir, &name) {
+                Ok(profile) => {
+                    gains = venue_gains(&profile);
+                    venue = Some(name);
+                }
+                Err(e) => log::warn!("US-113: default venue '{}' profile error: {} — starting with no venue", name, e),
+            },
+            Err(e) => log::warn!("US-113: failed to load default venue: {} — starting with no venue", e),
+        },
+    }
+    StartupVenue { active_venue: venue, pending_gains: gains, gate_open: false }
+}
+
+/// D-063 `open_gate` preconditions: a loaded venue and a closed gate.
+pub fn open_gate_precheck(pending_gains: &[(String, f64)], gate_open: bool) -> Result<(), String> {
+    if pending_gains.is_empty() {
+        return Err("no venue loaded".to_string());
+    }
+    if gate_open {
+        return Err("gate already open".to_string());
+    }
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
 // Loading
 // ---------------------------------------------------------------------------
 
@@ -874,6 +932,71 @@ channels:
         assert!(!state_dir.join(LAST_VENUE_FILE).exists(), "nothing may be persisted");
 
         let _ = fs::remove_dir_all(&state_dir);
+    }
+
+    // F-465 test (5): persisted valid venue, default unset -> restored,
+    // gate closed, gains pending.
+    #[test]
+    fn startup_restores_persisted_venue_gate_closed() {
+        let venues_dir = test_venues_dir("f465_t5_venues", "f465-venue");
+        let state_dir = fresh_dir("f465_t5_state");
+        persist_venue_name("f465-venue", &state_dir);
+
+        let s = resolve_startup_venue(&venues_dir, &state_dir, None);
+        assert_eq!(s.active_venue, Some("f465-venue".to_string()));
+        assert!(!s.gate_open, "D-063: gate closed at startup");
+        assert_eq!(s.pending_gains.len(), 8);
+        for (_, mult) in &s.pending_gains {
+            assert!((mult - 0.1).abs() < 1e-9, "-20 dB pending, got {}", mult);
+        }
+
+        let _ = fs::remove_dir_all(&venues_dir);
+        let _ = fs::remove_dir_all(&state_dir);
+    }
+
+    // F-465 tests (6) + (7): persisted unknown name, default unset -> no
+    // fallback to any venue, get_venue reads none, open_gate is refused,
+    // and the persisted file is left unchanged.
+    #[test]
+    fn startup_unknown_persisted_venue_is_none_and_gate_refused() {
+        let venues_dir = test_venues_dir("f465_t6_venues", "f465-venue");
+        let state_dir = fresh_dir("f465_t6_state");
+        persist_venue_name("gone-venue", &state_dir);
+        let before = fs::read(state_dir.join(LAST_VENUE_FILE)).unwrap();
+
+        let s = resolve_startup_venue(&venues_dir, &state_dir, None);
+        assert_eq!(s.active_venue, None, "get_venue must report no venue");
+        assert!(s.pending_gains.is_empty());
+        assert!(!s.gate_open);
+        assert_eq!(
+            open_gate_precheck(&s.pending_gains, s.gate_open),
+            Err("no venue loaded".to_string()),
+        );
+        assert_eq!(fs::read(state_dir.join(LAST_VENUE_FILE)).unwrap(), before);
+
+        let _ = fs::remove_dir_all(&venues_dir);
+        let _ = fs::remove_dir_all(&state_dir);
+    }
+
+    #[test]
+    fn startup_first_boot_default_unset_is_none() {
+        let venues_dir = test_venues_dir("f465_t1b_venues", "f465-venue");
+        let state_dir = fresh_dir("f465_t1b_state");
+
+        let s = resolve_startup_venue(&venues_dir, &state_dir, None);
+        assert_eq!(s, StartupVenue { active_venue: None, pending_gains: Vec::new(), gate_open: false });
+        assert!(!state_dir.join(LAST_VENUE_FILE).exists());
+
+        let _ = fs::remove_dir_all(&venues_dir);
+        let _ = fs::remove_dir_all(&state_dir);
+    }
+
+    #[test]
+    fn open_gate_precheck_states() {
+        let gains = vec![("gain_left_hp".to_string(), 0.1)];
+        assert_eq!(open_gate_precheck(&gains, false), Ok(()));
+        assert_eq!(open_gate_precheck(&gains, true), Err("gate already open".to_string()));
+        assert_eq!(open_gate_precheck(&[], false), Err("no venue loaded".to_string()));
     }
 
     // F-465 test (4): no built-in default venue name in the non-test code.
