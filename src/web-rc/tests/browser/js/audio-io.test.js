@@ -5,7 +5,7 @@
 // nodes log every call, in order.
 
 import { assert, eq } from "./assert.js";
-import { AudioIO, IO } from "../../../static/js/audio-io.js";
+import { AudioIO, IO, isSuperseded } from "../../../static/js/audio-io.js";
 
 const NOISE = { kind: "noise", seed: 1, band: null };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -271,4 +271,216 @@ export async function test_resume_reports_once_running() {
   c.io.ctx = null;
   await sleep(0);
   eq(c.msgs.resumed.length, 0);
+}
+
+// -- F-468: overlapping opens --------------------------------------------
+
+/**
+ * Runs `fn` with fake media devices and Web Audio behind open(). Each step
+ * is named by the call it belongs to: "gum1", "gum2", ... per getUserMedia
+ * call; "suspend1", "meter1", "output1", ... per context made. A step in
+ * `held` waits for release(name), one in `fail` then rejects; reached(name)
+ * resolves once an open is at that step, hit(name) tells whether one was.
+ * The order is the test's, not a clock's.
+ */
+async function withDevices({ held = [], fail = [] }, fn) {
+  const steps = new Map();
+  const step = (name) => {
+    if (!steps.has(name)) {
+      const s = {};
+      s.reached = new Promise((r) => { s.arrive = r; });
+      s.gate = new Promise((r) => { s.go = r; });
+      steps.set(name, s);
+    }
+    return steps.get(name);
+  };
+  const pass = async (name) => {
+    const s = step(name);
+    s.hit = true;
+    s.arrive();
+    if (held.includes(name)) await s.gate;
+    if (fail.includes(name)) throw new Error(name + " failed");
+  };
+  const streams = [], contexts = [];
+  class FakeContext {
+    constructor(opts) {
+      this.n = contexts.push(this);
+      this.opts = opts;
+      this.state = "running";
+      this.sampleRate = 48000;
+      this.destination = { maxChannelCount: 8 };
+      this.audioWorklet = {
+        addModule: (url) => pass((String(url).includes("meter") ? "meter" : "output") + this.n),
+      };
+    }
+    async suspend() { await pass("suspend" + this.n); this.state = "suspended"; }
+    async close() { this.state = "closed"; }
+    createMediaStreamSource() { return { connect() {} }; }
+    addEventListener() {}
+    setSinkId() {}
+  }
+  class FakeNode {
+    constructor() { this.port = { postMessage() {} }; }
+  }
+  const md = navigator.mediaDevices;
+  const saved = [md.getUserMedia, window.AudioContext, window.AudioWorkletNode];
+  md.getUserMedia = async () => {
+    const track = {
+      stopped: false, label: "", stop() { this.stopped = true; },
+      addEventListener() {}, getSettings: () => ({ sampleRate: 48000 }),
+    };
+    const stream = { track, getTracks: () => [track], getAudioTracks: () => [track] };
+    const n = streams.push(stream);
+    await pass("gum" + n);
+    return stream;
+  };
+  window.AudioContext = FakeContext;
+  window.AudioWorkletNode = FakeNode;
+  try {
+    await fn({ reached: (name) => step(name).reached, release: (name) => step(name).go(),
+      hit: (name) => !!(steps.has(name) && steps.get(name).hit), streams, contexts });
+  } finally {
+    [md.getUserMedia, window.AudioContext, window.AudioWorkletNode] = saved;
+  }
+}
+
+/** The rejection of `p`, or null if it resolves. */
+const rejection = (p) => p.then(() => null, (e) => e);
+
+/**
+ * Run 11: the older open, held at `at`, finishes after the newer one; it
+ * stops there, before its `next` step.
+ */
+async function olderFinishesLast(at, next) {
+  await withDevices({ held: [at] }, async ({ reached, release, hit, streams, contexts }) => {
+    const io = new AudioIO();
+    const first = io.open({ sinkId: "" });
+    await reached(at);
+    await io.open({ sinkId: "room" });
+    eq(io.ctx, contexts[1], "the newer open has committed");
+    release(at);
+    const e = await rejection(first);
+    assert(isSuperseded(e), "the older open rejects SupersededError, got " + e);
+    eq(hit(next), false, "the older open stops at once, before " + next);
+    eq(io.ctx, contexts[1], "the newer context stays");
+    eq(io.sinkId, "room", "the newer choice stays");
+    eq(contexts[0].state, "closed", "the older context is closed");
+    eq(streams[0].track.stopped, true, "the older mic is stopped");
+    eq(contexts[1].state, "suspended");
+    eq(streams[1].track.stopped, false);
+  });
+}
+
+export async function test_f468_older_open_held_at_suspend() {
+  await olderFinishesLast("suspend1", "meter1");
+}
+
+export async function test_f468_older_open_held_at_the_meter_module() {
+  await olderFinishesLast("meter1", "output1");
+}
+
+export async function test_f468_older_open_held_at_the_output_module() {
+  await olderFinishesLast("output1", "none");
+}
+
+export async function test_f468_older_open_finishing_first_does_not_commit() {
+  await withDevices({ held: ["meter1", "gum2"] }, async ({ reached, release, contexts }) => {
+    const io = new AudioIO();
+    const first = io.open({ sinkId: "" });
+    await reached("meter1");
+    const second = io.open({ sinkId: "room" });
+    await reached("gum2");
+    release("meter1");
+    assert(isSuperseded(await rejection(first)), "the older open is superseded");
+    eq(io.ctx, null, "nothing committed in between");
+    eq(contexts[0].state, "closed");
+    release("gum2");
+    await second;
+    eq(io.ctx, contexts[1]);
+    eq(io.sinkId, "room");
+  });
+}
+
+export async function test_f468_close_cancels_an_open_in_flight() {
+  await withDevices({ held: ["meter1"] }, async ({ reached, release, streams, contexts }) => {
+    const io = new AudioIO();
+    const p = io.open({ sinkId: "room" });
+    await reached("meter1");
+    await io.close();
+    release("meter1");
+    assert(isSuperseded(await rejection(p)), "the open is superseded");
+    eq(io.ctx, null, "nothing committed after the close");
+    eq(io.isOpen, false);
+    eq(contexts[0].state, "closed");
+    eq(streams[0].track.stopped, true);
+  });
+}
+
+export async function test_f468_close_during_getusermedia_makes_no_context() {
+  await withDevices({ held: ["gum1"] }, async ({ reached, release, streams, contexts }) => {
+    const io = new AudioIO();
+    const p = io.open({ sinkId: "room" });
+    await reached("gum1");
+    await io.close();
+    release("gum1");
+    assert(isSuperseded(await rejection(p)), "the open is superseded");
+    eq(contexts.length, 0, "no context for a superseded open");
+    eq(streams[0].track.stopped, true, "the granted mic is stopped");
+    eq(io.ctx, null);
+  });
+}
+
+export async function test_f468_close_right_after_open_cancels_it() {
+  // No await in between: the open has not yet passed its own close().
+  await withDevices({}, async ({ contexts }) => {
+    const io = new AudioIO();
+    const p = io.open({ sinkId: "room" });
+    const c = io.close();
+    assert(isSuperseded(await rejection(p)), "the open is superseded");
+    await c;
+    eq(io.ctx, null);
+    eq(contexts.every((x) => x.state === "closed"), true);
+  });
+}
+
+export async function test_f468_errors_of_a_current_open_pass_through() {
+  await withDevices({ fail: ["meter1"] }, async ({ streams, contexts }) => {
+    const io = new AudioIO();
+    const e = await rejection(io.open({ sinkId: "room" }));
+    eq(e && e.message, "meter1 failed", "the original error");
+    eq(isSuperseded(e), false);
+    eq(io.ctx, null);
+    eq(contexts[0].state, "closed");
+    eq(streams[0].track.stopped, true);
+  });
+}
+
+export async function test_f468_errors_of_a_superseded_open_are_superseded() {
+  // A newer open owns the outcome: an older one's failure is not reported.
+  await withDevices({ held: ["gum1"], fail: ["gum1"] }, async ({ reached, release, contexts }) => {
+    const io = new AudioIO();
+    const first = io.open({ sinkId: "" });
+    await reached("gum1");
+    const second = io.open({ sinkId: "room" });
+    release("gum1");
+    assert(isSuperseded(await rejection(first)), "superseded, not the gum error");
+    await second;
+    eq(io.ctx, contexts[0], "the newer open's context (the first one made)");
+    eq(io.sinkId, "room");
+  });
+}
+
+export async function test_f468_module_errors_of_a_superseded_open_are_superseded() {
+  await withDevices({ held: ["meter1"], fail: ["meter1"] }, async ({ reached, release, contexts }) => {
+    const io = new AudioIO();
+    const first = io.open({ sinkId: "" });
+    await reached("meter1");
+    const second = io.open({ sinkId: "room" });
+    await second;
+    release("meter1");
+    const e = await rejection(first);
+    assert(isSuperseded(e), "superseded, not the module error: " + e);
+    eq(contexts[0].state, "closed");
+    eq(io.ctx, contexts[1]);
+  });
 }

@@ -25,6 +25,10 @@
 // the flow only compares frames from one clock.
 // If "stopped" does not come within ZERO_TIMEOUT_MS, the context is
 // suspended anyway and the node is treated as stopped.
+//
+// Overlapping opens (F-468): only the newest open() commits. A newer open()
+// or a close() supersedes one still in flight; at its next await it stops
+// its own mic, closes its own context and rejects with SupersededError.
 
 import { checkDspFlags } from "./safety.js";
 
@@ -65,6 +69,17 @@ export function deviceKey(devices) {
     .join("|");
 }
 
+/** An open() that a newer open() or a close() has replaced (F-468). */
+export function isSuperseded(e) {
+  return !!e && e.name === "SupersededError";
+}
+
+function superseded() {
+  const e = new Error("superseded by a newer open or a close");
+  e.name = "SupersededError";
+  return e;
+}
+
 let clockSeq = 0;
 
 export class AudioIO {
@@ -84,6 +99,7 @@ export class AudioIO {
     this.recording = null;
     this.sinkId = "";
     this._playSeq = 0;
+    this._openSeq = 0;            // the newest open() (F-468)
     this._waiting = 0;
   }
 
@@ -93,21 +109,37 @@ export class AudioIO {
 
   /** Open the mic and the output device. Rejects with a named error. */
   async open({ micId = "", sinkId = "" } = {}) {
-    await this.close();
-    const stream = await navigator.mediaDevices.getUserMedia(micConstraints(micId));
+    const seq = ++this._openSeq;  // before any await: no two opens share it
+    const current = () => {
+      if (seq !== this._openSeq) throw superseded();
+    };
+    await this._close();
+    current();
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia(micConstraints(micId));
+    } catch (e) {
+      current();
+      throw e;
+    }
     const opts = { latencyHint: "interactive" };
     if (sinkId && "setSinkId" in AudioContext.prototype) opts.sinkId = sinkId;
     let ctx;
     try {
+      current();
       ctx = new AudioContext(opts);
       await ctx.suspend();
+      current();
       await ctx.audioWorklet.addModule(METER_URL);
+      current();
       await ctx.audioWorklet.addModule(OUTPUT_URL);
+      current();
     } catch (e) {
       for (const t of stream.getTracks()) t.stop();
       if (ctx) await ctx.close().catch(() => {});
-      throw e;
+      throw seq === this._openSeq ? e : superseded();
     }
+    // From here to the end nothing awaits: this open commits.
     const dest = ctx.destination;
     dest.channelCount = dest.maxChannelCount;
     dest.channelCountMode = "explicit";
@@ -137,6 +169,11 @@ export class AudioIO {
   }
 
   async close() {
+    this._openSeq += 1;           // an open() in flight is superseded
+    await this._close();
+  }
+
+  async _close() {
     // Closing cuts the output: first let every ramp reach 0 (r2 B4).
     this._playSeq += 1;
     if (this.out) this._retire(this.out, true);

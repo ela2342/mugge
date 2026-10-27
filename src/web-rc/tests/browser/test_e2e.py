@@ -102,8 +102,15 @@ def test_one_channel_end_to_end(room_page, page_url, tmp_path):  # noqa: F811
     expect(page.locator("#rate-lines li")).to_have_text([
         "Sample rate: 48000 Hz (output)", "Sample rate: 48000 Hz (input)"])
     sink_id = page.evaluate("window.__room.sinkId")
-    assert sink_id and page.evaluate("window.__room.contexts")[-1] == {
-        "sinkId": sink_id, "rate": RATE}
+    # The page's open context is on the room's output (F-468: not just the
+    # last one made), and every other context it made is closed.
+    active = page.evaluate("""() => { const io = window.__webrcApp.io;
+        return { sinkId: io.sinkId, rate: io.ctx && io.ctx.sampleRate,
+                 others: window.__room.live.filter((c) => c !== io.ctx)
+                     .map((c) => c.state) }; }""")
+    assert sink_id and active["sinkId"] == sink_id and active["rate"] == RATE, (
+        active)
+    assert all(s == "closed" for s in active["others"]), active
     assert page.evaluate("window.__room.heard") == 1
 
     page.select_option("#channel", str(CHANNEL))

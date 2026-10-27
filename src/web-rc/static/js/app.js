@@ -5,7 +5,7 @@
 // flow's; this file forwards events to it, carries out the commands it
 // returns and copies view.js's view model into the page.
 
-import { AudioIO, deviceKey } from "./audio-io.js";
+import { AudioIO, deviceKey, isSuperseded } from "./audio-io.js";
 import { parseCalibration } from "./calibration.js";
 import { Flow, STEP } from "./flow.js";
 import { RcClient } from "./rc-client.js";
@@ -151,6 +151,7 @@ export class App {
     try {
       await this.io.open({ micId, sinkId });
     } catch (e) {
+      if (isSuperseded(e)) return;   // the newer open owns the outcome (F-468)
       this.flow.setAudio(null);
       this.openError = "Can't open the audio devices: " +
         String(e && e.message || e);
