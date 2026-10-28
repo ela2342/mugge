@@ -786,7 +786,10 @@ defaults on PipeWire restart.
 
 Venue configuration profiles define per-channel gain, delay, and coefficient file
 settings for a specific performance location. They are stored as YAML files in
-`/etc/pi4audio/venues/` (or `configs/venues/` in the repository).
+`configs/venues/` in the repository. On the Pi 5 (NixOS), the build packages
+them into a read-only Nix store dir. GraphManager and the web UI both read that
+dir via `PI4AUDIO_VENUES_DIR` (F-465). `/etc/pi4audio/venues/` is the
+historical Pi 4B location.
 
 **YAML schema:**
 
@@ -1702,7 +1705,7 @@ Runtime configuration controls:
   - **Apply** button sends gain changes to PipeWire via `pw-cli`.
   - **Reset** button reverts sliders to last-fetched server values.
 - **Venue selector (US-113):** Dropdown listing available venue config profiles
-  from `/etc/pi4audio/venues/`. Selecting a venue loads per-channel gains, delays,
+  from the venues dir (`PI4AUDIO_VENUES_DIR`, see Venue Configuration). Selecting a venue loads per-channel gains, delays,
   and coefficient file assignments via the GraphManager `set_venue` RPC.
 - **Audio gate controls (D-063):** Open/close buttons for the universal audio gate.
   Gate status indicator shows whether audio is flowing (gate open) or muted (gate
