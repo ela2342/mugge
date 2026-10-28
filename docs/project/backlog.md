@@ -1342,6 +1342,63 @@ priority!"
     amps-on list row question to TW/AE (mirror rule) at the next
     safety.md batch; Pi-gated items parked (owner travelling,
     2026-10-28).
+  - v319 PUSHED (CM, PM verified ls-remote + blob): chore/backlog =
+    4c1622d584a62728ac15990083e683768b2c3fa0 (parent a468be82, blob
+    14408b84, +245/-0). v320 bases on it.
+  - OWNER RULING 2026-10-28 (via team-lead), verbatim: "Set the stop
+    at 10GB". The disk stop line for heavy work moves from 30 GiB free
+    to 10 GiB free (supersedes the 30 GiB line in DISK HOLD above).
+    DISK HOLD LIFTED (CM): the Mac was at 23 GiB free. Still NOT
+    authorized without an owner OK: store GC, store deletes, qcow2
+    compaction, stopping minikube, restarting the Mac. team-lead: ONE
+    heavy job at a time; no new starts as free space nears 12 GiB
+    (tell team-lead). worker-7 F-383 S4 ran first (free space 23 -> 19
+    GiB, never below 10), then K3 GO to worker-6 (see F-468).
+  - PR #73 (F-348 item 2 + B1) MERGED (CM): main c607ebac ->
+    2e992a0129563eb7b7547927bb31126aff7d49aa (PM verified ls-remote;
+    parents c607ebac + 3255e2dc). Head 3255e2dc = main-merge head M
+    (2e439985 + c607ebac; C1 code byte-identical per CM, the only
+    incoming change is #74 docs). 7/7 at 3255e2dc: AD r3 61466722
+    (supersedes 8b5cf0e1), AE c2d8ece5, SecSpec 2a45b71b, TW fe80d093,
+    UX 5ee87b81 (supersedes e79a74fa), Architect 72cc76ad, QE 75c8a061
+    (PM verified AD, UX, QE files at read). CI: 40672918025 at
+    2e439985 green; PR CI 40686750275 at 3255e2dc all pass (QE
+    carry-over C2); all six mutant runs (M1, M2a, M2b, M3, M4a, M4b)
+    done before M was pushed (C3). Body r4 TW P1 1f64d10e (cite only)
+    -> body r5 4af97760 (worker-4, l.145 only), TW-OK. Effect: F-320 D
+    (e0e12b58) and F-383 step 4 (12673904) are behind main and need
+    main merged in.
+  - DOCS QUEUE item 6 (supersedes v319's item 6 line): sequencing
+    "merges only after #73" MET. STAGED by the CM on local branch
+    docs/q6-F465-F467 on c607ebac, unpushed: e19d334f = TW F-465.md r1
+    eb73ba06 (blobs = MANIFEST 30bdc7ed; it already carries (d)
+    Architect #74 NB1(a), in the SETUP-MANUAL hunk,
+    Architect-confirmed; PM's earlier gap check on (d) was wrong) and
+    454e53b9 = PM F-467 r2 (see F-467). (b) TW r1 eb73ba06 STANDS, no
+    r2; PM input 120a1c9d item 3 is in r1, items 1-2 (F-487 Related
+    cite; CI 299 next to the worker's 298) go in the TW's next batch.
+    The TW (single writer) writes one more batch on #73's merged main
+    with (a) TW #73 N1 7e657834 + PM items 1-2; then the CM rebases
+    onto 2e992a01 or later and opens ONE PR with (a)-(d), so the 7
+    reviews happen once ((a) needs a UX release + Architect/SecSpec
+    fact checks).
+  - F-383 step 4 S4 PR body mapping (PM confirmed to CM): AE 7d4fd4a6
+    AD1 F-ID-1 = F-495, F-ID-2 = F-496, path item = F-372 (no F-ID-3);
+    all filed in v318/v319 (team-lead dup-check request answered:
+    nothing new to file).
+  - OPEN TRACKING (v320; supersedes v319's line): starvation guard
+    2026-10-28T20:04+01:00 (chain F-341 -> F-320 D hunk -> F-439 ->
+    #66; #72, #73, #74 merged); F-320 D merge-head CI 40687367761 +
+    main merge onto 2e992a01 + PR; F-383 step 4 main merge + PR (AE
+    release of Architect 82b91d68 to be cited; QE CI timeout-headroom
+    NB); docs queue item 6 (TW batch with (a) + PM items 1-2, then ONE
+    PR); F-468 K3 runs 3-20; the F-341 nix commit; F-504 owner + fix;
+    QE tier-docs text in TW batch r2 on e0e12b58 (watch the
+    testing-process.md section 3.9 line); F-477 + AD #70 nits (1)/(3)
+    marked fixed at the F-320 D merge; F-441 UART question (parked);
+    F-481 role-prompt vehicle; F-497 amps-on list row question to
+    TW/AE (mirror rule) at the next safety.md batch; Pi-gated items
+    parked (owner travelling, 2026-10-28).
 
 ## Reserved IDs
 
@@ -1520,6 +1577,9 @@ A1a line): F-500, US-183, D-072, T66.
 Next free (v319; supersedes the line above; F-500 to F-502 confirmed
 free on all local and origin refs and the CM relay files at PM read,
 filed in this version): F-503, US-183, D-072, T66.
+Next free (v320; supersedes the line above; F-503 and F-504 confirmed
+free on all local and origin refs and the CM relay files at PM read,
+filed in this version): F-505, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -3644,6 +3704,28 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       PASSED, 0 ERROR, 0 SKIPPED; for (i) the latched line + equal
       ids; counts as above or explained). The QE PR verdict waits on
       this. No new ID (test design inside F-320 D).
+    - v320 (worker-3 fix + evidence): QE r2 bcdfea5f (Option A)
+      WITHDRAWN (crossed worker-3's commit, never relayed); r1
+      224e5a46 governs with R2 option (ii) (drop L1; L2 carries its
+      assertions), implemented at 6a3f309a; QE acceptance
+      /tmp/qe-F320D-F4-6a3f309a-r1.md (sha256 46dc45da). AE RELEASE of
+      (ii):
+      /tmp/cm-relay/F-320D/frozen/ae-F320D-option-ii-drop-L1-release-97bb2cb9
+      (sha256 97bb2cb916d10f3d..., PM verified), covering 6a3f309a
+      (diff 9a0c6caa) and main merge e0e12b58 (6a3f309a + c607ebac,
+      merge check c2e87a02). worker-3 diagnosis afa36049: destroying
+      one filter-chain stream unloads the whole module, so "one node
+      missing" is never a stable state on the Pi (the watchdog latch
+      handles it). R4 MET (QE; run 40676614102 at 6a3f309a, lines sha
+      8eb4ac76): service-destructive 1/1 passed, 0 error, 0 skipped
+      (L2); service-int 3 xfail vs 2 xfail/1 xpass at 137f360a,
+      attributed (inferred; the lines do not name the test) to the
+      known F-262 test_full_session_api non-strict flip, same 81
+      collected / 76 passed; QE tracks it under #66 S2 as stable-pass
+      evidence. e0e12b58 PUSHED (fix/F-320D-unlatch-no-mult; PM
+      ls-remote), CI 40687367761 (run_e2e=true) in progress. Now
+      behind main 2e992a01 (#73). Local cargo counts in worker-3's
+      30dda595 item 2: see F-504.
 - **F-341** signal-gen pre-flight #6 replacement. MEDIUM (AE):
   pre-flight #6 only VERIFIES the -20 dBFS signal-gen cap, which stays
   enforced in code and immutable after start; it would be High if an
@@ -12484,6 +12566,27 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   blocks the whole deploy for that profile/venue. G0 not green until
   the rc second half and the unit suite run after the disk go.
   worker-7's PR follows.
+  v320 step 4 S4: worker-7 finished 14:02; rc green 1987 passed / 1
+  skipped (UMIK-1 calibration file absent, environment; 2 numpy
+  warnings from deliberate non-finite inputs), wall 1845 s (759 s at
+  step 3); unit RED, 3 cases of
+  test_in_window_lag_gives_the_lag_zero_filters in
+  test_capture_alignment_session.py (sub1 corrected response differs
+  ~3 dB, limit 0.2 dB), pass at base c44ac3de, fail with step 4,
+  deterministic: STOP
+  /tmp/cm-relay/F-383/frozen/w7-step4-stop-unit-lag-floor-33798203 (PM
+  verified). QE points c3225f9b to the Architect; Architect ruling r1
+  /tmp/cm-relay/F-383/frozen/ as
+  F383-step4-unit-lag-floor-ruling-architect-r1-82b91d68 (single
+  writer; AE release sha to be cited). Results at head 12673904
+  (fix/F-383-step4-combine, parent c44ac3de, one local commit, 10
+  files, unpushed):
+  /tmp/cm-relay/F-383/frozen/w7-step4-results-12673904-d3261d73; QE
+  "S4 results OK" against 82b91d68 R1-R7, no points; Architect + AE
+  signed off; AE: addenda 7d4fd4a6 etc. do not affect step 4 at
+  12673904. Needs main 2e992a01 merged in, then the PR. QE NB
+  (non-blocking): check the CI step timeout headroom for the longer rc
+  suite before the PR.
 - **F-384** (Architect; AE confirms the priority; P1; 2026-10-25)
   correction.py step 9 (main b0666c02,
   src/room-correction/room_correction/correction.py:130-143): the
@@ -17493,6 +17596,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     fails to load"; the change is F-467 (the cause of TW #74 C1).
     Defect file + index row: PM, docs queue item 6 (c) (TW #74 NB:
     none on main).
+  - v320: defect file r2 RELEASED (AE + Architect, no points):
+    /tmp/pm-docs/f467-r2/pm-F467-docs-r2.patch-96b20e01 (sha256
+    96b20e0162bb89d7..., git apply --check clean on c607ebac); r1
+    32929b78 not released (frozen, untouched). r2 folds in Architect
+    points 507e5492 (P1 Found in = main.rs l.214-226 at afaba039^, bug
+    at l.226; P2 the PI4AUDIO_DEFAULT_VENUE branch had the same
+    pattern, now no venue, venue.rs l.316-322 at c607ebac) and the AE
+    comment (16ab21eb P2: false active venue -> false PASS on the
+    F-465 AC3e get_venue read). Staged as commit 454e53b9 (docs queue
+    item 6).
 - **F-468** US-179 web-rc double Open (E2E ack-label flake, run11;
   parked behind F-341) (filed 2026-10-27; ID free across main, all
   origin/* and local branches at PM read; full record below, folded
@@ -17600,6 +17713,25 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       r2b script diff 21a3644b QE-accepted. Resume waits on the CM
       disk go (new expected end stated then). Closure still needs K3
       20/20.
+    - v320 K3 rules after the owner's 10 GiB line (all sha256 verified
+      at PM read): QE amendment 1 57c92643 (C3: df >= 12 GiB at each
+      run start, one heavy job at a time; a guard abort below 10 GiB
+      is VOID only if the run showed no test failure and no F-490
+      dropout signature before it, else FAIL); amendment 2 16ec1216
+      (Option A: the script diff may change only the df numbers);
+      k3r2c ee263263 NOT ACCEPTED (c8ddd0ab: start guard -lt 10);
+      a98cbfa6 (k3r2d 1ac32b91 / diff e0a24c89 / dfwatch a61b8d72)
+      SUPERSEDED, worker-6 voided that set.
+    - GOVERNING SET (QE 08307f7c; CM record cb00406d; FINAL):
+      k3r2d-r2.sh 1fc65a31, diff 695e673b (vs k3r2b 45cc41b1: header,
+      K/END paths, l.26 -lt 12), dfwatch-r2.sh ca430c20, frozen in
+      /tmp/cm-relay/F-468/frozen/. K1: the results file records the
+      sha256 of both scripts as run = 1fc65a31 and ca430c20, else the
+      runs do not count. K2: an ABORT line in dfwatch.log governs over
+      k3r2d.end. Results file cites df058564, 57c92643, 16ec1216,
+      c8ddd0ab, 08307f7c, 695e673b. Runs 1-2 carry over (2/20). K3 GO
+      to worker-6 after F-383 S4 (CM, 14:03; df 19 GiB). Closure still
+      needs 20/20.
 - **F-469** HIGH: Pi 5 USBStreamer driver ERR at quantum 256 (PR63 S1
   G6); Live-mode track, outside US-173 (filed 2026-10-27; ID free
   across main, all origin/* and local branches at PM read; full record
@@ -18182,6 +18314,74 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   US-123. Dup check: no restore-source logging entry. ID free at PM
   read.
   - Next free -> F-503.
+- **F-503** LOW (noise/observability; owner GM code owner, Architect
+  informed; outside F-320 D; after core tech; QE request + worker-3
+  afa36049 side note; filed 2026-10-28): the GM reconciler retries
+  DESTROY on the same stale link ids across back-to-back
+  reconciliations after a node removal (run 40669316702 log
+  l.10738-11024: DESTROY id=177 15 times). Harmless in that run (the
+  links' node was gone), but log noise, and it may hide a
+  non-converging reconcile. Ask: does the reconciler drop a link id
+  from its pending set once it is destroyed or no longer in the
+  registry? Related: the 8ef778e3 reconciler feedback-loop fix
+  (re-entrancy + duplicate-link guard, GM-12 Finding 10), F-361 (link
+  audit; different), F-373 (sink recovery; different). Dup check: no
+  repeated-DESTROY / stale-link-retry entry (l.188 ff. and l.13691 are
+  the stale CLAUDE.md reconciler bugs, closed by 8ef778e3/5fbd5f75).
+  ID free at PM read.
+- **F-504** (unrated; owner TBD, flake/test-app owner; Mac-local test
+  evidence, not a merge blocker; worker-3 via CM, filed 2026-10-28):
+  local Rust test apps can test a stale binary. The flake apps run
+  cargo from the /nix/store source, where every file has mtime
+  1970-01-01, with a shared CARGO_TARGET_DIR under
+  $HOME/.cargo-target; cargo sees the sources as older than any
+  existing binary and never rebuilds after the first build. Source:
+  /tmp/cm-relay/F-320D/frozen/w3-local-cargo-correction-r1-14d4db99
+  (sha256 14d4db99, PM verified). Instance: worker-3's "294 passed at
+  445ece2d" (30dda595 item 2, now void as evidence) ran a binary built
+  2026-10-27 18:44 from another tree ("Finished in 0.12s", lists a
+  test 445ece2d lacks); fresh-dir replacements: 6a3f309a 299 passed,
+  e0e12b58 306 passed; 30dda595 item 3 (clippy) stands.
+  QE impact ruling r1
+  /tmp/cm-relay/F-504/frozen/qe-local-cargo-stale-impact-r1-b58a68c9
+  (sha256 b58a68c9, PM verified): scope = both dirs, pi4audio-gm
+  (test-graph-manager and the GM steps of test-all / test-everything)
+  and pi4audio-ws (test-audio-common, test-level-bridge,
+  test-pcm-bridge, test-signal-gen and the audio-common steps of
+  test-all / test-everything). All agents share one HOME, so a count
+  can come from another worker's tree. A local Rust result is VALID
+  only if (i) the log shows "Compiling <crate under test>" in that
+  run, or (ii) it used a fresh, empty CARGO_TARGET_DIR; else
+  UNVERIFIED. Not affected: CI (empty HOME), the Python suites, F-468
+  K3, the #73 mutants, Nix-built packages. No merge rests on a local
+  count (Rule 13 needs CI). Interim: a local fresh-dir run is a heavy
+  job (CM clearance, df >= 12 GiB, no overlap with K3); do NOT touch
+  ~/.cargo-target/* until F-504 is ruled (cleanup is a CM decision).
+  Self-check sweep CLOSED (via CM): none from UX, SecSpec, Architect,
+  TW, AE, AD, worker-2, worker-4, worker-6, worker-7; worker-3 none
+  further (US-173 m1 "292 passed", log 4080a630, shows Compiling,
+  VALID); worker-1 ONE item: F-465 GM "298 passed" ran via
+  ~/.cargo-target/pi4audio-gm with no raw log kept (results r1
+  fa881b0e / r2 1041f6a9), UNVERIFIED; fresh evidence: sandbox build
+  at 1eb84dac, log c62472aa (Compiling, 298 passed) + PR #72 CI. The
+  #74 F-465 text "298/298 GM tests (worker-1 973b2865)" is historical
+  (QE b58a68c9 section (b), confirmed): CI 299 at 69004e63 governs, no
+  action. worker-5 not asked (standing avoid rule); any worker-5 local
+  count is UNVERIFIED by default. Fix acceptance (QE): run the app at
+  two shas whose Rust test counts differ; both runs compile the crate
+  and report their own count (e.g. 299 at 6a3f309a, then 306 at
+  e0e12b58). Related (different problem): "Rust tests recompile on
+  every CI run" (Architect, P3 CI speed). Dup check: no stale-binary /
+  mtime entry. ID free at PM read.
+- Low (QE, 2026-10-28; from /tmp/qe-F320D-test-tier-text-r1.md, sha256
+  93ffb7cc; no ID): fixtures/backend.py:85 describes the `destructive`
+  marker as "tests that modify Pi state"; the service-destructive tier
+  also uses it for local-demo stack state. Reword the marker text.
+  Owner: test-fixture owner (QE routes). Related: F-320 D,
+  testing-process.md section 3.9 (the stale
+  "tests/service-integration/ does not exist yet" note gets its own
+  Low line only if TW batch r2 leaves it out).
+  - Next free -> F-505.
 
 ## Open PRs (2026-10-24, per CM)
 
