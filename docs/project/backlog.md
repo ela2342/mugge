@@ -1143,6 +1143,95 @@ priority!"
     does not shrink; under the disk line no nix
     build/run/develop/store delete/GC without CM clearance; reclaiming
     space is a CM/owner call.
+  - v317 PUSHED (CM, PM verified ls-remote + blob): chore/backlog =
+    2f348cac61d603060777b07890f4b2b5b6195e65 (parent f070ecba, blob
+    1c84e9f1, +296/-0). v318 bases on it.
+  - #72 MERGED (CM): main df9a8f32 -> d12661e30d2f (PM verified
+    ls-remote; not fetched). Head 69004e63, 7/7, CI 40661085292 green
+    on all jobs, QE C1/C2 MET /tmp/pr72-qe-ci-c1c2-f5349afb-r1.md
+    (sha256 54ac4e15; skip set identical to F-439 40660143390 and
+    F-320 D 40660563894; QE c2934ef3 stands). Chain next: the F-341
+    nix commit, then the F-320 D OpenGate hunk (worker-3, AE NB2
+    order), then F-439 (after F-341), then #66.
+  - PR #73 = F-348 item 2, measure-only run (CM; worker-4, single body
+    writer): opened at 3cdad94b (body caaafb26, CI 40669507505);
+    main-merge head 8221a193 and TW docs 59a6e58d (patch
+    /tmp/cm-relay/PR73/frozen/ as
+    tw-pr73-docs-r1-d12661e3.patch-8593ba04, UX-released) local.
+    Verdicts at 3cdad94b (frozen in /tmp/cm-relay/PR73/frozen/, sha256
+    verified at PM read): APPROVE Architect af444097, QE 18d81a9e
+    (conditional C1-C3: CI T1-T3 green at the merging head with tier
+    and TestMeasureOnlyRun lines; head sync with one-line re-approval
+    if session.py stays 85a6556f and the test file d665841e; any other
+    head change re-checked), AD 1324805c, UX f51978cf; AE 98ec9e23
+    SUSPENDED for B1 (points cd6fd804: option A required); CHANGES
+    REQUESTED SecSpec 5cb57b90 (B1 BLOCKING: client output_dir on POST
+    /api/v1/measurement/start makes "nothing is written under
+    pipewire.conf.d" false) and TW 687c41a8 (operator docs =
+    8593ba04).
+    - B1 RULED OPTION A: Architect r3 /tmp/cm-relay/PR73/frozen/ as
+      arch-PR73-B1-output-dir-r3.txt-a49947b8 (r1 51f265e8 and r2
+      659e486f void, never released), AE RELEASED a49947b8 with no
+      NBs, SecSpec agrees (NBs 2803b167 to worker-4: the check in
+      SessionConfig.__post_init__ so a refusal does not hold the
+      siggen slot; the symlink test asserts nothing was created). The
+      client output_dir is IGNORED (one warning if it differs); a
+      server-owned BASE $XDG_STATE_HOME/pi4audio/measurement (else
+      ~/.local/state/pi4audio/measurement), 0700, owner and deny-list
+      checks, fail closed; a fresh mkdtemp run dir per session for
+      every write; boundary session.py + test_measurement_session.py;
+      tests and three mutations per A5; all 7 re-check the full diff
+      at the new head (A6). No option-B F-ID: the F-498 reservation
+      lapses (F-498 now = AE A1a line). r3 backlog lines: run-dir
+      retention -> F-499; the /generate half of SecSpec R1 ->
+      F-495/F-496; the 422 / drop-field item and filter_routes l.555
+      -> F-372; unbounded level fields = F-497.
+    - #73 backlog lines (no blockers): QE N5 -> F-493; AD (2) ->
+      F-494; AD (1) = UX U1 and UX U1-U3 -> US-174c (no ID); AD (3)
+      docstring nit -> US-174d note; SecSpec INFO-1 / AE cd6fd804 item
+      4 -> F-497; QE NB2 (mutations kill at the first assert) = F-492.
+  - S4 SET RELEASED AND FILED (CM; Architect split release, message
+    only): F-495 (gate bypass via REST /filters/deploy) and F-496
+    (client gains_db / delays_ms unvalidated into the conf), both HIGH
+    safety, hard pre-amps gates, ONE PR with F-348a (Architect
+    9b642349 section 4). Governing set (sha256 verified at PM read):
+    ruling f3116b8a (Architect release 9b642349), addendum 7d4fd4a6,
+    addendum-2 0122917f, addendum-3 10afa369, SecSpec R1 abf0a7f9
+    (/generate half). Item a of 7d4fd4a6 is a cross-ref to F-348a/G12;
+    SecSpec 1c and AD2-3 go under F-372 (no F-ID-3).
+  - F-320 D (QE CI accounting r1
+    /tmp/qe-F439-ci-20efc13c-and-F320D-ci-445ece2d-r1.md, sha256
+    a99cf5e9): run 40660563894 at 445ece2d NOT MET
+    (service-destructive: 2 ERROR at setup, KeyError
+    PI4AUDIO_PW_CONF_DIR); fix constraints F1-F4 to worker-3; fix
+    137f360a pushed; F3 MET (QE); run 40669316702 is the F4 evidence
+    run, in progress. F-439 at 20efc13c: CI MET (same file); body
+    items P1-P5 open; the PR goes after F-341.
+  - DOCS QUEUE (CM, 2026-10-28): ONE docs PR, in order: (1) PM US-174
+    reword 7394ff2f (held for (2)); (2) TW US-173 section 9(iii)
+    citation fix (PO release pending); (3) TW #72 N1; (4) TW #72 N2;
+    (5) PM F-465 defect file, frozen as
+    /tmp/cm-relay/docs-batch/frozen/F-465-docs-r1.patch-f3ff7709
+    (commit message ...commitmsg-ae4e3e7d; docs/ tree equal at
+    69004e63 and d12661e3, apply check holds). Fallback: F-465 docs as
+    its own PR if the batch is not ready when the F-341 nix commit is
+    done.
+  - DISK HOLD (CM, since 10:52 local 2026-10-28): Mac at 23 GiB free,
+    under the 30 GiB line (swap 20.5 of 21.5 GB; the minikube VM disk
+    is not the team's and is untouched); owner question with
+    team-lead. No new local jobs; no nix build/run/develop/store
+    delete/GC without CM clearance; no store GC/delete without the
+    owner's OK. Waiting on the lift: the F-468 K3 r2b resume (script
+    diff 21a3644b QE-accepted), the US-174 G0 rc/unit suites (AE
+    a0857317), any new local gate job. GitHub work continues.
+  - OPEN TRACKING (v318; supersedes v317's line): starvation guard
+    2026-10-28T20:04+01:00 (chain F-341 -> F-320 D hunk -> F-439 ->
+    #66; #72 merged); #73 final head + re-verdicts; F-320 D F4 run
+    40669316702; worker-7 F-383 PR; PO release of TW section 9(iii);
+    disk hold lift + K3 r2b resume; F-477 + AD #70 nits (1)/(3) marked
+    fixed at the F-320 D merge; QE tier-docs text; F-441 UART question
+    (parked); F-481 role-prompt vehicle; F-497 amps-on list row
+    question to TW/AE (mirror rule) at the next safety.md batch.
 
 ## Reserved IDs
 
@@ -1313,6 +1402,11 @@ at PM read, filed in this version, see P3): F-480, US-183, D-072, T66.
 Next free (v317; supersedes the line above; F-480 to F-489 confirmed
 free on main, all origin/* and local branches and the CM relay files
 at PM read, filed in this version, see P3): F-490, US-183, D-072, T66.
+Next free (v318; supersedes the line above; F-490 to F-499 confirmed
+free on main, all origin/* and local branches and the CM relay files
+at PM read, filed in this version, see P3; F-498 was announced as the
+B1 option-B ID and lapsed when B1 was ruled A, then given to the AE
+A1a line): F-500, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -3399,6 +3493,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       Rebase onto 057b9326 (#70 merged).
     - AE C3 (70541687) still OPEN: the F-320 D PR body must carry the
       "exactly 0.0" = |v| < 5e-7 note.
+    - v318 CI (QE a99cf5e9): run 40660563894 at 445ece2d NOT MET:
+      service-destructive collected 2, both ERROR at setup (KeyError
+      'PI4AUDIO_PW_CONF_DIR', test_watchdog_unlatch.py:349,
+      recreate_convolver), so test_l1/l2 have never run in CI; earlier
+      tiers green. Fix constraints: F1 the fixture stays fail-closed
+      (no default, no catch, no skip/xfail on unset); F2 the CI path
+      sets PI4AUDIO_PW_CONF_DIR to the SAME conf.d the local-demo
+      PipeWire loads the convolver from; F3 the fixture asserts
+      <dir>/30-convolver.conf exists; F4 evidence at the fixed head:
+      test_l1 + test_l2 PASSED, 0 ERROR, 0 SKIPPED, earlier tiers
+      green, skip set unchanged. Fix 137f360a (worker-3): F3 MET; run
+      40669316702 is the F4 run. The QE PR verdict (_read_gains
+      strictness vs 70541687 C1/C2) follows F4.
 - **F-341** signal-gen pre-flight #6 replacement. MEDIUM (AE):
   pre-flight #6 only VERIFIES the -20 dBFS signal-gen cap, which stays
   enforced in code and immutable after start; it would be High if an
@@ -7828,6 +7935,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       place (reload only when Closed); an AE file confirming row 21's
       interim rule can be lifted for 2-way + the TW safety.md update
       (mirror rule). Until then row 21 stands (766faf2f).
+      Also (v318, Architect 9b642349 section 2, AE D2, AD3 7d4fd4a6):
+      F-495 and F-496 merged (with F-348a, one PR), the shared conf.d
+      byte check (AD2-1/AD3-1) on every conf.d writer, and the F-372
+      path item; row 21 is not lifted for any web-UI writer before all
+      of these land.
     - 5. Owner line (team-lead), verbatim: "room correction is not
       blocked by this. Measurement can go ahead once a small "measure
       only, never install" change lands. Installing the new filters
@@ -7880,6 +7992,27 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       under-corrected in small_club / large_hall; MEDIUM, HIGH before
       the first venue use outside the home lab) is filed under this
       story; it does not block home-lab 174d.
+    - v318: PR #73 (F-348 item 2, measure-only run) open; B1 ruled A
+      (a49947b8: the client output_dir is ignored, measurement output
+      goes to a per-run dir under ~/.local/state/pi4audio/measurement;
+      UX/TW say where the operator finds the IRs). 174c follow-ups
+      from #73, no IDs: UX U1 (= AD (1)): a measure-only run ends on
+      "MEASUREMENT COMPLETE / Session finished successfully" with no
+      "filters not installed" line; AE wording for U1, verbatim:
+      "Filters generated, not installed. The system still uses the
+      filters installed before this run." U2: the skip message
+      "install disabled until F-348 fix and US-174d" is jargon (UX
+      text in f51978cf; AE no objection). U3: the Deploy/Verify
+      screens keep static "Deploying will replace the active filters"
+      / "Post-Deploy Verification" text. UX owns the wording.
+    - v318 174d notes: AD 1324805c (3): the docstrings of the
+      now-unreachable deploy/verify code still describe live installs;
+      clean up when 174d re-enables them. F-493 (test_normal_end
+      live_verification assert) folds in when 174d touches the test.
+      F-498 (A1a margin at 16384 taps, LOW) and F-499 (run-dir
+      retention, MEDIUM) are filed under this story. G0 (AE a0857317):
+      F-383 step 4 is not green until the second half of the rc suite
+      and the whole unit suite run, after the CM disk go.
 - **US-178** Measurement flow deploys via 174d sets (Architect,
   2026-10-26; P1, PO ruling 2026-10-26: directly after US-174d, ranked
   ABOVE US-177, design principle 6, one button per venue; PO wording:
@@ -8979,6 +9112,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     counted series restarts at 0/10 at the #66 head after the last
     chain PR; the CM extracts and freezes the per-run AC lines per run
     (R5 rule), and worker-4 compiles from those.
+  - v318 AC WATCH (QE N4 = dup of F-262, no new ID): the non-strict
+    xfail on service-int test_full_session_api (origin/main df9a8f32
+    src/web-ui/tests/service-integration/test_measurement.py:179)
+    flips between XPASS and XFAIL. #66 at 6931c372 drops it (l.176,
+    "F-262 c8 (ruling f8a014c7 R2/R5): no xfail"). After the #66
+    merge, the API test must show PASSED (no XPASS/XFAIL) in the first
+    main CI run; if #66 stalls or the marker survives, file N4 then.
+    The e2e test_full_session_browser
+    (src/web-ui/tests/e2e/test_measurement.py:249) keeps a non-strict
+    xfail on #66 under f8a014c7 R3 (3.0 dB limit), deliberately.
 - **F-403** Capture redesign (P1, room lane, directly after F-262; PO
   ruling 2026-10-26; ID allocated by the PM, checked free across main,
   all branches and worktrees). PO, verbatim: "capture redesign
@@ -10201,6 +10344,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   realpath + os.path.commonpath (or Path.is_relative_to), an
   allowlist pattern for the profile name, and tests that actually run
   (depends on F-362). No owner escalation (home lab rule).
+  v318 additions (S4 split, Architect; AE confirmed the PM split):
+  SecSpec 1c (string-prefix output_dir, unvalidated profile name) is
+  this item, no new ID; line numbers to refresh at the fix head (the
+  abspath + startswith check is filter_routes.py l.555 at d12661e3).
+  AD2-3 (0122917f): realpath / commonpath, symlinks refused, the
+  profile name matches [A-Za-z0-9_-] before any join or write, with
+  tests. From B1 r3 a49947b8 A4: clean 422 handling for a refused path
+  (today a failed check can surface as a 5xx) and dropping the unused
+  output_dir request field on POST /api/v1/measurement/start. The
+  /generate half of SecSpec R1 abf0a7f9 is placed in the F-495/F-496
+  PR next to AD2-3. Part of the row-21 lift set (US-174d deploy gate).
 - **Coefficient sets: single validated writer** (SecSpec, MEDIUM,
   PRE-PROD gig-blocker class next to F-037 and F-372; from the US-174d
   A5b ruling, 2026-10-26), verbatim: "Coefficient sets: single
@@ -12155,6 +12309,22 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   named OK for the test change): once the scalar gain replaces the
   per-bin clip, tighten the F-374 post-combine gate to legs -6
   +/-0.5 dB relative and sum +/-0.1 dB relative.
+  v318 step 4 record (CM): S4 STOP 12980837 (a gate-refused set
+  deployable through REST generate -> deploy while D-009 passes)
+  RULED: AE f3116b8a, Architect RELEASED as written
+  (/tmp/cm-relay/F-383/frozen/ as
+  F383-step4-S4-release-f3116b8a-and-QE-NB-architect-r1.txt-9b642349):
+  step 4 proceeds, D1-D4 bind, D3a = re-run run_correction_gate at
+  deploy time on the staged bytes (no sha-bound gate record), D3d
+  rollback uses the same call; the code half is F-495/F-496 (one PR
+  with F-348a). The QE NB on POST /api/v1/filters/deploy is answered
+  there (no new F-348 item). STOP 94e0bb8f -> F-491 (Architect
+  released AE 95936d2b). Q1 -> F-489 (Architect released ebf8fad5 at
+  ~10:33, no points). Q2 a0857317 RELEASED; its LOW line is F-498.
+  worker-7 S4 confirms from code that a gate refusal on any channel
+  blocks the whole deploy for that profile/venue. G0 not green until
+  the rc second half and the unit suite run after the disk go.
+  worker-7's PR follows.
 - **F-384** (Architect; AE confirms the priority; P1; 2026-10-25)
   correction.py step 9 (main b0666c02,
   src/room-correction/room_correction/correction.py:130-143): the
@@ -15971,6 +16141,21 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     by the T1 guards (extra evidence), Tc-1 NOT met; T-c2 required on
     the fixed head (T1 continue-on-error, no test changes). In flight:
     CI 40660143390 and T-c2 40660748461 at 20efc13c.
+  - T-c CLOSED (QE 77d530cf). CI MET at 20efc13c (QE a99cf5e9,
+    verified in the full log): run 40660143390 meets C1 (8/8
+    test_f439_gate_ui), C2 (browser-int 269 pass / 10 skip / 0 XPASS;
+    whole-run skip set = #72), E2 (8/8 test_mute_e2e, 4/4
+    test_unmute_gate_closed, 20/20 test_read_back_gains) and the f474
+    fix b391d0a9 (test_b1/b2 10/10, all 16 values 0.000000). The
+    service-int XPASS is the F-262 flake (QE N4, see F-262).
+  - Open for the PR (body only; code and tests done): P1 the T-c
+    evidence run 40660748461 at f35d7bee (named kills + 4 more in
+    test_unmute_gate_closed); P2 the A3 sentence (not expected to
+    fire, did not); P3 old -> new test name map; P4 deletion map for
+    the 304 lines of test_audio_mute.py removed in 58f45ed0 (moved /
+    replaced by X / dropped + reason); P5 CI green at the final head,
+    any head change past 20efc13c -> QE diff re-check. Sequenced after
+    the F-341 nix commit.
 - **F-440** runner MAX_CUT_DB vs venue_pipeline: a D-009 question for
   the AE (filed 2026-10-27; ID free across main, all origin/* and
   local branches at PM read; full record below, folded from the PM
@@ -16182,6 +16367,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     fix/F-444-measurement-teardown-race head c6c74907 (5 commits past
     origin/main, local; PM verified, and cfb99c15 is an ancestor); the
     F-444-alone commit is still cfb99c15.
+  - F4(ii-a) GATE JOB ENDED, ACCEPTED (QE, 2026-10-28; F-481
+    dependency closed): worker-1 harness run-loop-iia.sh 075cf5a4,
+    marker /tmp/w1-f444/f4ii-a.end, log 7d96dfbc: 1000/1000 at
+    c6c74907, 0 errors and 0 fails, load within bounds, no VOID (QE
+    re-spec (b) d4b0835d). F4 evidence COMPLETE: (i) + (ii-a) + (iii)
+    + F-445 G4 (b78b912d); (ii-b) waived. The branch stays parked
+    behind #66; worker-1 merges main in (no rebase); the QE re-checks
+    the head after that.
 - **F-445** Flaky browser test
   test_monitoring_meters_have_nonzero_values (worker-1; shared PR with
   F-444/F-452 after #66) (filed 2026-10-27; ID free across main, all
@@ -17070,6 +17263,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     foh-passthrough). Architect 5bf9b659 carries the deploy plan (Q1b
     step and the AC3e multi-source read, from 1041f6a9). TW N3: F-465
     gets a defect file (next docs queue).
+  - v318: #72 MERGED (main d12661e3; head 69004e63, 7/7, CI
+    40661085292, QE C1/C2 54ac4e15). Defect file WRITTEN by the PM (TW
+    N3): /tmp/pm-docs/F-465/F-465-docs-r1.patch (sha256 f3ff7709; adds
+    docs/project/defects/F-465.md, 83 lines, plus one defects-index
+    row; commit message ae4e3e7d), frozen by the CM in
+    /tmp/cm-relay/docs-batch/frozen/; rides the next docs PR (see the
+    chain block). Close-out items still open: 1 the Q1b first deploy
+    step; 2 AC3 b-e on the device; 3 the GM journal baseline update; 4
+    the F-341 gate-open precondition when the F-465 rule is dropped.
+    Deploy + AC3 b-e stay PARKED (no Pi access).
 - **F-466** Process: Pi plans name the path and env each RPC relies on
   (PM owner) (filed 2026-10-27; ID free across main, all origin/* and
   local branches at PM read; full record below, folded from the PM
@@ -17179,6 +17382,32 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       Option A end line (worker-6). QE d4b0835d: every K3 run touching
       09:04-09:25Z on 2026-10-28 (the F-444 F4(ii) load spike, Mac
       load 270) is VOID and re-run, and void runs count toward no cap.
+    - v318 K3 r1 RULING (QE /tmp/f468-qe-K3-r1-ruling-r1.md, sha256
+      c5dc959f; frozen /tmp/cm-relay/F-468/frozen/ as
+      f468-qe-K3-r1-ruling-r1.md-c5dc959f; on results r1 72a93306,
+      logs 454451e7): run 17 (09:28:57Z, load 8.6 / ~72 at 1 / 15 min)
+      is a FAIL, not VOID (outside the pre-fixed 09:04-09:25Z window,
+      not extended after a FAIL); the series RESETS TO 0. The F-468
+      asserts passed in all 13 valid runs incl. run 17 (supporting,
+      not the criterion). Its failure -> F-490. New rules: start a run
+      only if 1-min load <= 10 AND 5-min load <= 15; record 1/5/15-min
+      loads before and after each run; VOID only if the 1-min load
+      crosses 32 during a run or a CM-declared external event (QE
+      decides); STOP on the F-490 signature; any other failure: stop
+      and report; any src/web-rc/** change restarts.
+    - K3 r2 (gate job, worker-6, marker /tmp/w6-f468/k3r2.end):
+      started 09:40:24Z at 76490beb; STOPPED itself at 09:48:59Z rc 2
+      before run 3 (disk guard). QE r1
+      /tmp/qe-F468-K3r2-carry-and-F348-item2-r1.md (sha256 df058564):
+      runs 1-2 CARRY OVER (2/20), no restart; resume under C1 same
+      head 76490beb, clean tree, same script (sha stated), no
+      src/web-ui/** or src/web-rc/** change; C2 same test closure
+      (dev-shell python store path equal to runs 1-2, else restart
+      from 0); C3 the c5dc959f rules + df >= 30 GiB at each start; C4
+      numbering from 3, every hold and stop listed with timestamps. K3
+      r2b script diff 21a3644b QE-accepted. Resume waits on the CM
+      disk go (new expected end stated then). Closure still needs K3
+      20/20.
 - **F-469** HIGH: Pi 5 USBStreamer driver ERR at quantum 256 (PR63 S1
   G6); Live-mode track, outside US-173 (filed 2026-10-27; ID free
   across main, all origin/* and local branches at PM read; full record
@@ -17522,7 +17751,192 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   exclusion (do-no-harm guard) and F-431 (small_club sub dMid) are
   related, not the same. ID free on all local and origin refs and in
   /tmp/cm-relay at PM read.
+  - v318: the Architect RELEASED AE ruling ebf8fad5 at ~10:33 local
+    2026-10-28, no points, confirming MEDIUM -> HIGH before the first
+    venue use outside the home lab; supersedes "Architect release
+    PENDING" above. Relayed to worker-7 (F-383 step 4: a tree carrying
+    (a) needs R2, R3, R6).
   - Next free -> F-490.
+- **F-490** MEDIUM (owner worker-6 / QE; separate from F-468; QE
+  c5dc959f (b); filed 2026-10-28), title verbatim: "Main E2E: capture
+  dropout guard rejects the measurement under moderate host load
+  (US-179 CI-gate flake risk)". Signature:
+  test_one_channel_end_to_end, test_e2e.py:144 `flow.notice is None`
+  fails; notice cause 'rejected', "the audio recording skipped for a
+  moment", raised by the capture dropout guard during the first
+  capture (K3 run 17, 09:28:57Z at 76490beb; 1-min load 8.6, 15-min
+  ~72). Not the open race: every F-468 assert before :144 passed.
+  MEDIUM because a recurrence blocks the US-179 E2E CI-gate promotion.
+  Open questions: does the guard trip on a real gap or on the timing
+  heuristic; should the E2E fail on a guard rejection (today) or retry
+  the capture once and assert the guard fired visibly (UX/AE call).
+  The fix must not weaken the guard. Dup check: not F-402
+  (filter-generation 500 turned into a skip) nor F-468; no
+  dropout-guard / "recording skipped" / test_e2e.py:144 entry (v317
+  l.5486 "sandbox zero-dropouts" is the F-439-era gain matrix). ID
+  free at PM read.
+- **F-491** MEDIUM (AE; US-174 room correction; blocks only s218 in
+  rooms where it trips, NOT home-lab 174d; filed 2026-10-28 on AE
+  ruling r1 /tmp/cm-relay/F-383/frozen/ as
+  ae-F383-step4-stop-s218-tail-ruling-r1.txt-95936d2b, on worker-7
+  STOP 94e0bb8f; Architect RELEASED, no points), title verbatim: "Sub
+  cascade outlasts 16384 taps: pa-2way-80hz-s218 small_club, the
+  product correction x LR8 80 LP x 28 Hz subsonic rings about -38 dB
+  at the cut; the verify tail is -42.8 dB vs -45, so the gate refuses
+  it." AE reading: correction input clean (tail -111.8 dB); no
+  speaker-safety issue (D-009, HPF, decay pass); a fidelity limit; the
+  gate refusal is fail-safe; not a regression (base fails the same
+  channels on residual). Diagnose in order, before any limit change:
+  (i) which factor dominates the ring (subsonic Q or alignment vs a
+  low-frequency correction boost near the small_club mode); (ii)
+  whether the correction should limit boost or Q below ~40 Hz on
+  cascaded subs (AE preferred: cut modes, don't boost into the
+  subsonic); (iii) a longer product grid with a min-phase
+  re-truncation in the combine; (iv) only then whether 16384 taps or
+  the -45 dB limit are right for subs, owned by Architect + AE (taps:
+  the Architect's RT/CPU call, BM data at quantum 256 required before
+  any change from 16k; -45 dB: AE); neither changes without a new
+  ruling. F-383 step 4 S1-S5: no change to MIN_PHASE_MAX_TAIL_DB, the
+  tail window, the combine or A1c status; the S-tail sweep is not
+  edited (PR body: "S-tail sweep: 147 PASS, 1 FAIL (pa-2way-80hz-s218,
+  small_club, sub1/sub2 composition tail -42.8 dB vs -45; pre-existing
+  residual fail on base; F-491); all mutants FAIL as designed" + raw
+  output path); PA_PROFILES stays sealed + lavoce, no test pins the
+  s218 fail; S4 a gate refusal on any channel blocks the whole deploy
+  for that profile/venue; S5 any further S fail is a new STOP. Dup
+  check: F-489 (HP mains), F-411 (mock room), F-262 gate-xo finding
+  (a) (crossover-only, same tap-budget class, ruled under F-262 G2)
+  and the F-383 R4 note (A1c side) are related, not the same. ID free
+  at PM read.
+- **F-492** LOW (owner QE; test-only; non-blocking; QE NB2 df058564;
+  filed 2026-10-28): the F-348 item 2 mutations M1-M3 kill only at the
+  first assert (test_measurement_session.py:864 deploy_filters); the
+  skipped-event (_MEASURE_ONLY_MSG) and verify-skip asserts are not
+  shown killable separately. QE: the design makes them sound; no extra
+  run needed now. Not the /filters/deploy item (that is F-495). Dup
+  check: no entry. ID free at PM read.
+- **F-493** LOW (owner QE; test-only; non-blocking; QE N5 18d81a9e on
+  PR #73; filed 2026-10-28): test_normal_end (TestMeasureOnlyRun,
+  test_measurement_session.py) asserts phase, message and verification
+  of the verify_progress event but not live_verification is None. A
+  live sweep is still caught (extra events / ERROR state), so it is
+  cosmetic. Fix: add the assert when US-174d touches this test.
+  Related: F-492, F-494, PR #73. Dup check: no entry. ID free at PM
+  read.
+- **F-494** LOW (owner QE; test-only; non-blocking; AD 1324805c (2) on
+  PR #73; filed 2026-10-28): TestMeasureOnlyRun does not exercise an
+  abort at CP-6 itself. AD: acceptable for now, because the skip comes
+  after CP-6. Related: F-492, F-493 (same test class, different gaps).
+  Dup check: only v317 l.9204 (restore_production_mode at CP-2..CP-7,
+  a different item). ID free at PM read.
+- **F-495** HIGH, safety, HARD PRE-AMPS GATE (owner AE for the ruling,
+  Architect for the design, web-ui code owner; from worker-7 F-383
+  step 4 S4 STOP 12980837; filed 2026-10-28 on the released S4 set; AE
+  ruling /tmp/cm-relay/F-383/frozen/ as
+  ae-F383-step4-S4-deploy-interlock-ruling-r1.txt-f3116b8a, Architect
+  release 9b642349), D1 text verbatim: "REST POST
+  /api/v1/filters/deploy deploys a set that run_correction_gate
+  refused at /generate; only D-009 is re-checked (filter_routes.py
+  l.387 207, l.469-527, l.537 at c44ac3de; main df9a8f32
+  l.359/441/490/512)". Why safety: the Mandatory HPF and Format rows
+  are skipped, so sub-bass can reach the mains; reachable
+  unauthenticated via F-037. Fix (D3): (a) a deploy-time gate on the
+  exact staged bytes (Architect: re-run run_correction_gate at deploy
+  time, no sha-bound record), refusal as 4xx; (b) a refusal writes
+  nothing, with staging as in F-399, also for the session path
+  (session.py l.1173-1183 / l.1238-1240); (c) real-filesystem tests
+  plus a mutation; (d) rollback re-gates with the same call. D2: a
+  row-21 lift precondition. D4: PR body note.
+  Addendum-2 0122917f (SecSpec P2-P4), binding: AD2-1 /deploy checks
+  that all 8 Mult and all 8 Add values are 0.0 and finite in the exact
+  conf bytes; AD2-2 any gate record is written by the server only and
+  sha-bound to the bytes; AD2-3 path rules (under F-372); AD2-4 tests
+  for any order of API calls by a direct caller. Addendum-3 10afa369
+  (SecSpec Q1 77a3cce9: pre-fix confs already on disk), binding: AD3-1
+  ONE shared helper on every conf.d writer (today four, plus any
+  future one): 8 Mult + 8 Add = 0.0, finite, exactly the 8 gain_*
+  names; a writer without the call is a review FAIL; AD3-2
+  plant-a-pre-fix-conf tests plus a mutation; AD3-3 the deploy.sh
+  baseline is unchanged; AD3-4 one PR. Architect note: AD2-1 and AD3-1
+  are ONE helper in room_correction; the conf.d writers at d12661e3
+  are filter_routes.py l.320, l.522, l.945 and session.py l.1179. AE
+  condition (on the PM split): AD2-1 and AD3-1/AD3-2 are in this PR's
+  scope (named here, in F-496 and at F-348a).
+  SecSpec R1 abf0a7f9, /generate half (the session half is #73 B1,
+  a49947b8), binding here: the producers (/generate, and the CLI
+  runner if it takes a web path) write only into a server-owned
+  staging dir; the profile name rule applies before any join and
+  write; realpath / commonpath, refused under the conf and coeffs dirs
+  before any write; tests. A row-21 lift precondition. Sequencing
+  (Architect 9b642349 section 4): F-495 + F-496 + F-348a as ONE PR
+  (preferred), or F-348a first and rebase; no parallel worker edits on
+  filter_routes.py / deploy.py; any web-ui fix needs the Architect's
+  and the AE's named OK on its PR. Row 21 is not lifted for any web-UI
+  writer until F-495, F-496 and the F-372 path item land (AE AD3
+  7d4fd4a6; with F-348a, AE D2). Related: F-037, F-348a, F-372, F-399,
+  F-478, the SecSpec "Coefficient sets: single validated writer" item
+  (same mitigation family), the QE NB on /filters/deploy (answered
+  here, Architect 9b642349 section 2). Dup check: new. ID free at PM
+  read.
+- **F-496** HIGH, safety, HARD PRE-AMPS GATE (owner AE for the limits,
+  Architect for the design, web-ui code owner; AE addendum
+  /tmp/cm-relay/F-383/frozen/ as
+  ae-F383-step4-S4-addendum-secspec-28c15d51-r1.txt-7d4fd4a6 AD1,
+  Architect released; filed 2026-10-28), verbatim: "REST
+  /filters/generate writes client gains_db and delays_ms into the conf
+  unvalidated: no finite check (nan/inf accepted), no upper cap
+  (db_to_linear floors only); the Mult defaults go live past D-063 at
+  PW restart or reload." Scope = AD2 (b) + (c): (b) reject non-finite
+  values, cap gains at D-009, refuse as 4xx, delays finite and within
+  0..max; (c) HTTP-level tests. AD2 (a) (all 8 Mult defaults written
+  as exactly 0.0) is F-348a/G12 scope, a cross-ref here (Architect
+  split; AE confirmed). AD4: /reload-pw is covered by the same rule.
+  AD5: F-383 step 4 proceeds. Also binding here (AE condition): the
+  shared conf.d byte-check helper AD2-1 / AD3-1 and the AD3-2 tests
+  (see F-495; one helper in room_correction), and the /generate half
+  of SecSpec R1 abf0a7f9 (see F-495). Same PR as F-495 and F-348a. Row
+  21 stays until F-495 + F-496 + the F-372 path item land. Related:
+  F-439 (finite-check rule "every gain writer"), F-485 (venue YAML
+  gain_db; different input), F-497 (measurement parameters), F-037,
+  F-348, F-352, F-355. Dup check: new for the input validation. ID
+  free at PM read.
+- **F-497** MEDIUM, HARD PRE-AMPS-MEASUREMENT GATE (not pre-merge; AE
+  domain, from SecSpec 5cb57b90 INFO-1 on PR #73 via AE cd6fd804 item
+  4; owner AE for the limits, code owner with the US-174c measurement
+  work; filed 2026-10-28): POST /api/v1/measurement/start
+  (StartRequest, routes.py) takes sweep_level_dbfs, hard_limit_spl_db,
+  thermal_ceiling_dbfs, target_spl_db and mandatory_hpf_hz from an
+  unauthenticated LAN caller (F-037) with no bounds and no finite
+  checks. Fix (AE): server-side finite checks and caps: sweep level <=
+  the current measurement ceiling; hard limit <= 84 dB SPL default
+  cap; HPF >= the profile's D-031 value, never lower. Related: F-037,
+  F-391 (the sweep ignores mandatory_hpf_hz; different), F-480 (slider
+  step), F-485 / F-496 (finite checks on other inputs), SecSpec INFO-2
+  (fixed-name world-writable default dir; removed by #73 B1). PM: ask
+  the TW/AE whether it needs an amps-on list row (mirror rule) at the
+  next safety.md batch. Dup check: no StartRequest /
+  measurement-parameter bounds entry. ID free at PM read.
+- **F-498** LOW, raise to MEDIUM per the condition below (owner AE;
+  US-174 room correction; AE line in Q2 ruling a0857317 (F-383 step
+  4), verbatim: "generate_correction_filter at 4096 taps lands at
+  -39.5 dB on a white-noise IR (A1a limit -40). Measure the A1a margin
+  at 16384 taps on the simulator IRs; raise to MEDIUM if any
+  production-length margin is under 10 dB."; filed 2026-10-28).
+  Related: F-491 (16k-tap tail), F-489. Dup check: no A1a-margin /
+  white-noise entry. ID free at PM read (announced earlier as a B1
+  option-B reserve; lapsed when B1 was ruled A).
+- **F-499** MEDIUM (owner AE / Architect; from Architect B1 ruling r3
+  a49947b8 backlog lines, AE released; not a #73 blocker; filed
+  2026-10-28): measurement run-dir retention and cleanup under the new
+  server-owned BASE (~/.local/state/pi4audio/measurement). #73 creates
+  a fresh 0700 run-* dir per session and never reuses one; each run
+  leaves impulse responses, WAVs, delays.yml and the generated conf,
+  so SD-card wear and disk use grow with every run. Needs a retention
+  rule (count or age) that never deletes the run dir in use or a set
+  still referenced by a deploy. Related: F-497, PR #73, US-174. Dup
+  check: no measurement-output retention entry (v317 l.2414 is
+  boot-generation pruning). ID free at PM read.
+  - Next free -> F-500.
 
 ## Open PRs (2026-10-24, per CM)
 
