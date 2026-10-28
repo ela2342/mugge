@@ -80,6 +80,7 @@ or the local-demo setup is wrong.
 | `src/web-ui/tests/unit/` | Unit | No | No |
 | `src/web-ui/tests/integration/` | Browser integration | Yes | No (mocked backend) |
 | `tests/service-integration/` | Service integration | No | Yes (real services) |
+| `src/web-ui/tests/service-destructive/` | Destructive service integration | No | Yes (own fresh stack per run) |
 | `src/web-ui/tests/e2e/` | E2E | Yes | Yes (full stack) |
 
 A test in `tests/e2e/` with no Playwright `page` fixture is miscategorized.
