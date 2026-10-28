@@ -179,7 +179,10 @@ log "Running destructive service tests..."
 cd "$REPO_DIR/src/web-ui"
 SD_LOG_START=$(wc -c <"$START_LOG")
 SD_EXIT=0
-"$E2E_PYTHON" -m pytest tests/service-destructive/ -v -rs --tb=short --destructive "$@" || SD_EXIT=$?
+# The convolver fixture copies the stack's own 30-convolver.conf. Same path
+# as local-demo's web UI uses; XDG_CONFIG_HOME is the stack's, from env.
+PI4AUDIO_PW_CONF_DIR="$XDG_CONFIG_HOME/pipewire/pipewire.conf.d" \
+    "$E2E_PYTHON" -m pytest tests/service-destructive/ -v -rs --tb=short --destructive "$@" || SD_EXIT=$?
 
 log "Stack log during destructive service tests:"
 tail -c +"$((SD_LOG_START + 1))" "$START_LOG" | sed 's/^/[stack] /'
