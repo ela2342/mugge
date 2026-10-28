@@ -7,11 +7,12 @@ the filter with the exact product of its factors: residual <= -30 dB,
 g > 0 (polarity), g <= 1 + 1e-3 (boost), plus the residual row's tail and
 decay conditions.
 
-Until the step-4 combine commit, CASCADE_GATE_ROW = "residual": the
-residual row still gates every 'fir' file, and on cascade channels it
-carries the composition numbers in details["composition"] (log only).
-These tests do not depend on the combine: the composition-row inputs are
-built from IIR factors (minimum phase by construction).
+Since the step-4 combine commit (Architect ace87e0d a3) the composition
+row gates the cascade channels and the residual row every other 'fir'
+file; there is no switch. The row tests here do not depend on the
+combine: their inputs are built from IIR factors (minimum phase by
+construction). The gating tests on shipped profiles are in
+test_f383_step4_gating.py.
 """
 
 import os
@@ -221,7 +222,8 @@ class TestCompositionRow:
 def test_composition_limits():
     assert verify.COMPOSITION_MAX_RESIDUAL_DB == -30.0
     assert verify.COMPOSITION_MAX_GAIN == 1.0 + 1e-3
-    assert verify.CASCADE_GATE_ROW == "residual"
+    # a3: the step-4 combine commit removes the switch; no dead switch remains.
+    assert not hasattr(verify, "CASCADE_GATE_ROW")
 
 
 def test_all_zero_filter_fails(tmp_path):
@@ -230,7 +232,7 @@ def test_all_zero_filter_fails(tmp_path):
     assert not result.passed
 
 
-# -- D2/D3: plumbing, residual row still gates (a1) ----------------------------
+# -- D2/D3: plumbing, the composition row gates cascades (a3) ------------------
 
 def _cascade_sub(tmp_path):
     """The TestMandatoryHpfInGate sub (LP200 + 30 Hz subsonic), exported."""
@@ -250,22 +252,18 @@ def _cascade_sub(tmp_path):
 
 class TestGatePlumbing:
 
-    def test_residual_row_gates_and_logs_composition(self, tmp_path):
+    def test_composition_row_replaces_residual_row(self, tmp_path):
+        """a3: a cascade file gets the composition row INSTEAD of the residual row."""
         inputs = _cascade_sub(tmp_path)
-        files = {"sub1.wav": "fir"}
-        hpf = {"sub1.wav": 30.0}
-        plain_passed, plain = verify.run_correction_gate(
-            str(tmp_path), files, mandatory_hpf_hz=hpf)
         passed, results = verify.run_correction_gate(
-            str(tmp_path), files, mandatory_hpf_hz=hpf, composition_inputs=inputs)
-        assert passed == plain_passed
-        assert [(r.name, r.passed) for r in results] == [(r.name, r.passed) for r in plain]
-        assert not any("composition" in r.name for r in results)
-        row = next(r for r in results if r.name == "Minimum Phase (residual) (sub1.wav)")
-        composition = row.details["composition"]
-        assert {"composition_db", "g", "g_db", "residual_db", "tail_db", "tail_prev_db",
-                "tail_decaying", "failed", "passed", "message"} <= set(composition)
-        assert verify.gate_summary("sub1.wav", results) == verify.gate_summary("sub1.wav", plain)
+            str(tmp_path), {"sub1.wav": "fir"}, mandatory_hpf_hz={"sub1.wav": 30.0},
+            composition_inputs=inputs)
+        assert passed, [r.message for r in results if not r.passed]
+        rows = [r.name for r in results if r.name.startswith("Minimum Phase")]
+        assert rows == ["Minimum Phase (composition) (sub1.wav)"]
+        summary = verify.gate_summary("sub1.wav", results)
+        assert summary["min_phase_pass"] and summary["all_pass"]
+        assert summary["min_phase_residual_db"] is not None
 
     def test_non_cascade_file_has_no_composition(self, tmp_path):
         _cascade_sub(tmp_path)

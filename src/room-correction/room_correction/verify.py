@@ -609,10 +609,6 @@ def verify_minimum_phase_residual(filter_path,
 COMPOSITION_MAX_RESIDUAL_DB = -30.0
 # G<=1 (D-009): the combine scalar and the uniform trim only cut.
 COMPOSITION_MAX_GAIN = 1.0 + 1e-3
-# Which row gates the cascade channels (is_cascade). "residual": the
-# residual row gates and carries the composition numbers in
-# details["composition"]. The step-4 combine commit removes this switch.
-CASCADE_GATE_ROW = "residual"
 
 
 def verify_minimum_phase_composition(filter_path, factors,
@@ -691,17 +687,15 @@ def verify_minimum_phase_composition(filter_path, factors,
 
 
 def _minimum_phase_row(path, factors):
-    """The gating minimum-phase row of one 'fir' file (CASCADE_GATE_ROW)."""
-    residual = verify_minimum_phase_residual(path)
+    """
+    The gating minimum-phase row of one 'fir' file: the composition row for
+    a cascade channel (factors given), the residual row for every other
+    file (F-383 step 4, Architect ace87e0d a3). A file without factors gets
+    the residual row, so a missing role fails closed.
+    """
     if factors is None:
-        return residual
-    composition = verify_minimum_phase_composition(path, factors)
-    if CASCADE_GATE_ROW == "composition":
-        return composition
-    residual.details["composition"] = {
-        **composition.details, "passed": composition.passed,
-        "message": composition.message}
-    return residual
+        return verify_minimum_phase_residual(path)
+    return verify_minimum_phase_composition(path, factors)
 
 
 def verify_wav_subtype(filter_path, expected_subtype="FLOAT"):
@@ -747,8 +741,8 @@ def run_venue_checks(output_dir, expected_files, mandatory_hpf_hz=None,
     composition_inputs : dict, optional
         Filename -> factors (generate_profile_filters.
         composition_inputs_by_file) for the cascade channels. Those files
-        also get verify_minimum_phase_composition(); CASCADE_GATE_ROW says
-        which of the two rows gates.
+        get verify_minimum_phase_composition() instead of
+        verify_minimum_phase_residual().
 
     Returns
     -------
@@ -787,9 +781,6 @@ def run_venue_checks(output_dir, expected_files, mandatory_hpf_hz=None,
             result.name = f"{result.name} ({filename})"
             if result.name.startswith("Minimum Phase"):
                 log.info("%s: %s", result.name, result.message)
-                if "composition" in result.details:
-                    log.info("%s composition (log only): %s", result.name,
-                             result.details["composition"]["message"])
             results.append(result)
 
     all_passed = bool(results) and all(r.passed for r in results)

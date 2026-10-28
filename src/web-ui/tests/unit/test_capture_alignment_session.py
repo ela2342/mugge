@@ -19,10 +19,20 @@ import pytest
 import soundfile as sf
 
 import measure_nearfield
+from config_generator import load_profile
 from room_correction import dsp_utils
 
 LAST_EARLY_LAG = -223
 LAST_LATE_LAG = 71497
+
+# F-383 step 4 ruling 82b91d68: the response diff is taken over bins above
+# peak0 - 120 dB only.  The exact-product sub stopband reaches the float64
+# noise floor (~-185 dB re peak), where a 5e-6 capture difference moves the
+# noise by dB; it carries no signal.
+DIFF_FLOOR_DB = 120.0
+SUB_PASSBAND_HZ = (20.0, 200.0)
+BAND_TOP_HZ = 20000.0
+MAIN_MIN_KEPT_SHARE = 0.5
 
 # The 2way-80hz-sealed profile (sat_left on ch 0, sub1 on ch 2).
 START_BODY = {
@@ -88,6 +98,55 @@ def _smoothed_db(path):
         dsp_utils.fractional_octave_smooth(mag[band] + 1e-30, freqs[band], 6))
 
 
+def _band_freqs(path):
+    """The bin frequencies of _smoothed_db(path)."""
+    sr = sf.info(path).samplerate
+    freqs = np.fft.rfftfreq(65536, 1.0 / sr)
+    return freqs[(freqs >= 20.0) & (freqs <= 20000.0)]
+
+
+def _passbands(fg):
+    """Per channel: the band the kept bins must cover (ruling 82b91d68 R3).
+
+    Subs (lowpass) 20-200 Hz; mains (highpass) from the session profile's
+    crossover frequency (fg["crossover_freq_hz"]) to 20 kHz.
+    """
+    from app.measurement.session import _profile_dirs
+    profiles_dir, _ = _profile_dirs()
+    profile = load_profile(fg["profile"], profiles_dir=profiles_dir)
+    crossover = float(fg["crossover_freq_hz"])
+    bands = {}
+    for spk in fg["channels"]:
+        ftype = profile["speakers"][spk]["filter_type"]
+        assert ftype in ("lowpass", "highpass"), (spk, ftype)
+        bands[spk] = (SUB_PASSBAND_HZ if ftype == "lowpass"
+                      else (crossover, BAND_TOP_HZ))
+    return bands
+
+
+def _response_diff(spk, path, path0, passband):
+    """Max |dB diff| over the bins above the floor, with the R3 guards."""
+    db, db0 = _smoothed_db(path), _smoothed_db(path0)
+    freqs = _band_freqs(path0)
+    data0, _ = sf.read(path0, dtype="float64")
+    peak0 = float(np.max(db0))
+    assert np.max(np.abs(data0)) > 0 and np.isfinite(peak0), (
+        f"{spk}: lag-0 peak not finite/positive")
+    floor = peak0 - DIFF_FLOOR_DB
+    keep = (db0 > floor) | (db > floor)
+    lo, hi = passband
+    in_pass = (freqs >= lo) & (freqs <= hi)
+    missing = in_pass & ~keep
+    assert not missing.any(), (
+        f"{spk}: passband bin at {freqs[missing][0]:.1f} Hz below the "
+        f"{DIFF_FLOOR_DB:.0f} dB floor")
+    if passband != SUB_PASSBAND_HZ:
+        share = keep.mean()
+        assert share >= MAIN_MIN_KEPT_SHARE, (
+            f"{spk}: only {share:.0%} of band bins above the floor")
+    return float(np.max(np.abs(db[keep] - db0[keep])))
+
+
 def _wavs(directory, prefix):
     if not os.path.isdir(directory):
         return []
@@ -98,7 +157,10 @@ def _wavs(directory, prefix):
 @pytest.mark.parametrize("lag", [LAST_EARLY_LAG, 24000, LAST_LATE_LAG])
 def test_in_window_lag_gives_the_lag_zero_filters(
         client, capture_lag, tmp_path, lag):
-    """Q3: same filters, same gate verdict, D-009 within 0.1 dB, same delays."""
+    """Q3: same filters, same gate verdict, D-009 within 0.1 dB, same delays.
+
+    The response diff skips bins at the numerical floor (ruling 82b91d68).
+    """
     capture_lag["samples"] = 0
     final0, s0 = _run_session(client, tmp_path / "lag0")
     assert final0["state"] == "complete", final0.get("error_message")
@@ -118,9 +180,10 @@ def test_in_window_lag_gives_the_lag_zero_filters(
 
     assert fg["all_pass"] == fg0["all_pass"]
     assert set(fg["channels"]) == set(fg0["channels"])
+    passbands = _passbands(fg0)
     for spk in fg0["channels"]:
-        diff = np.max(np.abs(_smoothed_db(fg["channels"][spk])
-                             - _smoothed_db(fg0["channels"][spk])))
+        diff = _response_diff(spk, fg["channels"][spk],
+                              fg0["channels"][spk], passbands[spk])
         assert diff <= 0.2, f"{spk}: corrected response differs {diff:.3f} dB"
     peaks0 = {v["channel"]: v["d009_peak_db"] for v in fg0["verification"]}
     for v in fg["verification"]:

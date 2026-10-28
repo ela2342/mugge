@@ -39,9 +39,8 @@ from . import target_curves as tc
 
 SAMPLE_RATE = dsp_utils.SAMPLE_RATE
 D009_MARGIN_DB = -0.5
-# F-383/F-384 B3: the D-009 scalar measures the peak on an 8x grid (2^17
-# points at 16384 taps), full band. 4x under-reads the inter-bin peak by up to 0.045 dB.
-D009_SCALAR_OVERSAMPLE = 8
+# F-383/F-384 B3: the D-009 scalar's grid, shared with combine (F-384 q1 r2).
+D009_SCALAR_OVERSAMPLE = combine.D009_SCALAR_OVERSAMPLE
 
 # AE, 2026-10-25: level reference per driver role (median of the
 # 1/6-octave smoothed magnitude). Sats stay clear of the 200 Hz crossover
@@ -263,14 +262,7 @@ def _d009_scale(fir, margin_db, sr=SAMPLE_RATE):
     overshoot plays too (F-384 q2). An FIR already at or below margin_db is
     returned unchanged. Returns (fir, scalar in dB).
     """
-    peak_db = combine.max_gain_db(
-        fir, sr=sr, oversample=D009_SCALAR_OVERSAMPLE, band=None)
-    if not np.isfinite(peak_db):
-        raise ValueError("correction filter has a non-finite peak gain")
-    if peak_db <= margin_db:
-        return fir, 0.0
-    scalar_db = float(margin_db - peak_db)
-    return fir * dsp_utils.db_to_linear(scalar_db), scalar_db
+    return combine.d009_scale(fir, margin_db, sr=sr, what="correction filter")
 
 
 def normalize_ir_level(ir, ref_band_hz, sr=SAMPLE_RATE, target_db=0.0,

@@ -39,10 +39,16 @@ DESIGN_RESIDUAL_OVERSAMPLE = 16
 # A1b is calibrated at the production length (F-383 Q4). Below it the design
 # IR outlasts n and the fade dominates the residual, so A1b does not apply.
 A1B_MIN_TAPS = 16384
+# A1a (F-383): a correction input to combine must be minimum phase to this
+# residual, and its tail peak (last TAIL_FRACTION, re max|h|) at most
+# TAIL_LIMIT_DB. A1c reads the combined output's tail against the same limit.
+INPUT_RESIDUAL_LIMIT_DB = -40.0
+TAIL_LIMIT_DB = -60.0
 
 
 class MinimumPhaseError(ValueError):
-    """A generated FIR is not the minimum-phase FIR of its design (F-383 A1b)."""
+    """A generated FIR is not the minimum-phase FIR of its design (F-383 A1b),
+    or a correction input to combine is not minimum phase (A1a)."""
 
 
 def _as_fir(h):

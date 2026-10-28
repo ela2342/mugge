@@ -35,7 +35,11 @@ from room_correction.correction import (
     reference_band,
 )
 from room_correction.export import export_filter
-from room_correction.generate_profile_filters import generate_profile_filters
+from room_correction.min_phase import MinimumPhaseError
+from room_correction.generate_profile_filters import (
+    composition_inputs_by_file,
+    generate_profile_filters,
+)
 
 SR = 48000
 N_TAPS = 16384
@@ -329,10 +333,16 @@ def _p2():
     return _iir_impulse(lr8, _butter(8, 42, "high"))
 
 
-def _gate(tmp_path, fir, name="x.wav"):
-    """verify_minimum_phase_residual() on a float32 WAV round-trip."""
+def _gate(tmp_path, fir, name="x.wav", factors=None):
+    """
+    The gating minimum-phase row on a float32 WAV round-trip:
+    verify_minimum_phase_composition() for a cascade channel (factors
+    given, F-383 step 4), else verify_minimum_phase_residual().
+    """
     path = str(tmp_path / name)
     export_filter(fir, path, n_taps=N_TAPS)
+    if factors is not None:
+        return verify.verify_minimum_phase_composition(path, factors)
     return verify.verify_minimum_phase_residual(path)
 
 
@@ -362,8 +372,10 @@ class TestMinPhaseGateControls:
         profile, identities = config_generator.load_profile_with_identities(profile_name)
         filters, _ = combine.uniform_d009_trim(
             generate_profile_filters(profile, identities, n_taps=N_TAPS, sr=SR))
+        factors = composition_inputs_by_file(
+            profile, identities, {s: f"{s}.wav" for s in filters}, n_taps=N_TAPS, sr=SR)
         for spk, fir in filters.items():
-            result = _gate(tmp_path, fir, f"{spk}.wav")
+            result = _gate(tmp_path, fir, f"{spk}.wav", factors.get(f"{spk}.wav"))
             assert result.passed, f"{profile_name} {spk}: {result.message}"
             hpf = identities[profile["speakers"][spk]["identity"]].get("mandatory_hpf_hz")
             if hpf is not None:
@@ -410,8 +422,8 @@ class TestMinPhaseGateControls:
         assert not result.details["tail_decaying"]
         assert not result.passed
 
-    def test_raw_ir_mutant_fails_gate(self, tmp_path, bundle, sim, monkeypatch):
-        """N4: bug A (the measured IR used as the correction) fails the gate."""
+    def test_raw_ir_mutant_fails_closed(self, tmp_path, bundle, sim, monkeypatch):
+        """N4: bug A now fails closed in combine (A1a, F-383 step 4), before the verify gate."""
         def raw(ir, speaker, **kwargs):
             real = correction_from_measurement(ir, speaker, **kwargs)
             return CorrectionFilter(fir=np.asarray(ir[:N_TAPS], dtype=np.float64).copy(),
@@ -419,17 +431,9 @@ class TestMinPhaseGateControls:
                                     ref_band_hz=real.ref_band_hz)
 
         monkeypatch.setattr(vp, "correction_from_measurement", raw)
-        result = vp.generate_venue_filters(bundle, sim.measured_irs)
-        vp.write_venue_filters(result, str(tmp_path))
-        passed, results = verify.run_correction_gate(
-            str(tmp_path), bundle.expected_files(),
-            closed_loop_inputs=result.closed_loop_inputs,
-            mandatory_hpf_hz=bundle.mandatory_hpf_by_file())
-        assert not passed
-        for r in results:
-            if r.name.startswith(("Minimum Phase", "Closed Loop")):
-                print(f"N4 {r.name}: {'PASS' if r.passed else 'FAIL'} {r.message}")
-        assert not all(r.passed for r in results if r.name.startswith("Closed Loop"))
+        with pytest.raises(MinimumPhaseError, match="residual"):
+            vp.generate_venue_filters(bundle, sim.measured_irs)
+        assert not list(tmp_path.glob("combined_*.wav"))
 
 
 def _hpf(tmp_path, fir, hpf_hz):
@@ -500,7 +504,9 @@ class TestMandatoryHpfInGate:
             str(tmp_path), {"sub1.wav": "fir"},
             mandatory_hpf_hz=verify.mandatory_hpf_by_file(
                 {"speakers": {"sub1": {"identity": "sub-id"}}},
-                {"sub-id": {"mandatory_hpf_hz": 30}}, {"sub1": "sub1.wav"}))
+                {"sub-id": {"mandatory_hpf_hz": 30}}, {"sub1": "sub1.wav"}),
+            composition_inputs=composition_inputs_by_file(
+                profile, {"sub-id": identity}, {"sub1": "sub1.wav"}, n_taps=N_TAPS, sr=SR))
 
     def test_hpf_present_passes(self, tmp_path):
         passed, results = self._sub(tmp_path, {"mandatory_hpf_hz": 30})

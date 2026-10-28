@@ -25,6 +25,7 @@ from room_correction.generate_profile_filters import (
     COMBINE_MARGIN_DB,
 )
 from room_correction.correction import CorrectionFilter
+from room_correction.min_phase import MinimumPhaseError
 
 def _as_corrections(firs):
     """Wrap synthetic test FIRs as CorrectionFilter (F-262 type gate)."""
@@ -45,6 +46,8 @@ COMBINE_OUTPUT_LIMIT = D009_LIMIT  # -0.49 dB (post-synthesis, D-009 is what mat
 
 # Use shorter taps for test speed — D-009 compliance is independent of length.
 TEST_TAPS = 4096
+BANDPASS_SEEDS = list(range(10))
+BANDPASS_MIN_REACHING_D009 = 9
 
 
 def _max_gain_db(fir, sr=SR):
@@ -272,9 +275,9 @@ class TestPathB_CombineFilters:
             f"seed={seed}: combined+subsonic max gain {max_gain:.3f} dB exceeds limit"
         )
 
-    @pytest.mark.parametrize("seed", list(range(10)))
-    def test_bandpass_crossover(self, seed):
-        """Correction + bandpass crossover -> must comply."""
+    @staticmethod
+    def _bandpass_combined(seed):
+        """Correction + bandpass crossover, or None if combine refuses the input on A1a."""
         rng = np.random.RandomState(seed + 2000)
         correction = _random_ir(rng, TEST_TAPS)
         correction = generate_correction_filter(correction, n_taps=TEST_TAPS)
@@ -282,10 +285,33 @@ class TestPathB_CombineFilters:
         xo = generate_bandpass_filter(
             low_freq=300.0, high_freq=2000.0, n_taps=TEST_TAPS,
         )
-        combined = combine_filters(correction, xo, n_taps=TEST_TAPS, margin_db=COMBINE_MARGIN_DB)
+        try:
+            return combine_filters(correction, xo, n_taps=TEST_TAPS, margin_db=COMBINE_MARGIN_DB)
+        except MinimumPhaseError as e:
+            if "(A1a)" not in str(e):
+                raise
+            return None
+
+    @pytest.mark.parametrize("seed", BANDPASS_SEEDS)
+    def test_bandpass_crossover(self, seed):
+        """Correction + bandpass crossover -> A1a refuses the input, or the output complies.
+
+        AE Q2-1 (a0857317): a white-noise correction at 4096 taps may miss A1a
+        (seed 2003: -39.5 dB); the fail-closed refusal is D-009-safe.
+        """
+        combined = self._bandpass_combined(seed)
+        if combined is None:
+            return
         max_gain = _max_gain_db(combined)
         assert max_gain <= COMBINE_OUTPUT_LIMIT, (
             f"seed={seed}: combined+bandpass max gain {max_gain:.3f} dB exceeds limit"
+        )
+
+    def test_bandpass_seeds_reach_d009(self):
+        """AE Q2-2 (a0857317): at least 9 of the 10 bandpass seeds reach the D-009 assert."""
+        refused = [seed for seed in BANDPASS_SEEDS if self._bandpass_combined(seed) is None]
+        assert len(BANDPASS_SEEDS) - len(refused) >= BANDPASS_MIN_REACHING_D009, (
+            f"A1a refused bandpass seeds {refused}"
         )
 
     def test_combine_margin_provides_headroom(self):
