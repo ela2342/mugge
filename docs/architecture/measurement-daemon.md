@@ -234,6 +234,21 @@ broadcasts a `deploy_progress` "skipped" event and returns before any
 `live_verification: None`. There is no opt-in. US-174d re-enables deploy
 behind its deploy gate.
 
+Output location (F-348 B1): each session writes its IRs, `delays.yml`,
+speaker-key IRs and the generated WAVs plus `30-filter-chain-convolver.conf`
+into a fresh `run-*` dir (`mkdtemp`, mode 0700), exposed as the read-only
+`run_dir` property. The dir lies under the service-owned base
+`$XDG_STATE_HOME/pi4audio/measurement`, default
+`~/.local/state/pi4audio/measurement`. `SessionConfig.output_dir` is kept for
+API compatibility but is never written to; a non-default value logs a
+warning. The base must be a dir owned by the service uid and not group- or
+world-writable, and must not equal, lie under, or contain the PipeWire config
+or coeffs dirs (`PI4AUDIO_PW_CONF_DIR`, `PI4AUDIO_COEFFS_DIR`,
+`~/.config/pipewire`, `/etc/pi4audio/coeffs`, `/etc/pipewire`,
+`/usr/share/pipewire`). Otherwise building the `SessionConfig` fails with
+`ValueError` before any measurement file is written. Run dirs are not yet
+cleaned up.
+
 ### State Persistence
 
 The daemon holds the full session state in memory:

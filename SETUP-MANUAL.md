@@ -786,10 +786,11 @@ defaults on PipeWire restart.
 
 Venue configuration profiles define per-channel gain, delay, and coefficient file
 settings for a specific performance location. They are stored as YAML files in
-`configs/venues/` in the repository. On the Pi 5 (NixOS), the build packages
-them into a read-only Nix store dir. GraphManager and the web UI both read that
-dir via `PI4AUDIO_VENUES_DIR` (F-465). `/etc/pi4audio/venues/` is the
-historical Pi 4B location.
+`configs/venues/` in the repository. On NixOS (Pi 4B and Pi 5), the build
+packages them into a read-only Nix store dir. GraphManager and the web UI both
+read that dir via `PI4AUDIO_VENUES_DIR` (F-465). `/etc/pi4audio/venues/` is the
+pre-NixOS location and the web UI's fallback when `PI4AUDIO_VENUES_DIR` is
+unset.
 
 **YAML schema:**
 
