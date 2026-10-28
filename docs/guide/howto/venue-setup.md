@@ -100,6 +100,13 @@ before the day of the event.
 This is the room correction workflow. It measures each speaker channel in the
 room, computes correction filters, and deploys them -- all from the web UI.
 
+> **Interim (F-348, 2026-10-28):** a measurement run is currently
+> measure-only. It stops after filter generation (4e): the wizard skips the
+> deploy (4f) and the live verification sweep (4g), and nothing is installed
+> or reloaded. The generated filters stay in the session's output dir. Deploy
+> comes back with US-174d's deploy gate, after the F-348 fix. Steps 22-24
+> below describe that later behaviour.
+
 ### 4a. Position the Microphone
 
 15. Place the UMIK-1 at the primary measurement position. This is typically
@@ -205,6 +212,10 @@ room, computes correction filters, and deploys them -- all from the web UI.
 
 ### 4f. Deploy
 
+Currently skipped (F-348; see the interim note at the start of Phase 4).
+The wizard shows "Measure only: install disabled until F-348 fix and
+US-174d" and installs nothing.
+
 22. When filter generation completes, the wizard enters the deploy phase.
     It copies the generated WAV files to `/etc/pi4audio/coeffs/`, updates
     the PipeWire filter-chain configuration to reference the new files, and
@@ -215,6 +226,9 @@ room, computes correction filters, and deploys them -- all from the web UI.
     this step.
 
 ### 4g. Verification
+
+Currently skipped (F-348): there is no verification sweep. The wizard
+reports only the static filter-generation checks from 4e.
 
 23. The wizard runs an automatic verification sweep. It plays a new sweep
     through each channel with the correction filters now active and checks
@@ -235,7 +249,9 @@ room, computes correction filters, and deploys them -- all from the web UI.
     the previous filter set.
 
 24. When all channels pass verification, the wizard shows **COMPLETE**. The
-    room correction filters are active and deployed.
+    room correction filters are active and deployed. While deploy is
+    skipped (F-348), **COMPLETE** means only that filters were generated:
+    no correction is active.
 
 25. Remove the UMIK-1 from the measurement position. Stow it safely.
 
@@ -298,7 +314,7 @@ room, computes correction filters, and deploys them -- all from the web UI.
 | Gain calibration | 1 min | A few seconds per channel |
 | Sweep measurements (3 positions) | 5-10 min | Includes repositioning the mic |
 | Filter generation | 30 sec | Pipeline runs on Pi |
-| Deploy + verification | 1 min | Automated |
+| Deploy + verification | 1 min | Automated (currently skipped, F-348) |
 | Sound check | 5-10 min | Walk the room, listen |
 | **Total** | **~30-60 min** | From power-on to ready |
 
