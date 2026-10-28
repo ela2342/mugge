@@ -9,6 +9,7 @@ for 2-way, 3-way, and 4-way topologies (bandpass, per-driver slopes, D-009).
 """
 
 import asyncio
+import hashlib
 import os
 import sys
 from unittest.mock import MagicMock, patch
@@ -34,7 +35,14 @@ from app.measurement.session import (
     SessionConfig,
     _MEASUREMENT_ATTENUATION_DB,
     _MEASURE_ONLY_MSG,
+    _measurement_base_dir,
 )
+
+
+@pytest.fixture(autouse=True)
+def _state_home(tmp_path, monkeypatch):
+    """Keep every session's run dir (F-348/B1) inside tmp_path."""
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
 
 
 # ---------------------------------------------------------------------------
@@ -243,11 +251,16 @@ def _run_filter_gen_sync(profile, identities, tmpdir,
     generate_filter_chain_conf so we test the delegation logic without
     needing real YAML files on disk.
 
-    *tmpdir* must be caller-managed so WAV files survive for assertions.
+    *tmpdir* is passed as the client output_dir, which the session
+    ignores (F-348/B1); the files land in session.run_dir.
     """
     session = _make_session(output_dir=tmpdir)
     session._config.profile_name = profile_name
+    return _filter_gen_with_mocks(session, profile, identities)
 
+
+def _filter_gen_with_mocks(session, profile, identities):
+    """Call session._filter_gen_sync() with the profile loaders mocked."""
     def mock_load(name, profiles_dir=None, identities_dir=None):
         return profile, identities
 
@@ -896,3 +909,194 @@ class TestMeasureOnlyRun:
         assert session.state == MeasurementState.ERROR
         self._assert_nothing_deployed(env, sent)
         assert not [m for m in sent if m.get("type") == "verify_progress"]
+
+
+# ===================================================================
+# F-348/B1 (Architect a49947b8): the client output_dir is never written
+# ===================================================================
+
+def _snapshot(root):
+    """Map each path under root (links not followed) to its content hash."""
+    snap = {}
+    for dirpath, dirnames, filenames in os.walk(root):
+        for name in dirnames + filenames:
+            path = os.path.join(dirpath, name)
+            rel = os.path.relpath(path, root)
+            if os.path.islink(path):
+                snap[rel] = "link:" + os.readlink(path)
+            elif os.path.isfile(path):
+                with open(path, "rb") as f:
+                    snap[rel] = hashlib.sha256(f.read()).hexdigest()
+            else:
+                snap[rel] = "dir"
+    return snap
+
+
+class TestMeasurementOutputDir:
+    """Writes land only in a fresh run dir under the service-owned base.
+
+    The client output_dir is ignored, even when it names the conf.d or
+    coeffs dir or a dir with planted symlinks. A base that is a symlink
+    into, or lies under, a PipeWire/coeffs dir, or is not private to this
+    uid, is refused before anything is written.
+    """
+
+    @pytest.fixture
+    def dirs(self, tmp_path, monkeypatch):
+        coeffs = tmp_path / "coeffs"
+        conf = tmp_path / "pipewire.conf.d"
+        for d in (coeffs, conf):
+            d.mkdir()
+            (d / "sentinel").write_bytes(b"live")
+        monkeypatch.setenv("PI4AUDIO_COEFFS_DIR", str(coeffs))
+        monkeypatch.setenv("PI4AUDIO_PW_CONF_DIR", str(conf))
+        before = {d: _snapshot(d) for d in (coeffs, conf)}
+        return {"coeffs": coeffs, "conf": conf, "before": before}
+
+    @staticmethod
+    def _assert_untouched(dirs):
+        for d, snap in dirs["before"].items():
+            assert _snapshot(d) == snap, d
+
+    @staticmethod
+    def _gen(output_dir=None):
+        kwargs = {} if output_dir is None else {"output_dir": str(output_dir)}
+        session = _make_session(**kwargs)
+        session._config.profile_name = "test-profile"
+        result = _filter_gen_with_mocks(session, _PROFILE_2WAY, _IDENTITIES_2WAY)
+        return session, result
+
+    @staticmethod
+    def _assert_in_run_dir(session, result):
+        base = os.path.realpath(_measurement_base_dir())
+        run_dir = session.run_dir
+        assert os.path.dirname(run_dir) == base
+        assert os.path.basename(run_dir).startswith("run-")
+        assert os.stat(run_dir).st_mode & 0o777 == 0o700
+        assert result["output_dir"] == run_dir
+        written = set(os.listdir(run_dir))
+        assert "30-filter-chain-convolver.conf" in written
+        for path in result["channels"].values():
+            assert os.path.dirname(path) == run_dir
+            assert os.path.isfile(path)
+        assert len(written) == len(result["channels"]) + 1
+
+    def test_default_run_writes_only_in_run_dir(self, dirs):
+        session, result = self._gen()
+        self._assert_in_run_dir(session, result)
+        base = os.path.realpath(_measurement_base_dir())
+        assert os.listdir(base) == [os.path.basename(session.run_dir)]
+        self._assert_untouched(dirs)
+
+    def test_second_session_gets_new_run_dir(self, dirs):
+        first, _ = self._gen()
+        second, result = self._gen()
+        assert first.run_dir != second.run_dir
+        self._assert_in_run_dir(second, result)
+        self._assert_untouched(dirs)
+
+    @pytest.mark.parametrize("target", ["conf", "coeffs"])
+    def test_client_dir_ignored(self, dirs, target, caplog):
+        with caplog.at_level("WARNING", logger="app.measurement.session"):
+            session, result = self._gen(dirs[target])
+        assert "ignored, F-348/B1" in caplog.text
+        self._assert_in_run_dir(session, result)
+        self._assert_untouched(dirs)
+
+    def test_client_dir_with_planted_symlinks_ignored(self, dirs, tmp_path):
+        """SecSpec S1: a dir whose entries link into conf.d is not used."""
+        planted = tmp_path / "planted"
+        planted.mkdir()
+        (planted / "impulse_responses").symlink_to(dirs["conf"])
+        (planted / "30-filter-chain-convolver.conf").symlink_to(
+            dirs["conf"] / "30-filter-chain-convolver.conf")
+        before = _snapshot(planted)
+        session, result = self._gen(planted)
+        self._assert_in_run_dir(session, result)
+        assert _snapshot(planted) == before
+        self._assert_untouched(dirs)
+
+    def test_client_dir_dotdot_into_conf_ignored(self, dirs):
+        base = _measurement_base_dir()
+        sneaky = os.path.join(base, os.path.relpath(dirs["conf"], base))
+        session, result = self._gen(sneaky)
+        self._assert_in_run_dir(session, result)
+        self._assert_untouched(dirs)
+
+    def test_base_dir_is_never_reused_with_planted_symlinks(self, dirs):
+        """A link planted in the base dir is not followed by any write."""
+        base = _measurement_base_dir()
+        os.makedirs(base, mode=0o700)
+        os.symlink(dirs["conf"] / "30-filter-chain-convolver.conf",
+                   os.path.join(base, "30-filter-chain-convolver.conf"))
+        os.symlink(dirs["conf"], os.path.join(base, "impulse_responses"))
+        session, result = self._gen()
+        self._assert_in_run_dir(session, result)
+        self._assert_untouched(dirs)
+
+    def test_run_dir_is_read_only(self, dirs):
+        session, _ = self._gen()
+        with pytest.raises(AttributeError):
+            session.run_dir = str(dirs["conf"])
+        with pytest.raises(AttributeError):
+            session.config.run_dir = str(dirs["conf"])
+        self._assert_untouched(dirs)
+
+    @staticmethod
+    def _assert_refused(dirs):
+        """Refused when the config is built (SecSpec NB1: before routes.py
+        connects the signal-gen client), with no run dir or file created.
+        The conf.d and coeffs snapshots include dirs, so a dir that makedirs
+        created inside a target also fails (SecSpec NB2).
+        """
+        def files(snap):
+            return {k: v for k, v in snap.items() if v != "dir"}
+        state = os.environ["XDG_STATE_HOME"]
+        before = _snapshot(state)
+        with pytest.raises(ValueError, match="F-348/B1"):
+            SessionConfig(channels=[ChannelConfig(index=0, name="L")])
+        after = _snapshot(state)
+        assert files(after) == files(before)
+        assert not [k for k in after if os.path.basename(k).startswith("run-")]
+        TestMeasurementOutputDir._assert_untouched(dirs)
+
+    def test_base_symlink_into_conf_refused(self, dirs):
+        base = _measurement_base_dir()
+        os.makedirs(os.path.dirname(base))
+        os.symlink(dirs["conf"], base)
+        self._assert_refused(dirs)
+
+    def test_base_parent_symlink_into_conf_refused(self, dirs):
+        """SecSpec NB2: makedirs would follow the link and create
+        conf.d/measurement; the deny check runs before it."""
+        parent = os.path.dirname(_measurement_base_dir())
+        os.makedirs(os.path.dirname(parent))
+        os.symlink(dirs["conf"], parent)
+        self._assert_refused(dirs)
+        assert not os.path.exists(dirs["conf"] / "measurement")
+
+    def test_base_under_pipewire_config_refused(self, dirs, tmp_path,
+                                                monkeypatch):
+        home = tmp_path / "home"
+        monkeypatch.setenv("HOME", str(home))
+        monkeypatch.setenv(
+            "XDG_STATE_HOME", str(home / ".config" / "pipewire" / "state"))
+        self._assert_refused(dirs)
+
+    def test_base_group_writable_refused(self, dirs):
+        base = _measurement_base_dir()
+        os.makedirs(base)
+        os.chmod(base, 0o770)
+        self._assert_refused(dirs)
+
+    def test_base_world_writable_refused(self, dirs):
+        base = _measurement_base_dir()
+        os.makedirs(base)
+        os.chmod(base, 0o707)
+        self._assert_refused(dirs)
+
+    def test_base_owned_by_other_uid_refused(self, dirs, monkeypatch):
+        os.makedirs(_measurement_base_dir(), mode=0o700)
+        uid = os.getuid()
+        monkeypatch.setattr(os, "getuid", lambda: uid + 1)
+        self._assert_refused(dirs)

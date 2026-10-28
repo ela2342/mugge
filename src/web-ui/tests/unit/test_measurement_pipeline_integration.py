@@ -138,7 +138,7 @@ class TestFullPipelineE2E:
         session = mm.last_completed_session or mm.measurement_session
         assert session is not None
 
-        delays_path = os.path.join(session._config.output_dir, "delays.yml")
+        delays_path = os.path.join(session.run_dir, "delays.yml")
         assert os.path.isfile(delays_path), f"delays.yml not found at {delays_path}"
 
         with open(delays_path) as f:
@@ -159,7 +159,7 @@ class TestFullPipelineE2E:
         assert session is not None
 
         ir_dir = os.path.join(
-            session._config.output_dir, "impulse_responses")
+            session.run_dir, "impulse_responses")
         assert os.path.isdir(ir_dir), f"impulse_responses dir not found"
 
         # Should have spk_key-named files (from GAP-6 in _filter_gen_sync).
