@@ -53,7 +53,12 @@ in
         Type = "simple";
         # Graph manager spawns pw-dump as a subprocess for gain integrity
         # checks and xrun monitoring — PipeWire tools must be in PATH.
-        Environment = "PATH=${pkgs.pipewire}/bin";
+        # F-465: venue profiles from the store (no cwd fallback). No
+        # PI4AUDIO_DEFAULT_VENUE: a venue is armed only by set_venue.
+        Environment = [
+          "PATH=${pkgs.pipewire}/bin"
+          "PI4AUDIO_VENUES_DIR=${pi4audio-packages.venues}"
+        ];
         ExecStart = "${pi4audio-packages.graph-manager}/bin/pi4audio-graph-manager --mode ${cfg.mode} --log-level ${cfg.logLevel} --speaker-channels ${toString cfg.speakerChannels} --sub-channels ${cfg.subChannels}";
         Restart = "on-failure";
         RestartSec = 3;

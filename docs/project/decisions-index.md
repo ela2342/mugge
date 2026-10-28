@@ -71,3 +71,4 @@ Generated from the per-item files in `decisions/` (the source of truth). Do NOT 
 | [D-067](decisions/D-067.md) | 2026-10-24 | Documentation-only PRs are exempt from the Rule 13 CI requirement |
 | [D-068](decisions/D-068.md) | 2026-10-24 | US-163 local test suites run after the install, not as a pre-erase gate |
 | [D-069](decisions/D-069.md) | 2026-10-25 | Pi 5 platform baseline under NixOS |
+| [D-070](decisions/D-070.md) | 2026-10-25 | Supervised home-lab first-session exception to the Pi 5 amps-on list |
