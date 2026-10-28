@@ -8,9 +8,10 @@ R-3: _filter_gen_sync tests verify delegation to generate_profile_filters()
 for 2-way, 3-way, and 4-way topologies (bandpass, per-driver slopes, D-009).
 """
 
+import asyncio
 import os
 import sys
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 # Mock mode must be set before any app imports.
 os.environ["PI_AUDIO_MOCK"] = "1"
@@ -29,8 +30,10 @@ import pytest
 from app.measurement.session import (
     ChannelConfig,
     MeasurementSession,
+    MeasurementState,
     SessionConfig,
     _MEASUREMENT_ATTENUATION_DB,
+    _MEASURE_ONLY_MSG,
 )
 
 
@@ -757,3 +760,139 @@ class TestReloadConvolver:
         mock_rc.return_value = False
         # Should not raise
         MeasurementSession._reload_convolver()
+
+
+# ===================================================================
+# F-348 (PO c06db0a8 item 2): a session run is measure only
+# ===================================================================
+
+class TestMeasureOnlyRun:
+    """A run stops after filter generation and never deploys.
+
+    AE b08bae03 NB1/NB2, Architect eefb0c27 D4: the real deploy code runs
+    (no dry_run), with the coeffs and conf.d dirs redirected to temp dirs.
+    On normal end, abort and error there is no deploy_filters or
+    deploy_pw_config call, no file in either dir and no convolver reload.
+    Re-chaining deploy in _run_deploy makes every case fail.
+    """
+
+    @pytest.fixture
+    def env(self, tmp_path, monkeypatch):
+        import app.measurement.session as sess
+        sess._ensure_rc_path()
+        import room_correction.deploy as rc_deploy
+        from room_correction.export import CHANNEL_FILENAMES
+
+        out = tmp_path / "out"
+        coeffs = tmp_path / "coeffs"
+        conf = tmp_path / "pipewire.conf.d"
+        for d in (out, coeffs, conf):
+            d.mkdir()
+        for name in CHANNEL_FILENAMES.values():
+            (out / name).write_bytes(b"RIFF")
+        monkeypatch.setenv("PI4AUDIO_COEFFS_DIR", str(coeffs))
+        monkeypatch.setenv("PI4AUDIO_PW_CONF_DIR", str(conf))
+        monkeypatch.setattr(sess, "_MOCK_MODE", False)
+
+        # Spies around the real functions. The defaults were bound at
+        # import, so the temp dirs are passed explicitly.
+        real_filters = rc_deploy.deploy_filters
+        real_conf = rc_deploy.deploy_pw_config
+        spies = {
+            "deploy_filters": MagicMock(side_effect=lambda *a, **kw: real_filters(
+                *a, **{**kw, "coeffs_dir": str(coeffs)})),
+            "deploy_pw_config": MagicMock(side_effect=lambda *a, **kw: real_conf(
+                *a, **{**kw, "pw_conf_dir": str(conf)})),
+            "reload_convolver": MagicMock(return_value=True),
+        }
+        for name, spy in spies.items():
+            monkeypatch.setattr(rc_deploy, name, spy)
+        return {"out": out, "coeffs": coeffs, "conf": conf, "spies": spies}
+
+    @staticmethod
+    def _run(env, mock=False, after_deploy=None):
+        """Run a session whose stages up to filter gen are stubs.
+
+        after_deploy(session) runs once _run_deploy has returned, before
+        the real _run_verify, so a re-chained deploy has already happened.
+        """
+        sent = []
+
+        async def ws(msg):
+            sent.append(msg)
+
+        def stage(state):
+            async def run_stage(self):
+                self._transition(state)
+                self._is_mock = mock
+            return run_stage
+
+        async def filter_gen(self):
+            self._transition(MeasurementState.FILTER_GEN)
+            self._filter_gen_result = {
+                "output_dir": str(env["out"]), "all_pass": True,
+                "pw_conf_content": "# filter-chain\n",
+                "verification": [{"channel": "sat_left", "all_pass": True}],
+                "channels": ["sat_left"],
+            }
+
+        real_verify = MeasurementSession._run_verify
+
+        async def verify(self):
+            if after_deploy:
+                after_deploy(self)
+            await real_verify(self)
+
+        session = MeasurementSession(
+            config=SessionConfig(channels=[ChannelConfig(index=0, name="L")]),
+            ws_broadcast=ws, sd_override=object())
+        stages = {
+            "_check_profile_crossover": lambda self: None,
+            "_run_setup": stage(MeasurementState.SETUP),
+            "_run_gain_cal": stage(MeasurementState.GAIN_CAL),
+            "_run_measuring": stage(MeasurementState.MEASURING),
+            "_run_filter_gen": filter_gen,
+            "_run_verify": verify,
+        }
+        with patch.multiple(MeasurementSession, **stages):
+            asyncio.run(session.run())
+        return session, sent
+
+    @staticmethod
+    def _assert_nothing_deployed(env, sent):
+        for name, spy in env["spies"].items():
+            assert not spy.called, name
+        assert list(env["coeffs"].iterdir()) == []
+        assert list(env["conf"].iterdir()) == []
+        skipped = [m for m in sent if m.get("type") == "deploy_progress"]
+        assert skipped == [{"type": "deploy_progress", "phase": "skipped",
+                            "message": _MEASURE_ONLY_MSG}]
+        assert "F-348" in _MEASURE_ONLY_MSG
+
+    @pytest.mark.parametrize("mock", [False, True], ids=["real", "mock"])
+    def test_normal_end(self, env, mock):
+        session, sent = self._run(env, mock=mock)
+        assert session.state == MeasurementState.COMPLETE
+        self._assert_nothing_deployed(env, sent)
+        verify = [m for m in sent if m.get("type") == "verify_progress"]
+        assert [(m["phase"], m["message"]) for m in verify] == [
+            ("skipped", _MEASURE_ONLY_MSG)]
+        assert verify[0]["verification"] == [
+            {"channel": "sat_left", "all_pass": True}]
+
+    def test_abort(self, env):
+        """Abort at the next checkpoint (CP-7) after the deploy stage."""
+        session, sent = self._run(
+            env, after_deploy=lambda s: s.request_abort("test abort"))
+        assert session.state == MeasurementState.ABORTED
+        self._assert_nothing_deployed(env, sent)
+        assert not [m for m in sent if m.get("type") == "verify_progress"]
+
+    def test_error(self, env):
+        """An error after the deploy stage ends the run in ERROR."""
+        def fail(_session):
+            raise RuntimeError("test error")
+        session, sent = self._run(env, after_deploy=fail)
+        assert session.state == MeasurementState.ERROR
+        self._assert_nothing_deployed(env, sent)
+        assert not [m for m in sent if m.get("type") == "verify_progress"]

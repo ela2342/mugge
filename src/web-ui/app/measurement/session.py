@@ -50,6 +50,11 @@ def _ensure_rc_path() -> None:
 # Profile used for filter generation when the session names none.
 _DEFAULT_PROFILE_NAME = "2way-80hz-sealed"
 
+# F-348 (PO c06db0a8 item 2): a session run is measure only. It stops after
+# filter generation into the output dir; deploy and verify are skipped with
+# this message. There is no opt-in; re-enabling is US-174d's deploy gate.
+_MEASURE_ONLY_MSG = "Measure only: install disabled until F-348 fix and US-174d"
+
 
 def _profile_dirs() -> tuple[str, str]:
     """Return (profiles_dir, identities_dir) used for filter generation."""
@@ -1207,10 +1212,20 @@ class MeasurementSession:
 
         In mock mode, uses dry_run=True so no files are actually written
         to system paths.
+
+        F-348: skipped unconditionally, in mock and real mode alike. The
+        code below the skip stays for US-174d to re-enable behind its gate.
         """
         self._check_abort("CP-6")
         self._transition(MeasurementState.DEPLOY)
         await self._broadcast_state()
+
+        await self._broadcast({
+            "type": "deploy_progress", "phase": "skipped",
+            "message": _MEASURE_ONLY_MSG,
+        })
+        log.warning("Deploy skipped: %s", _MEASURE_ONLY_MSG)
+        return
 
         fg = getattr(self, "_filter_gen_result", None)
         if fg is None:
@@ -1342,6 +1357,9 @@ class MeasurementSession:
         In mock mode, skips the live sweep and reports only the static
         filter-gen verification results.  Design principle #7: mandatory
         verification measurement to confirm correction effectiveness.
+
+        F-348: nothing was deployed, so there is no live sweep in either
+        mode; only the static filter-gen verification is reported.
         """
         self._check_abort("CP-7")
         self._transition(MeasurementState.VERIFY)
@@ -1349,6 +1367,14 @@ class MeasurementSession:
 
         fg = getattr(self, "_filter_gen_result", None)
         static_verification = fg.get("verification", []) if fg else []
+
+        await self._broadcast({
+            "type": "verify_progress", "phase": "skipped",
+            "message": _MEASURE_ONLY_MSG,
+            "verification": static_verification,
+            "live_verification": None,
+        })
+        return
 
         # In mock mode we cannot run a real verification sweep —
         # no PipeWire is running.  Report static verification only.
