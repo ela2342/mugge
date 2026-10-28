@@ -1,6 +1,7 @@
 """F-262 S3 through the real session path (QE T1/T5; Q4 with the production tail).
 
-The whole mock session runs (gain cal, sweeps, filter gen, deploy, verify).
+The whole mock session runs (gain cal, sweeps, filter gen; deploy and live
+verify are skipped, F-348 measure-only).
 The only fake is at the capture boundary: measure_nearfield.play_and_record
 returns the mock room's capture shifted by a lag, as a late or early
 pw-record start would.
@@ -11,8 +12,8 @@ L is in window iff 240 <= onset + L and onset + L + 24000 <= 96000:
 L in [-223, 71497] (Sub1 bounds the start, Left the end).
 """
 
-import os
 import time
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -49,6 +50,12 @@ START_BODY = {
     "umik_sensitivity_dbfs_to_spl": 121.4,
     "profile_name": "2way-80hz-sealed",
 }
+
+
+@pytest.fixture(autouse=True)
+def _state_home(tmp_path, monkeypatch):
+    """Keep every session's run dir (F-348/B1) inside tmp_path."""
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
 
 
 @pytest.fixture
@@ -147,13 +154,6 @@ def _response_diff(spk, path, path0, passband):
     return float(np.max(np.abs(db[keep] - db0[keep])))
 
 
-def _wavs(directory, prefix):
-    if not os.path.isdir(directory):
-        return []
-    return sorted(f for f in os.listdir(directory)
-                  if f.startswith(prefix) and f.endswith(".wav"))
-
-
 @pytest.mark.parametrize("lag", [LAST_EARLY_LAG, 24000, LAST_LATE_LAG])
 def test_in_window_lag_gives_the_lag_zero_filters(
         client, capture_lag, tmp_path, lag):
@@ -200,10 +200,12 @@ def test_out_of_window_lag_fails_closed(
         client, capture_lag, tmp_path, lag, message):
     """Q4 FAIL rows: error state, the message, and no WAV written."""
     capture_lag["samples"] = lag
-    final, _ = _run_session(client, tmp_path)
+    final, s = _run_session(client, tmp_path)
     assert final["state"] == "error"
     error = final.get("error_message") or ""
     assert "capture misaligned: (i)" in error
     assert message in error
-    assert _wavs(tmp_path / "impulse_responses", "ir_") == []
-    assert _wavs(tmp_path, "combined_") == []
+    # F-348/B1: the session writes only into its run dir (ruling b1da279f R4a).
+    run_dir = Path(s.run_dir)
+    assert run_dir.is_dir()
+    assert sorted(run_dir.rglob("*.wav")) == []

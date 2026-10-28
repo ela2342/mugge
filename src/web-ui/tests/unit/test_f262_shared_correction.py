@@ -71,7 +71,7 @@ def _patched_profile(bundle):
         yield
 
 
-def _run_session(bundle, irs, output_dir):
+def _make_session(bundle, irs, output_dir):
     channels = [ChannelConfig(index=spk["channel"], name=k, speaker_key=k)
                 for k, spk in bundle.profile["speakers"].items()]
     config = SessionConfig(channels=channels, output_dir=output_dir, positions=1,
@@ -84,6 +84,11 @@ def _run_session(bundle, irs, output_dir):
     for k, spk in bundle.profile["speakers"].items():
         if k in irs:
             session._impulse_responses[f"ch{spk['channel']}_pos0"] = irs[k]
+    return session
+
+
+def _run_session(bundle, irs, output_dir):
+    session = _make_session(bundle, irs, output_dir)
     with _patched_profile(bundle):
         return session._filter_gen_sync()
 
@@ -93,10 +98,18 @@ def _samples(path):
     return data
 
 
+@pytest.fixture(autouse=True)
+def _state_home(tmp_path, monkeypatch):
+    """Keep every session's run dir (F-348/B1) inside tmp_path."""
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+
+
 @pytest.fixture(scope="module")
 def session_run(bundle, measured_irs, tmp_path_factory):
     root = tmp_path_factory.mktemp("f262")
-    result = _run_session(bundle, measured_irs, str(root / "session" / PROFILE_NAME))
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setenv("XDG_STATE_HOME", str(root / "state"))
+        result = _run_session(bundle, measured_irs, str(root / "session" / PROFILE_NAME))
     return root, result
 
 
@@ -145,10 +158,15 @@ class TestSessionFailsClosed:
 
     def test_bandpass_profile_rejected(self, bundle, measured_irs, tmp_path):
         """AE F-262 item 3: the text names the cause; nothing is written."""
-        out = tmp_path / "out"
-        with pytest.raises(RuntimeError, match=re.escape(BANDPASS_REJECTED)):
-            _run_session(_with_bandpass(bundle), measured_irs, str(out))
-        assert not out.exists() or not list(out.rglob("*.wav"))
+        bandpass = _with_bandpass(bundle)
+        session = _make_session(bandpass, measured_irs, str(tmp_path / "out"))
+        with _patched_profile(bandpass), \
+                pytest.raises(RuntimeError, match=re.escape(BANDPASS_REJECTED)):
+            session._filter_gen_sync()
+        # F-348/B1: the session writes only into its run dir (ruling b1da279f R4b).
+        run_dir = Path(session.run_dir)
+        assert run_dir.is_dir()
+        assert sorted(run_dir.rglob("*.wav")) == []
 
 
 class TestRoutesFailClosed:
