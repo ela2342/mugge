@@ -103,9 +103,11 @@ room, computes correction filters, and deploys them -- all from the web UI.
 > **Interim (F-348, 2026-10-28):** a measurement run is currently
 > measure-only. It stops after filter generation (4e): the wizard skips the
 > deploy (4f) and the live verification sweep (4g), and nothing is installed
-> or reloaded. The generated filters stay in the session's output dir. Deploy
-> comes back with US-174d's deploy gate, after the F-348 fix. Steps 22-24
-> below describe that later behaviour.
+> or reloaded. The generated filters stay in a new run dir for that session,
+> `~/.local/state/pi4audio/measurement/run-*/` (`$XDG_STATE_HOME/pi4audio/measurement/run-*/`
+> if `XDG_STATE_HOME` is set). An `output_dir` sent by the client is ignored.
+> Deploy comes back with US-174d's deploy gate, after the F-348 fix. Steps
+> 22-24 below describe that later behaviour.
 
 ### 4a. Position the Microphone
 
