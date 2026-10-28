@@ -6,15 +6,14 @@ mute (no test-only trip RPC, QE f79c7a5a).  Every gain value is read back
 from PipeWire (pw-cli enum-params on pi4audio-convolver), never from GM or
 web-ui state.
 
-L1 (QE f79c7a5a, AE 1e8c1fb3 NB1/NB2): remove pi4audio-convolver-out,
-    wait for the latch, check open_gate is refused, unlatch, then all 16
-    gain values (8 x Mult, 8 x Add) print exactly "Float 0.000000" (strict
-    string match, see ZERO_LINE), get_gate is closed and
-    the watchdog is not latched.  A relatch (watchdog_mute event) between
-    the unlatch and the read-back is a FAIL, because its mute would hide
-    what the unlatch wrote (QE ae15808b Q1).
-    No hw-out claim: with -out gone there is no path to hw-out.
-    L1 then restores the convolver (as in L2) for the next test.
+No L1 (CI 40669316702, QE 224e5a46 R2 (ii)): the planned L1 removed only
+    pi4audio-convolver-out and read the gains back from the surviving
+    capture node.  Both monitored nodes (watchdog.rs MONITORED_NODES) are
+    the two streams of ONE filter-chain instance, and PipeWire removes the
+    whole instance when either goes, so no real trip leaves the original
+    capture node in place.  L2 carries all of L1's assertions: open_gate
+    refused while latched, the relatch guard, 16 x "Float 0.000000", gate
+    closed, not latched.
 L2: remove both convolver nodes, recreate them in a separate PipeWire
     client (``pipewire -c filter-chain.conf`` with the stack's convolver
     config), so PipeWire and GM keep running and the latch survives.  With
@@ -389,38 +388,11 @@ def _stop(procs: list[subprocess.Popen]) -> None:
             proc.wait(timeout=5)
 
 
-def _restore_convolver(recreate) -> None:
-    """Recreate the convolver and clear the latch, for the next test."""
-    recreate()
-    if _watchdog()["latched"]:
-        assert _gm("watchdog_unlatch").get("ok"), "unlatch after restore failed"
-    _gm("close_gate")
-
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
 
 class TestUnlatchWritesNoGain:
-
-    def test_l1_unlatch_leaves_gains_zero_and_gate_closed(self, armed_closed,
-                                                          recreate_convolver):
-        try:
-            removed = _destroy_nodes(CONVOLVER_OUT)
-            assert removed, f"{CONVOLVER_OUT} not in the graph"
-            print(f"F-320D removed {CONVOLVER_OUT} via: pw-cli destroy {removed}")
-            assert _wait(lambda: not _node_ids(CONVOLVER_OUT), LATCH_TIMEOUT_S), (
-                f"{CONVOLVER_OUT} still in the graph after pw-cli destroy")
-            _wait_latched(CONVOLVER_OUT)
-            # The gains live on the capture node; it must survive for the read-back.
-            assert len(_node_ids(CONVOLVER)) == 1, (
-                f"{CONVOLVER} gone after removing {CONVOLVER_OUT}; cannot read back gains")
-
-            _assert_open_gate_refused("latched")
-
-            _unlatch_and_read_back("L1")
-        finally:
-            _restore_convolver(recreate_convolver)
 
     def test_l2_hw_out_at_floor_after_unlatch(self, armed_closed, tone_on_sw_tap,
                                              level_hw_out_port, recreate_convolver):
