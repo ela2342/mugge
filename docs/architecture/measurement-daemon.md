@@ -226,6 +226,14 @@ IDLE ─> SETUP ─> GAIN_CAL ─> MEASURING ─> RESULTS ─> FILTER_GEN ─> D
 | DEPLOY | Deploy filters to PW filter-chain | Approve deployment |
 | VERIFY | Post-deployment verification sweep | Review before/after comparison |
 
+Interim (F-348, 2026-10-28): DEPLOY and VERIFY are entered and left as
+"skipped" on every run, in mock and real mode alike. `_run_deploy`
+broadcasts a `deploy_progress` "skipped" event and returns before any
+`deploy_filters` / `deploy_pw_config` call or convolver reload.
+`_run_verify` reports only the static filter-gen verification, with
+`live_verification: None`. There is no opt-in. US-174d re-enables deploy
+behind its deploy gate.
+
 ### State Persistence
 
 The daemon holds the full session state in memory:
