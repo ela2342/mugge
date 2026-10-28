@@ -4,16 +4,19 @@
 Registers as JACK client "Mixxx" with 8 output ports (out_0..out_7),
 matching GM's routing table expectations (Prefix("Mixxx"), MixxxOutput
 port naming). Plays a stereo WAV/MP3 file on channels 1-2 (out_0/out_1)
-in a loop. Channels 3-8 output silence.
+in a loop, or with --tone a fixed sine test stimulus (F-394). Channels
+3-8 output silence.
 
 Must be run under pw-jack so that PipeWire's JACK shim handles the
 client registration and port creation.
 
 Usage:
-    pw-jack python3 scripts/mixxx-substitute.py [--file PATH] [--channels 8]
+    pw-jack python3 scripts/mixxx-substitute.py [--file PATH | --tone] [--channels 8]
 
 The --file argument specifies the audio file to play (WAV or MP3).
-If omitted, outputs silence on all channels.
+--tone plays TONE_FREQ_HZ at TONE_PEAK_DBFS peak on channels 1-2; test
+runs use it so their stimulus is known (AE Q1 V1). With neither, outputs
+silence on all channels.
 """
 
 from __future__ import annotations
@@ -42,6 +45,31 @@ JackDefaultAudioType = b"32 bit float mono audio"
 
 # JACK callback type: int (*process)(jack_nframes_t nframes, void *arg)
 JACK_PROCESS_CALLBACK = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_uint32, ctypes.c_void_p)
+
+# --tone stimulus (F-394, AE Q1 V1). Tests derive their expected levels
+# from these. 1000 Hz is exactly 48 samples per cycle at 48 kHz.
+TONE_FREQ_HZ = 1000
+TONE_PEAK_DBFS = -20.0
+TONE_CHANNELS = 2  # out_0/out_1 (Master L/R); the rest stay silent
+
+
+def tone_block(start_frame: int, nframes: int, rate: int = 48000,
+               freq_hz: int = TONE_FREQ_HZ, peak_dbfs: float = TONE_PEAK_DBFS,
+               channels: int = 8) -> np.ndarray:
+    """Return a (channels, nframes) float32 block of the tone stimulus.
+
+    The phase comes from the absolute frame index, so consecutive blocks
+    join without a click whatever the block size. Channels from
+    TONE_CHANNELS on are exactly 0.
+    """
+    n = np.arange(start_frame, start_frame + nframes, dtype=np.int64)
+    # Reduce the phase in integers before the float multiply, so it stays
+    # exact however long the stream runs.
+    phase = 2.0 * np.pi * ((n * freq_hz) % rate) / rate
+    sine = (10.0 ** (peak_dbfs / 20.0) * np.sin(phase)).astype(np.float32)
+    block = np.zeros((channels, nframes), dtype=np.float32)
+    block[:min(TONE_CHANNELS, channels)] = sine
+    return block
 
 
 def load_libjack() -> ctypes.CDLL:
@@ -141,7 +169,10 @@ class AudioFile:
 
 def main():
     parser = argparse.ArgumentParser(description="Mixxx substitute JACK client")
-    parser.add_argument("--file", type=str, default=None, help="Audio file to play (WAV)")
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--file", type=str, default=None, help="Audio file to play (WAV)")
+    source.add_argument("--tone", action="store_true",
+                        help=f"Play a {TONE_FREQ_HZ} Hz sine at {TONE_PEAK_DBFS} dBFS peak on ch 1-2")
     parser.add_argument("--channels", type=int, default=8, help="Number of output ports")
     parser.add_argument("--client-name", type=str, default="Mixxx", help="JACK client name")
     args = parser.parse_args()
@@ -163,6 +194,8 @@ def main():
     jack.jack_client_close.argtypes = [ctypes.c_void_p]
     jack.jack_port_get_buffer.restype = ctypes.c_void_p
     jack.jack_port_get_buffer.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+    jack.jack_get_sample_rate.restype = ctypes.c_uint32
+    jack.jack_get_sample_rate.argtypes = [ctypes.c_void_p]
 
     # Open client
     status = ctypes.c_int(0)
@@ -207,18 +240,27 @@ def main():
     elif args.file:
         print(f"WARNING: File not found: {args.file}", file=sys.stderr)
 
-    # Pre-allocate silence buffer
-    _silence = (ctypes.c_float * 8192)()
+    rate = jack.jack_get_sample_rate(client)
+    if args.tone:
+        print(f"[mixxx-substitute] Audio source: tone {TONE_FREQ_HZ} Hz {TONE_PEAK_DBFS} dBFS")
+    tone_frame = 0
 
     # Process callback
     @JACK_PROCESS_CALLBACK
     def process_callback(nframes, _arg):
+        nonlocal tone_frame
+        tone = None
+        if args.tone:
+            tone = tone_block(tone_frame, nframes, rate=rate, channels=len(ports))
+            tone_frame += nframes
         for i, port in enumerate(ports):
             buf = jack.jack_port_get_buffer(port, nframes)
             if not buf:
                 continue
 
-            if audio and i < 2:
+            if tone is not None:
+                ctypes.memmove(buf, tone[i].ctypes.data, nframes * 4)
+            elif audio and i < 2:
                 # Play audio on channels 0-1
                 samples = audio.read_frames(i, nframes)
                 ctypes.memmove(buf, samples.ctypes.data, nframes * 4)

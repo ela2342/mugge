@@ -258,11 +258,47 @@ class TestLocalDemoMeasurementAPI:
 class TestLocalDemoPostHocValidation:
     """Validate that the measurement session produced correct DSP artifacts."""
 
-    MEAS_DIR = "/tmp/pi4audio-measurement"
+    @pytest.fixture
+    def meas_lookup(self, local_demo_url):
+        """(run_dir, why) of the last session, from the cached filter-gen result.
 
-    def test_impulse_responses_saved(self, local_demo_url):
+        F-348/B1: the session ignores the client output_dir and writes into
+        a fresh run-* dir under the server's .../pi4audio/measurement base.
+        run_dir is None when the API has no run dir; why then carries the
+        HTTP status and detail, or "no output_dir in response".  A cached
+        result after a verification failure still names a valid run dir.
+        """
+        try:
+            result = _api_post(local_demo_url,
+                               "/api/v1/measurement/generate-filters")
+        except urllib.error.HTTPError as e:
+            try:
+                detail = json.loads(e.read()).get("detail")
+            except (ValueError, AttributeError):
+                detail = None
+            return None, (f"generate-filters: HTTP {e.code} "
+                          f"{detail or e.reason}")
+        run_dir = result.get("output_dir")
+        if not run_dir:
+            return None, "generate-filters: no output_dir in response"
+        real = os.path.realpath(run_dir)
+        parent = os.path.dirname(real)
+        assert os.path.basename(real).startswith("run-"), real
+        assert os.path.basename(parent) == "measurement", real
+        assert os.path.basename(os.path.dirname(parent)) == "pi4audio", real
+        # local-demo sets XDG_STATE_HOME (G1); never the user's real state.
+        home_state = os.path.realpath(os.path.expanduser("~/.local/state"))
+        assert os.path.commonpath([real, home_state]) != home_state, (
+            f"run dir {real} is under {home_state}")
+        return run_dir, None
+
+    def test_impulse_responses_saved(self, meas_lookup):
         """Deconvolved IRs were saved during the measurement."""
-        ir_dir = os.path.join(self.MEAS_DIR, "impulse_responses")
+        meas_dir, why = meas_lookup
+        if meas_dir is None:
+            pytest.skip(f"No run dir from the API ({why}) — "
+                        "run session test first")
+        ir_dir = os.path.join(meas_dir, "impulse_responses")
         if not os.path.isdir(ir_dir):
             pytest.skip("IR directory not found — run session test first")
 
@@ -271,9 +307,12 @@ class TestLocalDemoPostHocValidation:
         assert len(ir_files) >= 1, (
             f"Expected at least 1 IR file, found: {ir_files}")
 
-    def test_ir_has_room_characteristics(self, local_demo_url):
+    def test_ir_has_room_characteristics(self, meas_lookup):
         """The deconvolved IR shows room-sim characteristics (not a dirac)."""
-        ir_dir = os.path.join(self.MEAS_DIR, "impulse_responses")
+        meas_dir, why = meas_lookup
+        if meas_dir is None:
+            pytest.skip(f"No run dir from the API ({why})")
+        ir_dir = os.path.join(meas_dir, "impulse_responses")
         if not os.path.isdir(ir_dir):
             pytest.skip("IR directory not found")
 
@@ -305,23 +344,27 @@ class TestLocalDemoPostHocValidation:
                 f"IR looks like a dirac ({energy_ratio:.4f} energy in one sample) "
                 f"— room-sim reflections not captured?")
 
-    def test_correction_filters_generated(self, local_demo_url):
+    def test_correction_filters_generated(self, meas_lookup):
         """Combined correction filter WAV files were generated."""
+        meas_dir, why = meas_lookup
+        assert meas_dir, f"No run dir from the API ({why})"
         combined_files = [
-            f for f in os.listdir(self.MEAS_DIR)
+            f for f in os.listdir(meas_dir)
             if f.startswith("combined_") and f.endswith(".wav")
         ]
         assert len(combined_files) >= 1, (
-            f"No combined filter WAVs in {self.MEAS_DIR}: "
-            f"{os.listdir(self.MEAS_DIR)}")
+            f"No combined filter WAVs in {meas_dir}: "
+            f"{os.listdir(meas_dir)}")
 
-    def test_correction_filters_pass_d009(self, local_demo_url):
+    def test_correction_filters_pass_d009(self, meas_lookup):
         """Generated correction filters comply with D-009 safety (gain <= -0.5 dB)."""
         import numpy as np
         import soundfile as sf
 
+        meas_dir, why = meas_lookup
+        assert meas_dir, f"No run dir from the API ({why})"
         combined_files = sorted([
-            f for f in os.listdir(self.MEAS_DIR)
+            f for f in os.listdir(meas_dir)
             if f.startswith("combined_") and f.endswith(".wav")
         ])
         if not combined_files:
@@ -335,7 +378,7 @@ class TestLocalDemoPostHocValidation:
                 continue
             checked.add(prefix)
 
-            path = os.path.join(self.MEAS_DIR, fname)
+            path = os.path.join(meas_dir, fname)
             data, sr = sf.read(path, dtype="float64")
             if data.ndim > 1:
                 data = data[:, 0]
@@ -345,9 +388,11 @@ class TestLocalDemoPostHocValidation:
             assert peak_db <= 0.0, (
                 f"D-009 violation in {fname}: peak {peak_db:.2f} dB > 0 dB")
 
-    def test_pw_convolver_config_generated(self, local_demo_url):
+    def test_pw_convolver_config_generated(self, meas_lookup):
         """PW filter-chain convolver config was generated."""
-        conf_path = os.path.join(self.MEAS_DIR,
+        meas_dir, why = meas_lookup
+        assert meas_dir, f"No run dir from the API ({why})"
+        conf_path = os.path.join(meas_dir,
                                  "30-filter-chain-convolver.conf")
         assert os.path.isfile(conf_path), (
             f"PW convolver config not found at {conf_path}")
@@ -357,9 +402,11 @@ class TestLocalDemoPostHocValidation:
         assert "combined_" in content or "filename" in content, (
             "PW config doesn't reference any filter files")
 
-    def test_delays_yaml_exists(self, local_demo_url):
+    def test_delays_yaml_exists(self, meas_lookup):
         """Time alignment delays.yml was generated."""
-        delays_path = os.path.join(self.MEAS_DIR, "delays.yml")
+        meas_dir, why = meas_lookup
+        assert meas_dir, f"No run dir from the API ({why})"
+        delays_path = os.path.join(meas_dir, "delays.yml")
         assert os.path.isfile(delays_path), (
             f"delays.yml not found at {delays_path}")
 

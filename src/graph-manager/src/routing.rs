@@ -1479,6 +1479,73 @@ mod tests {
     }
 
     #[test]
+    fn dj_signal_path_is_exactly_mixxx_convolver_usbstreamer() {
+        // US-173 AC7: Mixxx -> convolver -> gate -> USBStreamer, no link
+        // around the gate (the D-063 gain nodes sit inside the convolver).
+        // Pins the exact audio-path link set of the deployed 2-way layout
+        // (graph-manager.nix defaults: 4 speaker channels, subs 3,4).
+        use std::collections::BTreeSet;
+        let table = RoutingTable::production();
+        let dj_links = table.links_for(Mode::Dj);
+        let name = |m: &NodeMatch| match m {
+            NodeMatch::Exact(n) | NodeMatch::Prefix(n) => n.clone(),
+        };
+        let set = |pred: &dyn Fn(&DesiredLink) -> bool| -> BTreeSet<(String, String, String, String)> {
+            dj_links
+                .iter()
+                .filter(|l| pred(l))
+                .map(|l| {
+                    (name(&l.output_node), l.output_port.clone(),
+                     name(&l.input_node), l.input_port.clone())
+                })
+                .collect()
+        };
+        let link = |o: &str, op: &str, i: &str, ip: &str| {
+            (o.to_string(), op.to_string(), i.to_string(), ip.to_string())
+        };
+
+        // Into the USBStreamer: only convolver-out, AUX n -> AUX n, all 8.
+        let into_usb = set(&|l| name(&l.input_node).starts_with(USBSTREAMER_OUT_PREFIX));
+        let want_usb: BTreeSet<_> = (0..8)
+            .map(|n| link(CONVOLVER_OUT, &format!("output_AUX{}", n),
+                          USBSTREAMER_OUT_PREFIX, &format!("playback_AUX{}", n)))
+            .collect();
+        assert_eq!(into_usb, want_usb);
+
+        // Into the convolver: only Mixxx. Mains 1:1, subs L+R, HP 1:1.
+        let into_cv = set(&|l| matches!(&l.input_node, NodeMatch::Exact(n) if n == CONVOLVER_IN));
+        let want_cv: BTreeSet<_> = [
+            ("out_0", "playback_AUX0"), ("out_1", "playback_AUX1"),
+            ("out_0", "playback_AUX2"), ("out_1", "playback_AUX2"),
+            ("out_0", "playback_AUX3"), ("out_1", "playback_AUX3"),
+            ("out_4", "playback_AUX4"), ("out_5", "playback_AUX5"),
+        ]
+        .iter()
+        .map(|(o, i)| link(MIXXX_PREFIX, o, CONVOLVER_IN, i))
+        .collect();
+        assert_eq!(into_cv, want_cv);
+
+        // Mixxx feeds only the convolver and the two metering taps.
+        let mixxx_targets: BTreeSet<String> = dj_links
+            .iter()
+            .filter(|l| matches!(&l.output_node, NodeMatch::Prefix(p) if p == MIXXX_PREFIX))
+            .map(|l| name(&l.input_node))
+            .collect();
+        let want_targets: BTreeSet<String> = [CONVOLVER_IN, PCM_BRIDGE, LEVEL_BRIDGE_SW]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        assert_eq!(mixxx_targets, want_targets);
+
+        // The audio path is mandatory: no optional link on it.
+        assert!(dj_links
+            .iter()
+            .filter(|l| name(&l.input_node).starts_with(USBSTREAMER_OUT_PREFIX)
+                || matches!(&l.input_node, NodeMatch::Exact(n) if n == CONVOLVER_IN))
+            .all(|l| !l.optional));
+    }
+
+    #[test]
     fn reaper_uses_prefix_matching() {
         let table = RoutingTable::production();
         let live_links = table.links_for(Mode::Live);
