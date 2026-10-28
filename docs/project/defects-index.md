@@ -362,3 +362,4 @@ Generated from the per-item files in `defects/` (the source of truth). Do NOT ru
 | [F-407](defects/F-407.md) | unrated (P-level pending, PM) | open. Found by the `-rs` evidence in PR #64 | Venue gate E2E reports a gate-indicator timeout as a skip, not a failure |
 | [F-410](defects/F-410.md) | HIGH (audio-engineer) | open. Hard pre-amps gate; closes with the F-439 PR after AE acceptance. F-474 is retired as a duplicate | Unmute restores the venue gains behind a closed gate |
 | [F-465](defects/F-465.md) | HIGH (architect) | fix merged (PR #72, `d12661e3`). Open: Pi 5 deploy + on-device AC3 (b-e), parked (no Pi access). Hard pre-audio gate: safety.md F-465 rule and row 19 stay until then | GraphManager venues dir not deployed, so no venue can be armed on the Pi 5 |
+| [F-467](defects/F-467.md) | unrated (architect: not a safety issue) | fixed (PR #72, `d12661e3`; commit `afaba039`) | GraphManager reports a persisted venue as active when its profile is not found |
