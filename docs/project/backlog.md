@@ -1057,6 +1057,92 @@ priority!"
     (3) marked fixed at the F-320 D merge; QE tier-docs text; worker-4
     measure-only run; F-441 UART question batched with the next
     physical owner task.
+  - v316 PUSHED (CM, PM verified ls-remote + blob): chore/backlog =
+    f070ecba9f5dfe9d9a38254da7e29e6d66996800 (blob 6ab6e5fc). v317
+    bases on it.
+  - #71 MERGED (CM): main 057b9326 ->
+    df9a8f320b5122c23ee900cf35dbfe2f6e519fcd (PM verified ls-remote;
+    not fetched). Head c6a09cf1 (2cd0506c TW US-173 S1 note r2,
+    cce8a2be TW US-160 narrative, c6a09cf1 PM US-174 NB1). 7/7 at
+    c6a09cf1, frozen in /tmp/cm-relay/PR71/frozen/ (sha256 verified at
+    PM read): SecSpec d379300f, UX 11978e49, Architect 07363d49, QE
+    207369b8, AE 27640bce, AD 02af98ea, TW d1550dbf (author COI
+    declared). CI 40567838400 pass (docs-only; 40567788363 cancelled
+    by the concurrency group, not evidence).
+    - #71 NBs (no new IDs): UX -> US-174c implementation time
+      (operator wording of "skipped (F-348)" ruled by UX). AD L1 ->
+      TW: US-173.md:297 "§9(iii) path N" is defined nowhere in the
+      repo, only in the PR #63 body s1e 8dac3c13 l.66; fix = cite the
+      source plus a one-clause explanation of path N; PO releases the
+      TW delta by sha. AD nit 2 = TW NB1 -> PM US-174 reword (below).
+      AD (3): F-469 has a backlog entry; answered.
+  - NEXT DOCS PR QUEUE (v317): (1) PM US-174 reword
+    /tmp/cm-relay/docs-post71/frozen/ as
+    pm-US174-reword-on-df9a8f32.patch-7394ff2f (US-174.md blob
+    ba0ad98c -> 40166154; Architect-checked), verbatim new text:
+    "Design: a session mode in which deploy is always off, with an
+    unconditional "skipped (F-348)" path and no opt-in; only the
+    US-174d deploy gate re-enables it, after F-348a/b (architect
+    boundary ruling `eefb0c27`, AE review). It joins the gates above."
+    HELD until (2) is PO-released; (2) TW US-173 §9(iii) citation fix
+    (PO release pending); (3) TW #72 N1: SETUP-MANUAL.md l.696-697,
+    l.789, l.1705 and US-113 l.36, l.66, l.77, l.147 still name
+    /etc/pi4audio/venues/ (TW writer; US-113 part PO-released); (4) TW
+    #72 N2: US-123.md one-line amendment for afaba039 (a persisted
+    venue whose profile fails to load is not active; TW drafts, PO
+    releases); (5) PM: docs/project/defects/F-465.md + defects-index
+    row (PM decision on TW #72 N3; after #72 merges; parked deploy +
+    AC3 b-e as open items).
+  - OWNER DIRECTIVE (2026-10-28, via team-lead, verbatim): "We're
+    travelling, no Pi access. Anything running on github or locally
+    can continue." PARKED (no Pi access, owner travelling): US-172 R6a
+    test boot (iv)/(v) and every later US-172 boot; US-172 / US-173
+    deferred display steps; F-465 deploy + AC3 b-e on the Pi 5; F-341
+    AC3 on the Pi 5; the US-173 supervised DJ session; any Pi-side
+    amps-on row check; the F-441 UART question. Every "after R6a's end
+    line" wait was a LOCAL resource hold (team-lead + CM): R6a's build
+    ended 2026-10-27T15:35:45Z rc 0 and was reported 2026-10-28 08:48Z
+    (F-481). Holds lifted: F-320 D tests/CI/service tier, F-465 Option
+    A, worker-4 measure-only r2 run, worker-7 F-383 step 4, F-468 K3,
+    F-444/F-445.
+  - PUSHES (CM; PM verified ls-remote):
+    experiment/US-172-R6a-bcm2712-kernel = 250199bc (R6a build report
+    /tmp/cm-relay/US-172/frozen/us172-R6a-build-report-r1.txt-583a7827);
+    story/US-179-web-rc = 76490beb (F-468 split head, tree a59f8785).
+  - PR #72 = F-465 (CM): head 69004e6395d9e6e56eef32ed7f46f8d4a3fb44b0
+    (PM verified refs/pull/72/head), a merge of main df9a8f32 into
+    1eb84dac; FIRST in the merge chain. Bundle
+    /tmp/pr72-review-69004e63/ (SHA256SUMS ecd62e53). 7/7 APPROVE at
+    69004e63, frozen in /tmp/cm-relay/PR72/frozen/ and posted (sha256
+    verified at PM read; comment ids): SecSpec c995cdb3 (6464929161,
+    conditional on CI green), UX ca3c29cf (6464938452), AE 31aeccfa
+    (6464944069), TW 963240ff (6464958697), QE c2934ef3 (6464961096;
+    C1 CI green at 69004e63 incl. nixos-eval board-guard, T1, T2,
+    test-e2e completed incl. service-destructive; C2 skip/xfail set =
+    main's; C3 re-check on head change; B1/B2 body items), AD 755204d4
+    (6464962058), Architect 5bf9b659 (6464963157). MERGE WAITS ON: CI
+    40661085292 green with the QE C1/C2 excerpt; worker-1's full body
+    (single writer; AE NB1: merging lifts no pre-audio gate, no AC3e
+    PASS claim; QE B1/B2); the TW body line and the UX wording
+    re-check. Then the CM merges (standing consent). AE NB2 =
+    Architect NB1 (worker-3 acked): in the OpenGate arm F-320 D's
+    open_gate_allowed(&wd) stays FIRST, before open_gate_precheck; the
+    second PR to merge resolves the conflict that way; Architect + AE
+    re-review that hunk. #72 backlog lines: F-483 to F-488 (P3); AD M2
+    -> F-465; QE N3 = F-473; Architect NB3 recorded, no ID ("Harmless,
+    no change").
+  - OPEN TRACKING (v317; supersedes v316's line): starvation guard
+    2026-10-28T20:04+01:00 (chain F-465 #72 -> F-341 -> F-439 -> #66;
+    at the 09:48 PM check NOT merge-ready, cause = GitHub/local work
+    plus the late R6a end line F-481, NOT the no-Pi directive); F-320
+    D C3 PR-body note and "CI evidence: TBD" merge blocker; F-477 + AD
+    #70 nits (1)/(3) marked fixed at the F-320 D merge; QE tier-docs
+    text; worker-4 measure-only run; F-441 UART question (parked);
+    F-481 role-prompt vehicle. DISK RISK (CM): Mac 34 GiB free vs the
+    30 GiB stop line; the linux-builder qcow2 grew ~14.6 GB in R6a and
+    does not shrink; under the disk line no nix
+    build/run/develop/store delete/GC without CM clearance; reclaiming
+    space is a CM/owner call.
 
 ## Reserved IDs
 
@@ -1224,6 +1310,9 @@ at PM read, filed in this version, see P3): F-478, US-183, D-072, T66.
 Next free (v316; supersedes the line above; F-478 and F-479 confirmed
 free on main, all origin/* and local branches and the CM relay files
 at PM read, filed in this version, see P3): F-480, US-183, D-072, T66.
+Next free (v317; supersedes the line above; F-480 to F-489 confirmed
+free on main, all origin/* and local branches and the CM relay files
+at PM read, filed in this version, see P3): F-490, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -7785,6 +7874,12 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       mirrored in v316. Architect NB1 (cite eefb0c27 in 174c) rides
       the next docs PR (PM patch cd14786e). Measure-only run
       (worker-4) still OPEN.
+    - v317: #71 MERGED (df9a8f32) carries the Architect NB1 eefb0c27
+      cite in 174c. The reword "deploy always off in this mode" (PM
+      7394ff2f) waits for the next docs PR. F-489 (venue-path HP mains
+      under-corrected in small_club / large_hall; MEDIUM, HIGH before
+      the first venue use outside the home lab) is filed under this
+      story; it does not block home-lab 174d.
 - **US-178** Measurement flow deploys via 174d sets (Architect,
   2026-10-26; P1, PO ruling 2026-10-26: directly after US-174d, ranked
   ABOVE US-177, design principle 6, one button per venue; PO wording:
@@ -10028,6 +10123,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     by an HTTP status; list what is found.
   Cross-refs: F-156 (stale reason text; RESOLVED, task #159), F-362
   AC5 (the filter_routes import skip), F-262 (session filter-gen).
+  - v317 (worker-1 F-444/F-445 evidence r1
+    /tmp/cm-relay/F-444/frozen/w1-F444-F445-evidence-r1.md-b78b912d
+    l.39-42): the 500 and the skip still reproduce (3
+    test_full_user_journey skips "POST /filters/generate returned 500
+    -- pre-existing numpy bool serialization bug in filter_routes" + 5
+    dependent "no completed session" skips); AC1-AC2 remain open.
+    Raised again by worker-1 and the QE as a backlog candidate; dup =
+    F-402, no new ID. Room-correction path (core tech).
 - **F-373** (AE; availability HIGH, safety-relevant; amps-on item
   13; linked US-159 G16): the USBStreamer sink does not recover after
   USB re-enumeration. AC17-B step (a), CM-CHG-.89-5: authorized 0->1
@@ -15846,6 +15949,28 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     in test_f439_gate_ui.py, l.204): slider 0.0006 != readback
     0.000631. Excerpt frozen ci-40562795846-excerpt-r1-577b3452.
     Routed to worker-3; OPEN.
+  - CI FIX (v317): worker-3 diag
+    /tmp/cm-relay/F-439/frozen/w3-F439-ci-40562795846-diag-r1.txt-996cf8f6
+    (test defect: the slider step 0.0001 snaps 0.000631 to 0.0006);
+    fix 7ffc204e (test-only, half-step tolerance 5e-5) QE ACCEPTED
+    131288d3 (NB1 read the step from the element; NB2 -> F-480).
+  - 2(c) PLAN GOVERNING SET (CM, QE confirmed): QE ruling r1
+    /tmp/cm-relay/F-439/frozen/f439-qe-2c-plan-r1-ruling-r1.md-4dac2326
+    (safety assertions D1-D5, not D1-D4) + AE points 1fb3da7c (P1
+    strict read-back of all 16 values incl. the 8 Adds; P2 fail-closed
+    parser printing the raw line) + worker-3 plan r1 086cbee1 with
+    addendum-a 3d14eba0, with QE supp-a 544d04b5 alongside
+    (pure-parser unit test in T1; AE N3 in T-c; Adds = 0 in the
+    gate-open precondition). Nothing voided. 2(c) fixture: worker-3
+    got only the FINAL pair r2 1730e0c2 + ffd783af; no correction
+    needed (CM ack closes v316's "CM ack pending").
+  - CI at 9dbc97f0 (QE c263523a): run 40569316144 meets C1/C2 and E2;
+    failed on test_f474_standby_zeroing b1/b2 ("gate already open" at
+    iter=1). Fix 20efc13c ACCEPTED (QE b391d0a9): test-setup only, a
+    TEST defect, not a product defect. T-c: mutant 95634e36 was caught
+    by the T1 guards (extra evidence), Tc-1 NOT met; T-c2 required on
+    the fixed head (T1 continue-on-error, no test changes). In flight:
+    CI 40660143390 and T-c2 40660748461 at 20efc13c.
 - **F-440** runner MAX_CUT_DB vs venue_pipeline: a D-009 question for
   the AE (filed 2026-10-27; ID free across main, all origin/* and
   local branches at PM read; full record below, folded from the PM
@@ -16929,6 +17054,22 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       first. F-472 decision input (PM cross-ref for the AE): the
       restore re-arms an attacker-chosen venue too. F-037 (no auth)
       and F-472 (restore of an unprotected venue) compound.
+  - OPTION A PASSED (v317; CM): end 2026-10-28T08:55:15Z, rc 0,
+    298/298 on aarch64 (linux-builder); results
+    /tmp/cm-relay/F-465/frozen/w1-F465-optA-results-r1.md-973b2865 (1
+    derivation built; disk guard never triggered). End marker
+    /tmp/w1-f465/optA.end written after the fact (F-481). Older rustc
+    dead-code warnings (13 bin + 7 test, none in F-465 code) -> F-482.
+  - PR #72 (see the chain block): 7/7 at 69004e63; merge waits on CI
+    40661085292, the full body, the TW body line and the UX re-check.
+    Deploy + AC3 b-e PARKED (no Pi access, owner travelling). AD M2
+    (755204d4 l.15), no new ID: the binding Q1b first deploy step (RO
+    `ls -la /var/lib/pi4audio/` + `cat last-venue`; present -> STOP to
+    the AE) also repeats as an OBSERVE read in AC3(e), so the first
+    boot with F-465 does not silently re-arm a stale venue (e.g.
+    foh-passthrough). Architect 5bf9b659 carries the deploy plan (Q1b
+    step and the AC3e multi-source read, from 1041f6a9). TW N3: F-465
+    gets a defect file (next docs queue).
 - **F-466** Process: Pi plans name the path and env each RPC relies on
   (PM owner) (filed 2026-10-27; ID free across main, all origin/* and
   local branches at PM read; full record below, folded from the PM
@@ -17030,6 +17171,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       into a test-only commit + a UX commit (M9 fix in the UX commit);
       r4 follows. Closure still needs K3 20/20 at the split head,
       after R6a.
+    - v317: split head pushed: story/US-179-web-rc = 76490beb (tree
+      a59f8785 = aaa9a4ad tree, so QE ACCEPT 50aba691 carries over);
+      results r4
+      /tmp/cm-relay/F-468/frozen/F468-results-r4.txt-cac23ade. Closure
+      needs only K3 20/20 at 76490beb. K3 released after the F-465
+      Option A end line (worker-6). QE d4b0835d: every K3 run touching
+      09:04-09:25Z on 2026-10-28 (the F-444 F4(ii) load spike, Mac
+      load 270) is VOID and re-run, and void runs count toward no cap.
 - **F-469** HIGH: Pi 5 USBStreamer driver ERR at quantum 256 (PR63 S1
   G6); Live-mode track, outside US-173 (filed 2026-10-27; ID free
   across main, all origin/* and local branches at PM read; full record
@@ -17154,6 +17303,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     (remote venue/select). The F-472 decision should come before
     F-471's design. Interim: the header r2 and status.md caveat
     ("never open the gate on own speakers with this venue armed").
+    - v317: F-487 is the SELECT path of the same class (#72 makes
+      every packaged venue selectable on the Pi); the AE takes the
+      F-472 and F-487 decisions together.
 - **F-473** Two tests weak under the F-465 "no venue at start" default
   (QE owner) (filed 2026-10-27; ID free across main, all origin/* and
   local branches at PM read; full record below, folded from the PM
@@ -17166,6 +17318,7 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     e2e/test_gate_closed_e2e.py l.147 tolerates a venue left by a
     prior test. Strengthen them later; they need per-test venue
     isolation (the persisted state survives between tests)."
+    - v317: QE c2934ef3 N3: still stands at #72 69004e63.
     - Next free -> F-474.
 - **F-474** RETIRED, never reused: duplicate of F-410 (TW flag; PM ID
   decision, 2026-10-27). F-410 survives (older, cited on main in
@@ -17227,6 +17380,149 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   devicechange, still opening in v315 + held). ID free across main,
   all origin/* and local branches and the CM relay files at PM read.
   - Next free -> F-480.
+- **F-480** LOW-MEDIUM (AE; after core tech; form: Architect/UX;
+  pre-existing, not an F-439 blocker; answers QE NB2 131288d3; filed
+  2026-10-27): the web-UI gain slider works in linear Mult with step
+  0.0001, too coarse at low gains. At the sub default 0.000631 (-64.0
+  dB) the only reachable values are 0.0006 (-64.4 dB) and 0.0007
+  (-63.1 dB); touching the slider can snap the sub up by +0.9 dB with
+  no explicit raise and no S-012 check, and the display shows 0.0006
+  for 0.000631. Fix direction (AE): a dB-domain slider with a 0.1 dB
+  step, or >= 3 significant digits; a snap must never round above the
+  current value or the venue gain ceiling; any snap that raises gain
+  counts as a gain increase under D-009/S-012. Related: F-347, the
+  safety.md slider-touch guard, F-439 test 7ffc204e. Dup check: no
+  existing entry. ID free at PM read.
+- **F-481** MEDIUM (process; owner CM, with the worker, change-manager
+  and orchestration role prompts; team-lead finding; filed
+  2026-10-28): a gating end line arrived ~17 h late. worker-2's R6a
+  build ended 2026-10-27 15:35Z; the end line reached the CM
+  2026-10-28 08:48Z. The jobs held behind it (F-468 K3, F-320 D
+  tests/CI, F-465 Option A, F-383 step 4, worker-4's measure-only run)
+  sat idle and delayed the US-173 chain. FIX ADOPTED AS STANDING
+  PROCESS (team-lead): (1) a job that gates others is declared as a
+  gate in the CM grant ("gate for: X, Y"), and the gating worker sends
+  the end line to the CM FIRST when the command returns; (2) the
+  detached command writes an end marker with UTC time and exit code;
+  (3) the grant states an expected end, the CM checks the marker once
+  per regular report (no polling) and sends ONE ask if the end is more
+  than 1 h past; (4) the PM records each "waits on <job> end line"
+  dependency with the gating job and its expected end. Open until the
+  role prompts carry the rule (owner of the team files picks the
+  vehicle). Applied first: F-465 Option A (marker written after the
+  fact). Dup check: no existing entry. ID free at PM read.
+- **F-482** LOW (owner Architect; tech debt; after core tech; CM label
+  "B-GM-CLIPPY"; filed 2026-10-28): graph-manager clippy is not clean
+  and not gated. Main df9a8f32 fails `clippy -D warnings` with
+  --no-default-features (~150 errors, mostly dead code from
+  pipewire-only items); ci.yml has no clippy step and the flake no
+  clippy check (pkgs.clippy only in the devShell, flake.nix l.347).
+  Fix (Architect, shape open): gate the pipewire-only modules/items
+  with cfg(feature = "pipewire-backend") or one crate-level cfg_attr
+  for the no-default-features test build, then add the CI check. Not
+  part of F-320 D. Source: /tmp/cm-relay/F-320D/frozen/ as
+  F320D-clippy-deadcode-ruling-architect-r1.txt-91daf857 l.32-36. Also
+  covers the older rustc dead-code warnings in the aarch64 build
+  (973b2865 l.10-15: 13 bin + 7 test, e.g. main.rs:871
+  reconcile_epoch, main.rs:1046 parse_xrun_count; none from F-465
+  code). Dup check: no clippy/dead-code entry. ID free at PM read.
+- **F-483** LOW (owner Architect for scope, UX for wording; after core
+  tech; UX #72 ca3c29cf; filed 2026-10-28): when a persisted venue
+  fails to load at startup, the reason goes only to the GM journal;
+  the UI shows only "No venue loaded", the same as a fresh deploy.
+  get_venue (or get_state) would need to carry the load-failure
+  reason. Related: F-467 (fixed in #72: active_venue = None on a
+  lookup failure), US-123, US-124. UX #72 line (1) (fresh-deploy
+  next-step hint) is NO new ID: covered by US-124 AC #1/#2 (banner
+  linking to Config > Venue; draft) and US-125 AC #4 (disabled Open
+  Gate tooltip "Load a venue configuration first."; IMPLEMENT, AC
+  check not done); UX rules the wording there. Dup check: no
+  surfaced-reason entry. ID free at PM read.
+- **F-484** LOW (INFO per SecSpec c995cdb3 INFO-1, AD 755204d4 L1;
+  owner web-ui code owner, Architect picks the form; after core tech;
+  filed 2026-10-28): web UI app/venue.py _venues_dir() silently falls
+  back to the repo configs/venues when PI4AUDIO_VENUES_DIR is set but
+  not a directory, with no log line; test_env_dir_hides_repo_venues
+  covers only an existing empty dir although its comment says "no
+  silent repo fallback". On the Pi, GM and the web UI could then list
+  different venue sets with no error; harmless today (the Nix unit
+  points at an existing store path; board-guard checks it). Fix: make
+  "env set" strict (raise), or log and reword the comment; add a
+  missing-dir test. Related: the speakers_dir R3 rule "no silent
+  fallback on the Pi" (same class). ID free at PM read.
+- **F-485** LOW (INFO per SecSpec c995cdb3 INFO-2; pre-existing, not
+  #72; owner Architect (GM), AE informed for the P-level; after core
+  tech; filed 2026-10-28): YAML gain_db from a venue file is parsed
+  into pending Mults with no finite-check; a .nan / .inf value would
+  reach the gains. Store packaging lowers the risk (only committed
+  files). Fix: the F-439 finite-check (reject non-finite, < 0, > 1.0)
+  also covers venue_gains / set_venue, as part of "every gain writer".
+  Related: F-352, F-355, F-439 plan D6/D7. Dup check: no gain_db
+  finiteness entry. ID free at PM read.
+- **F-486** LOW (owner QE; test-only; QE c2934ef3 N1 + N2; filed
+  2026-10-28): (a) resolve_startup_venue lacks tests for "a persisted
+  valid venue wins over a set PI4AUDIO_DEFAULT_VENUE" and for
+  PI4AUDIO_DEFAULT_VENUE="" (must validate-fail to no venue); (b) the
+  test_venue_dir fixture deletes the env var and reloads, losing a
+  pre-set PI4AUDIO_VENUES_DIR for later tests in the same process
+  (harmless in CI); cleanup: monkeypatch only, plus a reload after
+  undo. ID free at PM read.
+- **F-487** (owner AE, P-level for the AE; after core tech; AE
+  31aeccfa NB3 + AD 755204d4 M1; filed 2026-10-28): #72 makes every
+  packaged venue selectable on the Pi for the first time (the
+  packaging takes all configs/venues/*.yml: foh-passthrough (unity,
+  Dirac on all 8 incl. subs), local-demo (-20 dB, Dirac on all 8),
+  production, markaudio-ultimax-200hz, home-lab). foh-passthrough and
+  local-demo have no D-031 driver protection; an unauthenticated web
+  UI select (F-037) can arm them and Open Gate applies them; only
+  operator discipline and the docs stop a gate open on own speakers.
+  Proposal (AE): a D-031 guard for own-speaker deploys, e.g. a
+  packaged allow-list or a set_venue/open_gate refusal for venues
+  without HP on the mains and LP on the subs. AE ruling (via CM): AD
+  M1 is covered here; #72 accepted as is. Not a blocker: the hard
+  gates block any gate open today. Dup check: F-472 is the
+  restore-at-reboot path, F-471 the UI offering FoH passthrough; this
+  is the select path. Related: F-472, F-471, F-037, D-062, D-031. ID
+  free at PM read.
+- **F-488** LOW (owner QE, Architect informed; graph-manager test
+  robustness; test-only; after core tech; AD 755204d4 nit + Architect
+  5bf9b659 NB2; filed 2026-10-28): (a) the Rust tests use fixed temp
+  dir names (parallel-run collisions possible); (b) test (4) relies on
+  "the first #[cfg(test)] is the tests module", so a later
+  #[cfg(test)] helper higher up in venue.rs would silently shorten the
+  scan; split on "mod tests {" or assert the split index is past a
+  known marker. ID free at PM read.
+- **F-489** MEDIUM, raised to HIGH before the first venue use outside
+  the home lab (owner AE; US-174 room correction; pre-existing on
+  c44ac3de, not caused by F-383 step 4; filed 2026-10-28; AE ruling r1
+  /tmp/cm-relay/F-383/frozen/ as
+  ae-F383-step4-q1-d4d-closed-loop-ruling-r1.txt-ebf8fad5, sha256
+  verified at PM read; Architect release PENDING, filed now as the
+  AE's own line), title verbatim: "Venue path: HP mains are
+  under-corrected 250-500 Hz in the small_club (+5.15 dB) and
+  large_hall (+3.47 dB) simulations; the product gate refuses them.
+  Pre-existing on c44ac3de." AE reading: a correction-QUALITY gap, not
+  speaker safety; in all 8 failing runs corrected < uncorrected (5.15
+  < 5.97, 5.13 < 5.96, 3.47 < 4.62), so the filter does not apply the
+  room; the gate refusing these filters is fail-safe but blocks venue
+  use there. Investigate in this order, before any band or limit
+  change: (i) whether the frequency-dependent window leaves those
+  reflections uncorrected by design in larger rooms (the
+  CLOSED_LOOP_BANDS_HZ rationale may not hold at larger room scale);
+  (ii) the correction's cut depth and smoothing limits in that band;
+  (iii) whether the simulator rooms are realistic there. Any band or
+  limit change is a new AE ruling. Does not block home-lab 174d
+  (home_lab passes every row). F-383 test form (AE R1-R6): R4 prints
+  the small_club/large_hall Closed Loop verdicts without asserting
+  failure, so a fix turns green with no test edit; R5 no
+  xfail/skip/tolerance change. Dup check: F-411 (mock-room Left
+  under-corrected at 272.6 Hz near the band edge) is the same class
+  but a different room and scale; the AE says whether they share a
+  root cause. The US-174b large_hall/outdoor_tent closed-loop
+  exclusion (do-no-harm guard) and F-431 (small_club sub dMid) are
+  related, not the same. ID free on all local and origin refs and in
+  /tmp/cm-relay at PM read.
+  - Next free -> F-490.
 
 ## Open PRs (2026-10-24, per CM)
 
