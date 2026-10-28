@@ -2,7 +2,7 @@
 #
 # FastAPI/uvicorn monitoring web UI (D-020).
 # Type=simple (NOT notify — uvicorn does not call sd_notify; F-059 lesson).
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, pi4audio-packages, ... }:
 
 let
   cfg = config.services.pi4audio.web-ui;
@@ -111,6 +111,8 @@ in
         JACK_NO_START_SERVER = "1";
         PI4AUDIO_RC_DIR = "${webUiSrc}/room-correction";
         PI4AUDIO_MEAS_DIR = "${webUiSrc}/measurement";
+        # F-465: the same venue profiles GM reads.
+        PI4AUDIO_VENUES_DIR = "${pi4audio-packages.venues}";
       } // cfg.environment;
 
       serviceConfig = {
