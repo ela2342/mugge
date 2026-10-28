@@ -893,6 +893,14 @@
                 cargoLock.lockFile = ./src/Cargo.lock;
                 buildAndTestSubdir = "signal-gen";
               });
+              # F-465: venue profiles for GM and the web UI, read-only from the
+              # flake source. A source path (no build), so board-guard can hash
+              # the packaged files at eval time.
+              venues = builtins.path {
+                name = "pi4audio-venues";
+                path = ./configs/venues;
+                filter = path: type: type == "regular" && pkgs.lib.hasSuffix ".yml" path;
+              };
               # US-173 AC9: D-069 thermal watch for Pi 5 load runs (stdlib
               # only; run with sudo). The writer adds its own "#!" line and
               # runs flake8 on the result, so the script's shebang is

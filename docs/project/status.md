@@ -50,6 +50,12 @@ directories. Their index files are generated from the per-item files
 > - No commits between 2026-04-19 and 2026-10-24. The state of the Pi
 >   after April is unknown.
 
+> **Owner FYI (2026-10-27, F-465).** A fresh deploy now starts with no
+> venue (F-465); FoH passthrough is selected explicitly. Once selected, it
+> is restored at every startup (gate closed) until another venue is set.
+> It has no driver protection (D-031): never open the gate on own speakers
+> with it armed.
+
 ## Current Mission
 
 **New mission (owner, 2026-10-24): bootstrap NixOS on a Pi 5 with

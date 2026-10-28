@@ -208,50 +208,20 @@ fn run_pipewire(
     let resolved_state_dir = venue::state_dir();
     let resolved_venues_dir = venue::venues_dir();
 
-    // Active venue name.
-    // US-123: Load persisted venue name from disk (does NOT open gate or apply gains).
-    // US-113: If no persisted venue (first boot), load the default venue.
-    let persisted_venue = venue::load_persisted_venue(&resolved_state_dir);
-    let (initial_venue, initial_pending_gains) = match persisted_venue {
-        Some(name) => {
-            // Normal boot: venue name restored from disk.
-            // Load the profile to populate pending_gains (gate stays closed).
-            let gains = match venue::find_venue(&resolved_venues_dir, &name) {
-                Ok(profile) => venue::venue_gains(&profile),
-                Err(e) => {
-                    log::warn!("US-123: persisted venue '{}' not found: {} — starting with no venue", name, e);
-                    Vec::new()
-                }
-            };
-            (Some(name), gains)
-        }
-        None => {
-            // First boot (US-113): load default venue, persist it, populate
-            // pending_gains. Gate stays CLOSED per D-063 safety invariant.
-            match venue::load_default_venue(&resolved_venues_dir, &resolved_state_dir) {
-                Ok(name) => {
-                    let gains = match venue::find_venue(&resolved_venues_dir, &name) {
-                        Ok(profile) => venue::venue_gains(&profile),
-                        Err(e) => {
-                            log::warn!("US-113: default venue '{}' profile error: {}", name, e);
-                            Vec::new()
-                        }
-                    };
-                    (Some(name), gains)
-                }
-                Err(e) => {
-                    log::warn!("US-113: failed to load default venue: {} — starting with no venue", e);
-                    (None, Vec::new())
-                }
-            }
-        }
-    };
-    let active_venue: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(initial_venue));
+    // Active venue name and pending gains.
+    // US-123: restore the persisted venue; US-113: else the opt-in default.
+    // A venue whose profile does not load is not active (F-465).
+    let startup = venue::resolve_startup_venue(
+        &resolved_venues_dir,
+        &resolved_state_dir,
+        venue::default_venue_from_env().as_deref(),
+    );
+    let active_venue: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(startup.active_venue));
 
     // D-063 audio gate state: all gains start at 0.0, gate closed.
     // Gate must be explicitly opened via `open_gate` RPC after loading a venue.
-    let gate_open: Rc<RefCell<bool>> = Rc::new(RefCell::new(false));
-    let pending_gains: Rc<RefCell<Vec<(String, f64)>>> = Rc::new(RefCell::new(initial_pending_gains));
+    let gate_open: Rc<RefCell<bool>> = Rc::new(RefCell::new(startup.gate_open));
+    let pending_gains: Rc<RefCell<Vec<(String, f64)>>> = Rc::new(RefCell::new(startup.pending_gains));
 
     // US-140: Settlement epoch counters (deterministic reconciler settlement).
     // Both live on the PW main loop thread — Cell<u64> is sufficient (no sync needed).
@@ -745,13 +715,8 @@ fn dispatch_rpc_command(
             }
 
             let gains = pending_gains.borrow().clone();
-            if gains.is_empty() {
-                let _ = reply.send(RpcResult::Error("no venue loaded".to_string()));
-                return;
-            }
-
-            if *gate_open.borrow() {
-                let _ = reply.send(RpcResult::Error("gate already open".to_string()));
+            if let Err(e) = venue::open_gate_precheck(&gains, *gate_open.borrow()) {
+                let _ = reply.send(RpcResult::Error(e));
                 return;
             }
 
