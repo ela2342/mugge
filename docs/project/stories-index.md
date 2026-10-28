@@ -167,7 +167,7 @@ Generated from the per-item files in `stories/` (the source of truth). Do NOT ru
 | [US-157](stories/US-157.md) | draft (architect ruling 2026-10-24; AC reworded by PO, AC... | Mechanical Test Anti-Pattern Lint in test-unit |
 | [US-158](stories/US-158.md) | draft. Owner to confirm intent and priority (PO recommend... | Live-Mode Mic Input Capture (F-295 follow-up) |
 | [US-159](stories/US-159.md) | draft. Design agreed by architect, audio-engineer and UX ... | GraphManager Gate Module — Single Owner of All Gain Writes |
-| [US-160](stories/US-160.md) | draft. PO proposal (2026-10-24), recommended high priorit... | Interim — hide or relabel web UI UNMUTE to match interim rule 6 |
+| [US-160](stories/US-160.md) | draft. PO proposal (2026-10-24), recommended high priorit... | Mode changes and measurement exits keep the gate Closed (AC5-AC15); interim UNMUTE fix AC1-AC4 via F-320 F |
 | [US-161](stories/US-161.md) | draft (orphan from US-159 G9, filed by PM at PO request 2... | Amplifier chain calibration (validate "Mult 1.0 = 450 W") |
 | [US-162](stories/US-162.md) | draft (orphan from US-159 G9, filed by PM at PO request 2... | Dynamic per-speaker limiter |
 | [US-163](stories/US-163.md) | DONE (2026-10-25). Merged as #50; AC19 accepted by QE (wa... | Bootstrap NixOS on the Raspberry Pi 5 via nixos-anywhere |
@@ -177,4 +177,5 @@ Generated from the per-item files in `stories/` (the source of truth). Do NOT ru
 | [US-170](stories/US-170.md) | draft (PO, 2026-10-24, from worker-1) | Pi 4 config hardening parity |
 | [US-171](stories/US-171.md) | draft (PO, 2026-10-24; design by the architect, amended b... | GraphManager measurement lease closes the gate when the web UI is lost |
 | [US-172](stories/US-172.md) | draft (PO, 2026-10-25, from F-367). Next active job direc... | Pi 5 local display (D-022): vc4/DRM, greetd/labwc, Mixxx on HDMI |
+| [US-173](stories/US-173.md) | in progress (PO, 2026-10-25; P1/High, milestone; sub-item... | Supervised home-lab first DJ session (Pi 5) |
 | [US-174](stories/US-174.md) | in progress (PO, 2026-10-25; P1 epic; 174b active, runs i... | Automated room correction pipeline (Pi 5, home lab first) |
