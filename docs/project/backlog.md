@@ -1232,6 +1232,116 @@ priority!"
     fixed at the F-320 D merge; QE tier-docs text; F-441 UART question
     (parked); F-481 role-prompt vehicle; F-497 amps-on list row
     question to TW/AE (mirror rule) at the next safety.md batch.
+  - v318 PUSHED (CM, PM verified ls-remote): chore/backlog =
+    a468be8242cbe07be7369b82240f0efcfcd9bf3e (parent 2f348cac, blob
+    d7a75249, +414/-0). v319 bases on it.
+    - PR #73 B1 follow-through (all sha256 verified at PM read):
+      boundary amendment 1 /tmp/cm-relay/PR73/frozen/ as
+      arch-PR73-B1-r3-boundary-amendment-1.txt-8ac1c93d (option (a):
+      path-only test edits in 2 more files), AE RELEASED, no NBs. QE
+      points r1 6fb96f50: Q1 QE approval 18d81a9e LAPSES at the new
+      head; mutation evidence (each mutant red in a NAMED test)
+      required before approval; Q2 E5 evidence lines from the final
+      head's full CI log; Q3 an E3 skip on a /generate-filters
+      404/409/500 or a missing "output_dir" carries the HTTP status
+      and detail, and test_correction_filters_generated FAILs then;
+      Q4/Q5 see amendment 2. Amendment 2 /tmp/cm-relay/PR73/frozen/ as
+      arch-PR73-B1-r3-boundary-amendment-2.txt-f42188c5 (QE accepts):
+      Q4 = option (i), G1 one line in scripts/local-demo.sh next to
+      l.672, export XDG_STATE_HOME="$DEMO_BASE_DIR/state" (no mkdir);
+      G2 F-499 unchanged (it covers the Pi, not test runs); Q5 E3
+      asserts realpath(run_dir) basename run-*, parent "measurement",
+      grandparent "pi4audio", and not under realpath(~/.local/state).
+      Boundary now 5 files: session.py, test_measurement_session.py,
+      tests/unit/test_measurement_pipeline_integration.py,
+      tests/service-integration/test_measurement.py,
+      scripts/local-demo.sh (G1 line only); anything else is a STOP to
+      the Architect.
+    - #73 mutants (QE spec r1 /tmp/pr73-qe-Q1-mutant-spec-r1.md,
+      sha256 0bd96541; set update via QE accounting): M1 run_dir =
+      config.output_dir; M2a deny list always passes; M2b owner/mode
+      check always passes; M3 fixed reused run dir; M4a
+      MeasurementSession.run_dir writable (9c74473d); M4b
+      SessionConfig.run_dir writable; M4a and M4b each must kill
+      test_run_dir_is_read_only at its own assertion. Kill = an
+      assertion FAILED in a named test (no ERRORs). One scratch branch
+      per mutant (scratch/pr73-m*, ci-<ref> concurrency), one commit =
+      mutant hunk + ci.yml continue-on-error on "Run unit + Rust
+      tests" only, one workflow_dispatch each with run_e2e=false; the
+      CM deletes the branches after the QE records (never merged, no
+      Pi). PR body: one line per mutant (branch, run id, killing
+      tests). Carry-over (QE r1 /tmp/pr73-qe-mutant-carryover-r1.md,
+      sha256 e63be298): the results at 2e439985 carry over to the
+      main-merge head M (parents 2e439985 + c607ebac) with NO re-run
+      if C1 the code is byte-identical, C2 PR CI at M is green on
+      T1-T3 with the measurement-session unit + service-int counts
+      equal to 40672918025 (a changed count goes back to the QE), C3
+      the mutant runs finished and were reported before M is pushed
+      (cancelled is not evidence). The QE #73 verdict names M.
+    - #73 FINAL CODE HEAD 2e439985 (bundle /tmp/pr73-review-2e439985/,
+      SHA256SUMS cca3bd2d; base/merge-base d12661e3; docs 59a6e58d =
+      TW 8593ba04; body r3 ca639c47; CI 40672918025). Verdicts
+      recorded at 2e439985: UX APPROVE e79a74fa (supersedes f51978cf);
+      AD APPROVE r2 8b5cf0e1 (supersedes 1324805c); Architect
+      1938b8e6, SecSpec 7da6db5d, AE 9d413a91 and TW f00d20ef (NBs
+      mapped below, no blockers recorded by the PM). QE pending CI
+      40672918025 + the mutant runs. Then the main merge onto c607ebac
+      (head M) and re-checks there.
+    - #73 NB mapping (PM; new IDs only F-500, F-501): QE stray run
+      dirs from other suites / AD L1 / Architect NB1 = F-500; AD L2 /
+      Architect NB2 / SecSpec 7da6db5d disk-use reason = F-499; AD L3
+      + L5 = F-372; AD L4 / UX e79a74fa howto path / Architect NB3 /
+      AE 9d413a91 NB1 = US-174c U1 add-on; AD nit = F-501; TW N1 =
+      docs queue item 6 (a); TW N2 = F-495/F-496 note.
+  - PR #74 (docs) MERGED (CM): main d12661e3 -> c607ebac (PM verified:
+    parents d12661e3 + 8c332958; origin/main = c607ebac), 7/7 at head
+    8c332958, no failed check, docs-only (CI-exempt per owner).
+    History: opened at 396a7b2c (6bd311be TW venuesdir r1 13e247db, PO
+    afaf6d6e; 4d5aa9d8 PM F-465 docs f3ff7709; 396a7b2c PM US-174
+    reword 7394ff2f, PO RELEASED 72a20668; body r1 d649878e, r2
+    13b85f98 file count 7); 6/7 there (UX bf91ec40, AD 1134bf9b,
+    SecSpec 1df9415c, AE 01a35bc6, QE 2224a6e5, Architect e057797c)
+    until TW CHANGES REQUESTED ad6f3289 C1 (the US-123 amendment cited
+    afaba039 as F-465; it is the F-467 fix, whose commit subject says
+    "F-465"). New head 8c332958 = commit 4, TW C1 fix r2 61d1152d (PO
+    release 263a900d), body r3 a65659d8; all 7 re-reviewed (UX
+    a0f65e8b, QE c6815062 at PM read; the rest per CM). PM declared
+    authorship COI on the F-465 + US-174 commits. Docs queue items 1-5
+    DONE.
+  - DOCS QUEUE item 6 (one docs PR on c607ebac or later; it may open
+    now but MERGES ONLY AFTER #73, CM: merging #74 first put #73
+    behind main and cost a re-review round): (a) TW #73 N1 delta
+    (venue-setup.md + measurement-daemon.md section 5 name
+    ~/.local/state/pi4audio/measurement/run-*/), frozen
+    /tmp/cm-relay/docs-batch/frozen/ as
+    tw-pr73-docs-r2-2e439985.patch-7e657834, needs a UX release +
+    Architect/SecSpec fact checks; (b) TW F-465.md update (single
+    writer TW, AE c238cf12 B5): TW r1 eb73ba06 (AE + Architect
+    released) quotes B3 and covers PM input item 3; the PM input
+    /tmp/cm-relay/docs-q6/frozen/
+    (pm-F465md-input-for-TW-r1.txt-120a1c9d) items 1-2 (F-487 Related
+    cite, AD #74 (2); CI 299 GM tests next to the worker run's 298, QE
+    #74 NB2) are with the TW: r1 stands or r2, TW's call; (c) PM
+    F-467.md + one defects-index row, /tmp/cm-relay/docs-q6/frozen/
+    (pm-F467-docs-r1.patch-32929b78, git apply --check clean on
+    c607ebac), with the Architect for a fact check, AE informed; (d)
+    Architect #74 NB1(a): the store-dir venues packaging covers every
+    NixOS build, not only the Pi 5 (TW wording).
+  - F-320 D: F4 NOT MET at 137f360a (QE 224e5a46, see F-320 D);
+    relayed to worker-3. Branches that need a main merge onto
+    c607ebac: #73 (after its evidence runs), F-320 D, F-444, F-439.
+  - OPEN TRACKING (v319; supersedes v318's line): starvation guard
+    2026-10-28T20:04+01:00 (chain F-341 -> F-320 D hunk -> F-439 ->
+    #66; #72, #74 merged); #73 CI 40672918025 + mutant runs M1-M4b +
+    QE verdict at M + re-checks after the main merge; F-320 D L1 fix
+    (R1-R4) + R4 run; docs queue item 6 (TW r1/r2 answer, Architect
+    F-467 fact check, UX release of (a)); worker-7 F-383 PR; the F-341
+    nix commit; disk hold lift + K3 r2b resume; F-477 + AD #70 nits
+    (1)/(3) marked fixed at the F-320 D merge; QE tier-docs text;
+    F-441 UART question (parked); F-481 role-prompt vehicle; F-497
+    amps-on list row question to TW/AE (mirror rule) at the next
+    safety.md batch; Pi-gated items parked (owner travelling,
+    2026-10-28).
 
 ## Reserved IDs
 
@@ -1407,6 +1517,9 @@ free on main, all origin/* and local branches and the CM relay files
 at PM read, filed in this version, see P3; F-498 was announced as the
 B1 option-B ID and lapsed when B1 was ruled A, then given to the AE
 A1a line): F-500, US-183, D-072, T66.
+Next free (v319; supersedes the line above; F-500 to F-502 confirmed
+free on all local and origin refs and the CM relay files at PM read,
+filed in this version): F-503, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -3506,6 +3619,31 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       green, skip set unchanged. Fix 137f360a (worker-3): F3 MET; run
       40669316702 is the F4 run. The QE PR verdict (_read_gains
       strictness vs 70541687 C1/C2) follows F4.
+    - v319 F4 NOT MET at 137f360a (QE r1
+      /tmp/qe-F320D-F4-run40669316702-r1.md, sha256 224e5a46; run
+      40669316702): L1 fails deterministically, QE verbatim: "The
+      capture node goes with the playback node. The two are one
+      filter-chain instance, so destroying one node tears down both."
+      L1's premise (test l.414-417: the gains live on the capture
+      node, which must survive) does not hold; the l.416 guard failed
+      loudly, as intended. The "Convolver gone" watchdog fallback at
+      the restore is expected, not a second finding. L2 PASSED,
+      genuine (not vacuous), and must pass again at the fixed head;
+      counts service-int 76/2 skip/2 xfail/1 xpass, e2e 139/23 skip/2
+      xfail = #72 (54ac4e15). Fix (worker-3; mechanism with the
+      Architect): R1 trip by a real node removal and unlatch on the
+      ORIGINAL capture node (log equal node ids before the trip and at
+      the read-back); R2 (i) trip via a watchdog-monitored node
+      outside the convolver filter-chain instance, if one exists
+      (missing_nodes names it), or (ii) drop L1 and record in the
+      docstring and PR body that L2 carries its assertions; (ii) needs
+      an AE release (L1 came from QE f79c7a5a + AE 1e8c1fb3 NB1/NB2)
+      besides QE acceptance; R3 not acceptable: skip/xfail at l.416,
+      gains read from GM or web-ui state, a test-only trip RPC; R4 one
+      run_e2e=true dispatch at the fixed head (service-destructive all
+      PASSED, 0 ERROR, 0 SKIPPED; for (i) the latched line + equal
+      ids; counts as above or explained). The QE PR verdict waits on
+      this. No new ID (test design inside F-320 D).
 - **F-341** signal-gen pre-flight #6 replacement. MEDIUM (AE):
   pre-flight #6 only VERIFIES the -20 dBFS signal-gen cap, which stays
   enforced in code and immutable after start; it would be High if an
@@ -8013,6 +8151,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       retention, MEDIUM) are filed under this story. G0 (AE a0857317):
       F-383 step 4 is not green until the second half of the rc suite
       and the whole unit suite run, after the CM disk go.
+    - v319 U1 add-ons (no IDs): (1) venue-setup.md's interim note says
+      "the session's output dir" without the location; name
+      ~/.local/state/pi4audio/measurement/run-*/ (a new dir per run,
+      on the Pi $XDG_STATE_HOME/pi4audio/measurement) and how to pick
+      the newest (UX e79a74fa; AD 8b5cf0e1 L4; Architect 1938b8e6
+      NB3); met by docs queue item 6 (a) once merged. (2) AE 9d413a91
+      NB1: venue-setup.md "no correction is active" is inaccurate, the
+      filters installed before stay in use (AE U1 wording: "The system
+      still uses the filters installed before this run."); TW/UX.
+      US-174 reword 7394ff2f merged with #74 (c607ebac).
 - **US-178** Measurement flow deploys via 174d sets (Architect,
   2026-10-26; P1, PO ruling 2026-10-26: directly after US-174d, ranked
   ABOVE US-177, design principle 6, one button per venue; PO wording:
@@ -10355,6 +10503,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   output_dir request field on POST /api/v1/measurement/start. The
   /generate half of SecSpec R1 abf0a7f9 is placed in the F-495/F-496
   PR next to AD2-3. Part of the row-21 lift set (US-174d deploy gate).
+  v319 (#73 AD 8b5cf0e1): L3 a base-check ValueError from
+  SessionConfig surfaces as an unhandled 500 from /start; the 422
+  refusal also needs an operator-readable message (UX wording). L5
+  StartRequest.output_dir is ignored with a log warning only; a client
+  that chained IRs into POST /filters/generate via
+  PI4AUDIO_SESSION_DIR/<profile> loses that with no error (accepted
+  per r3 A1); dropping the field or refusing a non-default value makes
+  the break visible; the Architect says at fix time whether
+  /filters/generate needs a run-dir handle (UX 2e439985: "regenerate
+  with correction" reads DEFAULT_SESSION_DIR/<profile>, unchanged by
+  #73).
 - **Coefficient sets: single validated writer** (SecSpec, MEDIUM,
   PRE-PROD gig-blocker class next to F-037 and F-372; from the US-174d
   A5b ruling, 2026-10-26), verbatim: "Coefficient sets: single
@@ -17273,6 +17432,30 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     step; 2 AC3 b-e on the device; 3 the GM journal baseline update; 4
     the F-341 gate-open precondition when the F-465 rule is dropped.
     Deploy + AC3 b-e stay PARKED (no Pi access).
+  - v319: the defect file is ON MAIN (PR #74, c607ebac). Close-out 1
+    AMENDED by AE ruling r1 /tmp/cm-relay/F-465/frozen/ as
+    ae-F465-deploy-step1-bak-ruling-r1-c238cf12 (sha256 verified at PM
+    read; accepts AD #74 M1 1134bf9b; amends only the
+    deploy-precondition paragraph of 16ab21eb; cite both wherever the
+    step is quoted): B1 read the state dir the GM unit uses on the
+    generation it boots into (PI4AUDIO_STATE_DIR from the unit and
+    drop-ins, else /var/lib/pi4audio; both if they differ between
+    generations); B2 OBSERVE ls -la <state dir>/ and cat each present
+    last-venue, last-venue.bak, last-venue.tmp; B3 STOP and report to
+    the AE before the reboot if last-venue OR last-venue.bak EXISTS in
+    any state (empty, whitespace-only, unreadable count); PROCEED only
+    if both are absent; last-venue.tmp alone does not STOP but is
+    reported; the report gives each ls line and cat output and whether
+    the named venue exists in PI4AUDIO_VENUES_DIR on the target; no
+    one deletes or renames these files without an AE ruling; B4 AC3(e)
+    repeats B1-B3 after the reboot, and PASS needs disk state =
+    get_venue + journal (absent -> no venue + the "no persisted venue
+    ... starting with no venue" line; accepted present -> restored
+    venue, gate closed, gains pending, no "from backup" warning unless
+    the AE accepted a .bak-only restore). PM verified the .bak
+    fallback at d12661e3 (venue.rs l.178-198). The F-465.md update (B3
+    quote) is docs queue item 6 (b). AE optional LOW line -> F-502.
+    Still PARKED (no Pi access).
 - **F-466** Process: Pi plans name the path and env each RPC relies on
   (PM owner) (filed 2026-10-27; ID free across main, all origin/* and
   local branches at PM read; full record below, folded from the PM
@@ -17301,6 +17484,15 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     changes (main.rs l.211-245); the code owner may fold it into the
     F-465 GM commit only if the Architect says so.
     - Next free -> F-468.
+  - v319 FIXED and CLOSED: fixed inside #72 as its own commit afaba039
+    (merge d12661e3; afaba039 is an ancestor of origin/main, PM
+    checked); the restore is now venue::resolve_startup_venue
+    (venue.rs l.299 at c607ebac); test
+    startup_unknown_persisted_venue_is_none_and_gate_refused (l.961).
+    The commit subject reads "F-465 no active venue when its profile
+    fails to load"; the change is F-467 (the cause of TW #74 C1).
+    Defect file + index row: PM, docs queue item 6 (c) (TW #74 NB:
+    none on main).
 - **F-468** US-179 web-rc double Open (E2E ack-label flake, run11;
   parked behind F-341) (filed 2026-10-27; ID free across main, all
   origin/* and local branches at PM read; full record below, folded
@@ -17679,6 +17871,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   "env set" strict (raise), or log and reword the comment; add a
   missing-dir test. Related: the speakers_dir R3 rule "no silent
   fallback on the Pi" (same class). ID free at PM read.
+  v319 (no new IDs): Architect #74 NB1(b): the web-UI default
+  /etc/pi4audio/venues (venue.py l.101-103, PM verified at d12661e3)
+  is the pre-NixOS path; with PI4AUDIO_VENUES_DIR unset on NixOS it
+  does not exist and the UI falls back to the repo configs/venues;
+  part of the same fix (drop the default or require the env on the Pi;
+  Architect picks). AD #74 (3), optional: the SETUP-MANUAL venues-dir
+  paragraph could mention the web-UI repo fallback (TW at the fix).
 - **F-485** LOW (INFO per SecSpec c995cdb3 INFO-2; pre-existing, not
   #72; owner Architect (GM), AE informed for the P-level; after core
   tech; filed 2026-10-28): YAML gain_db from a venue file is parsed
@@ -17878,6 +18077,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (same mitigation family), the QE NB on /filters/deploy (answered
   here, Architect 9b642349 section 2). Dup check: new. ID free at PM
   read.
+  v319 note (TW #73 N2, no new ID; also US-174d): filter-gen.js sends
+  a deploy output_dir, and filter_routes reads the dir from the
+  request; check both at the fix with the AD2-3 path rules and the
+  server-owned staging dir.
 - **F-496** HIGH, safety, HARD PRE-AMPS GATE (owner AE for the limits,
   Architect for the design, web-ui code owner; AE addendum
   /tmp/cm-relay/F-383/frozen/ as
@@ -17936,7 +18139,49 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   still referenced by a deploy. Related: F-497, PR #73, US-174. Dup
   check: no measurement-output retention entry (v317 l.2414 is
   boot-generation pruning). ID free at PM read.
+  v319 additions (no new IDs): every POST /start creates a run dir,
+  including starts that fail afterwards, e.g. signal-gen 503 (AD
+  8b5cf0e1 L2), and an orphan run dir per SessionConfig even when the
+  session never runs (Architect 1938b8e6 NB2); retention also bounds
+  disk use by unauthenticated LAN callers (SecSpec 7da6db5d, F-037).
+  Scope stays the Pi (Architect f42188c5 G2); test-run dirs are F-500.
   - Next free -> F-500.
+- **F-500** LOW (owner QE; test-only hermeticity; not a #73 blocker;
+  not F-499 scope; filed 2026-10-28): unit and integration sessions
+  built outside test_measurement_session.py leave run-* dirs in the
+  runner's real ~/.local/state/pi4audio/measurement, because those
+  test runs do not set XDG_STATE_HOME (#73 sandboxes only local-demo,
+  amendment 2 G1). Suites (AD 8b5cf0e1 L1):
+  tests/unit/test_measurement_integration.py,
+  test_measurement_pipeline_integration.py,
+  test_speaker_crossover_validation.py, plus the integration and e2e
+  mock-server suites (direct SessionConfig or via POST
+  /measurement/start); AD unverified whether the nix test apps already
+  point HOME at a sandbox (QE checks at fix time). Fix: an autouse
+  fixture setting XDG_STATE_HOME to tmp_path, in
+  tests/unit/conftest.py + the integration conftest (QE) or one
+  top-level tests/conftest.py (Architect 1938b8e6 NB1); the owner
+  picks at fix time. Related: F-499 (Pi retention; f42188c5 G2), PR
+  #73 B1, F-365 (hermetic nix checks; different). Dup check: no
+  XDG_STATE_HOME / autouse-state entry (v318 l.11365 WP environment,
+  l.11465 _ensure_standby; different). ID free at PM read.
+- **F-501** LOW (owner web-ui code owner, Architect picks the form; AD
+  8b5cf0e1 nit on PR #73; not a #73 blocker; filed 2026-10-28):
+  session.py uses XDG_STATE_HOME even when it is a relative path; the
+  XDG Base Directory spec says to ignore relative values (fall back to
+  ~/.local/state); a relative value resolves against the service's
+  cwd. The A2 owner/mode/deny checks still apply to the result, so not
+  a safety gap. Related: PR #73 B1 (r3 A2), F-499, F-500. Dup check:
+  no relative-XDG entry. ID free at PM read.
+- **F-502** LOW (optional; owner GM code owner, AE informed; after
+  core tech; AE c238cf12 "Backlog (PM, LOW, optional)"; filed
+  2026-10-28), verbatim: "GM startup could log which file it restored
+  from on every path, primary or .bak. Today only the .bak path logs a
+  warning, and the primary path logs info. This is not needed for B4,
+  which reads the disk directly." Related: F-465 close-out 1, F-467,
+  US-123. Dup check: no restore-source logging entry. ID free at PM
+  read.
+  - Next free -> F-503.
 
 ## Open PRs (2026-10-24, per CM)
 
