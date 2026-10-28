@@ -113,6 +113,12 @@ def _assert_closed_and_silent(base_url, port: int, n: int) -> None:
 
 def _run(capsys, virtual_gate_open, base_url, gm_port, port, mute: bool) -> None:
     expected = virtual_gate_open
+    # virtual_gate_open leaves the gate open, and the GM refuses open_gate
+    # on an open gate; close it so every iteration opens from closed.
+    status, body = _api_post(base_url, "/api/v1/venue/gate/close")
+    assert status == 200, f"gate close before iter=1: {status} {body}"
+    gate = _gate_state(base_url)
+    assert gate.get("gate_open") is False, f"gate not closed before iter=1: {gate}"
     for n in range(1, ITERATIONS + 1):
         _open_gate_and_prove_tone(base_url, gm_port, port, expected, n)
 
