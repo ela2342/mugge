@@ -171,6 +171,12 @@ Stability and monitoring scripts for US-003 long-duration tests.
 |--------|---------|--------------|
 | `stability-monitor.sh` | Reusable monitoring daemon (pre-D-040): polls CPU usage, temperature, xrun count, and CamillaDSP state. Used by T3b and T3c. | CamillaDSP running |
 | `xrun-monitor.sh` | PipeWire xrun detection daemon. Watches for buffer underruns/overruns. Used by T3b and T3c. | PipeWire running |
+| `pi5_thermal_watch.py` | Pi 5 thermal watch for load runs (D-069 thermal rule, US-173 AC9). Samples every 10 s and prints one labeled line per sample. WARN at 75 C (keep running), STOP at 80 C (exit 2). The run is INVALID (exit 3) if a cooling device is non-zero, the `rpi_volt` undervoltage alarm is set, `cpuinfo_cur_freq` is below max, the governor is not `performance`, or a field is MISSING. Reads the root-only `cpuinfo_cur_freq` via `sudo -n cat`. | python3 (stdlib only), passwordless sudo |
+
+```bash
+./scripts/stability/pi5_thermal_watch.py --duration 2400   # 40-min soak
+python3 -m unittest discover -s scripts/stability/tests     # fake-sysfs tests
+```
 
 ### Deployment
 

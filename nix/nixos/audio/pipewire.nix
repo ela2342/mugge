@@ -27,19 +27,19 @@ let
     # F-358: module-rt args override (no nice step, no RTKit). Copied
     # under its plain name; a store-path copy keeps the hash prefix.
     cp ${../../../configs/pipewire/05-rt-direct.conf} $out/share/pipewire/pipewire.conf.d/05-rt-direct.conf
-    cp ${../../../configs/pipewire/10-audio-settings.conf}     $out/share/pipewire/pipewire.conf.d/
+    cp ${../../../configs/pipewire/10-audio-settings.conf} $out/share/pipewire/pipewire.conf.d/10-audio-settings.conf
     # F-295: 20-usbstreamer.conf (ada8200-in capture adapter) NOT deployed.
     # PipeWire promotes the node to driver=true at runtime despite config
     # saying false, adding a dormant driver node to the graph. Live mode
     # will re-enable this via GraphManager when mic input is needed.
-    cp ${../../../configs/pipewire/21-usbstreamer-playback.conf} $out/share/pipewire/pipewire.conf.d/
+    cp ${../../../configs/pipewire/21-usbstreamer-playback.conf} $out/share/pipewire/pipewire.conf.d/21-usbstreamer-playback.conf
     # D-040: 25-loopback-8ch.conf REMOVED — CamillaDSP abandoned, no ALSA
     # Loopback needed.  PW filter-chain convolver handles all DSP natively.
-    cp ${../../../configs/pipewire/30-filter-chain-convolver.conf} $out/share/pipewire/pipewire.conf.d/
+    cp ${../../../configs/pipewire/30-filter-chain-convolver.conf} $out/share/pipewire/pipewire.conf.d/30-filter-chain-convolver.conf
 
     # JACK config fragment (separate conf.d directory)
     mkdir -p $out/share/pipewire/jack.conf.d
-    cp ${../../../configs/pipewire/80-jack-no-autoconnect.conf} $out/share/pipewire/jack.conf.d/
+    cp ${../../../configs/pipewire/80-jack-no-autoconnect.conf} $out/share/pipewire/jack.conf.d/80-jack-no-autoconnect.conf
   '';
 in
 {

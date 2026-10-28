@@ -6,6 +6,8 @@
 #   53  — Lua script: deny unauthorized USBStreamer ALSA access
 #   54  — Disable all other ALSA cards (US-163; boards with
 #         mugge.board.hat.blockHifiberry only, i.e. the Pi 5)
+#   55  — Lua script: never auto-link playback streams, never pick the
+#         USBStreamer or convolver as default sink (F-318)
 #
 # D-040: 51-loopback-disable-acp.conf REMOVED — CamillaDSP abandoned,
 # snd-aloop not loaded, no ALSA Loopback device to disable.
@@ -33,6 +35,8 @@ let
        $out/share/wireplumber/wireplumber.conf.d/52-umik1-low-priority.conf
     cp ${../../../configs/wireplumber/53-deny-usbstreamer-alsa.conf} \
        $out/share/wireplumber/wireplumber.conf.d/53-deny-usbstreamer-alsa.conf
+    cp ${../../../configs/wireplumber/55-mugge-no-bypass.conf} \
+       $out/share/wireplumber/wireplumber.conf.d/55-mugge-no-bypass.conf
   '';
 
   # US-163: separate package so the Pi 4 configuration is unchanged.
@@ -48,10 +52,13 @@ in
   services.pipewire.wireplumber.configPackages = [ wpConfigPkg ]
     ++ lib.optional config.mugge.board.hat.blockHifiberry wpBlockCardsPkg;
 
-  # Lua script referenced by 53-deny-usbstreamer-alsa.conf.
+  # Lua scripts referenced by 53-deny-usbstreamer-alsa.conf and
+  # 55-mugge-no-bypass.conf.
   # extraScripts deploys to share/wireplumber/scripts/ in XDG_DATA_DIRS.
   services.pipewire.wireplumber.extraScripts = {
     "deny-usbstreamer-alsa.lua" =
       builtins.readFile ../../../configs/wireplumber/scripts/deny-usbstreamer-alsa.lua;
+    "mugge-no-bypass.lua" =
+      builtins.readFile ../../../configs/wireplumber/scripts/mugge-no-bypass.lua;
   };
 }

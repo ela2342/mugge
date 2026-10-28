@@ -207,14 +207,18 @@ yet in safety.md (rules 9-12), the stricter rule applies (AD).
    and pre-flight #10 before the amps go on and before headphones or IEM
    go back in (F-346; AE).
 10. (Proposed by architect and AE, owner to adopt, O-32.) Until F-348 is
-    fixed: (a) do not activate any speaker profile from the web UI
-    (profile activation writes an unsafe PipeWire config that takes effect
-    at the next PipeWire restart); (b) no 3-way or other non-2-way speaker
+    fixed: (a) do not activate any speaker profile, run a filter rollback,
+    deploy filters, or run the measurement DEPLOY step from the web UI,
+    and do not call room_correction's `deploy_pw_config` by hand (all of
+    these write an unsafe PipeWire config that takes effect at the next
+    PipeWire restart; the same rule is in safety.md as the "F-348 rule",
+    amps-on row 21, AE `766faf2f`); (b) no 3-way or other non-2-way speaker
     profile with the amps on, in any mode. (b) supersedes rule 8's DJ
     allowance. (c) Around any PipeWire restart (including the rule 9
     procedure): (1) before the restart, confirm that
-    ~/.config/pipewire/pipewire.conf.d/30-filter-chain-convolver.conf does
-    not exist; if it exists, do not restart, and keep the amps off until it
+    ~/.config/pipewire/pipewire.conf.d/30-filter-chain-convolver.conf
+    either does not exist, or is the shipped conf with all 8 gain Mult
+    defaults at 0.0; if not, do not restart, and keep the amps off until it
     has been removed in a CM CHANGE session with the owner's agreement;
     (2) after the restart, pass pre-flight #10 before the amps go on and
     before headphones or IEM go back in, and confirm that exactly one
