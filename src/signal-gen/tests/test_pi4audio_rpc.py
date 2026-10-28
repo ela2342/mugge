@@ -15,7 +15,9 @@ from pathlib import Path
 
 import pytest
 
-SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "pi4audio-rpc"
+# PI4AUDIO_RPC: test a packaged copy instead (nix/checks/pi4audio-rpc.nix).
+SCRIPT = Path(os.environ.get("PI4AUDIO_RPC")
+              or Path(__file__).resolve().parent.parent / "scripts" / "pi4audio-rpc")
 
 BROADCAST = json.dumps(
     {"type": "state", "cmd": "status", "ok": True, "playing": False,

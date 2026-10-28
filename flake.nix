@@ -399,6 +399,7 @@
           wireplumber-no-bypass = import ./nix/checks/wireplumber-no-bypass.nix { nixos = self.nixosConfigurations.mugge-pi5-deploy; };  # F-318
           jack-self-connect = import ./nix/checks/jack-self-connect.nix { nixos = self.nixosConfigurations.mugge-pi5-deploy; };  # F-318, US-173
           conf-fragment-names = import ./nix/checks/conf-fragment-names.nix { nixos = self.nixosConfigurations.mugge-pi5-deploy; };  # F-400, US-173
+          pi4audio-rpc = import ./nix/checks/pi4audio-rpc.nix { nixos = self.nixosConfigurations.mugge-pi5-deploy; };  # F-341
 
           app-source-paths = appSourceCheck;
 
@@ -912,6 +913,19 @@
                 assert pkgs.lib.hasPrefix "#!" (builtins.head lines);
                 pkgs.writers.writePython3Bin "pi5-thermal-watch" { }
                   (builtins.concatStringsSep "\n" (builtins.tail lines));
+              # F-341: one-shot RPC client for the signal-gen/GM pre-flight.
+              # The writer adds its own "#!" line and runs shellcheck on the
+              # result, so the script's shebang is dropped here (SC1128).
+              pi4audio-rpc = let
+                lines = pkgs.lib.splitString "\n"
+                  (builtins.readFile ./src/signal-gen/scripts/pi4audio-rpc);
+              in
+                assert pkgs.lib.hasPrefix "#!" (builtins.head lines);
+                pkgs.writeShellApplication {
+                  name = "pi4audio-rpc";
+                  runtimeInputs = [ pkgs.coreutils ];
+                  text = builtins.concatStringsSep "\n" (builtins.tail lines);
+                };
             };
           };
 

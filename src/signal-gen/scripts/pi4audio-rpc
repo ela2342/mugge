@@ -52,11 +52,15 @@ if [ "${1:-}" = "--connected-part" ]; then
     exit 3
 fi
 
-[ $# -ge 2 ] && [ $# -le 3 ] || usage
+if [ $# -lt 2 ] || [ $# -gt 3 ]; then
+    usage
+fi
 port=$1
 json=$2
 deadline=${3:-3}
-[[ $port =~ ^[0-9]{1,5}$ ]] && [ "$port" -ge 1 ] && [ "$port" -le 65535 ] || usage
+if ! [[ $port =~ ^[0-9]{1,5}$ ]] || [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
+    usage
+fi
 [[ $deadline =~ ^[0-9]+(\.[0-9]+)?$ ]] || usage
 case $json in
     *$'\n'* | '') usage ;;
