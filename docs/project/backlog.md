@@ -1907,6 +1907,46 @@ priority!"
     connected), AC10 unplug + AC1 power pull visit. PARKED: R5r
     (aecc01dc) and R6n (21f28b34); R6n revives on ANY hang or GPU
     reset in the soak.
+  - v333 PUSHED (CM, remote verified): chore/backlog =
+    64ab110fe2389f3e28f296dbf404dc679de78ded (+204/-0 on 45037840).
+    v334 bases on it and consumes PM addenda 50-53 in
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/:
+    held-for-v334-add50-20261031.txt (39b40e01...4381), -add51-
+    (1748c9bd...9762), -add52- (ea83968a...b034), -add53-
+    (a12e05ef...59ed). Built at MILESTONES (PR #77 merge; G-US172-07
+    closed, R5s-c complete). New ID: F-512.
+  - OPEN TRACKING (v334; supersedes v333's line): US-172 CRITICAL
+    PATH: worker-4 L1s head on story/US-172-layout-l1s (#52 reorder
+    revert first, merge of main 08c03af7 (post-#77), Arch 63e41531
+    M1-M6, OVERLAY_CLASS_MAX 40 citing aa797ef7 + KERNEL_CLASS_MAX 48
+    inclusive, SecSpec L1/L2/L3/L5 per 8d1e41d2, QE da578961 +
+    ad6a8bda, Part D r10 + r11 docs commits, TW doc patch 6a28cfcc
+    before Rule 13 reviews) -> PR under Rule 13 (supersedes #52) ->
+    branch build at a CM-picked venue (not the Mac below 10 GiB) -> s5
+    branch tryboot + 15-min GL soak at quantum 256 (kit: worker-1 desk
+    draft; QE + AE release, Architect review, AD challenge; CM grant)
+    -> AC2a read kit (worker-1) -> DEPLOY -> US-172 acceptance reads
+    (PO/QE; F5 = compositor screenshot); QE check of G-US172-07
+    b128e1eb; starvation guard at the US-172 F1 milestone (AC1 + AC2a
+    + AC11 on one boot) or 2026-11-03T20:00 (PO f6393b6b); route C run
+    41198461811 (Pi pull gated by SecSpec S5-S8); R6a' after route C;
+    AC2 grant only after AE review of the T2 link list; QE AC2 T3 test
+    form; F-439 HANDOVER worker-3 -> worker-2 (worker-3 release +
+    QE/PO confirmation of the governing set pm 6cc36f79; then merge of
+    main, CI, QE diff re-check, PR body P1-P5, Rule 13, merge before
+    #66); F-341 AC1 + AC3 Pi 5 run, then TW safety.md rewrite; F-383
+    S4 CI 41198071247 + PR (worker-3); F-468/F-490 after the F-439 PR
+    is in review (worker-2); F-512 record (AE pins P1-P4 in PR
+    reviews); F-509 (TW, after AC3); F-510 (Architect, after core
+    tech); F-511 option pick (Architect, after US-172); #66 last;
+    F-320 D post-merge TW list; F-504 owner + fix; F-441 serial
+    adapter question (with the owner); F-481 role-prompt vehicle;
+    F-497 amps-on row question; F-507 evidence home; F-508 owner
+    answer + TW docs vehicle for the out-link lesson; Mac disk below
+    the 10 GiB stop line (owner); batched owner items via team-lead:
+    QE O1 (monitor or dummy plug on HDMI-A-1), AC10 unplug + AC1 power
+    pull visit. PARKED: R5r (aecc01dc) and R6n (21f28b34); R6n revives
+    on ANY hang or GPU reset in the soak.
 
 ## Reserved IDs
 
@@ -2107,6 +2147,8 @@ Next free (v327; unchanged, no new IDs in this version): F-509,
 US-183, D-072, T66.
 Next free (v328; supersedes the line above; F-509, F-510, F-511 filed
 in this version): F-512, US-183, D-072, T66.
+Next free (v334; supersedes the line above; F-512 filed in this
+version): F-513, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -5868,6 +5910,58 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       carries the soak criteria. AE
       b7b12d3ab89a5078a7c714456b749ef44b73335741a0438ff8e81d5e96fcce7c:
       A3 checked on every R5s-c row.
+  - US-172 v334 STATE (MILESTONE; supersedes the v333 lines above
+    where they differ):
+    - R5s-c COMPLETE. Arch classification
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/arch-US172-R5s-c-classification-r1-095a80c0.md
+      (sha256
+      095a80c0df391bae8da438689db2b6a2b284b06be03c87f0e759584dc62d32c1):
+      APPLIED; L1s FINAL; L4 lapses; AD E1 closed. Arch confirmation
+      aa797ef7c126508de821e89651adc63447e9427000df960f152ba81820ec9161:
+      OVERLAY_CLASS_MAX = 40 (inclusive), KERNEL_CLASS_MAX stays 48.
+      QE results check
+      5fb8ac7c7bc32d297ef94ed9263d6abf192e1ca798a786c2670de52a03ee08b3:
+      criteria MET. AD: no objection to 095a80c0, aa797ef7 or G-07
+      (CM-reported). PO A10
+      9317ccd8d7290022fabc0fa1e3faf161858aa7837f75c684de10b663fa1cadb3:
+      AC12 overlay limit 40.
+    - G-US172-07 CLOSED (CHANGE, worker-1; grant
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/grant-G-US172-07-r1-3867e248.md,
+      sha256
+      3867e248016269a91471fb74a7bc3a8e8d09ec1a0551786133dd23303d6f8419;
+      verbs 07-09): run dir
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/g-us172-07-r5sc-restore-r1-b128e1eb/,
+      SHA256SUMS
+      b128e1ebbda32eb1b39ec83d812053e9e751cb3a970fb34166b2de7f77942901
+      (98 entries OK at PM read). 07 ef21df11 rc 0, FAT == PRE; 08
+      32a8a174 (boot_id 9d2e39d2, gen 6); 09 0cbaf9be, all == PRE,
+      ALSA index back to 1. Pi on gen 6, no session active. QE check
+      PENDING.
+    - ALSA INDEX (F-512): AE
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/ae-US172-R5s-c-ALSA-index-finding-ruling-r2-fc136bb5.txt
+      (sha256
+      fc136bb5f33c38d70ad497b3a7b5658facba9fc1d10175338710209d2390c76c):
+      not an audio safety event, record only; pins P1-P4 binding on
+      the soak, AC2a and R6n kits. worker-1 acked.
+    - STORY TEXT: Part D r11 RELEASED (PO release record
+      d5cdde3614bf0cdb75ab7c36b87263c44fae93ed245c30121f2077e2434ab255;
+      result
+      bf7651d2494f557f527ba43cb610b0dc839073a4203c136243ae57591e0bb7dd;
+      diff on r10
+      38971bd4fbdfdcdcf6ae261d7da9fb1bb9573a9fe0559a6ef4ec4f84455cf76e;
+      frozen dir us172-story-r11-67c0fc97/): the second docs commit
+      after r10 on story/US-172-layout-l1s; AC text r2 + A1..A10 fully
+      in the story.
+    - L1s BRANCH: needs one more merge of main 08c03af7 (post-#77)
+      before its PR (CM tells worker-4).
+    - STAFFING (PM, 2026-10-31): worker-1 -> s5 branch tryboot +
+      15-min GL soak kit for L1s, DESK DRAFT (no Pi, no local nix),
+      then the AC2a read kit. Inputs: Arch 04d8b687 s5, 2b485056
+      F1/F2/F5, 095a80c0, aa797ef7; AE 0a1cb983, fc136bb5, 1a3addf3,
+      d0a3eb93; QE errata 1-5; AD 8127ada2 T1/T2; SecSpec 6bdb35ce;
+      Part D r11. Pins depending on worker-4's head (toplevel, id8,
+      file list) stay named placeholders; the kit is not routed for
+      release before they are filled. worker-4 = L1s branch.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -18052,6 +18146,40 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     replaced by X / dropped + reason); P5 CI green at the final head,
     any head change past 20efc13c -> QE diff re-check. Sequenced after
     the F-341 nix commit.
+    - HANDOVER (2026-10-31, PM add50/add51/add53): owner worker-3 ->
+      worker-2, PENDING worker-3's release via the CM. Until then the
+      owner of record stays worker-3. CM outside view: worker-3's
+      worktree fix-F-439-unmute-fail-closed clean at 20efc13c ==
+      remote; scratch-F-439-tc (95634e36) and scratch-F-439-tc2
+      (f35d7bee) clean, no remote branch. worker-2 made one local
+      merge 10f9b8bf (20efc13c + main 08c03af7) in its own worktree
+      fix-F-439-merge before the PM HOLD arrived; unpushed; merge
+      check
+      /Users/gabriela.bogk/mugge-team-evidence/live/F-439/F439-merge-check-r1.txt
+      (sha256
+      e21285c517ba3af92f6891154c9801d21777eb1836ed2b15224f432a39fde317);
+      redone if worker-3 releases a head other than 20efc13c. worker-2
+      is on HOLD (read only).
+    - INPUTS after the /tmp loss: all 68 files of /tmp/cm-relay/F-439
+      survived in
+      /Users/gabriela.bogk/mugge-team-evidence/20261031-tmp-snapshot/cm-relay/F-439/
+      (CM list
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/F-439/F-439-surviving-inputs-20261031.txt,
+      sha256
+      ebf4be6b72bce9465ec524796033bc87fef78665f37251dde3554370ce7357dd).
+      PM PROPOSAL of the governing set (not a ruling)
+      /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/pm-F439-governing-set-proposal-r1-20261031.txt
+      (sha256
+      6cc36f79763e9dad48ec14de67a0ef39acd31d15f1361ba6cfb03032955c66a1):
+      PO scope r3 67f15d65, order A1 765723ca, F-474 placement
+      123cb139, re-decision 2632abf6; QE/AE 6e0e16b1, d3bf5f5c,
+      4dac2326, 544d04b5, 1fb3da7c, 086cbee1, 3d14eba0, 131288d3,
+      b391d0a9, a99cf5e9, 77d530cf; pr-body-requirements a9eca49f;
+      diff a9df62bf. QE (test evidence) and PO (scope/order) confirm
+      or amend by file+sha; the CM sends worker-2 the set only after
+      worker-3's release AND that confirmation. Any head change past
+      20efc13c (incl. 10f9b8bf) -> QE diff re-check. F-468/F-490
+      (worker-2) follow once the F-439 PR is in review.
 - **F-440** runner MAX_CUT_DB vs venue_pipeline: a D-009 question for
   the AE (filed 2026-10-27; ID free across main, all origin/* and
   local branches at PM read; full record below, folded from the PM
@@ -20313,6 +20441,24 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   deadline that is not > 0 (usage 64). AMPS-ON wording changes stay in
   step with docs/operations/safety.md via the TW.
   - Next free -> F-512.
+- **F-512** (P3, record + review pins; owner AE; 2026-10-31; source AE
+  /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/ae-US172-R5s-c-ALSA-index-finding-ruling-r2-fc136bb5.txt,
+  sha256
+  fc136bb5f33c38d70ad497b3a7b5658facba9fc1d10175338710209d2390c76c; ID
+  free in all local refs (heads + remotes, no fetch) and worktrees at
+  PM read except the backlog's own "next free" lines; dup-check: no
+  earlier item on ALSA card-index stability): the USBStreamer ALSA
+  card index is not stable across boots (1 -> 0 at G-US172-06, back to
+  1 at G-US172-07; USB enumeration order). Not a safety event:
+  production binds by name (WirePlumber device.name, PW node.name,
+  pcm-bridge node.name, Mixxx via pw-jack); the only hw:N is a
+  unit-test fixture. Pins: P1 identify the USBStreamer by PW node.name
+  (+ ALSA card id "USBStreamer"), never card number, hw:N or a fixed
+  /proc/asound/cardN; P2 the index is a record only, never STOP/FAIL;
+  P3 ALSA checks read the full card list; P4 any ALSA device string
+  uses hw:CARD=USBStreamer. The AE checks P4 in PR reviews. No fix
+  work.
+  - Next free -> F-513.
 
 ## Open PRs (2026-10-24, per CM)
 
