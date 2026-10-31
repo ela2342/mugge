@@ -1634,6 +1634,34 @@ priority!"
     F-507 evidence home; F-508 owner answer (who ran the 10-29 Mac GC;
     team-lead) + TW docs vehicle for the out-link lesson; Mac disk 2.6
     GiB free (below the 10 GiB stop line; owner).
+  - v325 PUSHED (CM, verified on the remote): chore/backlog =
+    051bff6f721507ebb96aa08b1e3e1809d3aa7055 (parent c1cdaf22, file
+    sha256 4d25204b, +113/-0). v326 bases on it and consumes PM
+    addenda 15 and 16 in
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/:
+    held-for-v326-add15-20261031.txt (6769982c...616a), -add16-
+    (3c10ae3c...19b2); the later addendum wins. v325 correction: its
+    "route C: whether it needs the workflow scope" question is CLOSED
+    (no scope needed).
+  - OPEN TRACKING (v326; supersedes v325's line): US-172 R5s grant
+    (kit r1 8dd2573c: QE pin review Q2/Q3, AE release Q4, Architect
+    plan approval Q5; worker-1) then R5s-b if applied, R5r (kit by
+    worker-4, no Pi access until granted; first verb checks gen 1 on
+    the Pi, dropped if missing), R5r-bt if needed (own AE envelope),
+    R6n (frozen 21f28b34; gen-6 base + owner workflow-scope push
+    block; after R5r); gen-6 evidence (worker-1, OBSERVE G-US172-01
+    active) gating route C dispatch and R6n; AE file for the E5
+    release (CM asked); R6a' after route C; AC2 grant only after AE
+    review of the T2 link list; QE AC2 T3 test form; starvation guard
+    at the US-172 F1 milestone or 2026-11-03T20:00 (PO f6393b6b);
+    F-341 CI 41196044817 + body r3 + PR (worker-2); F-383 S4 CI
+    41198071247 + PR (worker-3); F-468/F-490 after F-341 (worker-2);
+    F-439 main merge; #66 last; F-320 D post-merge TW list; F-504
+    owner + fix; F-441 serial adapter question (with the owner); F-481
+    role-prompt vehicle; F-497 amps-on row question; F-507 evidence
+    home; F-508 owner answer (who ran the 10-29 Mac GC; team-lead) +
+    TW docs vehicle for the out-link lesson; Mac disk 2.6 GiB free
+    (below the 10 GiB stop line; owner).
 
 ## Reserved IDs
 
@@ -1827,6 +1855,8 @@ US-183, D-072, T66.
 Next free (v324; unchanged, no new IDs in this version): F-509,
 US-183, D-072, T66.
 Next free (v325; unchanged, no new IDs in this version): F-509,
+US-183, D-072, T66.
+Next free (v326; unchanged, no new IDs in this version): F-509,
 US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
@@ -5009,6 +5039,36 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       not to be worked around. Waits on SecSpec S1-S3, the push, the
       gen-6 base; runs after R5r. Outputs: --out-link on the CI runner
       + full cachix push, no Mac root (worker-4).
+  - US-172 v326 STATE (supersedes the v325 lines above where they
+    differ):
+    - STAFFING (team-lead): worker-1 stays on R5s / R5s-b. R5r kit ->
+      worker-4, kit only, NO Pi access until granted; its first verb
+      confirms gen 1's files (p9mzphhy, kernel 1734v1w9) are on the
+      Pi, and R5r is DROPPED if any is missing (e7b38dec). R6n stays
+      frozen at 21f28b34.
+    - R5s KIT r1 FROZEN: cm-relay/US-172/frozen/r5s-kit-r1-8dd2573c/,
+      SHA256SUMS sha256
+      8dd2573cd27917679957c8d1bdb055e60bf675008ef89cc578de3e918b4a1f9c
+      (PM: sums file hash matches; all 10 listed files check OK). Out
+      for QE pin review (Q2, Q3), AE release (Q4), Architect plan
+      approval (Q5); worker-1 acked all released shas. The R5s CHANGE
+      grant waits on those three.
+    - GEN-6 EVIDENCE: OBSERVE grant G-US172-01 to worker-1 is ACTIVE
+      (verb 01, reads only). Gates route C dispatch and R6n.
+    - ROUTE C needs NO workflow scope: 879eb919 is already on the
+      remote (experiment/US-172-R6a-bcm2712-kernel =
+      879eb91919012592af9d19839417652969854cfc, CM verified); a
+      dispatch is an API call, not a push. Only pushing NEW
+      workflow-file content (R6n) is blocked.
+    - R6n: SecSpec S1-S3 OK on 21f28b34
+      (/Users/gabriela.bogk/mugge-team-evidence/live/security-specialist/secspec-US172-R6n-S1-S3-21f28b34-r1.md,
+      sha256
+      cd733428f18a6f3a63ab311500c56c2f2616b1c21d15d749b422dcd731263434).
+      R6n now waits ONLY on the gen-6 base and the push permission
+      (owner via team-lead); runs after R5r.
+    - E5 AE RELEASE: no file; the AE released 613063f3 by message to
+      the QE and the CM, the QE confirmed. CM asked the AE for a file
+      + sha; until then "per the CM".
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -19393,6 +19453,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   (/Users/gabriela.bogk/mugge-team-evidence/live/cm-log-YYYYMMDD), one
   line per root: path, store path, owner, removal point. The CM
   applies the lesson to the route C, R6n and R5r kit checks.
+  v326: Architect: worker-4 r2 b345e8b3 is consistent with lead r3
+  7258ba58; no new ruling.
   - Next free -> F-509.
 
 ## Open PRs (2026-10-24, per CM)
