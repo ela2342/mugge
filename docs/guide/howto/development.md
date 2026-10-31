@@ -111,10 +111,15 @@ nix run .#test-integration-browser
 `src/web-ui/tests/integration/screenshots/`. After intentional UI changes,
 regenerate reference screenshots and review the diffs before committing.
 
-**Destructive tests** are marked `@pytest.mark.destructive` (they modify Pi
-state) and are skipped by default. They require the `--destructive` flag.
-Note: `test-e2e.sh` does NOT pass `--destructive`, so these tests are always
-skipped in automated E2E runs. Run them manually with explicit opt-in only.
+**Destructive tests** are marked `@pytest.mark.destructive` and are skipped
+by default. They require the `--destructive` flag. `test-e2e.sh` passes it
+only in step 5, which runs `src/web-ui/tests/service-destructive/` (tests
+that break the stack on purpose, e.g. a watchdog trip) on a fresh
+local-demo stack of its own and stops it afterwards. The unit runs ignore
+that directory. Destructive tests elsewhere (they modify Pi state) still
+skip in automated runs; run them manually with explicit opt-in only.
+Destructive-tier evidence counts only as collected = passed with 0 skipped
+and 0 error (see `docs/project/testing-process.md` §3.9).
 
 **Tests against a real Pi** use the `pi_url` fixture and require the
 `PI_AUDIO_URL` environment variable. Tests skip if it is unset.

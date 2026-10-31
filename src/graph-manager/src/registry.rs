@@ -479,22 +479,6 @@ fn run_watchdog_check(
                 missing,
             );
 
-            // Store pre-mute gains (default production values from
-            // 30-filter-chain-convolver.conf, since reading the actual
-            // Mult value would require an async enum_params round-trip).
-            let pre_mute: Vec<(String, f64)> = watchdog::GAIN_PARAM_NAMES
-                .iter()
-                .map(|name| {
-                    let default_mult = match *name {
-                        "gain_left_hp" | "gain_right_hp" => 0.001,
-                        "gain_sub1_lp" | "gain_sub2_lp" => 0.000631,
-                        _ => 0.001,
-                    };
-                    (name.to_string(), default_mult)
-                })
-                .collect();
-            watchdog.borrow_mut().store_pre_mute_gains(pre_mute);
-
             // Execute mute via native PW API — no pw-cli subprocess.
             // Safety-critical: best-effort per param. If one fails, we
             // continue to mute the remaining gain builtins.
