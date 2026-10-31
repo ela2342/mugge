@@ -332,12 +332,22 @@ async def generate_filters(req: FilterGenerateRequest):
 
     The computation runs in a thread pool to avoid blocking the event loop.
     """
+    from room_correction.crossover import CrossoverSpecError
+
     try:
         result = await asyncio.to_thread(_run_pipeline, req)
     except FileNotFoundError as e:
         return JSONResponse(
             status_code=404,
             content={"error": "profile_not_found", "detail": str(e)},
+        )
+    except CrossoverSpecError as e:
+        # F-374: an unsupported stored crossover is the user's to fix.
+        return JSONResponse(
+            status_code=400,
+            content={"error": "invalid_crossover",
+                     "detail": (f"Profile {req.profile}: {e}. "
+                                f"Fix it in the speaker editor.")},
         )
     except Exception as e:
         log.exception("Filter generation failed for profile %r", req.profile)

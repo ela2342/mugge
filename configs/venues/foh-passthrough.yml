@@ -1,8 +1,12 @@
 # Venue config: foh-passthrough (US-113).
 #
 # FOH (front-of-house) passthrough — unity gain on all channels with Dirac
-# (identity) coefficients.  This is the default venue loaded on first boot
-# when no persisted venue exists (PI4AUDIO_DEFAULT_VENUE).
+# (identity) coefficients.  It is not a first-boot default: there is no
+# built-in default venue (F-465), and PI4AUDIO_DEFAULT_VENUE is opt-in and
+# set nowhere.  It is armed only by an explicit set_venue, and after that it
+# is restored at every startup (US-123) until another venue is set.  It has
+# no driver protection (D-031): never open the gate on own speakers with
+# this venue armed.
 #
 # Gain at 0 dB (unity, Mult 1.0) on all channels.  The operator controls
 # output level at the source (Mixxx/Reaper faders) and the amplifier gain

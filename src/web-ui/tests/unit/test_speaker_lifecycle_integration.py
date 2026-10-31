@@ -19,12 +19,9 @@ from starlette.testclient import TestClient
 
 from app.main import app
 
-try:
-    from app.speaker_routes import (
-        _speakers_dir, _PW_CONF_FILENAME,
-    )
-except ImportError:
-    pytest.skip("speaker_routes not available (pre-commit)", allow_module_level=True)
+from app.speaker_routes import (
+    _speakers_dir, _PW_CONF_FILENAME,
+)
 
 
 # ── Test data ────────────────────────────────────────────────────
@@ -368,8 +365,8 @@ class TestCrossTopologyLifecycle:
             "name": "E2E MEH Horn",
             "topology": "meh",
             "crossover": [
-                {"frequency_hz": 300, "slope_db_per_oct": 96, "type": "linkwitz-riley"},
-                {"frequency_hz": 3000, "slope_db_per_oct": 96, "type": "linkwitz-riley"},
+                {"frequency_hz": 300, "slope_db_per_oct": 48, "type": "linkwitz-riley"},
+                {"frequency_hz": 3000, "slope_db_per_oct": 48, "type": "linkwitz-riley"},
             ],
             "speakers": {
                 "bass": {

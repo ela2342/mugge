@@ -175,7 +175,7 @@ $ ps -L -o pid,tid,cls,rtprio,pri,ni,comm -p 1165
 | T49 at 11 min uptime | NRestarts <= 3, no failed units | max 0, both lists empty | PASS |
 | USBStreamer sink | S32LE, 8 ch, 48 kHz | S32LE, 8, 48000 (pw-dump and ALSA hw_params) | PASS |
 | USBStreamer capture PCM (AC12) | ALSA capture PCM, 8 ch, 48 kHz | `pcmC1D0c` (card 1); stream0: 8 ch S32_LE 48 kHz (altset 1; altset 2 = 4 ch), not open; PW capture node deferred per F-295 | PASS (QE) |
-| Gains (AC14), both rounds | all linear Mult/Add 0 | 24 enumerated, 16 gain-relevant (8 nodes x Mult/Add), all exactly 0 | PASS |
+| Gains (AC14), both rounds | all linear Mult/Add 0 | 24 enumerated, 16 gain-relevant (8 nodes x Mult/Add), all exactly 0 | PASS<br>2026-10-26: gains result NOT VERIFIABLE under F-395 (fc/fc-out node state not logged); re-run pending (F-395 AC c). |
 | HiFiBerry blocked | no card, modules, nodes | none in /proc/asound/cards; 4 modules not loaded; 0 objects | PASS |
 | Thermal | < 80 °C | max 66.65 °C (21 samples) | PASS |
 
@@ -228,6 +228,7 @@ $ ps -L -o pid,tid,cls,rtprio,pri,ni,comm -p 1165
 - **Gain readings:** `pw-cli enum-params` prints six decimals, so a tiny
   non-zero value would read as `0.000000`. AC14 was checked from `pw-dump`
   JSON against exact 0.
+  2026-10-26: gains result NOT VERIFIABLE under F-395 (fc/fc-out node state not logged); re-run pending (F-395 AC c).
 - **APC mini mk2** appears as ALSA card 0 (USB-Audio); it is MIDI-only and
   has no PCM device.
 - **WirePlumber** logs "mod.rt: could not set nice-level to -11: Permission
@@ -273,7 +274,7 @@ Listener evidence is on-device `ss`, not an external scan (owner, 2026-10-25).
 | T54 step 1-2 | rollback to gen 2 boots x83 | `--switch-generation 2` + `switch-to-configuration boot` rc 0; booted `x83m7bircd4b7j8wchx9k1mnilzi8kl4` (boot_id `8919af16`), system running | PASS |
 | T54 step 2b | x83 survives a second reboot | booted x83 (boot_id `b74bc437`) | PASS |
 | T54 step 3-4 | forward to gen 3 boots nkifli3r | `--switch-generation 3` + `switch-to-configuration boot` rc 0; booted nkifli3r (boot_id `45ebdf64`) | PASS |
-| T54 after return | T51, AC14, check #10, AC13/T49 | current = booted = profile = nkifli3r; 16 gain-relevant values exactly 0 (pw-dump); PW FF 88, one module-rt, RTTIME 200000/200000, NRestarts 0, no failed units | PASS (QE) |
+| T54 after return | T51, AC14, check #10, AC13/T49 | current = booted = profile = nkifli3r; 16 gain-relevant values exactly 0 (pw-dump); PW FF 88, one module-rt, RTTIME 200000/200000, NRestarts 0, no failed units | PASS (QE)<br>2026-10-26: gains result NOT VERIFIABLE under F-395 (fc/fc-out node state not logged); re-run pending (F-395 AC c). |
 | T54 thermal | < 80 °C, no throttling | max 66.1 °C; `cpuinfo_cur_freq` = max (2.4 GHz) on all 31 samples; governor performance; cooling_device not sampled | PASS |
 | AC1a: Pi 4 drvPath | only `05-rt-direct.conf` or configurationRevision differs from main | `nixosConfigurations.mugge`: origin/main `289390bf` and `c34f7da7` both `8nv9psc1mf8da746cxginj021jjs8a5a`; branch `bbff469e` `j2ykkiilld1pfkchxbgrqyqwigrkkd14`; nix-diff: only `pi4audio-pipewire-configs` gains `05-rt-direct.conf` | PASS (criterion met) |
 | AC18a: no-op boot | clean checkout at `132997f9`, `nixos-rebuild boot --no-reexec` | rc 0; toplevel unchanged (nkifli3r, 0 paths copied); no new profile generation (still system-3); os_prefix unchanged; FAT pruned to {new, prev, booted} by the pre-AC2a hook; MAP.txt updated (`2 x83… pruned`) | PASS (Architect + QE) |
@@ -403,19 +404,19 @@ $ grep 'Max realtime timeout' /proc/<pipewire pid>/limits
 | Check | Expected | Actual | Pass/Fail |
 |-------|----------|--------|-----------|
 | (a) nothing louder | volumes not higher, switches unchanged, mutes not released | all hw and PW values identical to BEFORE | PASS (AE) |
-| (a) gains (AC14) | 16 values exactly 0 | 16, all 0 (pw-dump) | PASS |
+| (a) gains (AC14) | 16 values exactly 0 | 16, all 0 (pw-dump) | PASS<br>2026-10-26: gains result NOT VERIFIABLE under F-395 (fc/fc-out node state not logged); re-run pending (F-395 AC c). |
 | (a) gate | closed | `gate_open: false`, no pending gains | PASS |
 | (a) links | unchanged | 24 before, 24 after, same set by name | PASS |
 | (a) sink recovery | recorded | no recovery: PipeWire never reopened the device (F-373, below) | FINDING |
 | (b) physical replug | replug seen within 1800 s | not seen: poll 13:54:48-14:25:31Z ended in a timeout | DEFERRED (F-373) |
 | (c) nothing louder | as in (a) | all hw and PW values identical to BEFORE | PASS |
-| (c) gains, gate, links | 16 x 0, closed, 24 | 16 x 0, closed, 24 (same set by name) | PASS |
+| (c) gains, gate, links | 16 x 0, closed, 24 | 16 x 0, closed, 24 (same set by name) | PASS<br>2026-10-26: gains result NOT VERIFIABLE under F-395 (fc/fc-out node state not logged); re-run pending (F-395 AC c). |
 | (c) nodes | the same 12 node names as BEFORE, all 5 bridge nodes | 12/12, all 5 bridges | PASS |
 | (c) sink | exactly one, running, no error, no `spa.alsa` lines from 5 s after the restart | one (`running`), `spa.alsa` count 0 | PASS |
 | (c) PCM open | Playback Channel Map as BEFORE | `3,4,7,8,5,6,12,13` again | PASS |
 | (c) services | all active, no restarts | PipeWire, WirePlumber, the 5 bridges, GraphManager, signal-gen active; NRestarts 0; no failed units | PASS |
 | Cycles 1, 2: reboot | new boot_id, same generation | down 15:20:20Z / up 15:20:43Z, then down 15:26:12Z / up 15:26:49Z; `eeddb8b6…` → `7f56af91…` → `8c6239cb…`; booted `2wf21ydg` both times; PREEMPT_RT | PASS |
-| Cycles 1, 2: nothing louder | as in (a), against the BEFORE-(a) reads | all hw and PW values identical; 16 gains 0; gate closed; 24 links, same set | PASS |
+| Cycles 1, 2: nothing louder | as in (a), against the BEFORE-(a) reads | all hw and PW values identical; 16 gains 0; gate closed; 24 links, same set | PASS<br>2026-10-26: gains result NOT VERIFIABLE under F-395 (fc/fc-out node state not logged); re-run pending (F-395 AC c). |
 | Cycles 1, 2: USBStreamer | one device at 1-1, bus-powered | `usb 1-1: new high-speed USB device number 2` in each boot; 1-1, `bmAttributes=80`, `bMaxPower=500mA` before and after | PASS |
 | Cycles 1, 2: sink and nodes | 12 nodes, one sink running, no `spa.alsa` errors | 12/12, one sink (`running`), `spa.alsa` count 0 | PASS |
 | Cycles 1, 2: services, power | no failed units, no throttling | 9/9 user units active, no failed units; `get_throttled=0x0`; no undervoltage | PASS |
@@ -463,6 +464,7 @@ louder, and the gate stayed closed.
   instead. If (b) runs later, it starts from a healthy sink.
 - **Step (b) baseline only.** The BEFORE-b read set (taken at 13:54Z) is
   complete; AC14 16 gains all 0 at that point.
+  2026-10-26: gains result NOT VERIFIABLE under F-395 (fc/fc-out node state not logged); re-run pending (F-395 AC c).
 - **The power-cycle reads do not prove a cold power-off.** The USBStreamer
   gets device number 2 on every fresh enumeration, and every boot logs
   `new high-speed USB device`, so a warm reboot would look the same. The
@@ -486,3 +488,63 @@ louder, and the gate stayed closed.
   USBStreamer before PipeWire starts, so the cycles do not exercise the
   F-373 hot-replug path. That is scope, not a gap: hot replug stays with
   F-373.
+
+---
+
+## Task AC19: redeploy of merged main (CM-DEP-.89-AC19)
+
+**Date:** 2026-10-25, run from 19:47Z (Pi down 19:54:29-19:54:47Z, Mac-side
+poll times; the Pi 5's early-boot journal runs ahead, see AC17 Session B)
+**Operator:** Claude (worker-1, under change-manager session CM-DEP-.89-AC19)
+**Host:** mugge (Pi 5), from `2wf21ydg` (f0fbefd1) to `rcyg67wd` (main `07a65f9e`)
+
+Purpose: after #50 merged, deploy the merged main SHA and re-read the
+AC17 set against the AC17 (a) BEFORE values. A warm reboot is enough
+unless the nix-diff from `2wf21ydg` touches an AC19 cold-cycle trigger
+(boot chain, audio device path, audio startup, gain defaults, anything
+that sets the USBStreamer hw volume), or the EEPROM changed. Verdict: QE
+ACCEPTED, warm reboot sufficient. QE recomputed the sha256 of every
+evidence file and read each result in the files themselves.
+
+### Procedure
+
+- Deploy from the Mac (start 19:49:34Z) with the D-069 deploy verb
+  (`nixos-rebuild-ng` `boot`, see `docs/guide/howto/nixos-upgrade.md` §8.3),
+  from a clean export of `07a65f9e`: `switch-to-configuration boot`, not
+  `switch`, with the pinned known_hosts and `StrictHostKeyChecking=yes`.
+- One announced warm reboot (issued 19:54:15Z). The down window comes from
+  the Mac-side poll, not from the Pi's journal.
+- The AC17/AC19 read set before (PRE) and after (POST) the reboot, and a
+  second service read at the 10-minute mark (same boot id).
+
+### Validation
+
+| Check | Expected | Actual | Pass/Fail |
+|-------|----------|--------|-----------|
+| Cold-cycle triggers | none touched | masked nix-diff `5fih61rg` (f0fbefd1) vs `113xl12f` (07a65f9e): one mismatching environment, `nixos-version` (`@configurationRevision@` and `@json@` only); the rest is the expected cascade (etc, dbus-1, system-path, system/user units, X-Restart-Triggers). Same shape vs 22370317 (`ydr9h4xi`); unmasked diffs show only the store-path cascade | PASS (warm) |
+| Other outputs | unchanged | Pi 4 drv `j2ykkiil`, `images.sd-card` `r4hqi43b`, both as in the #50 T3 | PASS |
+| Reboot and identity | new boot id; booted = main | `8c6239cb` → `ff87ced5`; booted = current = profile = `rcyg67wd`; configurationRevision `07a65f9e`; kernel 6.12.62 PREEMPT_RT; host key `a5kILUyr…`, MAC `88:a2:9e:8c:8d:4e` | PASS |
+| Boot generations | ≥2 complete incl. booted | `config.txt:16` `os_prefix=gens/rcyg67wd…/`; MAP 4 `2wf21ydg` and 5 `rcyg67wd` present, 1-3 pruned; both `.complete=yes`; no `*.tmp` dirs | PASS |
+| EEPROM | equal to DRM1 baseline | version `000d3ca2…`, timestamp 1756339608, config sha256 `916ce18a…`: all equal, so not a cold trigger | PASS |
+| Power | no throttling | `get_throttled=0x0`; no under-voltage lines in the kernel log | PASS |
+| HiFiBerry (AC12a) | no module, no card, no node | no hifiberry/pcm512 module loaded; 0 such PW objects; `/proc/asound/cards` lists only the APC mini mk2 and the USBStreamer | PASS |
+| Gains and gate (AC14) | 16 x 0, closed | all 16 Mult/Add 0; gate closed, no pending gains | PASS<br>2026-10-26: gains result NOT VERIFIABLE under F-395 (fc/fc-out node state not logged); re-run pending (F-395 AC c). |
+| USBStreamer hw mixer | unchanged | `amixer` sha256 `29d42498…` in all three snapshots, as in AC17; hw volume still 0 dB, not a cold trigger | PASS |
+| PW graph vs AC17 (a) BEFORE | unchanged | nodes 12/12 and links 24/24, none gone or new; 32 USBStreamer link lines; sink running; PW volume and mute props unchanged; `spa_alsa` journal count 0 | PASS |
+| RT scheduling | FF 88; RTTIME 200000/200000 | `pipewire` and `data-loop.0` FF/88; RTTIME 200000/200000 | PASS |
+| USB power | as AC17 | `bMaxPower=500mA`, devnum 2 | PASS |
+| Services | no failed units, no restarts | no failed system or user units; all 9 audio user units active, NRestarts 0 at 10 min (uptime 0:10, same boot id); no system unit with restarts | PASS |
+| Thermal | < 75 °C, no throttling | peak 65.55 °C during the deploy, 66.1 °C at 10 min; 2.4 GHz of 2.4 GHz, `performance` governor; no undervoltage alarm; no cooling devices (passive case, valid) | PASS |
+| PRE / POST read sets | PASS | both PASS, 0 recovery findings | PASS |
+
+### Notes
+
+- **deploy-src git metadata (QE, non-blocking).** The eval stderr shows
+  "could not read HEAD ref … using 'master'" for the deploy-src export.
+  Harmless here because configurationRevision came out correct. If future
+  evidence relies on the export's git metadata beyond `self.rev`, the
+  export needs a real ref (backlog, PM).
+- Evidence: the `ac19-run-20261025T194712Z/` directory (17 files, 0600)
+  plus the `ac19-nixdiff-*`, `ac19-evals-pi4-sdcard-07a65f9e.txt` and
+  `ac19-drvpath-07a65f9e.txt` files in the operator's private evidence
+  directory.

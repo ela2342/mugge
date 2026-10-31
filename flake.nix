@@ -396,6 +396,9 @@
             inherit pkgs;
             target = self.nixosConfigurations.mugge-pi5-deploy.config.system.build.pi5PruneGens;
           };
+          wireplumber-no-bypass = import ./nix/checks/wireplumber-no-bypass.nix { nixos = self.nixosConfigurations.mugge-pi5-deploy; };  # F-318
+          jack-self-connect = import ./nix/checks/jack-self-connect.nix { nixos = self.nixosConfigurations.mugge-pi5-deploy; };  # F-318, US-173
+          conf-fragment-names = import ./nix/checks/conf-fragment-names.nix { nixos = self.nixosConfigurations.mugge-pi5-deploy; };  # F-400, US-173
 
           app-source-paths = appSourceCheck;
 
@@ -407,7 +410,7 @@
             cp -r ${./src/room-correction} room-correction
             chmod -R u+w web-ui room-correction
             cd web-ui
-            python -m pytest tests/ -v --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --tb=short
+            python -m pytest tests/ -v -rs --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --ignore=tests/service-destructive/ --tb=short
             touch $out
           '';
 
@@ -415,11 +418,15 @@
             nativeBuildInputs = [ testPython camilladsp-test ];
             PI_AUDIO_MOCK = "1";
           } ''
-            cp -r ${./src/room-correction} room-correction
-            cp ${./src/camilladsp-test/test_config.yml} room-correction/test_camilladsp.yml
-            chmod -R u+w room-correction
-            cd room-correction
-            python -m pytest tests/ -v --tb=short
+            # Mirror the repo layout: room-correction resolves configs/ as ../../configs
+            mkdir src
+            cp -r ${./src/room-correction} src/room-correction
+            cp -r ${./configs} configs
+            chmod -R u+w src configs
+            cp ${./src/camilladsp-test/test_config.yml} src/room-correction/test_camilladsp.yml
+            test -d configs/venues && test -d configs/speakers || { echo "configs/ missing in sandbox"; exit 1; }
+            cd src/room-correction
+            python -m pytest tests/ -v -rs --tb=short
             touch $out
           '';
 
@@ -431,7 +438,7 @@
             cp -r ${./configs} configs
             chmod -R u+w midi configs
             cd midi
-            python -m pytest tests/ -v --tb=short
+            python -m pytest tests/ -v -rs --tb=short
             touch $out
           '';
 
@@ -444,7 +451,7 @@
             ln -s "$PWD/drivers" scripts/drivers
             chmod -R u+w drivers
             cd drivers
-            python -m pytest tests/ -v --tb=short
+            python -m pytest tests/ -v -rs --tb=short
             touch $out
           '';
         } // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
@@ -467,7 +474,7 @@
               set -euo pipefail
               export PI_AUDIO_MOCK=1
               cd ${repoSrc}/src/web-ui
-              exec ${testPython}/bin/python -m pytest tests/unit/ -v "$@"
+              exec ${testPython}/bin/python -m pytest tests/unit/ -v -rs "$@"
             ''}";
           };
 
@@ -479,7 +486,7 @@
               export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
               export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
               cd ${repoSrc}/src/web-ui
-              exec ${e2ePython}/bin/python -m pytest tests/integration/ -v "$@"
+              exec ${e2ePython}/bin/python -m pytest tests/integration/ -v -rs "$@"
             ''}";
           };
 
@@ -494,7 +501,7 @@
               export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
               export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
               cd ${repoSrc}/src/web-ui
-              exec ${e2ePython}/bin/python -m pytest tests/integration/test_full_user_journey.py -v "$@"
+              exec ${e2ePython}/bin/python -m pytest tests/integration/test_full_user_journey.py -v -rs "$@"
             ''}";
           };
 
@@ -504,7 +511,7 @@
               set -euo pipefail
               export PI_AUDIO_MOCK=1
               cd ${repoSrc}/src/room-correction
-              exec ${testPython}/bin/python -m pytest tests/ -v "$@"
+              exec ${testPython}/bin/python -m pytest tests/ -v -rs "$@"
             ''}";
           };
 
@@ -543,7 +550,7 @@
               echo "Output:  $ROOM_SIM_OUTPUT_DIR"
               echo ""
               cd "$REPO_DIR/src/room-correction"
-              exec ${testPython}/bin/python -m pytest tests/ -v --tb=short \
+              exec ${testPython}/bin/python -m pytest tests/ -v -rs --tb=short \
                 -k "test_sim_ or test_correction_roundtrip or test_mock_e2e" \
                 "$@"
             ''}";
@@ -556,18 +563,22 @@
               export PI_AUDIO_MOCK=1
               echo "=== web-ui unit tests ==="
               cd ${repoSrc}/src/web-ui
-              ${testPython}/bin/python -m pytest tests/ -v --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --tb=short
+              ${testPython}/bin/python -m pytest tests/ -v -rs --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --ignore=tests/service-destructive/ --tb=short
               echo ""
               echo "=== room-correction tests ==="
               cd ${repoSrc}/src/room-correction
-              ${testPython}/bin/python -m pytest tests/ -v --tb=short
+              ${testPython}/bin/python -m pytest tests/ -v -rs --tb=short
               echo ""
               echo "=== midi tests ==="
               cd ${repoSrc}/src/midi
-              ${testPython}/bin/python -m pytest tests/ -v --tb=short
+              ${testPython}/bin/python -m pytest tests/ -v -rs --tb=short
               echo ""
               echo "=== drivers tests ==="
               cd ${repoSrc}/scripts/drivers
+              ${testPython}/bin/python -m pytest tests/ -v -rs --tb=short
+              echo ""
+              echo "=== stability tests (pi5_thermal_watch, US-173 AC9) ==="
+              cd ${repoSrc}/scripts/stability
               ${testPython}/bin/python -m pytest tests/ -v --tb=short
               echo ""
               echo "=== audio-common tests ==="
@@ -616,18 +627,22 @@
               echo "========== test-all (unit + integration) =========="
               export PI_AUDIO_MOCK=1
               cd ${repoSrc}/src/web-ui
-              ${testPython}/bin/python -m pytest tests/ -v --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --tb=short
+              ${testPython}/bin/python -m pytest tests/ -v -rs --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --ignore=tests/service-destructive/ --tb=short
               echo ""
               echo "=== room-correction tests ==="
               cd ${repoSrc}/src/room-correction
-              ${testPython}/bin/python -m pytest tests/ -v --tb=short
+              ${testPython}/bin/python -m pytest tests/ -v -rs --tb=short
               echo ""
               echo "=== midi tests ==="
               cd ${repoSrc}/src/midi
-              ${testPython}/bin/python -m pytest tests/ -v --tb=short
+              ${testPython}/bin/python -m pytest tests/ -v -rs --tb=short
               echo ""
               echo "=== drivers tests ==="
               cd ${repoSrc}/scripts/drivers
+              ${testPython}/bin/python -m pytest tests/ -v -rs --tb=short
+              echo ""
+              echo "=== stability tests (pi5_thermal_watch, US-173 AC9) ==="
+              cd ${repoSrc}/scripts/stability
               ${testPython}/bin/python -m pytest tests/ -v --tb=short
               echo ""
               echo "=== audio-common tests ==="
@@ -642,7 +657,7 @@
               export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
               export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
               cd ${repoSrc}/src/web-ui
-              ${e2ePython}/bin/python -m pytest tests/integration/ -v --tb=short
+              ${e2ePython}/bin/python -m pytest tests/integration/ -v -rs --tb=short
               echo ""
               echo "All test suites passed (unit + integration + integration-browser)."
             ''}";
@@ -768,7 +783,7 @@
               set -euo pipefail
               export PI_AUDIO_BACKEND=pi-loopback
               cd ${repoSrc}/src/web-ui
-              exec ${e2ePython}/bin/python -m pytest tests/e2e/ -v -m "not needs_acoustic" --loopback-confirmed "$@"
+              exec ${e2ePython}/bin/python -m pytest tests/e2e/ -v -rs -m "not needs_acoustic" --loopback-confirmed "$@"
             ''}";
           };
 
@@ -779,7 +794,7 @@
               set -euo pipefail
               export PI_AUDIO_BACKEND=pi-full
               cd ${repoSrc}/src/web-ui
-              exec ${e2ePython}/bin/python -m pytest tests/e2e/ -v --owner-confirmed --destructive "$@"
+              exec ${e2ePython}/bin/python -m pytest tests/e2e/ -v -rs --owner-confirmed --destructive "$@"
             ''}";
           };
 
@@ -878,6 +893,25 @@
                 cargoLock.lockFile = ./src/Cargo.lock;
                 buildAndTestSubdir = "signal-gen";
               });
+              # F-465: venue profiles for GM and the web UI, read-only from the
+              # flake source. A source path (no build), so board-guard can hash
+              # the packaged files at eval time.
+              venues = builtins.path {
+                name = "pi4audio-venues";
+                path = ./configs/venues;
+                filter = path: type: type == "regular" && pkgs.lib.hasSuffix ".yml" path;
+              };
+              # US-173 AC9: D-069 thermal watch for Pi 5 load runs (stdlib
+              # only; run with sudo). The writer adds its own "#!" line and
+              # runs flake8 on the result, so the script's shebang is
+              # dropped here; a second "#!" on line 2 fails E265.
+              pi5-thermal-watch = let
+                lines = pkgs.lib.splitString "\n"
+                  (builtins.readFile ./scripts/stability/pi5_thermal_watch.py);
+              in
+                assert pkgs.lib.hasPrefix "#!" (builtins.head lines);
+                pkgs.writers.writePython3Bin "pi5-thermal-watch" { }
+                  (builtins.concatStringsSep "\n" (builtins.tail lines));
             };
           };
 

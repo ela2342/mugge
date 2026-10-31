@@ -758,7 +758,7 @@ crossover and room correction with minimum latency and no pre-ringing.
 **Related:** US-091 (Multi-Way Crossover — extends US-011 2-way to 3-way/4-way/MEH topologies)
 
 **Acceptance criteria:**
-- [ ] Crossover shape generation: highpass, lowpass, and bandpass as minimum-phase FIR. 3-way and 4-way crossover details are in US-091. US-011 delivers 2-way (HP/LP) crossover integration only; US-091 extends to 3-way/4-way/MEH topologies. Crossover frequency/frequencies and slope read from speaker profile (D-010, default 80Hz for 2-way, 48-96 dB/oct)
+- [ ] Crossover shape generation: highpass, lowpass, and bandpass as minimum-phase FIR. 3-way and 4-way crossover details are in US-091. US-011 delivers 2-way (HP/LP) crossover integration only; US-091 extends to 3-way/4-way/MEH topologies. Crossover frequency/frequencies and slope read from speaker profile (D-010, default 80Hz for 2-way; slope LR 24 or 48 dB/oct, default 48, from the speaker profile; narrowed per F-374, PO 2026-10-25)
 - [ ] Convolution of crossover shape with correction filter (multiply in frequency domain)
 - [ ] Final combined filter converted to minimum-phase via Hilbert transform of log magnitude
 - [ ] Final combined filter verified: no frequency bin exceeds -0.5dB gain (D-009 compliance check on the combined result, not just the correction component)
@@ -6828,7 +6828,7 @@ AE confirms: MEH is architecturally identical to conventional N-way for filter-c
 - [ ] Crossover engine generates bandpass FIR filters for mid-range drivers (not just HP/LP)
 - [ ] 3-way topology: HP (tweeter) + BP (mid) + LP (sub), with two crossover points
 - [ ] 4-way topology: HP (tweeter) + BP (upper-mid) + BP (lower-mid) + LP (sub), with three crossover points
-- [ ] Crossover slopes independently configurable per crossover point (24/48/96 dB/oct)
+- [ ] Crossover slope LR 24 or 48 dB/oct, one value per profile (narrowed per F-374, PO 2026-10-25). Per-crossover-point slopes are a future item: both legs that meet at one crossover point must use the same LR order.
 - [ ] Bandpass filters are minimum-phase FIR (consistent with existing crossover design principle)
 - [ ] Channel budget validation per D-054: 3-way stereo = 6 speaker + 2 monitoring; 4-way stereo = 8 speaker + 0 monitoring. Channel assignment is per-profile, not hardcoded. Warn user when 4-way leaves no monitoring channels.
 - [ ] PW filter-chain config generation is dynamic per speaker design (D-051): 2-way generates 4 convolver nodes, 3-way generates 6, 4-way generates 8. No max-channels-always approach. Config generator in US-011b produces topology-specific configs.

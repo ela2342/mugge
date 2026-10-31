@@ -111,10 +111,15 @@ nix run .#test-integration-browser
 `src/web-ui/tests/integration/screenshots/`. After intentional UI changes,
 regenerate reference screenshots and review the diffs before committing.
 
-**Destructive tests** are marked `@pytest.mark.destructive` (they modify Pi
-state) and are skipped by default. They require the `--destructive` flag.
-Note: `test-e2e.sh` does NOT pass `--destructive`, so these tests are always
-skipped in automated E2E runs. Run them manually with explicit opt-in only.
+**Destructive tests** are marked `@pytest.mark.destructive` and are skipped
+by default. They require the `--destructive` flag. `test-e2e.sh` passes it
+only in step 5, which runs `src/web-ui/tests/service-destructive/` (tests
+that break the stack on purpose, e.g. a watchdog trip) on a fresh
+local-demo stack of its own and stops it afterwards. The unit runs ignore
+that directory. Destructive tests elsewhere (they modify Pi state) still
+skip in automated runs; run them manually with explicit opt-in only.
+Destructive-tier evidence counts only as collected = passed with 0 skipped
+and 0 error (see `docs/project/testing-process.md` §3.9).
 
 **Tests against a real Pi** use the `pi_url` fixture and require the
 `PI_AUDIO_URL` environment variable. Tests skip if it is unset.
@@ -211,6 +216,15 @@ This starts the full local development stack on Linux: a headless PipeWire
 instance, GraphManager, signal-gen, pcm-bridge, level-bridge, and the web UI
 on `0.0.0.0:8080`. The UI will be available at `http://localhost:8080`.
 
+The stack also starts `scripts/mixxx-substitute.py`, a JACK client named
+`Mixxx` with 8 output ports. By default it plays
+`~/Claudia singt Cole Porter - I love Paris.mp3` on ch 1-2 if that file
+exists, and silence otherwise. With `LOCAL_DEMO_MIXXX_SOURCE=tone` it runs
+with `--tone` instead: a 1000 Hz sine at -20 dBFS peak on ch 1-2, silence
+on ch 3-8 (constants `TONE_FREQ_HZ`, `TONE_PEAK_DBFS`, `TONE_CHANNELS`).
+`test-e2e.sh` always sets it, so every test run measures the same signal
+(F-394).
+
 For interactive development (e.g., custom host/port, debugging), use the
 development shell:
 
@@ -265,6 +279,14 @@ python3 -c "import json; print(json.load(open('/tmp/local-demo-12345.json'))['po
 Test scripts (`test-e2e.sh`, `test-integration.sh`) automatically read the
 manifest via the `LOCAL_DEMO_MANIFEST` env var (exported by `local-demo env`)
 after starting the stack.
+
+`local-demo env` takes `XDG_RUNTIME_DIR` and `XDG_CONFIG_HOME` from the
+manifest (`LOCAL_DEMO_MANIFEST`, or the PID-derived path), so it is correct
+when run from a different process than `start` (F-394). After `eval`-ing
+it, `test-e2e.sh` checks for `$XDG_RUNTIME_DIR/pipewire-0` and exits 2 if
+the socket is missing. It keeps the stack log until cleanup and prints the
+part logged during the service-integration run, each line prefixed
+`[stack]`.
 
 ### 3b.4 Isolation
 

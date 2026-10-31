@@ -119,8 +119,30 @@ let
     && builtins.any (p: lib.hasInfix "pipewire.conf.d/05-rt-direct.conf" (p.buildCommand or ""))
       c.services.pipewire.configPackages;
 
+  # F-465: GM and the web UI read one packaged venues dir from the store,
+  # and no unit arms a default venue (AE 013d2fa8 (B)3).
+  gmUnit = c: c.systemd.user.services.pi4audio-graph-manager;
+  webUnit = c: c.systemd.user.services.pi4-audio-webui;
+  venuesPrefix = "PI4AUDIO_VENUES_DIR=";
+  gmVenuesEnv = c: builtins.filter (e: lib.hasPrefix venuesPrefix e)
+    (lib.toList (gmUnit c).serviceConfig.Environment);
+  gmVenuesDir = c: lib.removePrefix venuesPrefix (builtins.head (gmVenuesEnv c));
+  venueFile = "home-lab-chn50p-ultimax.yml";
+  unitText = c: name: c.systemd.user.units."${name}.service".text;
+  venues = c: [
+    { name = "GM unit sets PI4AUDIO_VENUES_DIR exactly once (F-465)"; ok = builtins.length (gmVenuesEnv c) == 1; }
+    { name = "GM venues dir is in the store (F-465)"; ok = lib.hasPrefix builtins.storeDir (gmVenuesDir c); }
+    { name = "web UI uses the GM venues dir (F-465)"; ok = ((webUnit c).environment.PI4AUDIO_VENUES_DIR or null) == gmVenuesDir c; }
+    { name = "venues dir not empty (F-465)"; ok = builtins.readDir (gmVenuesDir c) != { }; }
+    { name = "${venueFile} packaged as committed (F-465)"; ok = builtins.pathExists "${gmVenuesDir c}/${venueFile}"
+        && builtins.hashFile "sha256" "${gmVenuesDir c}/${venueFile}"
+          == builtins.hashFile "sha256" ../../configs/venues/${venueFile}; }
+    { name = "no PI4AUDIO_DEFAULT_VENUE in GM or web UI unit (F-465)"; ok =
+        !builtins.any (n: lib.hasInfix "PI4AUDIO_DEFAULT_VENUE" (unitText c n)) [ "pi4audio-graph-manager" "pi4-audio-webui" ]; }
+  ];
+
   pi4 = conf:
-    let c = cfg conf; in map (a: check conf a.name a.ok) [
+    let c = cfg conf; in map (a: check conf a.name a.ok) ([
       { name = "board is pi4"; ok = c.mugge.board.name == "pi4"; }
       { name = "PREEMPT_RT kernel variant"; ok = c.mugge.board.kernel.variant == "rt"; }
       { name = "kernel 6.12.62 with PREEMPT_RT=y"; ok = isRtKernel c; }
@@ -133,7 +155,7 @@ let
       { name = "PipeWire enabled"; ok = c.services.pipewire.enable; }
       { name = "module-rt direct, RTKit off (F-358)"; ok = rtDirect c; }
       { name = "no ALSA card-block rule (Pi 4 follow-up)"; ok = !hasCardBlock c; }
-    ];
+    ] ++ venues c);
 
   pi5Common = conf: c: [
     { name = "board is pi5"; ok = c.mugge.board.name == "pi5"; }
@@ -197,7 +219,7 @@ let
       { name = "WirePlumber disables other ALSA cards"; ok = hasCardBlock c; }
       { name = "8080 open on the LAN (owner ruling, F-037)"; ok = builtins.elem 8080 (tcpPorts c); }
       { name = "TCP inbound exactly [22 8080]"; ok = lib.sort lib.lessThan (allTcpPorts c) == [ 22 8080 ] && allTcpRanges c == [ ]; }
-    ]);
+    ] ++ venues c);
 
   installer = conf:
     let c = cfg conf; in map (a: check conf a.name a.ok) [

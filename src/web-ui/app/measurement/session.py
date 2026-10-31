@@ -19,7 +19,9 @@ import asyncio
 import enum
 import logging
 import os
+import stat
 import sys
+import tempfile
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -45,6 +47,90 @@ def _ensure_rc_path() -> None:
     """Add room-correction dir to sys.path if needed."""
     if _RC_DIR not in sys.path:
         sys.path.insert(0, _RC_DIR)
+
+
+# Profile used for filter generation when the session names none.
+_DEFAULT_PROFILE_NAME = "2way-80hz-sealed"
+
+# F-348 (PO c06db0a8 item 2): a session run is measure only. It stops after
+# filter generation into the output dir; deploy and verify are skipped with
+# this message. There is no opt-in; re-enabling is US-174d's deploy gate.
+_MEASURE_ONLY_MSG = "Measure only: install disabled until F-348 fix and US-174d"
+
+# F-348/B1 (Architect a49947b8): the client output_dir is ignored for all
+# writes. Each session writes into a fresh run dir under a service-owned
+# base dir that may not overlap any PipeWire or coeffs dir.
+_CLIENT_OUTPUT_DIR_DEFAULT = "/tmp/pi4audio-measurement"
+
+
+def _measurement_base_dir() -> str:
+    """Return $XDG_STATE_HOME/pi4audio/measurement (or ~/.local/state/...)."""
+    state_home = os.environ.get("XDG_STATE_HOME") or os.path.join(
+        os.path.expanduser("~"), ".local", "state")
+    return os.path.join(state_home, "pi4audio", "measurement")
+
+
+def _denied_dirs() -> List[str]:
+    """Dirs the measurement base may not equal, be under, or contain.
+
+    The env vars are read at check time; room_correction.deploy binds its
+    defaults at import and is deliberately not used here.
+    """
+    home = os.path.expanduser("~")
+    dirs = [os.environ.get("PI4AUDIO_PW_CONF_DIR"),
+            os.environ.get("PI4AUDIO_COEFFS_DIR"),
+            os.path.join(home, ".config", "pipewire", "pipewire.conf.d"),
+            "/etc/pi4audio/coeffs",
+            os.path.join(home, ".config", "pipewire"),
+            "/etc/pipewire",
+            "/usr/share/pipewire"]
+    return [os.path.realpath(d) for d in dirs if d]
+
+
+def _check_not_denied(real: str) -> None:
+    """Raise ValueError if real equals, is under, or contains a denied dir."""
+    for denied in _denied_dirs():
+        if os.path.commonpath([real, denied]) in (real, denied):
+            raise ValueError(f"F-348/B1: measurement base {real} overlaps "
+                             f"{denied}")
+
+
+def _prepare_measurement_base() -> str:
+    """Create and check the base dir; return its realpath.
+
+    Fails closed with ValueError unless the base is a directory owned by
+    this uid, not group- or world-writable, and clear of every denied dir.
+    The deny check also runs before makedirs, so a symlinked parent cannot
+    make it create dirs inside a denied dir.
+    """
+    base = _measurement_base_dir()
+    _check_not_denied(os.path.realpath(base))
+    try:
+        os.makedirs(base, mode=0o700, exist_ok=True)
+    except OSError as exc:
+        raise ValueError(
+            f"F-348/B1: cannot create measurement base {base}: {exc}") from exc
+    real = os.path.realpath(base)
+    st = os.lstat(real)
+    if not stat.S_ISDIR(st.st_mode):
+        raise ValueError(f"F-348/B1: measurement base is not a dir: {real}")
+    if st.st_uid != os.getuid():
+        raise ValueError(f"F-348/B1: measurement base not owned by uid "
+                         f"{os.getuid()}: {real}")
+    if st.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+        raise ValueError(f"F-348/B1: measurement base is group/world "
+                         f"writable: {real}")
+    _check_not_denied(real)
+    return real
+
+
+def _profile_dirs() -> tuple[str, str]:
+    """Return (profiles_dir, identities_dir) used for filter generation."""
+    project_root = os.path.normpath(os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", ".."))
+    speakers_dir = os.path.join(project_root, "configs", "speakers")
+    return (os.path.join(speakers_dir, "profiles"),
+            os.path.join(speakers_dir, "identities"))
 
 
 # ---------------------------------------------------------------------------
@@ -203,7 +289,8 @@ class SessionConfig:
     hard_limit_spl_db: float = 84.0
     umik_sensitivity_dbfs_to_spl: float = 121.4
     calibration_file: Optional[str] = None
-    output_dir: str = "/tmp/pi4audio-measurement"
+    # Ignored for writes (F-348/B1); kept for API compatibility.
+    output_dir: str = _CLIENT_OUTPUT_DIR_DEFAULT
     gm_host: str = "127.0.0.1"
     gm_port: int = 4002
     output_device: Optional[Any] = None
@@ -222,6 +309,19 @@ class SessionConfig:
                 self.output_device = 0
             if self.input_device is None:
                 self.input_device = 1
+        # F-348/B1: every write goes into a fresh 0700 run dir under the
+        # checked base, never into output_dir. This runs when routes.py
+        # builds the config, before the signal-gen client connects, so a
+        # failed check raises before anything is written or held.
+        if self.output_dir != _CLIENT_OUTPUT_DIR_DEFAULT:
+            log.warning("output_dir %r ignored, F-348/B1", self.output_dir)
+        self._run_dir = tempfile.mkdtemp(
+            prefix="run-", dir=_prepare_measurement_base())
+
+    @property
+    def run_dir(self) -> str:
+        """Directory the session writes its IRs, delays and filters into."""
+        return self._run_dir
 
 
 # ---------------------------------------------------------------------------
@@ -288,6 +388,11 @@ class MeasurementSession:
     @property
     def config(self) -> SessionConfig:
         return self._config
+
+    @property
+    def run_dir(self) -> str:
+        """Directory this session writes its IRs, delays and filters into."""
+        return self._config.run_dir
 
     @property
     def abort_requested(self) -> bool:
@@ -359,6 +464,10 @@ class MeasurementSession:
         await self._watchdog.start()
 
         try:
+            # F-374: refuse a profile the generator cannot design before
+            # any gain calibration or sweep, not at CP-5.
+            self._check_profile_crossover()
+
             # TK-199: Resolve device names to indices before any state
             # transition (fail-fast if UMIK-1 or output device not found).
             # Skipped in mock mode where __post_init__ already sets integer
@@ -446,6 +555,34 @@ class MeasurementSession:
             await self._broadcast_state({"error": str(exc)})
         finally:
             await self._cleanup()
+
+    def _check_profile_crossover(self) -> None:
+        """Run the generator's crossover check on the session's profile (F-374).
+
+        Raises RuntimeError with the generator's message for an unsupported
+        crossover type or slope.  A profile that cannot be loaded is left to
+        CP-5 filter generation, which reports it as before.
+        """
+        _ensure_rc_path()
+        from config_generator import load_profile
+        from room_correction.crossover import CrossoverSpecError
+        from room_correction.generate_profile_filters import (
+            validate_profile_crossover,
+        )
+
+        profile_name = self._config.profile_name or _DEFAULT_PROFILE_NAME
+        profiles_dir, _ = _profile_dirs()
+        try:
+            profile = load_profile(profile_name, profiles_dir=profiles_dir)
+        except FileNotFoundError as exc:
+            log.warning("F-374: crossover pre-check skipped: %s", exc)
+            return
+        try:
+            validate_profile_crossover(profile)
+        except CrossoverSpecError as exc:
+            raise RuntimeError(
+                f"Profile {profile_name}: {exc}. "
+                f"Fix it in the speaker editor.") from exc
 
     # -- Measurement mode management (D-040: GraphManager) --------------------
 
@@ -794,7 +931,7 @@ class MeasurementSession:
                 })
 
                 # Save IR as WAV for inspection / offline analysis.
-                ir_dir = os.path.join(self._config.output_dir, "impulse_responses")
+                ir_dir = os.path.join(self.run_dir, "impulse_responses")
                 os.makedirs(ir_dir, exist_ok=True)
                 ir_path = os.path.join(ir_dir, f"ir_{key}.wav")
                 from room_correction.export import export_filter
@@ -856,9 +993,7 @@ class MeasurementSession:
                              name, delay_s * 1000, delay_samples[name])
                 # Save delays to output dir for deployment.
                 import yaml as _yaml
-                delays_path = os.path.join(
-                    self._config.output_dir, "delays.yml")
-                os.makedirs(self._config.output_dir, exist_ok=True)
+                delays_path = os.path.join(self.run_dir, "delays.yml")
                 with open(delays_path, "w") as f:
                     _yaml.dump({
                         "delays_ms": {
@@ -1004,16 +1139,8 @@ class MeasurementSession:
         self._check_abort("CP-5a")
 
         # Resolve profile name from session config or default.
-        profile_name = self._config.profile_name
-        if not profile_name:
-            profile_name = "2way-80hz-sealed"
-
-        _project_root = os.path.normpath(os.path.join(
-            os.path.dirname(__file__), "..", "..", "..", ".."))
-        profiles_dir = os.path.join(
-            _project_root, "configs", "speakers", "profiles")
-        identities_dir = os.path.join(
-            _project_root, "configs", "speakers", "identities")
+        profile_name = self._config.profile_name or _DEFAULT_PROFILE_NAME
+        profiles_dir, identities_dir = _profile_dirs()
 
         profile, identities = load_profile_with_identities(
             profile_name,
@@ -1044,7 +1171,7 @@ class MeasurementSession:
             # GAP-6: Save IRs with speaker-key naming so filter_routes
             # _load_correction_filters() can find them for later re-generation.
             from room_correction.export import export_filter as _export_ir
-            ir_out = os.path.join(self._config.output_dir, "impulse_responses")
+            ir_out = os.path.join(self.run_dir, "impulse_responses")
             os.makedirs(ir_out, exist_ok=True)
             for spk_key, ir_data in correction_filters.items():
                 spk_path = os.path.join(ir_out, f"ir_{spk_key}.wav")
@@ -1079,7 +1206,7 @@ class MeasurementSession:
         })
 
         # Export WAV files
-        output_dir = self._config.output_dir
+        output_dir = self.run_dir
         from datetime import datetime as _dt
         timestamp = _dt.now()
 
@@ -1170,10 +1297,20 @@ class MeasurementSession:
 
         In mock mode, uses dry_run=True so no files are actually written
         to system paths.
+
+        F-348: skipped unconditionally, in mock and real mode alike. The
+        code below the skip stays for US-174d to re-enable behind its gate.
         """
         self._check_abort("CP-6")
         self._transition(MeasurementState.DEPLOY)
         await self._broadcast_state()
+
+        await self._broadcast({
+            "type": "deploy_progress", "phase": "skipped",
+            "message": _MEASURE_ONLY_MSG,
+        })
+        log.warning("Deploy skipped: %s", _MEASURE_ONLY_MSG)
+        return
 
         fg = getattr(self, "_filter_gen_result", None)
         if fg is None:
@@ -1305,6 +1442,9 @@ class MeasurementSession:
         In mock mode, skips the live sweep and reports only the static
         filter-gen verification results.  Design principle #7: mandatory
         verification measurement to confirm correction effectiveness.
+
+        F-348: nothing was deployed, so there is no live sweep in either
+        mode; only the static filter-gen verification is reported.
         """
         self._check_abort("CP-7")
         self._transition(MeasurementState.VERIFY)
@@ -1312,6 +1452,14 @@ class MeasurementSession:
 
         fg = getattr(self, "_filter_gen_result", None)
         static_verification = fg.get("verification", []) if fg else []
+
+        await self._broadcast({
+            "type": "verify_progress", "phase": "skipped",
+            "message": _MEASURE_ONLY_MSG,
+            "verification": static_verification,
+            "live_verification": None,
+        })
+        return
 
         # In mock mode we cannot run a real verification sweep —
         # no PipeWire is running.  Report static verification only.

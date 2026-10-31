@@ -50,6 +50,12 @@ directories. Their index files are generated from the per-item files
 > - No commits between 2026-04-19 and 2026-10-24. The state of the Pi
 >   after April is unknown.
 
+> **Owner FYI (2026-10-27, F-465).** A fresh deploy now starts with no
+> venue (F-465); FoH passthrough is selected explicitly. Once selected, it
+> is restored at every startup (gate closed) until another venue is set.
+> It has no driver protection (D-031): never open the gate on own speakers
+> with it armed.
+
 ## Current Mission
 
 **New mission (owner, 2026-10-24): bootstrap NixOS on a Pi 5 with
@@ -166,8 +172,9 @@ yet in safety.md (rules 9-12), the stricter rule applies (AD).
    CHN-50P amp channels stay OFF. This rule relies on rule 1 (gate closed
    before any venue switch). The CHN-50P rig needs its 200 Hz filter files
    verified (F-321, F-322; AE) [Rule 10].
-5. A watchdog unlatch restores fixed gains instantly, even if the gate
-   was closed (F-320 D). Order: amps off, headphones off and IEMs out,
+5. A watchdog unlatch writes no Mult, and Open Gate is refused while the
+   watchdog is latched (F-320 D, fixed). After a latch, the order is:
+   amps off, headphones off and IEMs out,
    then unlatch (GM RPC `watchdog_unlatch` via SSH or a CM CHANGE
    session; the web UI has no unlatch control until US-159 U2), then Close
    Gate and check the venue, then pre-flight #10, then amps on, then Open
@@ -201,14 +208,18 @@ yet in safety.md (rules 9-12), the stricter rule applies (AD).
    and pre-flight #10 before the amps go on and before headphones or IEM
    go back in (F-346; AE).
 10. (Proposed by architect and AE, owner to adopt, O-32.) Until F-348 is
-    fixed: (a) do not activate any speaker profile from the web UI
-    (profile activation writes an unsafe PipeWire config that takes effect
-    at the next PipeWire restart); (b) no 3-way or other non-2-way speaker
+    fixed: (a) do not activate any speaker profile, run a filter rollback,
+    deploy filters, or run the measurement DEPLOY step from the web UI,
+    and do not call room_correction's `deploy_pw_config` by hand (all of
+    these write an unsafe PipeWire config that takes effect at the next
+    PipeWire restart; the same rule is in safety.md as the "F-348 rule",
+    amps-on row 21, AE `766faf2f`); (b) no 3-way or other non-2-way speaker
     profile with the amps on, in any mode. (b) supersedes rule 8's DJ
     allowance. (c) Around any PipeWire restart (including the rule 9
     procedure): (1) before the restart, confirm that
-    ~/.config/pipewire/pipewire.conf.d/30-filter-chain-convolver.conf does
-    not exist; if it exists, do not restart, and keep the amps off until it
+    ~/.config/pipewire/pipewire.conf.d/30-filter-chain-convolver.conf
+    either does not exist, or is the shipped conf with all 8 gain Mult
+    defaults at 0.0; if not, do not restart, and keep the amps off until it
     has been removed in a CM CHANGE session with the owner's agreement;
     (2) after the restart, pass pre-flight #10 before the amps go on and
     before headphones or IEM go back in, and confirm that exactly one
@@ -437,7 +448,7 @@ connected).
 
 | ID | Severity | Summary |
 |----|----------|---------|
-| **F-320** | High | Gate can read CLOSED while audio is live (watchdog unlatch, GM restart, UI UNMUTE). D amended: unlatch writes a hardcoded gain table past the gate (architect, AE High). |
+| **F-320** | High | Gate can read CLOSED while audio is live (watchdog unlatch, GM restart, UI UNMUTE). D fixed: unlatch writes no Mult, and open_gate is refused while latched (2026-10-27); E, F, G open. |
 | **F-321** | High | Venue coefficients not enforced; dirac on a fresh image; shared filenames across venues. |
 | **F-322** | High | No per-speaker power/excursion limit on runtime gain (7 W CHN-50P can get 450 W). |
 | **F-323** | High (readiness) | No vocal-mic capture in Live mode. Fix: US-158. |
@@ -465,7 +476,6 @@ connected).
 | **F-335** | **Critical** | CI T1 fails on main before any test runs (`src/web-ui` not found in flake source). Blocks every merge, incl. #41-#43 (O-22). |
 | F-361 | Medium (AE, architect; High if a non-AUX port name or profile) | Link audit protects only ports named `playback_AUX0..7`. Amps-on precondition 7. |
 | F-362 | High (QE) | Silent ImportError module skips hide whole test modules. Not a US-163 blocker. |
-| F-363 | Medium (QE) | Purifi Qts test is order-dependent and hides a data error. Blocks if Linux CI T1 on #50 hits the failing order. |
 | F-364 | Low | local-demo seeds are read-only, so saving a profile fails. |
 | F-365 | Not rated (QE) | Hermetic nix checks are broken in the sandbox; CI never builds `checks.*`. |
 | F-367 | Medium | greetd crash-loops on the Pi 5 (no DRM device). Guarded in US-163; real fix US-172. |

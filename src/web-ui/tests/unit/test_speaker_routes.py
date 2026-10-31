@@ -23,18 +23,15 @@ from starlette.testclient import TestClient
 
 from app.main import app
 
-try:
-    from app.speaker_routes import (
-        _list_yamls, _read_yaml, _speakers_dir, _SAFE_NAME,
-        _validate_identity, _validate_profile, _slugify,
-        _write_yaml, _delete_yaml, _deep_validate_profile,
-        _VALID_TOPOLOGIES, _VALID_ROLES, _VALID_ENCLOSURE_TYPES,
-        _VALID_GM_MODES, _MAX_CHANNEL,
-        _compute_target_gains, _activate_profile_impl,
-        _PW_CONF_FILENAME,
-    )
-except ImportError:
-    pytest.skip("speaker_routes not available (pre-commit)", allow_module_level=True)
+from app.speaker_routes import (
+    _list_yamls, _read_yaml, _speakers_dir, _SAFE_NAME,
+    _validate_identity, _validate_profile, _slugify,
+    _write_yaml, _delete_yaml, _deep_validate_profile,
+    _VALID_TOPOLOGIES, _VALID_ROLES, _VALID_ENCLOSURE_TYPES,
+    _VALID_GM_MODES, _MAX_CHANNEL,
+    _compute_target_gains, _activate_profile_impl,
+    _PW_CONF_FILENAME,
+)
 
 
 # ── Fixtures ──────────────────────────────────────────────────────
@@ -576,8 +573,8 @@ _VALID_MEH_PROFILE = {
     "name": "MEH 3-Way Horn System",
     "topology": "meh",
     "crossover": [
-        {"frequency_hz": 300, "slope_db_per_oct": 96, "type": "linkwitz-riley"},
-        {"frequency_hz": 3000, "slope_db_per_oct": 96, "type": "linkwitz-riley"},
+        {"frequency_hz": 300, "slope_db_per_oct": 48, "type": "linkwitz-riley"},
+        {"frequency_hz": 3000, "slope_db_per_oct": 48, "type": "linkwitz-riley"},
     ],
     "speakers": {
         "sub_left": {"identity": "sub-18-horn", "role": "subwoofer", "channel": 0,

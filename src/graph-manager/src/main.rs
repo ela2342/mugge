@@ -208,50 +208,20 @@ fn run_pipewire(
     let resolved_state_dir = venue::state_dir();
     let resolved_venues_dir = venue::venues_dir();
 
-    // Active venue name.
-    // US-123: Load persisted venue name from disk (does NOT open gate or apply gains).
-    // US-113: If no persisted venue (first boot), load the default venue.
-    let persisted_venue = venue::load_persisted_venue(&resolved_state_dir);
-    let (initial_venue, initial_pending_gains) = match persisted_venue {
-        Some(name) => {
-            // Normal boot: venue name restored from disk.
-            // Load the profile to populate pending_gains (gate stays closed).
-            let gains = match venue::find_venue(&resolved_venues_dir, &name) {
-                Ok(profile) => venue::venue_gains(&profile),
-                Err(e) => {
-                    log::warn!("US-123: persisted venue '{}' not found: {} — starting with no venue", name, e);
-                    Vec::new()
-                }
-            };
-            (Some(name), gains)
-        }
-        None => {
-            // First boot (US-113): load default venue, persist it, populate
-            // pending_gains. Gate stays CLOSED per D-063 safety invariant.
-            match venue::load_default_venue(&resolved_venues_dir, &resolved_state_dir) {
-                Ok(name) => {
-                    let gains = match venue::find_venue(&resolved_venues_dir, &name) {
-                        Ok(profile) => venue::venue_gains(&profile),
-                        Err(e) => {
-                            log::warn!("US-113: default venue '{}' profile error: {}", name, e);
-                            Vec::new()
-                        }
-                    };
-                    (Some(name), gains)
-                }
-                Err(e) => {
-                    log::warn!("US-113: failed to load default venue: {} — starting with no venue", e);
-                    (None, Vec::new())
-                }
-            }
-        }
-    };
-    let active_venue: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(initial_venue));
+    // Active venue name and pending gains.
+    // US-123: restore the persisted venue; US-113: else the opt-in default.
+    // A venue whose profile does not load is not active (F-465).
+    let startup = venue::resolve_startup_venue(
+        &resolved_venues_dir,
+        &resolved_state_dir,
+        venue::default_venue_from_env().as_deref(),
+    );
+    let active_venue: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(startup.active_venue));
 
     // D-063 audio gate state: all gains start at 0.0, gate closed.
     // Gate must be explicitly opened via `open_gate` RPC after loading a venue.
-    let gate_open: Rc<RefCell<bool>> = Rc::new(RefCell::new(false));
-    let pending_gains: Rc<RefCell<Vec<(String, f64)>>> = Rc::new(RefCell::new(initial_pending_gains));
+    let gate_open: Rc<RefCell<bool>> = Rc::new(RefCell::new(startup.gate_open));
+    let pending_gains: Rc<RefCell<Vec<(String, f64)>>> = Rc::new(RefCell::new(startup.pending_gains));
 
     // US-140: Settlement epoch counters (deterministic reconciler settlement).
     // Both live on the PW main loop thread — Cell<u64> is sufficient (no sync needed).
@@ -658,43 +628,15 @@ fn dispatch_rpc_command(
         }
 
         rpc::RpcCommand::WatchdogUnlatch { reply } => {
-            let mut wd = watchdog_state.borrow_mut();
-            match wd.unlatch() {
-                Some(gains) => {
-                    // Drop the borrow before accessing the graph (may need
-                    // to look up node IDs for gain restoration).
-                    drop(wd);
-
-                    info!("Watchdog unlatch: restoring {} gain values", gains.len());
-
-                    // Restore pre-mute gain values via native PW API.
-                    // Gain builtins are params on the convolver node.
-                    let g = graph.borrow();
-                    let mut restored = 0usize;
-                    if let Some(convolver) = g.node_by_name(watchdog::CONVOLVER_NODE_NAME) {
-                        for (name, mult) in &gains {
-                            let prefixed = format!("{}:Mult", name);
-                            if reg_handle.set_node_param_mult(convolver.id, &prefixed, *mult as f32) {
-                                info!("Watchdog unlatch: restored {} to Mult={}", prefixed, mult);
-                                restored += 1;
-                            } else {
-                                log::warn!("Watchdog unlatch: failed to restore {}", prefixed);
-                            }
-                        }
-                    } else {
-                        log::warn!("Watchdog unlatch: convolver node not in graph, skipping restore");
-                    }
-                    drop(g);
-
-                    let _ = event_tx.send(GraphEvent::WatchdogUnlatched {
-                        restored_gains: restored,
-                    });
+            // F-320 D: unlatch writes no Mult and leaves the gate closed.
+            let result = watchdog::handle_unlatch(&mut watchdog_state.borrow_mut());
+            match result {
+                Ok(()) => {
+                    let _ = event_tx.send(GraphEvent::WatchdogUnlatched);
                     let _ = reply.send(RpcResult::Ok);
                 }
-                None => {
-                    let _ = reply.send(RpcResult::Error(
-                        "watchdog is not latched".to_string(),
-                    ));
+                Err(e) => {
+                    let _ = reply.send(RpcResult::Error(e));
                 }
             }
         }
@@ -764,14 +706,17 @@ fn dispatch_rpc_command(
         }
 
         rpc::RpcCommand::OpenGate { reply } => {
-            let gains = pending_gains.borrow().clone();
-            if gains.is_empty() {
-                let _ = reply.send(RpcResult::Error("no venue loaded".to_string()));
+            // F-320 D: refused while the watchdog is latched, before any
+            // other check and before any Mult write.
+            if let Err(e) = watchdog::open_gate_allowed(&watchdog_state.borrow()) {
+                log::warn!("open_gate refused: {}", e);
+                let _ = reply.send(RpcResult::Error(e));
                 return;
             }
 
-            if *gate_open.borrow() {
-                let _ = reply.send(RpcResult::Error("gate already open".to_string()));
+            let gains = pending_gains.borrow().clone();
+            if let Err(e) = venue::open_gate_precheck(&gains, *gate_open.borrow()) {
+                let _ = reply.send(RpcResult::Error(e));
                 return;
             }
 

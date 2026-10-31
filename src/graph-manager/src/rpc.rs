@@ -459,7 +459,7 @@ pub enum GraphEvent {
         mechanism: String,
     },
     #[serde(rename = "watchdog_unlatched")]
-    WatchdogUnlatched { restored_gains: usize },
+    WatchdogUnlatched,
     #[serde(rename = "gain_integrity_violation")]
     GainIntegrityViolation {
         violating: Vec<(String, f64)>,
@@ -793,7 +793,6 @@ fn handle_watchdog_status(cmd_tx: &mpsc::Sender<RpcCommand>) -> HandleResult {
             armed: false,
             latched: false,
             missing_nodes: Vec::new(),
-            pre_mute_gains: Vec::new(),
         };
         return HandleResult::ResponseJson(
             serde_json::to_string(&serde_json::json!({
@@ -821,7 +820,7 @@ fn handle_watchdog_status(cmd_tx: &mpsc::Sender<RpcCommand>) -> HandleResult {
                 "type": "response",
                 "cmd": "watchdog_status",
                 "ok": true,
-                "watchdog": { "latched": false, "missing_nodes": [], "pre_mute_gains": [] },
+                "watchdog": { "latched": false, "missing_nodes": [] },
             }))
             .unwrap_or_default(),
         ),
@@ -1340,7 +1339,6 @@ pub fn handle_pw_command(cmd: RpcCommand, current_mode: &Mutex<String>, venues_d
                 armed: false,
                 latched: false,
                 missing_nodes: Vec::new(),
-                pre_mute_gains: Vec::new(),
             });
         }
         RpcCommand::WatchdogUnlatch { reply } => {
@@ -2024,6 +2022,12 @@ mod tests {
         assert_eq!(v["type"], "event");
         assert_eq!(v["event"], "device_connected");
         assert_eq!(v["name"], "usbstreamer");
+    }
+
+    #[test]
+    fn event_watchdog_unlatched_serializes_without_gains() {
+        let v: Value = serde_json::to_value(&GraphEvent::WatchdogUnlatched).unwrap();
+        assert_eq!(v, serde_json::json!({"event": "watchdog_unlatched"}));
     }
 
     #[test]
