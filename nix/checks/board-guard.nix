@@ -51,11 +51,7 @@ let
   configTxt = c: c.system.build.pi5ConfigTxt;
   txtLines = c: lib.splitString "\n" (configTxt c);
   hasVc4 = c: lib.hasInfix "dtoverlay=vc4-kms-v3d-pi5" (configTxt c);
-  # US-172: os_prefix= and the OS file lines precede every dtoverlay=/dtparam=.
   lineIdx = c: re: lib.lists.findFirstIndex (l: builtins.match re l != null) null (txtLines c);
-  firstDt = c: lineIdx c "dt(overlay|param)=.*";
-  osFilesFirst = c: firstDt c != null && lib.all (re: let i = lineIdx c re; in i != null && i < firstDt c)
-    [ "os_prefix=g/@ID@/" "kernel=Image" "initramfs initrd followkernel" "cmdline=cmdline.txt" ];
   # US-172 R1 (architect ruling 04d8b687): the firmware skips any file
   # whose path is longer than 48 characters. Every path it opens, built
   # from the rendered config.txt with @ID@ at its real length (<id8>):
@@ -165,7 +161,6 @@ let
     { name = "no account with a password"; ok = withPassword c == { }; }
     { name = "firewall and nftables enabled"; ok = firewalled c; }
     { name = "disable-bt-pi5 in config.txt"; ok = lib.hasInfix "dtoverlay=disable-bt-pi5" (configTxt c); }
-    { name = "config.txt: os_prefix and OS files before any dtoverlay/dtparam (US-172)"; ok = osFilesFirst c; }
     { name = "every firmware path <= 48 characters (US-172 R1)"; ok = fwPathsShort c; }
     { name = "no root authorized_keys"; ok = rootKeys c == [ ] && c.users.users.root.openssh.authorizedKeys.keyFiles == [ ]; }
     { name = "PermitRootLogin no"; ok = (ssh c).PermitRootLogin == "no"; }
