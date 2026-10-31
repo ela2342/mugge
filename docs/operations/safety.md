@@ -45,7 +45,7 @@ alternative (rows 14 and 21).
 | 13 | US-159 G16 (F-373) | Any re-adoption of the USBStreamer sink after a re-enumeration (by GraphManager or WirePlumber) comes up gated: gains 0, gate closed, and audio returns only when the operator re-opens the gate (an instant step to the venue gain, F-315; there is no ramp). To be tested (AE; US-159 T65) |
 | 14 | Gate-authority defects (AD M4) | F-338, F-339, F-320, F-314, F-325 and F-349 are closed, or each has an interim operating rule in the merged safety.md (planned in PR #45, paused since 2026-10-26; until it merges, the rules in this row and in the Pi 5 rules below apply) that is followed. For F-314, F-349, F-338 and F-339 the interim rule must be AE-accepted. For F-338 and F-339 it must not rely on the web-UI Close Gate or on a CloseGate success reply: the emergency stop is the amp power switches (including the HP/IEM amps); a person at the switches the whole time the amps are on. After any gate close, mute or GraphManager restart, reading the gains does not prove "muted" yet. Switch the amps off, including the headphone/IEM amps, and headphones/IEMs not worn, and keep them off until PipeWire is restarted or the Pi is cold power-cycled, with all 16 gains verified at their boot values (safety.md, Gains at boot) and the gate closed. A gains reading counts only if the filter-chain node and its output node were idle or running immediately before and after the reading (states logged with it); a reading on a suspended node shows 0 whatever the real gain is and proves nothing (F-395, Gate-2 r6b). Once the live readback is proven on the Pi, this goes back to: "muted" is proven only by all 16 gains reading exactly 0.000000 via `pw-cli enum-params` on a node that is idle or running. That interim covers supervised sessions only; before any gig or unattended use, F-338 and F-339 are closed. For any own-speaker venue (e.g. CHN-50P), F-321 and F-322 are also closed |
 | 19 | F-465 | F-465 fixed and AC3 b-e passed on that generation; see F-465 rule |
-| 20 | F-410, F-320 D | While the D-063 gate is closed, no action other than Open Gate raises any Mult: the web UI unmute never restores gains behind a closed gate (F-410, closes with the F-439 / F-320 F PR), and the GM watchdog unlatch writes no Mult (F-320 D). Both must be fixed; no interim operating rule counts; AE acceptance required |
+| 20 | F-410, F-320 D | While the D-063 gate is closed, no action other than Open Gate raises any Mult: the web UI unmute never restores gains behind a closed gate (F-410, closes with the F-439 / F-320 F PR), and the GM watchdog unlatch writes no Mult (F-320 D, fixed: unlatch only clears the latch, and Open Gate is refused while the watchdog is latched). F-410 must still be fixed; no interim operating rule counts; AE acceptance required |
 | 21 | F-348 | No generated filter-chain conf can bring the gains up behind a closed gate. A generated conf writes the venue gains as its Mult defaults, and they take effect at the next PipeWire restart (F-348). Holds when F-348 is closed, or when the F-348 rule below is followed. Row 14's interim alternative does not cover F-348 |
 
 Until the list is closed, these rules apply on the Pi 5:
@@ -181,12 +181,16 @@ Until the list is closed, these rules apply on the Pi 5:
   PipeWire started after those files were written, (d) the journal shows
   no filter-chain load error, (e) GraphManager's active venue is the
   expected one.
-- **Watchdog latch (F-320 D):** until F-320 D lands, `watchdog_unlatch`
-  writes a fixed gain table back (0.001 on the mains and ch 5-8, 0.000631
-  on the subs), not the venue gains, while the gate still reads closed.
-  So a closed gate is not silent after an unlatch. If the watchdog
-  latches: unlatch, then `close_gate`, then confirm all 8 Mults read 0
-  (read as in "Gains at boot") before anything else.
+- **Watchdog latch (F-320 D, fixed):** `watchdog_unlatch` only clears the
+  latch. It writes no Mult and the gate stays closed. While the watchdog
+  is latched, `open_gate` is refused with an error starting "watchdog
+  latched: gate stays closed, no gain changed". The latch zeroes the Mults
+  only while the convolver node is still there. If the node was gone, the
+  watchdog destroyed the USBStreamer links instead, and a recreated node
+  starts at its conf defaults (see the F-348 rule). If the watchdog
+  latches: unlatch, then `close_gate`, then confirm all 16 gain values
+  (8 Mult + 8 Add) read 0 (read as in "Gains at boot") before anything
+  else.
 - **F-348 rule (generated convolver conf):** until F-348 is fixed, a
   generated `~/.config/pipewire/pipewire.conf.d/30-filter-chain-convolver.conf`
   comes up at the next PipeWire restart with the venue gains as its
@@ -627,7 +631,8 @@ amplifiers: turn those down before opening the gate. `foh-passthrough.yml` is
 no subsonic protection (D-031). It is only for feeding a venue FoH system that
 does its own gain staging, never our own 4x450W amps. The old fixed defaults
 0.001 (-60 dB mains) and 0.000631 (-64 dB subs) are pre-D-063; they survive
-only in the watchdog unlatch restore table (defect F-320). Setting a
+only in mock data, code comments and tool defaults (since F-320 D,
+GraphManager no longer writes them on unlatch). Setting a
 speaker-channel gain node to unity while our speakers are connected, whether
 by `pw-cli` or by opening the gate on the wrong profile, sends full-scale
 audio through the 4x450W amplifier chain. Even momentarily, this can damage
@@ -708,33 +713,39 @@ PipeWire graph.
 
 ### Layer 4: Filter-Chain Watchdog (T-044-4)
 
-The GraphManager's watchdog (`src/graph-manager/src/watchdog.rs`) continuously
-monitors 6 critical nodes in the PipeWire graph:
+The GraphManager's watchdog (`src/graph-manager/src/watchdog.rs`) monitors
+2 nodes in the PipeWire graph (`MONITORED_NODES`):
 
 | Node | Role |
 |------|------|
 | `pi4audio-convolver` | Filter-chain capture side |
 | `pi4audio-convolver-out` | Filter-chain playback side |
-| `gain_left_hp` | Left main gain node |
-| `gain_right_hp` | Right main gain node |
-| `gain_sub1_lp` | Sub 1 gain node |
-| `gain_sub2_lp` | Sub 2 gain node |
 
-If ANY monitored node disappears from the PipeWire graph, the watchdog
-triggers a **latched safety mute**:
+The 8 gains (`gain_left_hp`, `gain_right_hp`, `gain_sub1_lp`,
+`gain_sub2_lp`, `gain_hp_l`, `gain_hp_r`, `gain_iem_l`, `gain_iem_r`) are
+not graph nodes. They are builtins inside the filter-chain and show up as
+params on the `pi4audio-convolver` node (e.g. `gain_left_hp:Mult`).
 
-**Primary mute mechanism:** Set `Mult=0.0` on all 4 gain nodes via native
-PipeWire API (`pw_node_set_param` via `pipewire-rs` FFI). Target response
-time: <1ms per node, <5ms total.
+The watchdog starts unarmed and arms once both nodes are present in the
+same check, so nodes that register one by one at PipeWire startup do not
+trip it. Once armed, if EITHER monitored node disappears from the PipeWire
+graph, the watchdog triggers a **latched safety mute**:
 
-**Fallback mechanism:** If the gain nodes themselves have disappeared (can't
-set Mult on a nonexistent node), the watchdog destroys ALL links to the
+**Primary mute mechanism:** Set `Mult=0.0` on all 8 gain params of the
+`pi4audio-convolver` node via native PipeWire API (`pw_node_set_param` via
+`pipewire-rs` FFI). Target response time: <1ms per param, <8ms total.
+
+**Fallback mechanism:** If the `pi4audio-convolver` node itself is gone
+(no node to set the params on), the watchdog destroys ALL links to the
 USBStreamer input ports using `pw_registry::destroy_global()`.
 
 **Latch behavior:** Once triggered, the mute is LATCHED -- it stays active
 even after the missing nodes return. Unlatching requires an explicit RPC
 command (`watchdog_unlatch`). This prevents transient audio during graph
-recovery. Pre-mute gain values are stored and restored on unlatch.
+recovery. Unlatching writes no Mult: the gains stay at 0.0 and the gate
+stays closed, and `open_gate` is refused while the watchdog is latched.
+The only way back to the venue gains is an explicit `open_gate` after the
+unlatch (F-320 D).
 
 **Response time budget:** <21ms (1 PipeWire graph cycle at quantum 1024).
 Registry events are push-based (not polled), so the watchdog fires within
