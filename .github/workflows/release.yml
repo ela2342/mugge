@@ -85,9 +85,17 @@ jobs:
           echo "dtbs:     $kdir/dtbs"
           echo "closure size: $(nix path-info -S -h "$top" | awk '{print $2, $3}')"
           cfg=$(readlink -f result-kernel-dev)/lib/modules/*/build/.config
-          grep -E '^(# )?CONFIG_(LOCALVERSION|PREEMPT_RT|EXPERT|ARM64_(4K|16K)_PAGES|ARM64_VA_BITS|DRM_V3D|DRM_VC4)[ =]' $cfg
-          for want in CONFIG_ARM64_16K_PAGES=y CONFIG_PREEMPT_RT=y CONFIG_DRM_VC4=m CONFIG_DRM_V3D=m; do
+          grep -E '^(# )?CONFIG_(LOCALVERSION|PREEMPT_RT|EXPERT|IKCONFIG(_PROC)?|ARM64_(4K|16K)_PAGES|ARM64_VA_BITS|DRM_V3D|DRM_VC4)[ =]' $cfg
+          for want in CONFIG_ARM64_16K_PAGES=y CONFIG_PREEMPT_RT=y CONFIG_IKCONFIG_PROC=y CONFIG_DRM_VC4=m CONFIG_DRM_V3D=m; do
             grep -qx "$want" $cfg || { echo "::error::missing $want"; exit 1; }
+          done
+          # Pins for the Pi-side checks: Image sha, built .config sha, banner.
+          sha256sum "$(readlink -f "$top/kernel")" $cfg
+          # No grep -m1: an early exit would SIGPIPE strings under pipefail.
+          strings "$(readlink -f "$top/kernel")" | grep '^Linux version '
+          mods=$(readlink -f "$top/kernel-modules")
+          for ko in vc4 v3d; do
+            find -L "$mods/lib/modules" -name "$ko.ko*" | grep . || { echo "::error::missing $ko module"; exit 1; }
           done
           ls "$kdir/dtbs/broadcom/" | grep bcm2712
           ls "$kdir/dtbs/overlays/" | grep -E 'vc4-kms-v3d-pi5|disable-bt-pi5'
