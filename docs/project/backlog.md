@@ -1399,6 +1399,121 @@ priority!"
     F-481 role-prompt vehicle; F-497 amps-on list row question to
     TW/AE (mirror rule) at the next safety.md batch; Pi-gated items
     parked (owner travelling, 2026-10-28).
+  - v320 PUSHED (CM, PM verified ls-remote, ls-tree and parent):
+    chore/backlog = c1b0c48334cbd11f338be77f55cc439858428689 (parent
+    4c1622d5, blob 82930fa4, +200/-0). v321 bases on it. v321 consumes
+    held-for-next.txt (frozen by the previous team, sha256
+    2f1d7b42...) in full plus PM addendum 1
+    /tmp/pm-backlog/held-for-v321-add-20261031.txt (sha256
+    b80d96d6...).
+  - TEAM RESPAWN (2026-10-31): the previous team ended when the
+    owner's session restarted (owner, verbatim via team-lead: "you
+    need to respawn the team, it is gone."). All roles respawned fresh
+    from the files; restart briefing
+    /tmp/team-lead-restart-20261031.md. Owner, verbatim via team-lead:
+    "we're back home, Pi is accessible. Still nothing connected to any
+    outputs, any restart is safe." and "TRy to make progress getting
+    the graphics to work, it's been a week now." The travel hold of
+    2026-10-28 is LIFTED; every item parked by it is resumable (US-172
+    boots first). US-172 stays the single top priority.
+  - DISK (CM log 2026-10-31): the Mac is BELOW the owner's 10 GiB stop
+    line (2.3 GiB at 12:06 local per the briefing; 7.2 GiB at 11:12Z
+    and 7.0 GiB at 11:17Z per the CM). No local nix build/run/develop.
+    GC, store deletes and qcow2 compaction stay owner-only; team-lead
+    has asked the owner to free space. Build route while held (CM to
+    the Architect): CI aarch64 + cachix is fine; a build on the Pi is
+    a CHANGE session.
+  - EVIDENCE LOSS (PM finding, 2026-10-31) -> F-507 (P3). The CM
+    copied the surviving /tmp team evidence to
+    /Users/gabriela.bogk/mugge-team-evidence/20261031-tmp-snapshot/
+    (2355 files, SHA256SUMS; plus F383-mutated-trees with its own
+    SHA256SUMS). New team files go under
+    /Users/gabriela.bogk/mugge-team-evidence/live/<role-or-item>/.
+    Lost files are NOT reconstructed; where a lost file matters for an
+    open item, the item says so (US-172 AC2, F-394, F-411).
+  - PR #76 (F-320 D) MERGED (CM, 2026-10-31T11:10:53Z, --merge
+    --match-head-commit f9a27a97, standing consent): main 90aba97e ->
+    c33225c269f7ff3286f5bd1365d540c1b5ba2350 (parents 90aba97e +
+    f9a27a97; PM verified via the public API and ls-remote). 7/7
+    APPROVE at f9a27a97: UX 96c449a6, Architect a019453d, TW 8f179520,
+    QE 099d445a, SecSpec 7bfb8ea1, AE 17373885 ("No veto"), AD
+    3181142f. PR-event CI 40751860957 green (changes, nixos-eval,
+    test-and-build, ci-gate). Effect: every open PR is behind main;
+    F-477 CLOSES (see F-477); the F-320 D post-merge items are under
+    F-320 D. Ledgers that assumed main 90aba97e (QE and others) were
+    told.
+  - PR #75 = DOCS QUEUE ITEM 6 MERGED (CM, 2026-10-28, standing
+    consent, --merge --match-head-commit): main 2e992a01 ->
+    90aba97e043744c69da4db57f5e03e7bae417344 (parents 2e992a01 +
+    51729b0b). Head docs/q6-F465-F467 = 51729b0b (commits 11bbee5f =
+    TW F-465.md r1; 4f1d8e39 = PM F-467 r2; 51729b0b = TW final batch
+    119a8afc with (a) 7e657834 + PM items 1-2 as confirmed in
+    120a1c9d: item 1 = F-487 on the Related line, item 2 = the CI 299
+    line citing QE 54ac4e15). 7/7 at 51729b0b, frozen in
+    /tmp/cm-relay/PR75/frozen/: UX be925a21, SecSpec 2cc06a34, TW
+    398b46e0, AE ad3efc0d, AD 26228942, Architect ca6893a1, QE
+    5bef9c4c. Docs-only, CI-exempt, no failed job. PM authorship COI
+    on the F-467 commit declared. Docs queue item 6 DONE; F-467 file +
+    index row on main. Body r2 681c6559 (TW) applied post-merge (#74
+    -> #72 (d12661e3)): Arch NB1 / QE NB2 CLOSED.
+  - #75 NBs still OPEN: (1) AE #73 NB1 (= v319 US-174 U1 add-on (2),
+    AE 9d413a91): venue-setup.md step 24 "no correction is active" is
+    inaccurate, the filters installed before stay in use; next docs
+    batch (TW/UX). (2) AD L1 -> F-484 add-on. (3) TW: the F-484
+    follow-up (same item) and the UX run-dir NB (stays in US-174c U1
+    add-on (1)). (4) QE NB1 -> F-504 close-out (PM call, see F-504).
+    (5) Architect/worker-3 docs NB: F-467.md cites open_gate at l.768,
+    it is l.708; the claim holds; line-number refresh in the next
+    TW/PM docs batch (PM owns F-467.md).
+  - #73 SCRATCH BRANCHES (CM, 2026-10-28): scratch/pr73-m* DELETED on
+    the remote after the QE confirmed the records (e63be298 +
+    75c8a061). worker-4 held all six heads locally (m4a 9c74473d
+    pinned).
+  - STARVATION GUARD history: 2026-10-28T20:05 PM check NOT
+    merge-ready (F-320 D f9a27a97 no PR; F-341 79 behind, nix commit
+    outstanding; F-439 20efc13c 79 behind; #66 6931c372 79 behind, S2
+    incomplete; cause GitHub/local work plus the late R6a end line
+    F-481, not the no-Pi directive). PO re-decision 2632abf6
+    (2026-10-28): #66 merges LAST after F-341, the F-320 D hunk and
+    F-439; ready-first, only fixed order F-320 D before F-439 (QE and
+    Architect named no other forced order, so ready-first BINDS); no
+    #66 update-branch until the last has merged; next guard
+    2026-10-29T20:00. That guard passed unflagged (team ended); the PM
+    flagged it as OVERDUE to the PO once on 2026-10-31.
+  - PO STARVATION RE-DECISION 2026-10-31:
+    /Users/gabriela.bogk/mugge-team-evidence/live/product-owner/PO-starvation-redecide-20261031.txt,
+    sha256 f6393b6b690841a9... (PM verified, 444; PO single writer).
+    (1) NO SPLIT of #66; the set and end position stay as in 2632abf6;
+    S2 restarts once at the head after the last merge. Why (PO): an
+    earlier #66 merge buys no product value before US-172 and US-173;
+    a split costs a CI round at ~50% red risk (QE d3bf5f5c) plus
+    review time competing with US-172. (2) Order unchanged,
+    ready-first; F-320 D before F-439 is now satisfied. (3) Staffing:
+    F-341 and F-439 rank BELOW US-172; only workers US-172 does not
+    need, GitHub/CI work only; no local nix under the 10 GiB line; no
+    Pi sessions for them while US-172 needs the Pi; if nobody is free
+    they wait, which is not starvation. (4) #66: no update-branch
+    until F-341 and F-439 have merged. (5) NEXT GUARD: when the US-172
+    milestone "graphics works on a test boot" (PO 24c0efd1 F1) is
+    reported, or 2026-11-03T20:00, whichever comes first; the PM flags
+    the chain state then; the PO re-decides staffing and considers the
+    split only with QE input. Route: team-lead (staffing per item 3).
+  - gh (CM): the env GITHUB_TOKEN gives 401; the keyring login works
+    via `env -u GITHUB_TOKEN gh`. CM deviation log cm-log-20261031:
+    team-lead ran git fetch and git show at the restart, before the
+    team existed (read-only; recorded at team-lead's request).
+  - OPEN TRACKING (v321; supersedes v320's line): US-172 R6a (outputs
+    gone from both stores; rebuild route under the disk hold; kit;
+    tryboot); US-172 story text update (TW delta -> worker-1 via CM;
+    PO r2 AC numbering after the Architect's F2/F5/N1 round); US-172
+    AC2 AE ruling (PO 57772dd0); starvation guard next at the US-172
+    F1 milestone or 2026-11-03T20:00 (PO f6393b6b); F-341 CI
+    41196044817 at cc34d3f4 + body r3 + PR (owner worker-2); F-383 S4
+    main merge (now c33225c2) + PR; F-468 P3 draft after F-341 (QE
+    5edc5622); F-439 main merge; #66 last; F-320 D post-merge TW list;
+    F-504 owner + fix; F-441 UART question (batchable now the owner is
+    home); F-481 role-prompt vehicle; F-497 amps-on row question at
+    the next safety.md batch; F-507 evidence home.
 
 ## Reserved IDs
 
@@ -1580,6 +1695,10 @@ filed in this version): F-503, US-183, D-072, T66.
 Next free (v320; supersedes the line above; F-503 and F-504 confirmed
 free on all local and origin refs and the CM relay files at PM read,
 filed in this version): F-505, US-183, D-072, T66.
+Next free (v321; supersedes the line above; F-505 to F-507 confirmed
+free on all local and fetched origin refs and the CM relay files at PM
+read, filed in this version; US-183 still held for the UX story
+decision on the US-152 bundle): F-508, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -3726,6 +3845,36 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       ls-remote), CI 40687367761 (run_e2e=true) in progress. Now
       behind main 2e992a01 (#73). Local cargo counts in worker-3's
       30dda595 item 2: see F-504.
+    - v321 MERGED as PR #76 (2026-10-31, main c33225c2; see the change
+      log). Docs: TW final batch
+      /tmp/cm-relay/F-320D/frozen/tw-f320d-docs-final-e0e12b58.patch-f49b96c9,
+      QE-released test-tier adaptation
+      tw-f320d-docs-final-r2-delta-other.diff-8290c448 (on QE
+      93ffb7cc), AE-released safety delta
+      tw-f320d-docs-final-r2-delta-safety-F320.diff-3d0a78fa; applied
+      as commit 08aadea4 (tree e20d3742 = the TW's). F-477 and AD #70
+      nits (1)/(3): FIXED by this merge. CI 40699383158 at f9a27a97
+      green (run_e2e=true); its one XPASS (test_full_session_api) is
+      the known non-strict F-262 flip (QE), handled in #66 S2.
+    - Q2b leftover risk: AD #76 L1 (3181142f) restates it (unlatch
+      accepted while monitored nodes are absent, then open_gate
+      allowed; mitigated by open_gate needing the convolver). SecSpec
+      #76 NB2 = the same; US-159 G6 "refuse while the trip cause
+      persists" stays open there. No new ID.
+    - US-152 bundle (a)+(b): UX 96c449a6 NB1: until then a web-UI
+      operator sees "Error: watchdog latched: ..." with no unlatch
+      control there; acceptable for supervised sessions only. US-183
+      still free pending the UX story decision.
+    - TW POST-MERGE LIST, added: AD #76 L2 = SecSpec #76 NB1:
+      safety.md Layer 4 "The only way back to the venue gains is an
+      explicit open_gate after the unlatch" overstates the case,
+      because the web-UI audio_mute.py unmute path (F-410) stays until
+      F-439; scope it to GM or cross-ref F-410/F-439 (rows 14/20 are
+      accurate). Re-check at the F-439 merge. LOW wording nit (AD, not
+      pursued before the merge): test docstring + PR body say "Close
+      Gate -> Open Gate", but the gate is already closed after a
+      latch. No new IDs. Architect #76 NB2 = B-GM-CLIPPY (F-482),
+      carried over. TW optional body r4 not pursued (CM).
 - **F-341** signal-gen pre-flight #6 replacement. MEDIUM (AE):
   pre-flight #6 only VERIFIES the -20 dBFS signal-gen cap, which stays
   enforced in code and immutable after start; it would be High if an
@@ -3948,6 +4097,36 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     765723ca). Hard gate before any gate open with amps (see the MERGE
     CHAIN bullet at the top). AE NB c54ab9f2 on F-465 AND F-341 is
     recorded under F-465.
+    - v321 (2026-10-28 to 2026-10-31): nixv check (run.sh 53c73b13 on
+      e15adc4b) ended rc=0 19:23:19Z, results 098748f0 (evals OK,
+      shellcheck clean, pytest 16/16); merge-check 246b1c48. HEAD
+      8e169407 pushed fast-forward 19:26Z = merge 6c5646af (f5224ab3 +
+      main 90aba97e) + the nix commit (pi4audio-rpc
+      writeShellApplication on the system PATH + a flake check running
+      test_pi4audio_rpc.py); tree = e15adc4b. PO 2632abf6 item 4 (the
+      nix commit) MET at 19:26Z, ahead of the 21:30Z ETA. Dispatch
+      40754223514 green on all 4 jobs, but on the pre-#76 base (log
+      /tmp/cm-relay/f341-run-40754223514.log, sha256 460fc52c, PM
+      verified).
+    - MERGE BLOCKER (QE e3e9bbe6 X1 open item 1, frozen
+      qe-F341-4b-X1-ruling-r1-e3e9bbe6; unaffected by cancelled run
+      40554384947): a green final-head CI run must show PASSED, cited
+      in the PR body: (a) the rpc.rs no-nested-object test; (b)
+      test_pi4audio_rpc.py against the built artifact; (c) main.rs
+      "T4". There is no test named "T4"; the CM grep list for r3 names
+      rpc::tests::acks_are_flat_json_objects,
+      tests::process_state_clips_with_the_given_limits (main.rs:1101,
+      the Rust "T4"), the pi4audio-rpc check step (pytest lines, N
+      passed, negative control) and the signal-gen cargo "test
+      result:" total. The QE confirms the (c) id; PM asked.
+    - OWNER (2026-10-31): worker-6 is gone; team-lead spawned worker-2
+      for F-341 in .claude/worktrees/fix-F-341-merge. worker-2 merged
+      main c33225c2 -> cc34d3f4, pushed by the CM by sha to
+      fix/F-341-signal-gen-preflight 11:14Z; dispatch 41196044817 (ETA
+      ~12:00Z). Next: body r3 (worker-2, path + sha256) -> the CM
+      opens the PR -> 7 reviews. Staffing below US-172 (PO f6393b6b
+      item 3). Build warnings seen in the F-341 CI -> F-506 (not fixed
+      in this PR unless the Architect asks).
 
 - **AMPS-ON PRECONDITION** (AE + Architect): "pcm-bridge/level-bridge
   PW nodes don't come back after a PipeWire restart, so metering is
@@ -4364,6 +4543,85 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     deferred display steps are a hard pre-audio gate for the DJ path.
     Owner question to batch with the next physical owner task: is a
     3.3 V USB-serial adapter or Pi Debug Probe at hand (F-441)?
+  - US-172 STATUS (PM, v321, 2026-10-31; supersedes the v313 "R5e
+    designed" line above): R5a TRYBOOT; R5b, R5c and R5d each FAIL-K
+    (early kernel panic). Architect ruling r2
+    /tmp/cm-relay/US-172/frozen/arch-us172-R5d-kernel-config-first-r2-bb45927f
+    (sha256 bb45927f, PM verified), triggered by the owner, verbatim
+    via team-lead: "The kernel has been built with a Pi 4
+    configuration and this isn't the first thing you check?". Finding:
+    the Pi 5 image runs our RT kernel built from bcm2711_defconfig
+    (nixpkgs linux_rpi4 override, kernel-rt.nix; Pi 5 reuse since
+    US-163). NEXT TEST = R6a: R5d exactly, with only the kernel
+    swapped for a bcm2712_defconfig RT build (16K pages). TRYBOOT ->
+    the Pi 4 config is the cause, STOP to the Architect, then R6b
+    (full KMS on the new kernel); K -> ruled out, back to R5e
+    (demoted, not cancelled; may run while the kernel builds, never
+    delays R6a). Risks noted in bb45927f sec 2d (16K pages vs
+    Reaper/jemalloc; RT on bcm2712 unverified; T51/US-163 AC3 PAGESIZE
+    4096 change only at adoption).
+  - R6a steps (i)-(iii) DONE (worker-2, 2026-10-27, report
+    /tmp/cm-relay/US-172/frozen/us172-R6a-build-report-r1.txt-583a7827,
+    PM verified): experiment/US-172-R6a-bcm2712-kernel = 250199bc
+    (parent #63 head 3f28b6c7; pushed, not for merge), option
+    mugge.board.kernel.defconfig, pi5 = bcm2712_defconfig; only the
+    mugge-pi5-deploy kernel drvPath changed. Build ended
+    2026-10-27T15:35:45Z rc 0, reported ~17 h late (F-481).
+  - BLOCKER (2026-10-31): the R6a outputs (toplevel bp7j2r0d, kernel
+    hh3lic79, initrd 7iqvshyi, modules vfx4ad07, dev biad35w4) are no
+    longer in the Mac store (PM check), nor in the Pi store (worker-1
+    OBSERVE, below). A local rebuild is held by the disk stop line;
+    the route (CI aarch64 + cachix, or a build on the Pi under CHANGE)
+    is the Architect's and the CM's call. The R6a kit (steps (iv) nix
+    copy + staging under CHANGE, (v) the tryboot) is still to be
+    written; pins to the QE, AE release.
+  - PI STATE 2026-10-31 (worker-1, OBSERVE OBS-.89-US172-20261031-1,
+    11:12-11:13Z, host key matched, no mutations; frozen
+    /tmp/cm-relay/US-172/frozen/us172-pi5-state-r1-f60aa960.txt,
+    sha256 f60aa960, PM verified): running kernel 6.12.62 PREEMPT_RT
+    from the bcm2711 config (4K pages), not the R6a build; DRM_VC4=m
+    and DRM_V3D=m present but not loaded; every display DT node
+    status=disabled (no overlay applied); config.txt has
+    vc4-kms-v3d-pi5,noaudio + disable-bt-pi5 + os_prefix=gens/<id>/,
+    no tryboot.txt; /dev/dri absent; greetd skipped. Workers: worker-1
+    owns US-172 (checkouts story-US-172-pi5-drm @27e90a0d,
+    exp-US-172-R6a @250199bc); next Pi step only with an
+    Architect-approved plan sha + rollback; no local nix under 10 GiB.
+  - PO AC PROPOSAL r1 RELEASED:
+    /tmp/po-US172/us172-ac-remote-judging-po-r1.md, sha256
+    24c0efd1a403d7d8... (PM verified). F1 HEADLINE MILESTONE "graphics
+    works" (amended by PO 57772dd0, see AC2 below) = AC1 + AC2a + AC11
+    all PASS on ONE boot, reported to the owner as soon as met;
+    AC3-AC10 still gate the story and the PR. F2 AC1: a remote reboot
+    instead of a cold boot (one cold boot later, batched with the AC10
+    owner visit); checks /dev/dri/card* + renderD128, /sys/module/vc4
+    + v3d, live DT v3d/vc4/HDMI status okay, no vc4/v3d probe error or
+    oops in dmesg. F3 (now AC2a): GL/EGL renderer names V3D ("V3D
+    7.1"), the V3D DRI driver mapped in the Mixxx process, no
+    llvmpipe/swrast, no LIBGL_ALWAYS_SOFTWARE, Mixxx 10 min with a
+    deck playing to a null sink, no V3D error/GPU reset/hang; works
+    headless. F4 AC10: the owner only plugs in HDMI (batched physical
+    task); the team checks over SSH (drm connected, a wlr-randr mode,
+    a grim screenshot). F5 NEW AC11: the passing kernel is our
+    PREEMPT_RT build (uname -v shows PREEMPT_RT; D-013); a pass on the
+    cached non-RT kernel or stock Raspberry Pi OS is diagnosis
+    evidence only. AC3-AC9 and the AMPS-ON GATE text unchanged. OPEN:
+    the Architect's ONE objection round on F2 (/sys/module test), F5
+    and N1; QE tooling for F2/F3/F4; full numbering and wording in PO
+    r2 after the Architect's answer.
+  - STORY TEXT UPDATE SCHEDULED (PM, 2026-10-31): US-172.md on
+    story/US-172-pi5-drm (PR #52, draft, head 27e90a0d) still names
+    the 2026-10-25 overlay-order theory, worker-2 and PR #52 as the
+    route. The TW drafts: Status and Starter set rewritten to the
+    actual route (R5a-d, K1-K4, Architect r2 bb45927f, R6a kernel);
+    the PO AC edits (F1, F3, F4 now; F2, F5 final after the Architect
+    round); the lapsed AC1 ride-in note (TW N2). TW base copy
+    /Users/gabriela.bogk/mugge-team-evidence/live/technical-writer/us172-story-r1/US-172.base-27e90a0d.md.
+    Route: TW delta file + sha -> the CM relays to worker-1, who
+    applies it on the branch; the PO releases the AC parts.
+  - F-441 UART question (is a 3.3 V USB-serial adapter or Pi Debug
+    Probe at hand?) is no longer parked: batch it with the next
+    physical owner task (the AC10 HDMI plug or a power pull).
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -4421,6 +4679,26 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   V3D/RT deadlock (F-012/F-017) showed up within minutes under load,
   so 30 minutes of real GL load catches that class. The 11-hour soak
   is not part of this AC; it belongs to a later gig-readiness check.
+  AC2 RULING (PO r1, 2026-10-31):
+  /Users/gabriela.bogk/mugge-team-evidence/live/product-owner/us172-ac2-10vs30-po-ruling-r1.md,
+  sha256
+  57772dd08927457744a2a37c31e553cf9077a18f5a4b4e8540bd7edd740102e7 (PM
+  verified, 444). Answer (b): the Architect's 30-minute run above
+  STAYS as AC2, needed for DONE and the PR but not for the F1
+  milestone; PO r1 F3 does not replace it. F3 (10-min check, with QE
+  O1-O3/O5 and AE 7586d390) becomes a SEPARATE AC2a "hardware-GL smoke
+  check"; F1 milestone = AC1 + AC2a + AC11. QE O6
+  (/sys/kernel/realtime; booted kernel = kernel under test) and N1
+  (default boot of the deployed PR commit) apply to AC2 too. OPEN, AE
+  call: AE 7586d390 S1 rules a null sink for AC2a and allows the
+  production graph only with a separate AE release naming every
+  Mixxx-to-hardware link and its Mult-0 node; AC2 runs through the
+  convolver with the gate closed, so AC2 needs its own AE ruling (or
+  an AE statement that the S1 fallback release covers it) before any
+  AC2 grant. Route PM -> AE. LOST FILE: the frozen copy
+  /tmp/pm-backlog/us172-ac2-architect.txt was deleted by the /tmp
+  cleanup (F-507); the verbatim AC2 text above (pushed in v320,
+  chore/backlog c1b0c483) is the citation basis. Not reconstructed.
   Status UPDATE (CM, worker-2, 2026-10-26; corrects "the owner's cold
   power cycle done" above only in its basis): the cold cycle is
   CONFIRMED by /proc/uptime (boot ~08:44:31Z; see the lane status at
@@ -12587,6 +12865,19 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   12673904. Needs main 2e992a01 merged in, then the PR. QE NB
   (non-blocking): check the CI step timeout headroom for the longer rc
   suite before the PR.
+  v321 S4 main merge: QE run requirements M1-M5 b5b6ac9d (frozen; with
+  the Architect for the conflict ruling). worker-7 local M-run
+  (mrun/run.sh 00c8b0b7, steps 1-4, end marker
+  /private/tmp/w7-F383-step4/mrun/4.done); local unpushed heads
+  02bbc083 (merge of 12673904 + 90aba97e) and 64097aed (R4) in
+  worker-7's worktree (PM saw both exist 2026-10-31). QE 941855f8:
+  step 5 full parent runs DROPPED, replaced by a collect-only node-id
+  diff (no all.done expected); after the post-#76 main merge no local
+  re-run if R-1..R-3 hold, else M1/M2 rerun. Now needs main c33225c2
+  merged in, then the PR. AE release of Architect 82b91d68 still to be
+  cited. Staffing: below US-172 (PO f6393b6b item 3 applies by
+  analogy; team-lead call). worker-7 is not in the respawned team;
+  F-383 S4 needs a new owner (team-lead).
 - **F-384** (Architect; AE confirms the priority; P1; 2026-10-25)
   correction.py step 9 (main b0666c02,
   src/room-correction/room_correction/correction.py:130-143): the
@@ -15679,6 +15970,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   error. Not blocking; not US-163 scope. Owner: Architect.
   Seen again 2026-10-27 (QE, #63 C4 evals): on every pi5 eval. No new
   ID (v314).
+  Seen again 2026-10-28 (F-341 nixv,
+  nix/nixos/boards/pi4/disko.nix:63, on main). No new ID (v321).
 - US-170: Pi 4 allowlist and configurationRevision (AC1); Pi 4 WP ALSA
   rule; drvPath pin removal.
 - **F-375** (SecSpec, LOW; F-318 follow-up, 2026-10-25) Consider
@@ -17732,6 +18025,26 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       c8ddd0ab, 08307f7c, 695e673b. Runs 1-2 carry over (2/20). K3 GO
       to worker-6 after F-383 S4 (CM, 14:03; df 19 GiB). Closure still
       needs 20/20.
+    - v321 K3 r2 = NOT MET (QE/CM 2026-10-28): STOP at run 5, rc=1.
+      Results
+      /tmp/cm-relay/F-468/frozen/F468-K3r2d-results-r1.txt-63e3f443;
+      QE ruling qe-F468-K3r2d-outcome-r1-bd141cab (both PM verified).
+      K1 met (as-run 1fc65a31 / ca430c20, head 76490beb, clean tree),
+      K2 met (no ABORT, df 19G), no VOID ground (max 1-min load 5.65).
+      Run 5 is a valid FAIL with the F-490 signature at
+      test_e2e.py:144 ("recording skipped for a moment"); clean streak
+      4; 2 FAIL in 26 valid full runs (~8%) at low-to-moderate load;
+      both fails end at 18.00 s (~43 s for a pass), in or just after
+      the FIRST capture. Diagnosis conditions D1-D5 go under F-490.
+      CLOSURE now needs D5 40/40 (supersedes "20/20").
+    - P1/P2 probe (diagnosis under F-490): P2 (probe r2 7c54d9b6 +
+      runner 233dea58) ENDED 0/40 glitches, rc=0, results 8370e791. QE
+      P2 ruling r2 5edc5622 (frozen qe-F468-P2-ruling-r2-5edc5622):
+      VALID, INCONCLUSIVE; 0/40 does not count toward D5; P3
+      preconditions P3-a..P3-f set; the P3 draft follows the F-341 nix
+      commit (team-lead; now: after F-341). F-468 stays OPEN in
+      DIAGNOSIS. UX user-impact view ux-F468-notice-impact-c749800b
+      (input only, gates nothing; see F-490).
 - **F-469** HIGH: Pi 5 USBStreamer driver ERR at quantum 256 (PR63 S1
   G6); Live-mode track, outside US-173 (filed 2026-10-27; ID free
   across main, all origin/* and local branches at PM read; full record
@@ -17908,6 +18221,8 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   / all 4 gain nodes / MONITORED_NODES in v314). Vehicle (TW): F-320 D
   docs r2, in the F-320 D PR. No F-477.md or index row; the PM marks
   it fixed here when the F-320 D PR merges.
+  CLOSED (v321): fixed by the F-320 D docs batch (f49b96c9, AE + QE
+  released), merged with PR #76 at main c33225c2 on 2026-10-31.
   - Next free -> F-478.
 - **F-478** LOW while nothing is connected (owner UX for the design;
   amps-on candidate, not a gate yet; UX #70 one-liner; filed
@@ -18010,6 +18325,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   part of the same fix (drop the default or require the env on the Pi;
   Architect picks). AD #74 (3), optional: the SETUP-MANUAL venues-dir
   paragraph could mention the web-UI repo fallback (TW at the fix).
+  v321 add-on (AD #75 L1, AD 26228942; TW at the fix; no new ID):
+  SETUP-MANUAL l.792 calls /etc/pi4audio/venues "the web UI's fallback
+  when PI4AUDIO_VENUES_DIR is unset". The real behaviour (PM verified,
+  venue.py l.101-118 at c607ebac): PI4AUDIO_VENUES_DIR defaults to
+  /etc/pi4audio/venues; if that dir is missing (env unset or pointing
+  at a missing dir) the web UI falls back to the repo's
+  configs/venues; if that is missing too it returns None. Correct the
+  sentence when F-484 is fixed.
 - **F-485** LOW (INFO per SecSpec c995cdb3 INFO-2; pre-existing, not
   #72; owner Architect (GM), AE informed for the P-level; after core
   tech; filed 2026-10-28): YAML gain_db from a venue file is parsed
@@ -18106,6 +18429,39 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   dropout-guard / "recording skipped" / test_e2e.py:144 entry (v317
   l.5486 "sandbox zero-dropouts" is the F-439-era gain matrix). ID
   free at PM read.
+  v321 DIAGNOSIS CONDITIONS (QE bd141cab, from the F-468 K3 r2 STOP):
+  D1 no weakening as a fix (no retry/rerun/xfail/skip/loosened :144,
+  no threshold change without an AE ruling + QE re-ruling); D2
+  instrument the guard trip first (behaviour-neutral logging, passing
+  captures as baseline); D3 a ~40-run loop of
+  test_one_channel_end_to_end alone (K3 start/disk/load rules, CM go,
+  detached + end marker, script and as-run sha); D4 root cause + a
+  check that fails without the fix (a detector unit/browser test, or a
+  harness fix shown from the D2 data); D5 re-qualify with a NEW full
+  test_e2e.py K3 series, 40/40, no carry-over (~30 min). The AE rules
+  on any guard change. Open (QE): harness dropout or detector false
+  positive? The latter would reject a user on an idle machine.
+  PRIORITY (team-lead ruling 2026-10-28, supersedes "below the DJ path
+  and room correction"): room-correction path work (owner priority 3,
+  US-174), per QE bd141cab; normal queue order. Severity stays MEDIUM
+  (PM): a detector false positive is a function blocker, not safety.
+  Owner: was worker-6 (diagnosis, with the Architect; QE = test owner
+  for test_e2e.py and the gate); worker-6 is not in the respawned
+  team, so F-490/F-468 needs a new owner (team-lead). Diagnosis r1
+  ed9bb017 = the D2/D3 plan (QE ack); probe criteria
+  /tmp/cm-relay/F-468/frozen/qe-F468-probe-criteria-r1-7a4d36ef
+  (Q1-Q7; Q7: 0 glitches in 40 = INCONCLUSIVE); probe verdict 72a8e39c
+  (r1 da76c184/73a2b83e VOID, never released; r2 7c54d9b6/233dea58 the
+  set; Architect A1-A6 confirmed, A1 a non-blocking NB). P2 result:
+  see F-468.
+  ADD-ON (UX c749800b item 5; no new ID; PM dup check: F-437 related
+  but different), verbatim: "The glitch {before, after, at} values are
+  dropped before they reach any log, so field reports cannot tell H1,
+  H2 and H3 apart. Keep them in the console or debug log (diagnosis
+  section 1)." UX: under H1/H2 the notice's sentence 2 names the wrong
+  cause (our own page), but the guard fails safe; no text change
+  before P2; an interim wording is in item 3c, for the AE to release
+  only if the cause fix lags.
 - **F-491** MEDIUM (AE; US-174 room correction; blocks only s218 in
   rooms where it trips, NOT home-lab 174d; filed 2026-10-28 on AE
   ruling r1 /tmp/cm-relay/F-383/frozen/ as
@@ -18373,6 +18729,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   e0e12b58). Related (different problem): "Rust tests recompile on
   every CI run" (Architect, P3 CI speed). Dup check: no stale-binary /
   mtime entry. ID free at PM read.
+  v321 CLOSE-OUT item (QE #75 NB1, QE 5bef9c4c; PM decision: not in
+  #75): F-465.md l.91-93 says "298/298 GM tests pass (worker-1
+  973b2865) ... a separate run, so the counts differ". The 298 is
+  UNVERIFIED (local shared ~/.cargo-target run, no raw log); the fresh
+  run at 1eb84dac (log c62472aa) also gives 298, so "a separate run"
+  does not explain the difference. TW wording fix at the F-504
+  close-out: cite c62472aa at 1eb84dac and the F-504 UNVERIFIED
+  status, drop the "separate run" explanation. Why not in #75: QE
+  b58a68c9 (b) ruled the text historical; changing #75 would have
+  voided approvals; core tech first.
 - Low (QE, 2026-10-28; from /tmp/qe-F320D-test-tier-text-r1.md, sha256
   93ffb7cc; no ID): fixtures/backend.py:85 describes the `destructive`
   marker as "tests that modify Pi state"; the service-destructive tier
@@ -18381,7 +18747,58 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   testing-process.md section 3.9 (the stale
   "tests/service-integration/ does not exist yet" note gets its own
   Low line only if TW batch r2 leaves it out).
+  v321 EXTENDED (QE 2026-10-28; still ONE line, no ID; condition on
+  item 1 met, QE asks to file it): (1) testing-process.md section 3.9:
+  the note "tests/service-integration/ does not exist yet" is stale;
+  both the repo-root tests/service-integration/ (jack-self-connect,
+  wp-f318) and src/web-ui/tests/service-integration/ exist; the table
+  row and the shorthand note must name both (TW confirms this is the
+  stale note). (2) fixtures/backend.py:85, as above.
   - Next free -> F-505.
+- **F-505** LOW (owner QE, test owner; QE #76 NB1, QE 099d445a; filed
+  2026-10-28): verbatim "rule R (collected = passed, 0 skipped) for
+  the service-destructive tier is a review-time check only. An
+  all-skip tier run exits 0, so test-e2e.sh step 5 should fail unless
+  collected == passed." Related but different: F-362 / 174d no-re-skip
+  rule, the test-e2e.sh set -e dead code, F-424. Dup check: no
+  all-skip / collected == passed item; ID free on main, all origin/*
+  and /tmp/cm-relay at PM read.
+- **F-506** LOW (owner Architect; tech debt; after core tech;
+  reporters CM and worker-2; filed 2026-10-31): signal-gen builds with
+  rustc warnings (F-341 CI 40754223514, log 460fc52c l.3316-3396):
+  unused import `error` at signal-gen/src/file_playback.rs:15 (`use
+  log::{error, info, warn};`); fields gen_silence, gen_white and
+  gen_pink never read (signal-gen/src/main.rs:166-169, ProcessState;
+  git blame 15a12419, tools/signal-gen era, so they predate F-341;
+  F-341 adds no `use` lines); field `format` never read (same log,
+  l.3396). Not fixed in the F-341 PR unless the Architect asks.
+  Related: F-482 (B-GM-CLIPPY, graph-manager only), the same gap of no
+  warnings/clippy gate in CI. Dup check: no signal-gen warning entry;
+  ID free at PM read.
+- **F-507** MEDIUM (process/infra; owner CM, with team-lead; PM
+  finding; filed 2026-10-31): macOS's daily /tmp cleanup deletes files
+  nobody has opened for about 3 days, and the team kept all relay
+  records, frozen rulings, backlog versions and run evidence under
+  /tmp. After the 2026-10-28 to 10-31 pause it had removed, among
+  others: US-172 frozen-rulings (r4 1816176e and the rest; dir empty),
+  v6 and v7 kits, run4, most of the v8-c96afb79 kit (7 files left);
+  F-394 and F-411 frozen (dirs empty); PR64 and PR67 verdicts;
+  /tmp/pm-backlog/us172-ac2-architect.txt; backlog versions before
+  v309. MEDIUM because cited shas can no longer be checked and an open
+  item can lose its only record. Mitigation in place (CM 2026-10-31):
+  snapshot
+  /Users/gabriela.bogk/mugge-team-evidence/20261031-tmp-snapshot/
+  (SHA256SUMS) and the live dir
+  /Users/gabriela.bogk/mugge-team-evidence/live/<role-or-item>/ for
+  new files. Still open: (a) the role prompts and protocol still name
+  /tmp paths (vehicle with F-481); (b) /tmp items excluded from the
+  snapshot stay at risk (w7-F383-step4 repo trees, w6-f341 harness
+  target). Rule: never reconstruct a lost file; cite only sha-checked
+  files; where a lost file matters, the item says so (US-172 AC2;
+  F-394 and F-411: their frozen citations are now unverifiable, the
+  backlog text is the record). Dup check: no /tmp cleanup or
+  evidence-retention entry; ID free at PM read.
+  - Next free -> F-508.
 
 ## Open PRs (2026-10-24, per CM)
 
