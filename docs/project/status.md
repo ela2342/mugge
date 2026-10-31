@@ -172,8 +172,9 @@ yet in safety.md (rules 9-12), the stricter rule applies (AD).
    CHN-50P amp channels stay OFF. This rule relies on rule 1 (gate closed
    before any venue switch). The CHN-50P rig needs its 200 Hz filter files
    verified (F-321, F-322; AE) [Rule 10].
-5. A watchdog unlatch restores fixed gains instantly, even if the gate
-   was closed (F-320 D). Order: amps off, headphones off and IEMs out,
+5. A watchdog unlatch writes no Mult, and Open Gate is refused while the
+   watchdog is latched (F-320 D, fixed). After a latch, the order is:
+   amps off, headphones off and IEMs out,
    then unlatch (GM RPC `watchdog_unlatch` via SSH or a CM CHANGE
    session; the web UI has no unlatch control until US-159 U2), then Close
    Gate and check the venue, then pre-flight #10, then amps on, then Open
@@ -447,7 +448,7 @@ connected).
 
 | ID | Severity | Summary |
 |----|----------|---------|
-| **F-320** | High | Gate can read CLOSED while audio is live (watchdog unlatch, GM restart, UI UNMUTE). D amended: unlatch writes a hardcoded gain table past the gate (architect, AE High). |
+| **F-320** | High | Gate can read CLOSED while audio is live (watchdog unlatch, GM restart, UI UNMUTE). D fixed: unlatch writes no Mult, and open_gate is refused while latched (2026-10-27); E, F, G open. |
 | **F-321** | High | Venue coefficients not enforced; dirac on a fresh image; shared filenames across venues. |
 | **F-322** | High | No per-speaker power/excursion limit on runtime gain (7 W CHN-50P can get 450 W). |
 | **F-323** | High (readiness) | No vocal-mic capture in Live mode. Fix: US-158. |

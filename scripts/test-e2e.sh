@@ -3,7 +3,9 @@
 #
 # Starts the full local-demo stack (PipeWire + GM + signal-gen + pcm-bridge +
 # level-bridge + web UI) with PI_AUDIO_MOCK=0, waits for health, runs the
-# E2E test suite (src/web-ui/tests/e2e/), and tears down on exit.
+# service-integration and E2E suites (src/web-ui/tests/service-integration/,
+# src/web-ui/tests/e2e/), then restarts the stack for the destructive suite
+# (src/web-ui/tests/service-destructive/), and tears down on exit.
 #
 # Only physical audio hardware is absent — everything else is real.
 #
@@ -56,6 +58,8 @@ trap cleanup EXIT INT TERM
 
 # ---- 1. Start local-demo stack ----
 
+# Steps 1-2 run again before step 5, on a fresh stack.
+start_stack() {
 START_LOG=$(mktemp /tmp/test-e2e-start-XXXXXX.log)
 # Test runs always get the known tone stimulus, never the owner's mp3, so
 # every run (CI or dev) measures the same signal (F-394 Q1-1).
@@ -137,6 +141,9 @@ fi
 
 # Allow services to stabilize (GM reconciler, level-bridges)
 sleep 2
+}
+
+start_stack
 
 # ---- 3. Run service-integration tests (no browser) ----
 
@@ -158,13 +165,39 @@ log "Running browser E2E tests..."
 E2E_EXIT=0
 "$E2E_PYTHON" -m pytest tests/e2e/ -v -rs --tb=short "$@" || E2E_EXIT=$?
 
-# Report both results — fail if either failed.
+# ---- 5. Run destructive service tests on a fresh stack ----
+
+# These remove monitored PipeWire nodes (F-320 D), so they get their own
+# stack: stop the one steps 3-4 used, start a new one, stop it on exit.
+log "Restarting local-demo stack for destructive service tests..."
+cd "$REPO_DIR"
+"$BASH_BIN" "$LOCAL_DEMO" stop 2>/dev/null || true
+rm -f "$START_LOG"
+start_stack
+
+log "Running destructive service tests..."
+cd "$REPO_DIR/src/web-ui"
+SD_LOG_START=$(wc -c <"$START_LOG")
+SD_EXIT=0
+# The convolver fixture copies the stack's own 30-convolver.conf. Same path
+# as local-demo's web UI uses; XDG_CONFIG_HOME is the stack's, from env.
+PI4AUDIO_PW_CONF_DIR="$XDG_CONFIG_HOME/pipewire/pipewire.conf.d" \
+    "$E2E_PYTHON" -m pytest tests/service-destructive/ -v -rs --tb=short --destructive "$@" || SD_EXIT=$?
+
+log "Stack log during destructive service tests:"
+tail -c +"$((SD_LOG_START + 1))" "$START_LOG" | sed 's/^/[stack] /'
+log "End of stack log."
+
+# Report all results — fail if any failed.
 if [ $SI_EXIT -ne 0 ]; then
     log_err "Service-integration tests failed (exit $SI_EXIT)"
 fi
 if [ $E2E_EXIT -ne 0 ]; then
     log_err "Browser E2E tests failed (exit $E2E_EXIT)"
 fi
-if [ $SI_EXIT -ne 0 ] || [ $E2E_EXIT -ne 0 ]; then
+if [ $SD_EXIT -ne 0 ]; then
+    log_err "Destructive service tests failed (exit $SD_EXIT)"
+fi
+if [ $SI_EXIT -ne 0 ] || [ $E2E_EXIT -ne 0 ] || [ $SD_EXIT -ne 0 ]; then
     exit 1
 fi

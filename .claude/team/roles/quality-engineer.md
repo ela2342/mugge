@@ -209,6 +209,12 @@ defect description.
 
     Service integration tests (direct backend connections, no browser) belong
     in `tests/service-integration/`. These are valuable but they are NOT E2E.
+    Tests that break the stack on purpose (node removal, watchdog trips)
+    belong in `src/web-ui/tests/service-destructive/`, not in
+    `tests/service-integration/`. They run only in `scripts/test-e2e.sh`
+    step 5 on their own stack. QE accepts that tier's evidence only as
+    collected = passed with 0 skipped and 0 error (a missing
+    `--destructive` skips silently).
     See `docs/project/testing-process.md` Section 3.9 for the binding
     definition and directory structure.
 
