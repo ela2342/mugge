@@ -1,30 +1,19 @@
-# Release Pipeline for mugge
+# US-172 R6a' build-only workflow (experiment branch, NEVER merge)
 #
-# Builds the aarch64 SD card image and creates a GitHub release with
-# the compressed image as a downloadable artifact.
+# Replaces the release pipeline on experiment/US-172-R6a-bcm2712-kernel
+# only. workflow_dispatch needs a workflow file that exists on main, so
+# this reuses release.yml's name; the dispatch runs this branch's copy.
 #
-# Triggers:
-#   Tag push matching v* (e.g., v2026.04.05, v0.1.0)
-#   Manual workflow_dispatch on any branch
+# It builds the Pi 5 deploy toplevel (bcm2712_defconfig, 16K pages, RT
+# kernel) on the native ARM runner and pushes every built path to the
+# mugge cachix, so the Pi can substitute it (Architect restart reading
+# r1 ee7e28f4, section 5 route C). No release, no artifact upload.
 #
-# The SD image build is identical to CI T3 — same runner, same Nix
-# expression, same Cachix cache.  The release step adds artifact
-# upload and checksum generation.
-#
-# IMPORTANT: Tags MUST only be pushed to commits that have passing CI
-# (T0+T1+T2+T3 green on the PR that merged the commit).  This workflow
-# does NOT re-run tests — it trusts that CI already validated the
-# tagged commit.  Pushing a tag to an untested commit will produce an
-# image from unverified code.  The verify-ci job below is a safety net
-# that checks the commit's CI status, but the primary gate is the PR
-# merge process (Rule 13 + CI green).
+# Dispatch: gh workflow run release.yml --ref experiment/US-172-R6a-bcm2712-kernel
 
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 concurrency:
@@ -32,52 +21,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # -----------------------------------------------------------
-  # Pre-flight: verify the tagged commit has passing CI
-  # Fast check via GitHub API — fails the release if CI never
-  # ran or failed on this commit.  Only runs for tag pushes.
-  # -----------------------------------------------------------
-  verify-ci:
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Check CI status on tagged commit
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          sha="${{ github.sha }}"
-          echo "Checking CI status for commit $sha"
-
-          # Query combined commit status + check runs
-          state=$(gh api "repos/${{ github.repository }}/commits/$sha/status" \
-            --jq '.state')
-          echo "Combined commit status: $state"
-
-          if [ "$state" = "failure" ] || [ "$state" = "error" ]; then
-            echo "::error::Tagged commit $sha has failing CI status: $state"
-            echo "Tags must only be pushed to commits with passing CI."
-            exit 1
-          fi
-
-          if [ "$state" = "pending" ]; then
-            echo "::warning::CI status is pending for $sha — CI may not have completed yet."
-            echo "Proceeding, but verify CI passed before distributing the image."
-          fi
-
-          echo "CI status: $state"
-
-  # -----------------------------------------------------------
-  # Build SD image and create release / upload artifact
-  # -----------------------------------------------------------
-  build-and-release:
+  build-pi5-toplevel:
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 180
-    needs: [verify-ci]
-    if: ${{ !cancelled() && (needs.verify-ci.result == 'success' || needs.verify-ci.result == 'skipped') }}
+    # Kernel compile on 4 vCPU; GitHub-hosted jobs stop at 6 h anyway.
+    timeout-minutes: 300
     permissions:
-      contents: write
+      contents: read
     steps:
+      - name: Free runner disk
+        run: |
+          df -h /
+          # Preinstalled toolchains we never use; the kernel build plus
+          # closure does not fit in the default free space.
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+            /opt/hostedtoolcache /usr/local/share/boost /usr/local/.ghcup \
+            /usr/share/swift /usr/local/share/powershell || true
+          sudo docker image prune --all --force > /dev/null 2>&1 || true
+          df -h /
+
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6 (= v6.1.0)
 
       - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b  # v31 = upstream master HEAD on 2026-10-24 (2 commits after v31.11.2; ships Nix 2.35.4)
@@ -94,77 +55,39 @@ jobs:
           name: mugge
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
-      - name: Build aarch64 SD card image
-        run: cachix watch-exec mugge -- nix build .#images.sd-card --print-build-logs
-
-      - name: Prepare release artifacts
-        id: artifacts
+      - name: Build Pi 5 deploy toplevel
         run: |
-          mapfile -t images < <(find result/ -name '*.raw.zst' 2>/dev/null)
+          echo "commit ${GITHUB_SHA}"
+          echo "START $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          cachix watch-exec mugge -- nix build --print-build-logs \
+            --print-out-paths --out-link result-toplevel \
+            .#nixosConfigurations.mugge-pi5-deploy.config.system.build.toplevel
+          echo "END $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          df -h /
 
-          if [ "${#images[@]}" -eq 0 ]; then
-            # Fall back to uncompressed .raw
-            mapfile -t images < <(find result/ -name '*.raw' 2>/dev/null)
-          fi
+      - name: Build kernel dev output (built .config)
+        # Same derivation as the kernel above, so this only fetches/links
+        # the -dev output; pushed to cachix for the desk check.
+        run: |
+          cachix watch-exec mugge -- nix build --print-out-paths \
+            --out-link result-kernel-dev \
+            .#nixosConfigurations.mugge-pi5-deploy.config.boot.kernelPackages.kernel.dev
 
-          if [ "${#images[@]}" -eq 0 ]; then
-            echo "::error::No image file found in result/"
-            ls -lhR result/
-            exit 1
-          fi
-
-          if [ "${#images[@]}" -gt 1 ]; then
-            echo "::error::Expected exactly one image file, found ${#images[@]}:"
-            printf '  %s\n' "${images[@]}"
-            exit 1
-          fi
-
-          img="${images[0]}"
-          filename=$(basename "$img")
-          size=$(du -h "$img" | cut -f1)
-          sha256=$(sha256sum "$img" | cut -d' ' -f1)
-          tag="${GITHUB_REF_NAME:-manual-$(date +%Y%m%d-%H%M%S)}"
-          sha="${GITHUB_SHA:0:7}"
-
-          echo "img=$img" >> "$GITHUB_OUTPUT"
-          echo "filename=$filename" >> "$GITHUB_OUTPUT"
-          echo "size=$size" >> "$GITHUB_OUTPUT"
-          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
-
-          echo "Image: $filename ($size)"
-          echo "SHA-256: $sha256"
-
-      - name: Create GitHub release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2 (= v2.6.2)
-        with:
-          files: ${{ steps.artifacts.outputs.img }}
-          fail_on_unmatched_files: true
-          generate_release_notes: true
-          body: |
-            ## SD Card Image
-
-            | Field | Value |
-            |-------|-------|
-            | Image | `${{ steps.artifacts.outputs.filename }}` |
-            | Compressed size | ${{ steps.artifacts.outputs.size }} |
-            | SHA-256 | `${{ steps.artifacts.outputs.sha256 }}` |
-            | Tag | `${{ steps.artifacts.outputs.tag }}` |
-            | Commit | `${{ steps.artifacts.outputs.sha }}` |
-
-            ### Flash to SD card
-
-            ```bash
-            zstd -d ${{ steps.artifacts.outputs.filename }} -o mugge.img
-            sudo dd if=mugge.img of=/dev/sdX bs=4M status=progress
-            ```
-
-      - name: Upload image as workflow artifact
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4 (= v4.6.2)
-        with:
-          name: sd-card-image
-          path: ${{ steps.artifacts.outputs.img }}
-          retention-days: 7
+      - name: Report out paths and kernel config
+        run: |
+          top=$(readlink -f result-toplevel)
+          echo "toplevel: $top"
+          echo "drvPath:  $(nix path-info --derivation .#nixosConfigurations.mugge-pi5-deploy.config.system.build.toplevel)"
+          echo "kernel:   $(readlink -f "$top/kernel")"
+          echo "initrd:   $(readlink -f "$top/initrd")"
+          echo "modules:  $(readlink -f "$top/kernel-modules")"
+          kdir=$(dirname "$(readlink -f "$top/kernel")")
+          echo "dtbs:     $kdir/dtbs"
+          echo "closure size: $(nix path-info -S -h "$top" | awk '{print $2, $3}')"
+          cfg=$(readlink -f result-kernel-dev)/lib/modules/*/build/.config
+          grep -E '^(# )?CONFIG_(LOCALVERSION|PREEMPT_RT|EXPERT|ARM64_(4K|16K)_PAGES|ARM64_VA_BITS|DRM_V3D|DRM_VC4)[ =]' $cfg
+          for want in CONFIG_ARM64_16K_PAGES=y CONFIG_PREEMPT_RT=y CONFIG_DRM_VC4=m CONFIG_DRM_V3D=m; do
+            grep -qx "$want" $cfg || { echo "::error::missing $want"; exit 1; }
+          done
+          ls "$kdir/dtbs/broadcom/" | grep bcm2712
+          ls "$kdir/dtbs/overlays/" | grep -E 'vc4-kms-v3d-pi5|disable-bt-pi5'
