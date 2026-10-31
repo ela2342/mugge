@@ -31,25 +31,28 @@
 # first 8 characters. .complete holds the full <id>.
 #
 # Layout L1s (US-172, architect ruling 04d8b687): the firmware skips any
-# file whose path is longer than 48 characters. Under the old
-# gens/<id>/ layout the overlay paths were 51-67 characters, so no
-# dtoverlay= took effect. The longest path the firmware opens under
-# g/<id8>/ is g/<id8>/overlays/vc4-kms-v3d-pi5.dtbo (40); board-guard
-# asserts <= 48 for the whole set.
+# file whose path is too long. Under the old gens/<id>/ layout the
+# overlay paths were 51-67 characters, so no dtoverlay= took effect. Two
+# path classes have separate limits (KERNEL_CLASS_MAX, OVERLAY_CLASS_MAX
+# below). board-guard asserts them on the rendered config.txt, and the
+# hook asserts them again on the files it wrote, before the pointer.
 #
-# Write sequence (architect ruling):
+# Write sequence (architect rulings 04d8b687, 2b485056, 63e41531; all in
+# prune-gens.nix):
 #   1. Build the generation in g/<id8>.tmp, fsync, rename to g/<id8>,
 #      then write .complete (via .complete.new and a rename). A directory
 #      without .complete is rebuilt on the next run. A .complete that
 #      names another <id> is an 8-character id collision: the hook fails
 #      before config.txt is written.
-#   2. Check that g/<id8>/.complete names <id>, then write config.txt.new,
-#      fsync, rename over config.txt, fsync the FAT root directory.
-#   3. Only then prune (prune-gens.nix): keeps new, previous, booted and
-#      the newest other present generation, so >=2 whenever >=2 exist
-#      (AC2a). Remove all others and any stale .tmp directories. A pruned
-#      generation is never recreated. The old gens/<id>/ directories are
-#      removed unless previous or booted, and gens/ once it is empty.
+#   2. Check that g/<id8>/.complete names <id> and that every file the
+#      firmware opens exists within its class limit, then write
+#      config.txt.new, fsync, rename over config.txt, fsync the FAT root.
+#   3. Only then prune, and only if the previous os_prefix= is known:
+#      keeps new, previous, booted, chosen (the prefix the firmware booted
+#      from) and the newest other present generation, so >=2 whenever
+#      >=2 exist (AC2a). A pruned generation is never recreated. The old
+#      gens/<id>/ directories stay until two g/ generations exist and
+#      previous, booted and chosen are all known.
 #
 # Residual risk (accepted): vfat has no atomic rename guarantee. A power
 # loss during step 2 can leave config.txt missing or truncated, and the
@@ -63,8 +66,8 @@
 # (mugge.bootstrap.minimal) has no desktop and gets no vc4-kms overlay.
 #
 # nixos-install (chroot, no /run/booted-system): the generation install and
-# the pointer write run as always; only the "keep the booted generation"
-# rule has nothing to keep. A fresh install has one generation.
+# the pointer write run as always. With no previous config.txt nothing is
+# pruned; with no booted system no gens/ directory is removed.
 #
 # Device tree: the firmware applies the dtoverlay= lines below to the DTB
 # it loads, from g/<id8>/overlays/. NixOS does not merge overlays on the
@@ -78,10 +81,31 @@ let
   # the name newer firmware uses for D0.
   pi5Dtbs = [ "bcm2712-rpi-5-b.dtb" "bcm2712d0-rpi-5-b.dtb" "bcm2712-d-rpi-5-b.dtb" ];
 
-  # Length of <id8>, the generation directory name (layout L1s).
+  # Layout L1s (04d8b687): the generation directory is <container><id8>/.
+  # Both are parameters (architect a8f9d760, 63e41531 B); every place that
+  # needs them interpolates these two values.
   idLen = 8;
+  pi5Container = "g/";
 
-  pruneGens = import ./prune-gens.nix { inherit lib pkgs idLen; };
+  # Firmware path class limits (US-172 R1), inclusive (architect 94817076).
+  # A path is the os_prefix value plus the file name, as the firmware
+  # opens it.
+  # Kernel class: kernel, initramfs, cmdline and pi5Dtbs. 48: DTBs and
+  # kernel loaded at that length (architect 56271517, f0750f9b E2).
+  KERNEL_CLASS_MAX = 48;
+  # Overlay class: overlays/README, overlay_map.dtb, hat_map.dtb and every
+  # dtoverlay= .dtbo. 31: the longest path proven APPLIED,
+  # t/overlays/vc4-kms-v3d-pi5.dtbo (architect ead362c2, 56271517). The
+  # L1s paths are up to 40, so the board-guard and the hook fail on
+  # purpose until an architect confirmation ruling raises this to 40.
+  OVERLAY_CLASS_MAX = 31;
+
+  pruneGens = import ./prune-gens.nix {
+    inherit lib pkgs idLen KERNEL_CLASS_MAX OVERLAY_CLASS_MAX;
+    container = pi5Container;
+    dtbs = pi5Dtbs;
+    configTemplate = configTxt "@ID@";
+  };
 
   # The position of os_prefix= is not significant for overlays: R5s-b
   # applied them with os_prefix= last (architect ead362c2, 7f064c75). The
@@ -109,85 +133,15 @@ let
     kernel=Image
     initramfs initrd followkernel
     cmdline=cmdline.txt
-    os_prefix=g/${id}/
+    os_prefix=${pi5Container}${id}/
   '';
 
+  # The whole install (generation, pointer, prune) is one script, so the
+  # pi5-prune-gens check runs exactly this code offline.
   installHook = pkgs.writeShellScript "install-pi5-bootloader" ''
     set -euo pipefail
-    export PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.util-linux pkgs.gnused pkgs.findutils ]}
-
-    top="$1"
-    fw=/boot/firmware
-
-    die() { echo "install-pi5-bootloader: $*" >&2; exit 1; }
-
-    # Never write the generation tree into the root filesystem by mistake.
-    # Inside the nixos-install chroot the target's /mnt/boot/firmware
-    # appears as /boot/firmware, so the same check covers the install.
-    fstype=$(findmnt -n -o FSTYPE --mountpoint "$fw" || true)
-    [ "$fstype" = vfat ] || die "$fw is not a mounted vfat filesystem (got '$fstype')"
-
-    toplevel=$(readlink -f "$top")
-    id=$(basename "$toplevel" | cut -c1-32)
-    case "$id" in
-      *[!0-9a-z]*) die "unexpected toplevel id '$id'" ;;
-      ${lib.concatStrings (lib.genList (_: "?") 32)}) ;;
-      *) die "unexpected toplevel id '$id'" ;;
-    esac
-    id8=$(echo "$id" | cut -c1-${toString idLen})
-    gens="$fw/g"
-    gen="$gens/$id8"
-    kdir=$(dirname "$(readlink -f "$toplevel/kernel")")
-
-    mkdir -p "$gens"
-
-    # 1. Generation directory. An existing one is reused only if its
-    # .complete names this <id>; another <id> is an <id8> collision.
-    if [ -e "$gen/.complete" ]; then
-      have=$(cat "$gen/.complete")
-      [ "$have" = "$id" ] || die "$gen/.complete names '$have', not $id (id8 collision); config.txt not changed"
-    else
-      rm -rf "$gen.tmp" "$gen"
-      mkdir -p "$gen.tmp"
-      cp -L --no-preserve=mode "$toplevel/kernel" "$gen.tmp/Image"
-      cp -L --no-preserve=mode "$toplevel/initrd" "$gen.tmp/initrd"
-      echo "init=$toplevel/init $(cat "$toplevel/kernel-params")" > "$gen.tmp/cmdline.txt"
-      for dtb in ${lib.escapeShellArgs pi5Dtbs}; do
-        cp -L --no-preserve=mode "$kdir/dtbs/broadcom/$dtb" "$gen.tmp/$dtb"
-      done
-      cp -rL --no-preserve=mode "$kdir/dtbs/overlays" "$gen.tmp/overlays"
-      # The firmware only uses a prefixed overlays/ if it has a README.
-      echo "Overlays for NixOS generation $toplevel" > "$gen.tmp/overlays/README"
-      sync -f "$gen.tmp"
-      mv "$gen.tmp" "$gen"
-      echo "$id" > "$gen/.complete.new"
-      sync "$gen/.complete.new"
-      mv "$gen/.complete.new" "$gen/.complete"
-      sync "$gen/.complete" "$gens"
-    fi
-
-    # 2. Pointer. Never point at an incomplete generation.
-    [ "$(cat "$gen/.complete" 2>/dev/null)" = "$id" ] || die "$gen is incomplete; config.txt not changed"
-    # The previous os_prefix= value as written (g/<id8>/, or gens/<id>/
-    # from a generation before L1s); prune-gens.nix parses it.
-    prev=""
-    if [ -f "$fw/config.txt" ]; then
-      prev=$(sed -n 's|^os_prefix=||p' "$fw/config.txt" | head -n 1)
-    fi
-    cat > "$fw/config.txt.new" <<'EOF'
-    ${configTxt "@ID@"}
-    EOF
-    sed -i "s|@ID@|$id8|" "$fw/config.txt.new"
-    sync "$fw/config.txt.new"
-    mv -f "$fw/config.txt.new" "$fw/config.txt"
-    sync "$fw"
-
-    # 3. Prune, then rewrite MAP.txt.
-    booted=""
-    if [ -e /run/booted-system ]; then
-      booted=$(basename "$(readlink -f /run/booted-system)" | cut -c1-32)
-    fi
-    ${pruneGens} "$fw" /nix/var/nix/profiles "$id" "$prev" "$booted"
+    exec ${pruneGens} /boot/firmware "$1" ${pruneGens.templateFile} \
+      /nix/var/nix/profiles /run/booted-system /proc/device-tree/chosen/os_prefix
   '';
 in
 {
@@ -199,9 +153,12 @@ in
   boot.loader.generic-extlinux-compatible.enable = lib.mkForce false;
   # Exposed for board-guard; the hook replaces @ID@ with <id8>.
   system.build.pi5ConfigTxt = configTxt "@ID@";
-  # Exposed for board-guard's path-length check (US-172 R1).
+  # Exposed for board-guard's path class checks (US-172 R1).
   system.build.pi5Dtbs = pi5Dtbs;
   system.build.pi5IdLen = idLen;
+  system.build.pi5Container = pi5Container;
+  system.build.pi5KernelClassMax = KERNEL_CLASS_MAX;
+  system.build.pi5OverlayClassMax = OVERLAY_CLASS_MAX;
   # Exposed for board-guard and the pi5-prune-gens check (same script as
   # the hook runs).
   system.build.pi5PruneGens = pruneGens;

@@ -21,11 +21,13 @@ let
     if ok then "PASS ${conf}: ${name}"
     else throw "board-guard: ${conf}: ${name} FAILED";
 
-  # The hook text calls the exact store path the pi5-prune-gens check runs.
-  # Context is dropped only for the string comparison.
-  hookRunsPrune = c: lib.hasInfix
-    (builtins.unsafeDiscardStringContext "${c.system.build.pi5PruneGens} ")
-    (builtins.unsafeDiscardStringContext c.boot.loader.external.installHook.text);
+  # The hook text calls the exact store path the pi5-prune-gens check runs,
+  # with the rendered config template. Context is dropped only for the
+  # string comparison.
+  hookRunsPrune = c: let s = c.system.build.pi5PruneGens; in lib.hasInfix
+    (builtins.unsafeDiscardStringContext "${s} /boot/firmware \"$1\" ${s.templateFile} ")
+    (builtins.unsafeDiscardStringContext c.boot.loader.external.installHook.text)
+    && s.configTemplate == configTxt c;
   hasNoauto = c: builtins.elem "noauto" c.fileSystems."/boot/firmware".options;
   hasUs156Route = c: c.networking.interfaces ? end0
     && c.networking.interfaces.end0.ipv4.routes != [ ];
@@ -49,35 +51,73 @@ let
   ssh = c: c.services.openssh.settings;
   rootKeys = c: c.users.users.root.openssh.authorizedKeys.keys;
   configTxt = c: c.system.build.pi5ConfigTxt;
-  txtLines = c: lib.splitString "\n" (configTxt c);
+  # Text predicates take the rendered config.txt (with @ID@), so the
+  # negative cases below can feed them altered texts.
+  lines = t: lib.splitString "\n" t;
+  txtLines = c: lines (configTxt c);
   hasVc4 = c: lib.hasInfix "dtoverlay=vc4-kms-v3d-pi5" (configTxt c);
-  lineIdx = c: re: lib.lists.findFirstIndex (l: builtins.match re l != null) null (txtLines c);
-  # US-172 R1 (architect ruling 04d8b687): the firmware skips any file
-  # whose path is longer than 48 characters. Every path it opens, built
-  # from the rendered config.txt with @ID@ at its real length (<id8>):
-  # kernel, initramfs, cmdline, the DTBs, overlays/README, the overlay and
-  # HAT maps, and every dtoverlay= .dtbo.
-  txtValues = c: re: lib.concatMap (l: let m = builtins.match re l; in
-    if m == null then [ ] else m) (txtLines c);
-  txtValue = c: re: let v = txtValues c re; in
+  lineIdx = t: re: lib.lists.findFirstIndex (l: builtins.match re l != null) null (lines t);
+  # US-172 R1 (architect rulings 04d8b687, 56271517, 94817076): the
+  # firmware skips any file whose path is too long. Every path it opens,
+  # built from the rendered config.txt with @ID@ at its real length
+  # (<id8>), in two classes with inclusive limits (bootloader.nix).
+  txtValues = t: re: lib.concatMap (l: let m = builtins.match re l; in
+    if m == null then [ ] else m) (lines t);
+  txtValue = t: re: let v = txtValues t re; in
     if builtins.length v == 1 then builtins.head v else null;
-  fwPaths = c: let
-    prefix = lib.replaceStrings [ "@ID@" ]
-      [ (lib.concatStrings (lib.genList (_: "x") c.system.build.pi5IdLen)) ]
-      (txtValue c "os_prefix=(.*)");
-    files = [ (txtValue c "kernel=(.*)") (txtValue c "initramfs ([^ ]+) followkernel")
-      (txtValue c "cmdline=(.*)") ];
-  in map (f: prefix + f) (files ++ c.system.build.pi5Dtbs
-    ++ [ "overlays/README" "overlays/overlay_map.dtb" "overlays/hat_map.dtb" ]
-    ++ map (o: "overlays/${o}.dtbo") (txtValues c "dtoverlay=([^,]*).*"));
-  fwPathsShort = c: txtValue c "os_prefix=(.*)" != null
-    && lib.all (v: v != null) [ (txtValue c "kernel=(.*)") (txtValue c "initramfs ([^ ]+) followkernel") (txtValue c "cmdline=(.*)") ]
-    && txtValues c "dtoverlay=([^,]*).*" != [ ]
-    && lib.all (p: builtins.stringLength p <= 48) (fwPaths c);
-  # US-172: dtparam=audio=off sets the vc4 overlay's parameter, so it
-  # must directly follow that overlay line.
-  audioOffAfterVc4 = c: let i = lineIdx c "dtoverlay=vc4-kms-v3d-pi5,noaudio"; in
-    i != null && builtins.elemAt (txtLines c) (i + 1) == "dtparam=audio=off";
+  osFiles = t: [ (txtValue t "kernel=(.*)") (txtValue t "initramfs ([^ ]+) followkernel")
+    (txtValue t "cmdline=(.*)") ];
+  dtoverlays = t: txtValues t "dtoverlay=([^,]*).*";
+  # The prefix the firmware sees: <container><id8>/.
+  fwPrefix = c: t: let v = txtValue t "os_prefix=(.*)"; b = c.system.build; in
+    if v == "${b.pi5Container}@ID@/"
+    then lib.replaceStrings [ "@ID@" ] [ (lib.concatStrings (lib.genList (_: "x") b.pi5IdLen)) ] v
+    else null;
+  kernelPaths = c: t: map (f: fwPrefix c t + f) (osFiles t ++ c.system.build.pi5Dtbs);
+  overlayPaths = c: t: map (f: fwPrefix c t + "overlays/" + f)
+    ([ "README" "overlay_map.dtb" "hat_map.dtb" ] ++ map (o: "${o}.dtbo") (dtoverlays t));
+  within = max: p: builtins.stringLength p <= max;
+  wellFormed = c: t: fwPrefix c t != null && lib.all (v: v != null) (osFiles t) && dtoverlays t != [ ];
+  kernelFits = c: t: wellFormed c t && lib.all (within c.system.build.pi5KernelClassMax) (kernelPaths c t);
+  overlayFits = c: t: wellFormed c t && lib.all (within c.system.build.pi5OverlayClassMax) (overlayPaths c t);
+  # US-172 (AE 1a3addf3 B1): HDMI audio off on the vc4 line, and
+  # dtparam=audio=off, which sets the vc4 overlay's parameter, directly
+  # after that line.
+  vc4Line = "dtoverlay=vc4-kms-v3d-pi5,noaudio";
+  vc4Noaudio = t: builtins.elem vc4Line (lines t);
+  audioOff = t: builtins.elem "dtparam=audio=off" (lines t);
+  audioOffAfterVc4 = t: let i = lineIdx t (lib.escapeRegex vc4Line); in
+    i != null && i + 1 < builtins.length (lines t) && builtins.elemAt (lines t) (i + 1) == "dtparam=audio=off";
+
+  # Negative cases: each alters the real rendered text in one way, and
+  # the predicate must reject it (QE 74504b2f, 3f80f141, d272764d). Each
+  # alteration must change the text, or the case is void.
+  altered = t: from: to: let r = lib.replaceStrings [ from ] [ to ] t; in
+    if r == t then throw "board-guard: negative case alters nothing ('${from}')" else r;
+  filler = n: lib.concatStrings (lib.genList (_: "k") n);
+  prefixLen = c: builtins.stringLength c.system.build.pi5Container + c.system.build.pi5IdLen + 1;
+  # A kernel= name whose path is n characters.
+  kernelAt = c: n: altered (configTxt c) "\nkernel=Image\n" "\nkernel=${filler (n - prefixLen c)}\n";
+  # An extra dtoverlay= whose .dtbo path is n characters.
+  overlayName = c: n: filler (n - prefixLen c - builtins.stringLength "overlays/" - builtins.stringLength ".dtbo");
+  overlayAt = c: n: configTxt c + "dtoverlay=${overlayName c n}\n";
+  overlayPath = c: n: fwPrefix c (overlayAt c n) + "overlays/${overlayName c n}.dtbo";
+  negatives = c: let t = configTxt c; b = c.system.build; k = b.pi5KernelClassMax; o = b.pi5OverlayClassMax; in [
+    { name = "kernel path at KERNEL_CLASS_MAX (${toString k}) passes"; ok = kernelFits c (kernelAt c k); }
+    { name = "kernel path at KERNEL_CLASS_MAX + 1 fails"; ok = !kernelFits c (kernelAt c (k + 1)); }
+    { name = "overlay path at OVERLAY_CLASS_MAX (${toString o}) is in the overlay class and within the limit";
+      ok = builtins.elem (overlayPath c o) (overlayPaths c (overlayAt c o))
+        && builtins.stringLength (overlayPath c o) == o && within o (overlayPath c o); }
+    { name = "overlay path at OVERLAY_CLASS_MAX + 1 fails";
+      ok = builtins.stringLength (overlayPath c (o + 1)) == o + 1 && !overlayFits c (overlayAt c (o + 1)); }
+    { name = "os_prefix outside the container fails";
+      ok = !kernelFits c (altered t "os_prefix=${b.pi5Container}@ID@/" "os_prefix=@ID@/"); }
+    { name = "vc4 line without noaudio fails"; ok = !vc4Noaudio (altered t vc4Line "dtoverlay=vc4-kms-v3d-pi5"); }
+    { name = "no dtparam=audio=off fails"; ok = !audioOff (altered t "dtparam=audio=off\n" ""); }
+    { name = "dtparam=audio=off not directly after the vc4 line fails";
+      ok = let a = altered t "${vc4Line}\ndtparam=audio=off\n" "${vc4Line}\n"; in
+        audioOff (a + "dtparam=audio=off\n") && !audioOffAfterVc4 (a + "dtparam=audio=off\n"); }
+  ];
   greetdOnVc4 = c: lib.hasInfix
     ''DRIVERS=="vc4-drm", TAG+="systemd", ENV{SYSTEMD_WANTS}+="greetd.service"''
     c.services.udev.extraRules;
@@ -183,7 +223,8 @@ let
     { name = "no account with a password"; ok = withPassword c == { }; }
     { name = "firewall and nftables enabled"; ok = firewalled c; }
     { name = "disable-bt-pi5 in config.txt"; ok = lib.hasInfix "dtoverlay=disable-bt-pi5" (configTxt c); }
-    { name = "every firmware path <= 48 characters (US-172 R1)"; ok = fwPathsShort c; }
+    { name = "kernel class paths <= KERNEL_CLASS_MAX (US-172 R1)"; ok = kernelFits c (configTxt c); }
+    { name = "overlay class paths <= OVERLAY_CLASS_MAX (US-172 R1)"; ok = overlayFits c (configTxt c); }
     { name = "no root authorized_keys"; ok = rootKeys c == [ ] && c.users.users.root.openssh.authorizedKeys.keyFiles == [ ]; }
     { name = "PermitRootLogin no"; ok = (ssh c).PermitRootLogin == "no"; }
     { name = "no password authentication"; ok = !(ssh c).PasswordAuthentication; }
@@ -209,8 +250,10 @@ let
       { name = "NVMe-oF stripped (F-366)"; ok = nvmeFabricsStripped c; }
       { name = "local NVMe not stripped"; ok = kconf c "BLK_DEV_NVME" == null; }
       { name = "bootstrap.minimal unset"; ok = !c.mugge.bootstrap.minimal; }
-      { name = "vc4-kms overlay with noaudio"; ok = lib.hasInfix "dtoverlay=vc4-kms-v3d-pi5,noaudio" (configTxt c); }
-      { name = "dtparam=audio=off directly after the vc4 overlay (US-172)"; ok = audioOffAfterVc4 c; }
+      { name = "vc4-kms overlay with noaudio"; ok = vc4Noaudio (configTxt c); }
+      { name = "dtparam=audio=off present"; ok = audioOff (configTxt c); }
+      { name = "dtparam=audio=off directly after the vc4 overlay (US-172)"; ok = audioOffAfterVc4 (configTxt c); }
+    ] ++ map (n: { name = "negative: ${n.name}"; inherit (n) ok; }) (negatives c) ++ [
       { name = "greetd skipped without a DRM card (F-367)"; ok = c.systemd.services.greetd.unitConfig.ConditionPathExistsGlob == "/dev/dri/card*"; }
       { name = "greetd started by the vc4 DRM card (US-172 AC8)"; ok = greetdOnVc4 c; }
       { name = "greetd started only by the udev rule (US-172 AC8)"; ok = c.systemd.services.greetd.wantedBy == [ ] && c.systemd.services.greetd.aliases == [ ]; }
