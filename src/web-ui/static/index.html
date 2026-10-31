@@ -130,7 +130,7 @@
 
     <!-- Anchor: panic button + mode badge -->
     <div class="sb-anchor">
-        <button class="sb-panic-btn" id="sb-panic-btn" data-testid="panic-button" title="Emergency mute all outputs (or abort measurement)">MUTE</button>
+        <button class="sb-panic-btn" id="sb-panic-btn" data-testid="panic-button" title="Mute all outputs now (closes the audio gate)">MUTE</button>
         <span class="sb-mode-badge c-grey" id="sb-mode" title="Click to switch mode">--</span>
         <!-- F-161: Mode switcher dropdown -->
         <div class="sb-mode-dropdown hidden" id="sb-mode-dropdown">
@@ -415,7 +415,7 @@
 
         <!-- Right column: gate control -->
         <div class="cfg-column">
-            <div class="cfg-section">
+            <div class="cfg-section" id="cfg-audio-gate">
                 <div class="cfg-section-title" title="D-063 audio gate — controls whether gains are applied to the signal chain">AUDIO GATE</div>
                 <div class="gate-status-row">
                     <span class="gate-indicator" id="gate-indicator" title="Gate state: CLOSED = all gains zeroed, OPEN = venue gains active">CLOSED</span>

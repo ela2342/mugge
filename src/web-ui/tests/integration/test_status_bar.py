@@ -481,14 +481,14 @@ class TestDashboardRegression:
 
 
 class TestPanicButtonIdleState:
-    """Panic button shows MUTE when no measurement is active."""
+    """Panic button follows the gate when no measurement is active (F-439)."""
 
-    def test_panic_shows_mute_in_idle(self, page):
-        """A1: #sb-panic-btn shows 'MUTE' text when idle (no measurement)."""
+    def test_panic_shows_muted_in_idle(self, page):
+        """A1: idle with the mock gate closed, #sb-panic-btn shows 'MUTED'."""
         _wait_for_ws_data(page)
         btn = page.locator("#sb-panic-btn")
         expect(btn).to_be_visible()
-        expect(btn).to_have_text("MUTE")
+        expect(btn).to_have_text("MUTED")
 
     def test_panic_has_data_testid(self, page):
         """M4: Exactly one panic button with data-testid='panic-button'."""

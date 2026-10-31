@@ -42,6 +42,9 @@ _BACKOFF_CAP = 8.0
 # from quantum changes (links briefly torn down and recreated in <1s).
 _DEGRADED_GRACE_S = 2.0
 
+# F-439: a gate state older than this reads "unknown" (polls run at ~2 Hz).
+GATE_STATE_MAX_AGE_S = 2.0
+
 
 class FilterChainCollector:
     """Singleton collector for PipeWire filter-chain health via GraphManager."""
@@ -57,6 +60,9 @@ class FilterChainCollector:
         # Latest polled data
         self._links: dict | None = None
         self._state: dict | None = None
+        # time.monotonic() of the last successful get_state (F-439: gate
+        # freshness; _state survives a disconnect).
+        self._state_time: float | None = None
         self._watchdog: dict | None = None
         self._gain_integrity: dict | None = None
 
@@ -116,6 +122,19 @@ class FilterChainCollector:
     def get_gm_state(self) -> dict | None:
         """Return the latest GraphManager state snapshot, or None."""
         return self._state
+
+    def gate_state(self) -> str:
+        """``open``, ``closed`` or ``unknown`` from the last get_state.
+
+        ``unknown`` when there is no state, the collector is disconnected,
+        or the state is older than ``GATE_STATE_MAX_AGE_S`` (F-439).
+        """
+        if (self._state is None or self._state_time is None
+                or not self._connected):
+            return "unknown"
+        if time.monotonic() - self._state_time > GATE_STATE_MAX_AGE_S:
+            return "unknown"
+        return "open" if self._state.get("gate_open") is True else "closed"
 
     def notify_mode_change(self, mode: str) -> None:
         """Update cached GM state mode after a confirmed mode change.
@@ -369,6 +388,7 @@ class FilterChainCollector:
                 state_resp = await self._send_command({"cmd": "get_state"})
                 if state_resp and state_resp.get("ok"):
                     self._state = state_resp
+                    self._state_time = time.monotonic()
 
                 # Query safety status (F-072: watchdog + gain integrity).
                 wd_resp = await self._send_command(

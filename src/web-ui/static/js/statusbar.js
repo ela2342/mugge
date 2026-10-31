@@ -82,8 +82,15 @@
 
     // -- Panic button state --
 
-    var isMuted = false;
+    // F-439: MUTE closes the D-063 gate; there is no UNMUTE. "MUTED" shows
+    // only when the server reports the gate closed ("open"/"closed"/"unknown").
+    var gateState = "unknown";
     var isMeasuring = false;
+
+    var PANIC_TITLE_MUTE = "Mute all outputs now (closes the audio gate)";
+    var PANIC_TITLE_MUTED = "All outputs muted: the audio gate is closed. " +
+        "To play again, use OPEN GATE in the Audio Gate section.";
+    var PANIC_TITLE_ABORT = "Emergency mute all outputs (or abort measurement)";
 
     // -- Helpers --
 
@@ -362,9 +369,10 @@
             thermalPollSb();
         }
 
-        // Sync mute state from server (F-040)
-        if (data.is_muted != null && data.is_muted !== isMuted && !isMeasuring) {
-            isMuted = data.is_muted;
+        // Sync gate state from server (F-040, F-439)
+        var newGate = (data.gate && data.gate.state) || "unknown";
+        if (newGate !== gateState) {
+            gateState = newGate;
             updatePanicButton();
         }
     }
@@ -559,11 +567,14 @@
         if (isMeasuring) {
             btn.textContent = "ABORT";
             btn.classList.add("aborting");
-        } else if (isMuted) {
-            btn.textContent = "UNMUTE";
+            btn.title = PANIC_TITLE_ABORT;
+        } else if (gateState === "closed") {
+            btn.textContent = "MUTED";
             btn.classList.add("muted");
+            btn.title = PANIC_TITLE_MUTED;
         } else {
             btn.textContent = "MUTE";
+            btn.title = PANIC_TITLE_MUTE;
         }
     }
 
@@ -579,13 +590,17 @@
             // Abort measurement
             fetch("/api/v1/measurement/abort", { method: "POST" })
                 .catch(function () { flashPanicError(); });
+        } else if (gateState === "closed") {
+            // Muted: the way back is OPEN GATE in the Config tab.
+            PiAudio.switchView("config");
+            var gateSection = document.getElementById("cfg-audio-gate");
+            if (gateSection) gateSection.scrollIntoView({ block: "start" });
         } else {
-            // Toggle mute
-            var endpoint = isMuted ? "/api/v1/audio/unmute" : "/api/v1/audio/mute";
-            fetch(endpoint, { method: "POST" })
+            // Mute = close the gate, no confirmation (also when unknown).
+            fetch("/api/v1/audio/mute", { method: "POST" })
                 .then(function (res) {
                     if (!res.ok) { flashPanicError(); return; }
-                    isMuted = !isMuted;
+                    gateState = "closed";
                     updatePanicButton();
                 })
                 .catch(function () { flashPanicError(); });
