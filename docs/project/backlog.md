@@ -1578,6 +1578,33 @@ priority!"
     adapter question (with the owner); F-481 role-prompt vehicle;
     F-497 amps-on row question; F-507 evidence home; F-508 owner
     answer + VM settings check (worker-4).
+  - v323 PUSHED (CM, verified on the remote): chore/backlog =
+    8da52dcd045d68c46fef38e3bdbb4968d43abc1c (parent 92f62c3d, file
+    sha256 b25975df, +122/-0). v324 bases on it and consumes PM
+    addenda 8-11 in
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/:
+    held-for-v324-add8-20261031.txt (4324238a...6cda), -add9-
+    (a1af2b69...33b6), -add10- (ddd7750e...f272), -add11-
+    (e67c9d15...3a80); the later addendum wins. add8's E4 sha e58f881a
+    is VOID (add11: taken before the file had settled).
+  - OPEN TRACKING (v324; supersedes v323's line): US-172 R5s grant
+    (worker-1 kit only; criteria released 8ba69e99) then R5s-b if
+    applied, R5r (QE text with AE H1-H4 e19de908; gen 1, no build;
+    dropped if pre-reads missing), R5r-bt if needed (own AE envelope),
+    R6n (Architect ruling on worker-4 85a1fac7; after R5r; no dispatch
+    before the gen-6 evidence); QE E4 release sha; route C dispatch
+    (worker-1 evidence gen 6 = 3f28b6c7); R6a' after route C; AC2
+    grant only after AE review of the T2 link list; QE AC2 T3 test
+    form; starvation guard at the US-172 F1 milestone or
+    2026-11-03T20:00 (PO f6393b6b); F-341 CI 41196044817 + body r3 +
+    PR (worker-2); F-383 S4 merge of main c33225c2 + PR (worker-3);
+    F-468/F-490 after F-341 (worker-2); F-439 main merge; #66 last;
+    F-320 D post-merge TW list; F-504 owner + fix; F-441 serial
+    adapter question (with the owner); F-481 role-prompt vehicle;
+    F-497 amps-on row question; F-507 evidence home; F-508 owner
+    answer (who ran the Mac GC; team-lead) + worker-4 Mac nix-daemon
+    log read if still wanted + out-link list home (CM) + TW docs
+    vehicle.
 
 ## Reserved IDs
 
@@ -1767,6 +1794,8 @@ Next free (v322; supersedes the line above; F-508 confirmed free in
 v321, the addenda and the live/ evidence files at PM read, filed in
 this version): F-509, US-183, D-072, T66.
 Next free (v323; unchanged, no new IDs in this version): F-509,
+US-183, D-072, T66.
+Next free (v324; unchanged, no new IDs in this version): F-509,
 US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
@@ -4855,6 +4884,49 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       /Users/gabriela.bogk/mugge-team-evidence/live/technical-writer/us172-story-r5/,
       SHA256SUMS ab052854); applied on 27e90a0d = 6cf471a7 (CM). Relay
       to worker-1 by the CM.
+  - US-172 v324 STATE (supersedes the v323 R5s GRANT/CRITERIA, R5r,
+    R6n and ORDER lines above where they differ):
+    - ORDER (Architect 2e985576): R5s -> R5s-b if applied -> R5r ->
+      R5r-bt if needed -> R6n.
+    - CRITERIA RELEASED: Architect
+      /Users/gabriela.bogk/mugge-team-evidence/live/architect/arch-US172-r5E1-R6n-build-ruling-r1.md,
+      sha256
+      2e98557603e19d20f9bf2e1e70f3fe75e883a242ae34c6108668de8bc8f7d3d3,
+      released r5 + E1; then
+      /Users/gabriela.bogk/mugge-team-evidence/live/architect/arch-US172-criteria-r5-E1-E3-release-r1.md,
+      sha256
+      8ba69e99c7e2b369fb49d5fdcbc67954bd9afb8b33d0b4e7561c5e4964fd7b33,
+      releases r5 c0d2bc7f + E1 6f82736b + E2 a9127139 + E3 as ONE
+      criteria text (CM confirmed). E3 =
+      /Users/gabriela.bogk/mugge-team-evidence/live/quality-engineer/qe-US172-criteria-r5-erratum-E3.md,
+      sha256
+      152b16fbff67c8caeb216ee7e942ee99b7b0ea15c75b17500585b55f38c24a98
+      (Part G, R5r). The Architect made e7b38dec, 2e985576, e9eb19e7
+      and 8ba69e99 read-only, hashes unchanged. The R5s GRANT now
+      waits ONLY on worker-1's kit; the CM checks that the kit pins
+      this set.
+    - E4 NOT RECORDED: a QE erratum E4 (amends Part G / E3) is on disk
+      at
+      /Users/gabriela.bogk/mugge-team-evidence/live/quality-engineer/qe-US172-criteria-r5-erratum-E4.md;
+      its released sha is with the QE (CM asked). The PM's earlier
+      e58f881a is VOID (hashed before the file had settled). Recorded
+      only once the QE names the release sha.
+    - R5r: the AE acked E3, but G6 meets V2/V4 only with the AE
+      corrections H1-H4 in
+      /Users/gabriela.bogk/mugge-team-evidence/live/audio-engineer/ae-US172-E3-G6-response-r1.txt,
+      sha256
+      e19de908bdb18c5a3b51f1958f3e6e91c43200d1b5d9f4bf367a529c52b307db
+      (cites the AE R5r envelope b0536f62). The R5r kit waits on the
+      QE text carrying H1-H4.
+    - R5r-bt (Architect 2e985576): a contingency split, before the
+      UART: R5r with the vc4 dtoverlay line (and its
+      dtparam=audio=off) removed. Needs its own AE envelope before any
+      grant.
+    - R6n (Architect 2e985576): no dispatch before the gen-6 evidence
+      (worker-1: gen 6 source = 3f28b6c7); pin `TRANSPARENT_HUGEPAGE =
+      lib.mkForce no;` in C2 now (K has no THP line: THP depends on
+      !PREEMPT_RT); runs AFTER R5r. The ruling on worker-4's proposal
+      85a1fac7 is still open.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -13176,6 +13248,17 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   64097aed <new merge> == git diff 90aba97e c33225c2. If R-1 or R-2
   fails, M1/M2 re-run locally only once the disk is above the 10 GiB
   line.
+  v324: Architect addendum r1 to b1da279f R4d,
+  /Users/gabriela.bogk/mugge-team-evidence/live/architect/F-383/arch-F383-S4-R4d-addendum-r1.md,
+  sha256
+  e9eb19e7704b9f10442e98c999b3dd3f312d95f51dca5ed03c7afc872f92a216, is
+  AE-RELEASED:
+  /Users/gabriela.bogk/mugge-team-evidence/live/audio-engineer/ae-F383-S4-R4d-addendum-release-r1.txt,
+  sha256
+  499ea7257e026b7a6ae9a3796259e986a16fc85017fc1e7ac26d600834ab1432,
+  "RELEASED, no blocking points" (test code only, routes_result
+  fixture; nothing under src/ changes). CM confirmed and relayed it to
+  worker-3.
 - **F-384** (Architect; AE confirms the priority; P1; 2026-10-25)
   correction.py step 9 (main b0666c02,
   src/room-correction/room_correction/correction.py:130-143): the
@@ -19155,6 +19238,48 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   the VM config needs more than plain read access, worker-4 stops and
   reports to team-lead. NOT worker-1. The open point above goes with
   it, as a question for worker-4 and the Architect.
+  v324 FINDINGS (Architect lead r2
+  /Users/gabriela.bogk/mugge-team-evidence/live/architect/F-508/arch-F508-gc-lead-r2.md,
+  sha256
+  a6c43a7b3a44aa8329354e8e1181cc083f4852feefd89340ffb860bdd3702904,
+  and lead r3
+  /Users/gabriela.bogk/mugge-team-evidence/live/architect/F-508/arch-F508-gc-lead-r3.md,
+  sha256
+  7258ba58ea5ae3b45af480be120a0481f0e29fd01e036f31f19fffb1a82ad684; r3
+  supersedes r2's Mac-side candidates and the e7b38dec s6 inference):
+  (1) FACT: the linux-builder VM's nix.conf sets min-free 1 GiB /
+  max-free 3 GiB; the ~1100-path GC in the R6a build.log is the VM's,
+  deletes VM-store copies only, and costs re-fetches. (2) FACT: the
+  Mac has no auto-GC (no min-free, no GC launchd job); its /nix had
+  ~38 GiB free during the build. (3) The R6a build finished (rc 0,
+  2026-10-27T15:35:45Z) and the toplevel bp7j2r0d was copied back to
+  the Mac (frozen log, confirmed by r3). (4) bp7j2r0d is NOT valid in
+  the Mac store now; build.sh used --no-link, so it was unrooted and a
+  later manual or tool-run GC on the Mac removed it.
+  OWNER QUESTION (team-lead asks; nobody probes other sessions; shell
+  history excluded as the owner's and other sessions' data): who or
+  what ran a Nix store GC on the Mac after 2026-10-27. worker-4's
+  VM-daemon check is answered by r3; the Mac nix-daemon log read stays
+  with worker-4 (via the CM, read-only) if team-lead still wants it.
+  LESSON (team-lead asked; filed here, no new F-ID): "Builds whose
+  outputs are needed later keep an out-link under a persistent path,
+  never --no-link." Why: R6a's outputs were lost to an unrooted GC and
+  a rebuild costs hours and disk below the 10 GiB stop line. How to
+  apply: every build whose outputs feed a later step (nix copy,
+  deploy, tryboot staging, M-runs) uses --out-link <persistent
+  dir>/<item>-<rev> (not /tmp: F-507) or pushes to cachix; the kit
+  records the out-link path; re-check the store path right before use.
+  A check build nobody consumes may keep --no-link. ARCHITECT
+  CONDITION (accepted with it): every out-link in a persistent dir
+  gets a NAMED OWNER and a REMOVAL POINT, and the live roots are
+  listed for the owner, because they pin disk under the 10 GiB hold;
+  removing a root is not a store delete, but the GC afterwards stays
+  owner-only. Proposed list home: the CM log (path, store path, owner,
+  removal point); CM answer pending. Vehicle: CM/QE kit templates now;
+  TW adds it to docs/guide/howto/development.md (and a learnings file
+  if kept) in the next docs batch, with the F-507/F-481 vehicle.
+  Related: the Low line on ela's missing per-user GC-root dir on the
+  Pi.
   - Next free -> F-509.
 
 ## Open PRs (2026-10-24, per CM)
