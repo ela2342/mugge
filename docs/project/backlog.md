@@ -1756,6 +1756,41 @@ priority!"
     owner answer (who ran the 10-29 Mac GC; team-lead) + TW docs
     vehicle for the out-link lesson; Mac disk 2.6 GiB free (below the
     10 GiB stop line; owner).
+  - v329 PUSHED (CM, checked on the remote): chore/backlog =
+    b5571490be879b3aee262b73aa60481d251e15ae (file sha256 af852f1b,
+    +84/-0 on 0ffbb08d). v330 bases on it and consumes PM addenda
+    28-30 in
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/:
+    held-for-v330-add28-20261031.txt (a4143349...aceb), -add29-
+    (7ada0d2e...80fa), -add30- (d92c69ae...160c). Built at a MILESTONE
+    (Architect R5s-b classification: R5r and R6n dropped, new critical
+    path).
+  - OPEN TRACKING (v330; supersedes v329's line): US-172 CRITICAL
+    PATH: Architect s6 production layout scheme ruling (every
+    firmware-opened path <= 48 chars; no "bcm2708_fb." token in
+    /proc/cmdline; weighs L1/L2/L3) -> worker branch + PR under Rule
+    13 -> scheme tryboot with a compositor/GL soak (QE sets the
+    length, at least 10 min past hung_task 120 s) + US-172 acceptance
+    reads (PO/QE); G-US172-04 07/08/09 restore (worker-1; lock
+    released after 09); optional AD E3 firmware-log OBSERVE after 09;
+    QE PLAN wording fix for O3 (next kit); route C run 41198461811 (Pi
+    pull gated by SecSpec S5-S8); R6a' after route C; AC2 grant only
+    after AE review of the T2 link list; QE AC2 T3 test form;
+    starvation guard at the US-172 F1 milestone or 2026-11-03T20:00
+    (PO f6393b6b); PR #77 (F-341) 7/7, CI 41199141583 + CM check +
+    merge; F-383 S4 CI 41198071247 + PR (worker-3); F-468/F-490 after
+    F-341 (worker-2); F-509 (TW, after AC3; UX + AE agree on
+    61c3306f); F-510 (Architect, after core tech); F-511 option pick
+    (Architect, after US-172); F-439 main merge; #66 last; F-320 D
+    post-merge TW list; F-504 owner + fix; F-441 serial adapter
+    question (with the owner); F-481 role-prompt vehicle; F-497
+    amps-on row question; F-507 evidence home; F-508 owner answer (who
+    ran the 10-29 Mac GC; team-lead) + TW docs vehicle for the
+    out-link lesson; Mac disk 2.6 GiB free (below the 10 GiB stop
+    line; owner). PARKED (not tracked as open): R5r (kit r1 aecc01dc)
+    and R6n (frozen 21f28b34; its workflow-scope push block is no
+    longer an owner question on US-172's account); revived only if the
+    GL soak shows an RT-specific hang.
 
 ## Reserved IDs
 
@@ -5362,6 +5397,66 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       the tool is already in the closure (no install); compare against
       known layouts (stock RPi OS flat overlays/, other NixOS-on-Pi5
       installers) and weigh overlay rollback fidelity; keep R5r on t/.
+  - US-172 v330 STATE (MILESTONE; supersedes the v329 lines above
+    where they differ):
+    - R5s-b CLASSIFIED by the Architect:
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/arch-US172-R5s-b-classification-r1-ead362c2.md,
+      sha256
+      ead362c22aac07d7c8fbd78c979d163dce669b44dc6854c04a782b11e211726e.
+      TRYBOOT-APPLIED, KMS BOUND, no hang up to uptime 50.6 s. vc4-drm
+      bound the HVS, both HDMI encoders, the TXP and both pixelvalves;
+      vc4drmfb took fb0 from simpledrm; greetd came up with a greeter
+      on seat0/tty1, so the KMS desktop path works. KERNEL K (RT
+      6.12.62, 4K pages) IS CLEARED at bring-up level. The gen-6 "no
+      graphics" symptom has one cause: the firmware skips the overlays
+      under gens/<32-hash>/ (path form: length or depth).
+    - R5r AND R6n DROPPED from the US-172 queue (both were built to
+      find a kernel-side cause; there is none). R6n's workflow-scope
+      push block is PARKED and is no longer an owner question on
+      US-172's account; R6n is revived only if the GL soak shows an
+      RT-specific hang. The R5r kit r1 (aecc01dc) reviews are moot
+      unless the Architect revives R5r.
+    - CRITICAL PATH (new): (1) Architect s6 production layout scheme
+      ruling. Binding inputs: every firmware-opened path <= 48 chars
+      (f0750f9b E2); /proc/cmdline has no "bcm2708_fb." token (the
+      firmware adds those tokens exactly when the vc4-kms overlay is
+      NOT applied); weighs L1/L2/L3 (f0750f9b E4). (2) Implementation
+      by a worker on a branch + PR under Rule 13. (3) A scheme tryboot
+      (also the depth test) that carries a compositor/GL soak, length
+      set by the QE and at least 10 min past the 120 s hung_task
+      window (Pi 4 D-022 V3D deadlock history makes sustained load the
+      open risk), plus the US-172 acceptance reads (PO/QE).
+    - NEXT ON THE PI: G-US172-04 extended to 07/08/09 restore
+      (worker-1); the lock is released after 09. The optional 06b
+      re-read was SKIPPED (outside the grant scope; the soak lives in
+      the scheme tryboot). Optional AD E3 firmware-log OBSERVE after
+      09 and the lock release.
+    - RECORDS: O1 HDMI-A-1 is a real 1920x1080 sink (the firmware read
+      the mode), probably the owner's monitor or a dummy plug; no HDMI
+      audio path, so outside "nothing connected" (AE O1 ruling
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/ae-US172-R5s-b-O1-ruling-r1-add6a230.txt,
+      sha256
+      add6a23002a704e67fdfef9fbbdbe7ef2a94587dc838b0c7a525f66c39ce9995:
+      no change while ,noaudio, dtparam=audio=off, the snd/HDMI
+      blacklist and each kit's no-HDMI-sink STOP check stay; any
+      change that could create an HDMI audio device needs its own AE
+      envelope BEFORE the grant plus an owner question about what is
+      on HDMI-A-1). A remote KMS mode read can stand in for
+      owner-at-screen checks. O2 v3d THP hint: no action. O3 README vs
+      PLAN Q3: no effect; the QE may fix the PLAN wording.
+    - CAUSE WORDING (Architect
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/arch-US172-R5s-AD-challenge-response-r1-f0750f9b.md,
+      sha256
+      f0750f9b1dda1596413b79056fddf81755fe089b0b2fcd3435d32a41608be7e5;
+      AD challenge bbea6df3 CLOSED, E1-E4 accepted in full): firmware
+      path form under os_prefix, length OR depth, length leading.
+      Depth 2 works; depth 3 (any <p>/<id>/overlays/ scheme, however
+      short) is untested. The DTB did load from gens/ (57 or 59 chars,
+      which one undetermined). The scheme's own tryboot clears depth
+      for that scheme. The fix ruling must settle the
+      os_prefix/overlay_prefix interaction, rollback fidelity under
+      L2/L3, and a cross-check against stock RPi OS and one other
+      NixOS-on-Pi5 install.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
