@@ -1791,6 +1791,39 @@ priority!"
     and R6n (frozen 21f28b34; its workflow-scope push block is no
     longer an owner question on US-172's account); revived only if the
     GL soak shows an RT-specific hang.
+  - v330 PUSHED (CM, checked on the remote): chore/backlog =
+    e660f4fa074a225623f07194ad021577a2781fff (file sha256 94bd8b25,
+    +95/-0 on b5571490). v331 bases on it and consumes PM addenda
+    31-32 in
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/:
+    held-for-v331-add31-20261031.txt (691ab536...4a5a) and -add32-
+    (f47ea5b3...bce). add32 VOIDS add31 item 4 (worker-4 F-439 pick
+    withdrawn by team-lead: US-172 needs worker-4). Built at a
+    MILESTONE (G-US172-04 closed).
+  - OPEN TRACKING (v331; supersedes v330's line): US-172 CRITICAL
+    PATH: Architect layout scheme ruling r1 (04d8b687, exists; content
+    into the backlog after the CM's release) -> worker-4 layout branch
+    + PR under Rule 13 -> R5s-c kit (worker-1) / scheme tryboot with a
+    compositor/GL soak run together with the RT audio graph (AD
+    d02fb6f8 F2) + US-172 acceptance reads incl. the V3D renderer read
+    (AC2a; AD F1) (PO/QE); AD d02fb6f8 F1-F5 (Architect; F1/F2/F5 with
+    QE + PO); G-US172-05 OBSERVE firmware-log read (worker-1); route C
+    run 41198461811 (Pi pull gated by SecSpec S5-S8); R6a' after route
+    C; AC2 grant only after AE review of the T2 link list; QE AC2 T3
+    test form; starvation guard at the US-172 F1 milestone (AC1 + AC2a
+    + AC11 on one boot; NOT triggered by R5s-b) or 2026-11-03T20:00
+    (PO f6393b6b); PR #77 (F-341) 7/7, CI 41199141583 + CM check +
+    merge; F-383 S4 CI 41198071247 + PR (worker-3); F-468/F-490 after
+    F-341 (worker-2); F-439 PR UNSTAFFED, waits until US-172 frees a
+    worker; F-509 (TW, after AC3; UX + AE agree on 61c3306f); F-510
+    (Architect, after core tech); F-511 option pick (Architect, after
+    US-172); #66 last; F-320 D post-merge TW list; F-504 owner + fix;
+    F-441 serial adapter question (with the owner); F-481 role-prompt
+    vehicle; F-497 amps-on row question; F-507 evidence home; F-508
+    owner answer (who ran the 10-29 Mac GC; team-lead) + TW docs
+    vehicle for the out-link lesson; Mac disk 2.6 GiB free (below the
+    10 GiB stop line; owner). PARKED: R5r (aecc01dc) and R6n
+    (21f28b34).
 
 ## Reserved IDs
 
@@ -5457,6 +5490,52 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       os_prefix/overlay_prefix interaction, rollback fidelity under
       L2/L3, and a cross-check against stock RPi OS and one other
       NixOS-on-Pi5 install.
+  - US-172 v331 STATE (MILESTONE; supersedes the v330 lines above
+    where they differ):
+    - G-US172-04 CLOSED (R5s-b complete):
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/g-us172-04-09-r1-147446e0/G-US172-04-result-09-r1.md,
+      sha256
+      147446e07f676196d7a877d7d7c5a33642dc1fe13c47ca0fe0acdb44f8d556db
+      (07 accd1cfd, 08 5d83e040, 09 fb381149; PM: all listed files
+      check OK). 09 rc=0 at 12:18:06Z; 06b not run. Pi on gen 6
+      a11skqm2, normal boot 140cb722, state == PRE, gains 8/8 = 0,
+      gate closed, 65.5 C. CHANGE lock released.
+    - G-US172-05 OBSERVE granted to worker-1: AD E3 firmware-log read
+      on the gen-6 normal boot ("not in closure" -> record it, install
+      nothing).
+    - LAYOUT SCHEME RULING r1:
+      /Users/gabriela.bogk/mugge-team-evidence/live/architect/arch-US172-layout-scheme-ruling-r1.md,
+      sha256
+      04d8b687449749d02fdc2498ad5d3319a927a7a339d869790b8e0f9663b4b249.
+      Not yet released to the PM; content follows in the next version.
+      Staffing (team-lead/CM): worker-4 = layout branch; worker-1 =
+      R5s-c kit after G-US172-05.
+    - AD CHALLENGE on the R5s-b classification:
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/ad-US172-challenge-R5s-b-classification-r1-d02fb6f8.md,
+      sha256
+      d02fb6f8375fe0ee350e9ccdbcd66df5ed92ec4b57cd914b0a4ea2a0da20c71c
+      (with the Architect; did not block 07/08/09). F1 MED: bound is
+      not hardware GL, read the renderer. F2 MED: the soak runs V3D
+      load together with the RT audio graph. F3 LOW: the bcm2708_fb
+      token is a secondary check. F4 MED: existing generations and
+      rollback, for the scheme ruling. F5 LOW: HDMI connected does not
+      mean the owner is at the screen. F1, F2, F5 routed to the QE and
+      PO for acceptance.
+    - STANDING CONDITIONS from the moot R5r rulings: SecSpec
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/secspec-US172-R5r-Qd-aecc01dc-r1-0abaf8cd.md
+      (sha256
+      0abaf8cdbe9c017c8af148a273fe3d22ffea0eb343859251f0e012ea51196c5e):
+      any later run that boots an OLDER generation re-applies D1-D5,
+      D1 (gen-N sshd key-only) as a GATE. AE
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/ae-US172-R5r-kit-r1-release-r1-9505e0fb.txt
+      (sha256
+      9505e0fbbf598bd3340f1665a23a5d881e26fbcaa02e06ec161acdcd41c96776):
+      no carry-over (a revived R5r needs a fresh AE release); N1 an
+      HDMI/vc4 ALSA card STOPs any run from now on.
+    - STARVATION GUARD NOT TRIGGERED by R5s-b: the F1 milestone needs
+      AC1 + AC2a + AC11 on one boot; AC2a (eglinfo renderer V3D, Mixxx
+      holding renderD128) is not shown yet. Date trigger
+      2026-11-03T20:00 stands.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
