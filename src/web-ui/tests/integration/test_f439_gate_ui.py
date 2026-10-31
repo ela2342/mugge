@@ -4,11 +4,15 @@ Status bar panic button, driven by ``/ws/system`` ``gate.state``:
     - closed:  'MUTED' (muted class); a click goes to the AUDIO GATE section
       and sends no request.
     - open:    'MUTE'; a click posts /api/v1/audio/mute.
-    - unknown: 'MUTE', never 'MUTED' (GM unreachable must not look muted).
+    - unknown: 'MUTE', never 'MUTED' (GM unreachable must not look muted);
+      a click posts /api/v1/audio/mute at once (UX 031e271f).
+    - measuring, gate closed: 'ABORT'; a click posts the measurement abort,
+      no mute and no view switch (UX b8f5c054).
 
 The mock GM gate is always closed, so open and unknown come from an init
 script that rewrites ``gate`` in each /ws/system frame before app.js sees
-it (``WS_GATE_OVERRIDE``).
+it (``WS_GATE_OVERRIDE``). A running measurement is made the same way, from
+/ws/measurement frames (``WS_MEASURING_OVERRIDE``).
 
 Config tab gain apply:
     - 409 gate_closed (the real mock server): the sliders show a fresh
@@ -16,6 +20,7 @@ Config tab gain apply:
     - 409 gate_unknown with a failing readback: the sliders go disabled
       and '-- dB', with the danger text.
     - 409 without a reason, and 422: their own texts.
+    - the text follows the ``reason`` field, never the ``error`` string.
     page.route stands in for the server only where the mock cannot produce
     the response (gate_unknown, 422, a failing readback).
 
@@ -80,6 +85,30 @@ WS_GATE_OVERRIDE = """
 }
 """
 
+# Rewrites state to "measuring" in every /ws/measurement frame.
+WS_MEASURING_OVERRIDE = """
+() => {
+    const desc = Object.getOwnPropertyDescriptor(WebSocket.prototype, "onmessage");
+    Object.defineProperty(WebSocket.prototype, "onmessage", {
+        configurable: true,
+        get() { return desc.get.call(this); },
+        set(fn) {
+            if (!fn || !this.url.includes("/ws/measurement")) {
+                desc.set.call(this, fn);
+                return;
+            }
+            desc.set.call(this, function (ev) {
+                let data;
+                try { data = JSON.parse(ev.data); } catch (e) { return fn.call(this, ev); }
+                if (data && "state" in data) data.state = "measuring";
+                return fn.call(this, new MessageEvent("message",
+                    { data: JSON.stringify(data) }));
+            });
+        }
+    });
+}
+"""
+
 
 @pytest.fixture()
 def open_page(browser, mock_server):
@@ -87,12 +116,14 @@ def open_page(browser, mock_server):
     contexts = []
     page_errors = []
 
-    def _open(gate_state=None):
+    def _open(gate_state=None, measuring=False):
         context = browser.new_context()
         contexts.append(context)
         if gate_state is not None:
             context.add_init_script(
                 script=f"({WS_GATE_OVERRIDE})({json.dumps(gate_state)});")
+        if measuring:
+            context.add_init_script(script=f"({WS_MEASURING_OVERRIDE})();")
         pg = context.new_page()
         pg.on("pageerror", lambda exc: page_errors.append(str(exc)))
         pg.goto(mock_server)
@@ -161,6 +192,38 @@ class TestPanicButtonGateStates:
         expect(btn).to_have_text("MUTE", timeout=UI_TIMEOUT_MS)
         expect(btn).not_to_have_class(re.compile(r"\bmuted\b"))
         expect(btn).to_have_attribute("title", PANIC_TITLE_MUTE)
+
+    def test_unknown_click_closes_gate(self, open_page):
+        """UX 031e271f: unknown is not muted, so a click mutes at once."""
+        pg = open_page("unknown")
+        dialogs = []
+        pg.on("dialog", lambda d: (dialogs.append(d.message), d.dismiss()))
+        btn = _panic(pg)
+        expect(btn).to_have_text("MUTE", timeout=UI_TIMEOUT_MS)
+        with pg.expect_response(
+                lambda r: r.url.endswith("/api/v1/audio/mute")
+                and r.request.method == "POST") as resp_info:
+            btn.click()
+        resp = resp_info.value
+        assert resp.status == 200 and resp.json() == {"ok": True, "gate_open": False}
+        assert dialogs == [], f"MUTE asked for confirmation: {dialogs}"
+
+    def test_measuring_shows_abort_and_click_aborts(self, open_page):
+        """UX b8f5c054: a running measurement wins over a closed gate."""
+        pg = open_page(measuring=True)
+        _route_json(pg, "**/api/v1/measurement/abort", 200, {"ok": True})
+        requests = []
+        pg.on("request", lambda req: requests.append((req.method, req.url))
+              if "/api/v1/audio/" in req.url else None)
+        btn = _panic(pg)
+        expect(btn).to_have_text("ABORT", timeout=UI_TIMEOUT_MS)
+        expect(btn).not_to_have_class(re.compile(r"\bmuted\b"))
+        with pg.expect_request(
+                lambda r: r.url.endswith("/api/v1/measurement/abort")
+                and r.method == "POST"):
+            btn.click()
+        assert requests == [], f"ABORT click sent audio requests: {requests}"
+        expect(pg.locator("#view-config")).not_to_have_class(re.compile(r"\bactive\b"))
 
     def test_open_shows_mute_and_click_closes_gate(self, open_page):
         pg = open_page("open")
@@ -242,6 +305,20 @@ class TestGainApplyRefused:
         pg.locator("#cfg-gain-apply").click()
         status = pg.locator("#cfg-gain-status")
         expect(status).to_have_text(GATE_DEFAULT_TEXT, timeout=UI_TIMEOUT_MS)
+        expect(status).to_have_class(re.compile(r"\bc-warning\b"))
+
+    def test_refusal_text_follows_reason_not_error_string(self, open_page):
+        """UX f05b5f4a/9c7109b4: the text is picked by reason, never by error."""
+        pg = open_page()
+        _open_config(pg)
+        _move_probe_slider(pg)
+        _route_json(pg, "**/api/v1/config/gain", 409,
+                    {"ok": False, "error": "gate_unknown", "reason": "gate_closed",
+                     "applied": {}})
+
+        pg.locator("#cfg-gain-apply").click()
+        status = pg.locator("#cfg-gain-status")
+        expect(status).to_have_text(GATE_CLOSED_TEXT, timeout=UI_TIMEOUT_MS)
         expect(status).to_have_class(re.compile(r"\bc-warning\b"))
 
     def test_invalid_value_422(self, open_page):

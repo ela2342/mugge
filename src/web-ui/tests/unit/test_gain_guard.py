@@ -383,15 +383,20 @@ class TestGateState:
 # Thermal limiter details
 # ---------------------------------------------------------------------------
 
-def _limiter(headroom_db, pct=80.0):
+def _limiter(headroom_db, pct=80.0, base_mult=0.001):
     monitor = MagicMock()
     monitor.snapshot.return_value = [
         {"name": "sat_left", "headroom_db": headroom_db, "pct_of_ceiling": pct}]
     limiter = ThermalGainLimiter(monitor, is_mock=False)
     limiter.configure_channels([
         {"name": "sat_left", "channel_index": 0,
-         "gain_node_name": "gain_left_hp", "base_mult": 0.001}])
+         "gain_node_name": "gain_left_hp", "base_mult": base_mult}])
     return limiter
+
+
+def _fixed_factor(limiter, factor):
+    """Pin the reduction factor, so the target is base_mult * factor exactly."""
+    limiter.compute_reduction = lambda headroom, pct, name: factor
 
 
 @pytest.fixture()
@@ -500,6 +505,124 @@ class TestThermalLimiterGuarded:
         for i in range(10):
             asyncio.run(limiter._enforce_tick(100.0 + i))
         factor = limiter._channels["sat_left"].reduction_factor
+        # QE f1858c33 A3: a factor * live mutant writes again only while
+        # 0.001 * f * (1 - f) > READ_MARGIN.
+        assert 0.01 < factor < 0.99
         assert len(fake_pw.writes) == 1
         assert float(fake_pw.writes[0][1]) == pytest.approx(0.001 * factor, abs=1e-6)
         assert fake_pw.mults["gain_left_hp"] == pytest.approx(0.001 * factor, abs=1e-6)
+
+    def test_target_equal_live_not_written(self, gm, fake_pw):
+        """QE ddc52a33 C2: target == live (exact at 6 decimals) is not written."""
+        gm("open", pw=fake_pw)
+        limiter = _limiter(1.0)
+        _fixed_factor(limiter, 0.5)  # target 0.0005 exactly
+        live = 0.0005
+        fake_pw.mults["gain_left_hp"] = live  # reads back as Float 0.000500
+        # QE f1858c33 A2: equal as floats, or a `target <= live` mutant survives.
+        assert 0.001 * 0.5 == float(f"{live:f}")
+        asyncio.run(limiter._enforce_tick(100.0))
+        assert fake_pw.writes == []
+
+    @pytest.mark.parametrize("base, live, factor, written", [
+        (0.001, 0.001, 0.9995, False),          # target 0.0009995: within 1e-6
+        (0.001, 0.001, 0.998, True),            # target 0.000998
+        (0.0011, 0.001004, 0.001002 / 0.0011, True),  # needs all 6 decimals
+    ])
+    def test_read_margin_boundary(self, gm, fake_pw, base, live, factor, written):
+        """AE 56043d31 C5 / QE ddc52a33 C5: write iff target < live_read - 1e-6.
+
+        pw-cli prints 6 decimals. Dropping the margin writes case 1; a
+        margin of 2e-6 or more (like the old 1e-4 skip) skips cases 2 and 3.
+        """
+        gm("open", pw=fake_pw)
+        limiter = _limiter(1.0, base_mult=base)
+        _fixed_factor(limiter, factor)
+        fake_pw.mults["gain_left_hp"] = live
+        asyncio.run(limiter._enforce_tick(100.0))
+        if written:
+            assert len(fake_pw.writes) == 1
+            assert float(fake_pw.writes[0][1]) == pytest.approx(base * factor, abs=1e-9)
+        else:
+            assert fake_pw.writes == []
+
+    def test_no_rewrite_loop_for_target_between_decimals(self, gm, fake_pw):
+        """AE be3da6a3 H2: target 0.0009985 reads back as 0.000999: one write.
+
+        A margin of 0 or 1e-7 rewrites it on every tick.
+        """
+        gm("open", pw=fake_pw)
+        limiter = _limiter(1.0)
+        _fixed_factor(limiter, 0.9985)
+        for i in range(10):
+            asyncio.run(limiter._enforce_tick(100.0 + i))
+        assert len(fake_pw.writes) == 1
+        assert f"{fake_pw.mults['gain_left_hp']:f}" == "0.000999"
+
+    def test_read_failure_is_per_channel_and_clear_logged_once(
+            self, gm, fake_pw, caplog):
+        """QE ddc52a33 C3: one channel's fault leaves the other protected."""
+        from app.thermal_limiter import READBACK_FAILED
+        from app.ws_system import _thermal_limiter_section
+        gm("open", pw=fake_pw)
+        fake_pw.mults["gain_right_hp"] = 0.001
+        monitor = MagicMock()
+        monitor.snapshot.return_value = [
+            {"name": n, "headroom_db": 1.0, "pct_of_ceiling": 80.0}
+            for n in ("sat_left", "sat_right")]
+        limiter = ThermalGainLimiter(monitor, is_mock=False)
+        limiter.configure_channels([
+            {"name": "sat_left", "channel_index": 0,
+             "gain_node_name": "gain_left_hp", "base_mult": 0.001},
+            {"name": "sat_right", "channel_index": 1,
+             "gain_node_name": "gain_right_hp", "base_mult": 0.001}])
+        app = types.SimpleNamespace(
+            state=types.SimpleNamespace(thermal_limiter=limiter))
+        del fake_pw.mults["gain_left_hp"]  # not in enum-params: unreadable
+
+        def writes(name):
+            return [v for n, v in fake_pw.writes if n == name]
+
+        with caplog.at_level(logging.ERROR, logger="app.thermal_limiter"):
+            for t in (100.0, 101.0, 102.0):
+                asyncio.run(limiter._enforce_tick(t))
+            expected = [{"channel": "sat_left", "fault": READBACK_FAILED}]
+            assert limiter.faults() == expected
+            assert _thermal_limiter_section(app) == {
+                "degraded": True, "faults": expected}
+            right = limiter.snapshot()["channels"][1]
+            assert right["readback_fault"] is None
+            assert writes("gain_left_hp") == []
+            assert len(writes("gain_right_hp")) == 1
+
+            fake_pw.mults["gain_left_hp"] = 0.001
+            for t in (103.0, 104.0):
+                asyncio.run(limiter._enforce_tick(t))
+
+        assert _thermal_limiter_section(app) == {"degraded": False, "faults": []}
+        assert len(writes("gain_left_hp")) == 1
+        assert len(writes("gain_right_hp")) == 1
+        errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+        assert len([m for m in errors if "FAULT" in m]) == 1, errors
+        assert len([m for m in errors if "readable again" in m]) == 1, errors
+        assert all("sat_left" in m for m in errors), errors
+
+    def test_gate_close_between_read_and_write_rezeroes(self, gm, fake_pw):
+        """QE ddc52a33 C4: the post-write gate re-read zeroes the reduction."""
+        from .f439_fakes import CONVOLVER_ID
+        fake = gm("open", pw=fake_pw)
+
+        def close_after_write(name, raw):
+            if float(raw) != 0.0:
+                fake.gate = "closed"  # GM reports closed; its zeroing is not modelled
+
+        fake_pw.on_write = close_after_write
+        limiter = _limiter(1.0)
+        ch = limiter._channels["sat_left"]
+        asyncio.run(limiter._enforce_tick(100.0))
+
+        values = [float(v) for n, v in fake_pw.writes if n == "gain_left_hp"]
+        assert len(values) == 2 and 0.0 < values[0] < 0.001 and values[1] == 0.0
+        assert asyncio.run(pw_helpers.read_mult(CONVOLVER_ID, "gain_left_hp")) == 0.0
+        assert ch.blocked == gain_guard.GATE_CLOSED
+        assert ch.current_mult == 0.001

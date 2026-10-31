@@ -1,13 +1,16 @@
 """Defect repro tests closed by F-320 F / F-439 (PO r3 67f15d65, QE f5c607ef).
 
 One named test (or group) per defect.  Each is red at base ff55d0c8 and
-green at the fix; the PR body carries both runs.  They use only interfaces
-that exist at base (the /api/v1/config/gain route, ThermalGainLimiter),
-with fakes at the process boundary (``f439_fakes``): PipeWire behind
-``subprocess.run`` and a GraphManager on a localhost port.
+green at the fix; the PR body carries both runs.  The exceptions, green at
+base too, are the F-352 regression pins and the positive control below.
+They use only interfaces that exist at base (the /api/v1/config/gain route,
+ThermalGainLimiter), with fakes at the process boundary (``f439_fakes``):
+PipeWire behind ``subprocess.run`` and a GraphManager on a localhost port.
 
     F-344  a gain write raises Mult while the gate is closed or unknown.
     F-352  NaN, inf, a subnormal or > 1.0 reaches pw-cli (or is clamped).
+           -Infinity and -0.5 are refused at base too (base
+           config_routes.py:102-103): regression pins, not closers.
     F-345  the thermal limiter raises Mult on recovery after a gate close,
            writes a non-zero reduction while the gate is closed, or skips
            the reduction after a gate reopen (stale cached Mult).
@@ -116,6 +119,16 @@ class TestF352InvalidMultRefused:
         assert resp.status_code == 422, resp.text
         # A refused request makes no PipeWire call at all, not even a read.
         assert fake_pw.calls == [], f"422 for {raw} still ran {fake_pw.calls}"
+
+    def test_valid_value_reaches_pw_cli_control(self, monkeypatch, gm, fake_pw, client):
+        """QE f1858c33 B: positive control, so ``calls == []`` above is live."""
+        monkeypatch.setattr(config_routes, "subprocess", types.SimpleNamespace(
+            run=fake_pw.run, TimeoutExpired=subprocess.TimeoutExpired,
+            CompletedProcess=subprocess.CompletedProcess))
+        resp = _post_gain(client, "0.01")
+        assert resp.status_code == 200, resp.text
+        assert fake_pw.calls != []
+        assert fake_pw.writes == [("gain_left_hp", "0.01")]
 
 
 # ---------------------------------------------------------------------------

@@ -62,8 +62,10 @@ DEFAULT_OVERRIDE_DURATION_S = 300.0  # 5 minutes
 # Prevents flooding PipeWire with rapid Mult changes.
 MIN_UPDATE_INTERVAL_S = 0.5
 
-# Minimum Mult change to trigger a pw-cli update (avoids tiny corrections).
-MULT_CHANGE_THRESHOLD = 0.0001
+# pw-cli enum-params prints Mult with 6 decimals (error <= 5e-7), so a
+# reduction is written only if target < live_read - READ_MARGIN: read
+# rounding can never let a raise through (AE 56043d31 C2/C5).
+READ_MARGIN = 1e-6
 
 
 def _db_to_linear(db: float) -> float:
@@ -460,7 +462,7 @@ class ThermalGainLimiter:
             self._set_readback_fault(now, ch_limit, live_mult is None)
             if live_mult is None:
                 continue
-            if live_mult - target_mult < MULT_CHANGE_THRESHOLD:
+            if target_mult >= live_mult - READ_MARGIN:
                 # Already at or below the target (e.g. gate closed: 0).
                 continue
 
