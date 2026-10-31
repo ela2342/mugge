@@ -1862,6 +1862,51 @@ priority!"
     the out-link lesson; Mac disk 2.6 GiB free (below the 10 GiB stop
     line; owner). PARKED: R5r (aecc01dc, not reviewed) and R6n
     (21f28b34); R6n revives on ANY hang or GPU reset in the F2 soak.
+  - v332 PUSHED (CM, remote verified): chore/backlog =
+    450378408513904c23574741e962e1fe218e06f8 (+135/-0 on 4b6038b5).
+    v333 bases on it and consumes PM addenda 35-49 in
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/:
+    held-for-v333-add35-20261031.txt (796e328d...a9b5), -add36-
+    (d887ffb2...88ec), -add37- (e9b44a46...2229), -add38-
+    (9912e303...bd80), -add39- (9f05b5d6...1740), -add40-
+    (6a3125f5...8709), -add41- (4f1d88c9...b3a1), -add42-
+    (53e697db...4370), -add43- (3bdca03d...8e9b), -add44-
+    (3d6c4ebe...d3db), -add45- (4d197778...1442), -add46-
+    (508cb782...238b), -add47- (2705b835...3052), -add48-
+    (a96cd929...9a5d), -add49- (c34346bf...384a). Built at a MILESTONE
+    (G-US172-06 Pi result: R5s-c TRYBOOT-APPLIED).
+  - OPEN TRACKING (v333; supersedes v332's line): US-172 CRITICAL
+    PATH: Architect classification of R5s-c + confirmation ruling
+    raising OVERLAY_CLASS_MAX 31 -> 40 (a8f9d760 S2) -> new CM grant
+    for verbs 07-09 (worker-1) -> worker-4 L1s head on
+    story/US-172-layout-l1s (first commit = #52 reorder revert, main
+    merge, Arch 63e41531 M1-M6, length classes 48/31->40 inclusive,
+    SecSpec L1/L2/L3/L5 per 8d1e41d2, QE da578961 + ad6a8bda, Part D
+    r10 as a separate docs commit, TW doc patch 6a28cfcc before Rule
+    13 reviews) -> PR under Rule 13 (supersedes #52; #52 closed with a
+    pointer) -> branch build at a CM-picked venue (not the Mac below
+    10 GiB) -> s5 branch tryboot + 15-min GL soak at quantum 256 (AE
+    0a1cb983, QE erratum 5) -> DEPLOY -> US-172 acceptance reads
+    (PO/QE; F5 = compositor screenshot, no owner look); AE rating of
+    the USBStreamer ALSA index 1 -> 0 finding (PM files an F-ID after
+    the AE answer); starvation guard at the US-172 F1 milestone (AC1 +
+    AC2a + AC11 on one boot) or 2026-11-03T20:00 (PO f6393b6b); route
+    C run 41198461811 (Pi pull gated by SecSpec S5-S8); R6a' after
+    route C; AC2 grant only after AE review of the T2 link list; QE
+    AC2 T3 test form; PR #77 (F-341) 7/7, CI 41199141583 + CM check +
+    merge; F-383 S4 CI 41198071247 + PR (worker-3); F-468/F-490 after
+    F-341 (worker-2); F-439 PR UNSTAFFED, waits until US-172 no longer
+    needs worker-4; F-509 (TW, after AC3); F-510 (Architect, after
+    core tech); F-511 option pick (Architect, after US-172); #66 last;
+    F-320 D post-merge TW list; F-504 owner + fix; F-441 serial
+    adapter question (with the owner); F-481 role-prompt vehicle;
+    F-497 amps-on row question; F-507 evidence home; F-508 owner
+    answer + TW docs vehicle for the out-link lesson; Mac disk below
+    the 10 GiB stop line (owner); batched owner items via team-lead:
+    QE O1 (monitor or dummy plug on HDMI-A-1; HDMI-A-1 now reads
+    connected), AC10 unplug + AC1 power pull visit. PARKED: R5r
+    (aecc01dc) and R6n (21f28b34); R6n revives on ANY hang or GPU
+    reset in the soak.
 
 ## Reserved IDs
 
@@ -5671,6 +5716,158 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       f5dd73aaf254c8018520e2cf1b8d435e2d0e0e46d33b5d9ddbb7458aa79669c2);
       worker-4 G1 pre-read kit 37d35016, not granted (CM-reported; not
       found under live/ by the PM).
+  - US-172 v333 STATE (MILESTONE; supersedes the v332 lines above
+    where they differ):
+    - G-US172-06 CLOSED (CHANGE, worker-1, issued ~12:40Z; grant
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/grant-G-US172-06-r1-b14c796f.md,
+      sha256
+      b14c796f268a68e79a048bf89c0523410af83be9235d37568321b21b0e1d6774;
+      kit r3 a27687ff, variant sb, verbs 01-06, STOP after 06): R5s-c
+      ROW TRYBOOT-APPLIED, 0 STOP, 0 FAIL; vc4-drm and v3d up;
+      HDMI-A-1 connected. Run dir
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/g-us172-06-r5sc-r1-99959158/,
+      SHA256SUMS sha256
+      99959158f79018f90072658d30ed0f095f0d42a6097708a73399e443a61f764f
+      (all entries OK at PM read). Meaning: the firmware applies the
+      overlays at the 40-char overlay-class depth, so L1s stays the
+      layout (L4 not needed). FINDING for the AE: USBStreamer ALSA
+      card index moved 1 -> 0 (enumeration order); no existing backlog
+      item (PM dup-check); F-ID after the AE rating.
+    - R5s-c KIT HISTORY: r1 (SHA256SUMS 4790cdaa, DIFF 30b03f0f, desk
+      test 0cc3dbc1) VOID (built before its inputs); its Architect
+      review 554c203b VOID; QE review 2a35df59 (sha256
+      2a35df595a1f207ef236197a12dcdf924f61a6ae6aad59724e280ac29d01ea44)
+      and AE review efc95414 (sha256
+      efc9541450417fb00806a1568a2de7af7f53214504b2afe99d19487d64e982c6)
+      were inputs for r2/r3. r2 VOID (DIFF sha mismatch; predated
+      94817076, QE E3-5, 2a35df59, efc95414); its SUMS ff0d22b2
+      (sha256
+      ff0d22b208101f50b5c9168649c929dde69adadc411becf3c0ed3ba9072a0727)
+      kept as RECORD only. r3 RELEASED: SHA256SUMS
+      a27687ffe93dd297a1b9cbdb5283df6de7e9ed22154171f96dced6f438bfc0fa,
+      delta note PLAN-r5sc-r3-delta.md
+      c6faf1efdf93ad6067a82886e1f4877ff68568bef40343137baf4978be6c48c7,
+      DIFFs
+      ccba3a36370f209c5645554a5307998e4cef5e8ef047c31b65d5a3ff51f82c7c
+      (r2->r5sc3) and
+      ee7cdd97470139e597b41866f9193131d72bb7c1588861c3f35ab73552063f7b
+      (r5sc2->r5sc3), desk test SUMS
+      d24d2c65fef7786179551fcefaf57afe4f3bd058f054454184b5991e472ba897;
+      releases Architect
+      d8fd350da9f0ca4018877a9a0e2b2d44a56074f50e6f46912a4d03cc31d6bc25,
+      AE
+      ca10ad1274a4f91f67db64844834eab0bf3e185cf62f95fba91c684ca9caaaba
+      + erratum
+      0e3f6349990a933b7727295944d7b9dacee5e0962f82a0c22bf00460916c82ca,
+      QE
+      d507337b78dcb08a8c47e185cd91c4502116aebea65a47ce8ed8e124b45b1d89.
+    - LENGTH CLASSES (Arch a8f9d760 two classes; Arch
+      5627151721afc8e37c32f10eed38db6658f71b684b8891b8a0866ad1a7837be9
+      E3 N/A + constants; Arch
+      948170766a7bb1bde65b2189d175f1c98980780f80aeb73af869f149a3f4917b
+      INCLUSIVE): KERNEL_CLASS_MAX 48 (path length <= 48);
+      OVERLAY_CLASS_MAX 31 now, 40 only after the Architect's
+      confirmation ruling on the APPLIED R5s-c (pending). QE errata 3
+      (3f80f1419e02ec2304f85de4975e85e7e862312224ba3a01cfaebcd9971b2e0f)
+      and 4
+      (d272764db6e80ed8efa99a7c46353e1b94102704e81300bacc125a8ff430429e):
+      boundary tests against the named constants (CONST passes, CONST
+      + 1 fails; 48/49 and 31/32 today); at 31 the L1s real-name check
+      is red BY DESIGN and blocks merge; no xfail/skip;
+      dtparam=audio=off stays DIRECTLY after the vc4-kms-v3d-pi5 line
+      (three negative cases + the noaudio check). QE erratum 2
+      74504b2f52630323b0ebe820e769350a222d808a257d7c405a3470151165d9dd;
+      QE erratum 1
+      9a21330d7fa7a4be8cd11f7ace2b866336f8e14e57dddb9bbf205b8a88d06225
+      (prune cases 9-11).
+    - PR #52 DISPOSITION (Arch
+      7f064c75f19a06143e7019eb94d150af07059b5b82b230f3a534ccd913eb5ac3:
+      #52's line reorder refuted; #52 CONFLICTING with main 5fc3a012):
+      CM decision, PM concurs: the revert is worker-4's first commit
+      on story/US-172-layout-l1s; the L1s PR SUPERSEDES #52, which is
+      closed with a pointer when the L1s PR opens; worker-4 is the
+      single writer of bootloader.nix and board-guard.nix. AD
+      8127ada27d2dadaa769215a892a8136eb30ca2ff15a3361bba0df33a7cdf0ba4
+      accepts 7f064c75/56271517 with two LOW notes: T1 fixed check
+      order if the branch tryboot fails (layout code vs #52's greetd
+      AC8 start path); T2 at OVERLAY_CLASS_MAX 31 the branch fails at
+      eval, so only the scratch-commit run at 40 counts as CI evidence
+      until the confirmation, recorded as such in the PR.
+    - L1s BRANCH STATE (worker-4): 466345d9 pushed, CI 41201406562 for
+      eval feedback only (NOT final). Revert c1e07219 and main merge
+      4ceb08b1 local, unpushed (CM-reported). worker-4 acked 15 input
+      shas. Before the next push: Arch L1s consult answer
+      63e41531e066f5e3e5aed437fb3fa5a43da1000fbbeb75b223c275cb0e0f3b26
+      M1-M6; QE L1s consult answer
+      da5789617f8d7b7697d3e0f0ce973c4945a0685936aa16598aa3794e161f994d
+      + erratum 1
+      ad6a8bdab75e8a6ee96224671f557a92bff45910fe998d51ac19c2e2f7285343;
+      SecSpec consult verdict on 466345d9
+      8d1e41d2b06797fcb18ed7671373b46020c3e81f0ce3e4203cd98a10ab4f1d04:
+      CHANGES NEEDED (not a veto), L1, L2, L3, L5 unmet. SecSpec
+      acb8fb17d62f7351c92e2095fbfdbccf19e1ff28a5dbeb7c609c54e2fa1c50ad:
+      no veto, legacy gens/ delete under L1-L5; Arch concurrence r2
+      6bdb35ce2cf56f3da5b4223175078ede647fa3233a992b721ae81f32793c8cd6
+      (r1 void): L1-L5 BINDING on the L1s PR.
+    - DOCS PLACEMENT (PM decision): the TW doc patch (TW impact list
+      6a28cfccaf29bd12cf7eb7ae25da91cd1c6e3e105b5ca6a0037cebfe7b00c856,
+      items 1-3, incl. docs/lab-notes/US-172-pi5-graphics.md) goes
+      into the L1s PR, not a separate docs PR: sent as file + sha256
+      against worker-4's fixed code head; applied with no fuzz (fuzz
+      goes back to the TW); lands BEFORE the Rule 13 reviews start;
+      who applies it is the CM's call. Part D r10 story diff goes on
+      the L1s branch as worker-4's SEPARATE docs commit (CM).
+    - AC TEXT (PO; CLOSED for now): r2 + A1..A9, later wins: A3
+      f7516172e09b608307e0d72326c7992787817fb6b26619e3e610c8552d828c9f,
+      A4
+      172e7a3db5673067ab379140067a3333a6b7a88a795b0d7afdf649f41059c556,
+      A5
+      d81eeb44c923290a1b428a9ed2f0e56d9b4474b182770c7cd25c0c1aa8fba06f,
+      A6
+      b2612c22572c23a3370bb39e9cadc6d037437b2ba75b08e87ac3cdf44fa0fba7,
+      A7
+      7f265ab3c300ad2a06c0ea4ed4d343fac168a9de3eae475bf7c887d9cefa951d,
+      A8
+      d46b2eaeee5232d40cb0724c792a8a2f774ad478f91742339f3efa60f03748f7,
+      A9
+      12fe02129fbef6d90967c3ebccb50ef52a18ecf501af94d48ed47872c803cbb1
+      (in
+      /Users/gabriela.bogk/mugge-team-evidence/live/product-owner/;
+      frozen copies of A3-A8 in the US-172 frozen dir). Key content:
+      AC1 bcm2708_fb. token recorded only; AC2a two renderer reads
+      (labwc env + GL client on the same seat), one read =
+      INCONCLUSIVE, C1 YES (AE
+      d0a3eb9383cc82eaa972dbfe65784f6a287dad1f7085668dfbdd701ac9dbaa31)
+      so the RT-graph bullet at quantum 1024 stays; AC12 uses the
+      a8f9d760 class limits, 40 only after the Architect confirms,
+      legacy prune only when the running system is known; gen 6
+      (a11skqm2) stays a no-graphics rollback target until pruned; F5
+      = compositor (grim) screenshot, no owner look. Arch
+      6eb85121e426e88956c6ca2979e9c6f57587cd353b96f41b0a81eba72ff22d5f
+      flags resolved; Arch
+      ad56f7d25ddbbdbafcdcbc79919b3cb43c4b7a5e6742b52ba0ee321ddf455557
+      no misquote in A6/A7. Part D r10 RELEASED: release record
+      /Users/gabriela.bogk/mugge-team-evidence/live/product-owner/us172-story-partD-r10-po-release.md
+      (02e5fea4b4a1826f96a75139178ed751abec897744b50378bccbce9425ce37db),
+      diff
+      2dd8a6f13ae52bc46cf5b0ac0a114dd53c33bcccc996602f82ce738316ea3b7c
+      (insert-only on C r5 6cf471a7), result
+      65b360a7ed95f9fe8d8827270e9b8752f12f76d3a4b01eb60a7f43a7051ffa1e,
+      kit SUMS
+      364f0183477be4eca1378182c896744e2684937156bdf502cc82a132e44bbda8;
+      Part D r6-r9 VOID, never relay.
+    - SOAK TERMS (s5 branch tryboot): AE
+      0a1cb98365228eff9184ec6ffca290dc760518162c1195472a4aeb8c1b5ea0f5:
+      15-min GL soak at quantum 256 (Q1 PRE reads 256 or a pw-metadata
+      set after gains/gate reads; Q2 any quantum change after PRE =
+      VOID; Q3 counted nodes pinned by node.name, only "running"
+      counts; Q4 ERR/xrun growth fails; Q5 1a3addf3 C1-C4). Not in
+      conflict with A3's 1024 (AC2a bullet; the soak is not an AC). QE
+      erratum 5
+      88b558cffad3f39cf93e44c360dd293a22b79fa26052eedc584f9d18ec944a86
+      carries the soak criteria. AE
+      b7b12d3ab89a5078a7c714456b749ef44b73335741a0438ff8e81d5e96fcce7c:
+      A3 checked on every R5s-c row.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -16764,6 +16961,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   enabled on the Pi 5" (v197-v199) is the same issue; this item is the
   original. The later item's additions (AE pre-prod point, SecSpec
   pre-gig check) stand.
+  Addition (SecSpec acb8fb17, 2026-10-31; PM dedup, no new F-ID): safe
+  only while the mugge kernel forces BT=n / BT_HCIUART=n
+  (kernel-rt.nix, D-019) and bluezSupport=false. Any kernel without
+  that force (e.g. a stock or diagnosis rpi-defconfig kernel such as
+  R6n's) plus a pre-fix rollback would re-expose the radio. TW
+  rollback doc: "BT radio node enabled; no BT stack in the mugge
+  kernel".
 - ela's PAM loginLimits (nix/nixos/audio/pipewire.nix:83-86; Pi 4 and
   Pi 5) set rtprio 95 and memlock unlimited: every ela process (SSH
   sessions, Mixxx) may go to FIFO 95, above PipeWire's 88, and lock
