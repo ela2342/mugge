@@ -1690,6 +1690,40 @@ priority!"
     home; F-508 owner answer (who ran the 10-29 Mac GC; team-lead) +
     TW docs vehicle for the out-link lesson; Mac disk 2.6 GiB free
     (below the 10 GiB stop line; owner).
+  - v327 PUSHED (CM, verified on the remote): chore/backlog =
+    6c901706cd47c783dd3acef3f3bcf8df5f0129ea (parent f129eb11, file
+    sha256 358a60de, +58/-0). v328 bases on it and consumes PM addenda
+    19-25 in
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/:
+    held-for-v328-add19-20261031.txt (71e918aa...8a61), -add20-
+    (8219cef0...175b), -add21- (f236a124...5565), -add22-
+    (5f515f88...00a4), -add23- (54a39ed2...44ae), -add24-
+    (fcad49bf...6f7d), -add25- (2cb7b9c5...a87f); the later addendum
+    wins. Built at the R5s MILESTONE (batching rule, team-lead: a
+    backlog version at most about every 30 minutes, or at once on a Pi
+    run result, a merge or an owner decision). v327 corrections: its
+    "R5s grant waits ONLY on QE Q2/Q3 + Architect Q5" and "gen-6
+    evidence NOT yet a ruling" lines are superseded below.
+  - OPEN TRACKING (v328; supersedes v327's line): US-172 07/08/09
+    restore of the normal boot (GO under G-US172-03) then the R5s-b
+    grant (kit r2 8c3eaae7, variant sb, fresh 01) and the Architect's
+    R5s-b classification; then the Architect's re-judgement of R5r;
+    production os_prefix fix scheme (Architect, after R5s-b; worker
+    branch + PR); R5r kit (worker-4); R6n (frozen 21f28b34; owner
+    workflow-scope push block only); route C run 41198461811 (Pi pull
+    gated by SecSpec S5-S8); R6a' after route C; AC2 grant only after
+    AE review of the T2 link list; QE AC2 T3 test form; starvation
+    guard at the US-172 F1 milestone or 2026-11-03T20:00 (PO
+    f6393b6b); PR #77 (F-341) 7/7, CI 41199141583 + CM check + merge;
+    F-383 S4 CI 41198071247 + PR (worker-3); F-468/F-490 after F-341
+    (worker-2); F-509 (TW, after AC3; UX + AE agree on 61c3306f);
+    F-510 (Architect, after core tech); F-511 option pick (Architect,
+    after US-172); F-439 main merge; #66 last; F-320 D post-merge TW
+    list; F-504 owner + fix; F-441 serial adapter question (with the
+    owner); F-481 role-prompt vehicle; F-497 amps-on row question;
+    F-507 evidence home; F-508 owner answer (who ran the 10-29 Mac GC;
+    team-lead) + TW docs vehicle for the out-link lesson; Mac disk 2.6
+    GiB free (below the 10 GiB stop line; owner).
 
 ## Reserved IDs
 
@@ -1888,6 +1922,8 @@ Next free (v326; unchanged, no new IDs in this version): F-509,
 US-183, D-072, T66.
 Next free (v327; unchanged, no new IDs in this version): F-509,
 US-183, D-072, T66.
+Next free (v328; supersedes the line above; F-509, F-510, F-511 filed
+in this version): F-512, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -4330,6 +4366,30 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       and the CM ("T4" was worker-6's label in fa28c800). The pre-#76
       run 40754223514 does not count: one dispatch at the merged head
       (41196044817 at cc34d3f4).
+      v328 PR #77 (head cc34d3f4): 7/7 Rule 13 approvals, all posted
+      verbatim on the PR: UX 9f0be312, SecSpec 8745c7a6, AE 72a569b3,
+      QE 626c8ce8, TW dca6075e, Architect 9394cb3b, AD
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/F-341/frozen/ad-PR77-verdict-cc34d3f4-r1-6c9e3943.md
+      (sha256
+      6c9e3943920a86b6ee701621adbe4f7fb1d8df9119f813fe1e98f4c8009b9191);
+      the AE ruled on the AD's A1
+      (/Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/F-341/frozen/ae-PR77-AD-A1-ruling-r1-17da8b9d.txt,
+      sha256
+      17da8b9dd137e89cd1ef0680bd71695752c99af05b8aa887cc25f0151d6f6961)
+      and its approval stands. PR CI 41199141583 running at PM read;
+      the CM merges only after it is green and its own check passes
+      (standing consent).
+      Non-blocking follow-ups:
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/F-341/frozen/PR77-followups-for-PM-r2.txt,
+      sha256
+      b978e19b2abf9dd02a46ca3ad90a07378bdace28d00f9df81722c565182f1910
+      (supersedes r1 7f9767dd), filed as F-509 (docs), F-510 (code
+      cleanups) and F-511 (AE gate on AD A1 + L1). The F-341 AMPS-ON
+      row keeps the F-511 gate. QE 626c8ce8 GENERAL READING RULE
+      (process, for QE/CM kit and review templates): a
+      cache-substituted check counts as evidence only when a quoted
+      mugge CI build log (with its push line) exists for that exact
+      out path; otherwise build at that head.
 
 - **AMPS-ON PRECONDITION** (AE + Architect): "pcm-bridge/level-bridge
   PW nodes don't come back after a PipeWire restart, so metering is
@@ -5127,6 +5187,97 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       yet a ruling. Live confirmation under OBSERVE G-US172-01.
     - R5r KIT: worker-4 acked all 13 R5r inputs and is building it;
       the G1 pre-reads go in as a separately pinned read-only script.
+  - US-172 v328 STATE (MILESTONE; supersedes the v327 lines above
+    where they differ):
+    - R5s RESULT: TRYBOOT-APPLIED, blacklist holding; PATH-LENGTH
+      HYPOTHESIS CONFIRMED. Architect classification
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/arch-US172-R5s-classification-r1-f6519788.md,
+      sha256
+      f6519788a1ac9d56f46d82841d44bb1926ad48cfcf816e5aecabbf2bfc157a50;
+      evidence 02-06
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/g-us172-03-06-r1-a7ebb264/,
+      result G-US172-03-result-06-r1.md sha256
+      a7ebb2643bd033730a8775914777d50ced327374650b23ddc834a5742ab01d7f.
+      The overlays WERE applied (the relay summary said the opposite;
+      "B2 node paths == PRE" compares paths only, the node STATUS
+      changed; checker "B2 effects: disable-bt-pi5=yes
+      vc4-kms-v3d-pi5=all"; chosen os_prefix=t/,
+      overlay_prefix=t/overlays/, tryboot=00000001). One variable: the
+      same overlay files and parameters are APPLIED at a 31-char path
+      (t/) and silently SKIPPED at a 67-char path (gens/<32-char
+      hash>/). So the firmware path-length limit is why gen 6 never
+      gets its display or Bluetooth overlays; kernel, DTB and overlay
+      bytes are identical, NOT a build mismatch. Confirms the
+      2026-10-26 inference (~64-byte limit; likely F-367 cause).
+    - NEXT ON THE PI: 07/08/09 (restore the normal boot) GO under
+      G-US172-03. Then R5s-b: a NEW grant after 09 passes; kit r2
+      8c3eaae7 unchanged, variant sb, a new run dir with a fresh 01
+      (QE r5 E1); verbs 01-06, then STOP for the Architect's
+      classification. It decides whether vc4/v3d probe and bind
+      (renderD128 -> v3d, HDMI-A-1/2) with overlays applied and the
+      blacklist removed, without hang or panic: the first boot in
+      which vc4/v3d see enabled DT nodes on this kernel. Envelope
+      unchanged (one-shot tryboot; panic/softlockup/hung_task bounds;
+      ",noaudio" + dtparam=audio=off; audio = STOP; a HANG goes to the
+      power-pull path, QE r5 B5, via team-lead). R5r and R6n stay
+      queued behind R5s-b; the Architect re-judges whether R5r is
+      still needed after R5s-b.
+    - PRODUCTION FIX (US-172 scope, no new ID; Architect rules on the
+      scheme after R5s-b): keep every firmware-opened path under the
+      limit, likely a shorter per-generation os_prefix (today
+      gens/<32-char hash>/ gives 67-char overlay paths). Touches the
+      pi5 boot-loader install code -> a worker, normal branch + PR
+      under Rule 13. Closes the F-367 root cause once it lands.
+    - R5s KIT r2 (all three releases IN):
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/r5s-kit-r2-8c3eaae7/,
+      SHA256SUMS sha256
+      8c3eaae7cf6b4d0baaf45d60fc859762c0b8e3bd196ea793620bcfd8b0896b10
+      (PM: every listed file checks OK); diff vs r1
+      r5s-kit-r2-DIFF-r1-r2-1ac558e5.patch
+      (1ac558e52fdd7ca9942e02291132cf9002e94f9dccff8fc2015c4d115ab8dc03).
+      AE release ae-US172-R5s-kit-r2-release-r1-d3a0cead.txt
+      (d3a0cead344c49a0353e8fb6c7d519b91cec14621b8d9fa33d11711dae2cf98c);
+      Architect delta approval
+      arch-US172-R5s-kit-r2-delta-approval-r1-7e5af510.md
+      (7e5af5105ae3dafbea7223ec526186864a5ccf63fd284886071dd261d9855763);
+      QE delta review r2 qe-US172-R5s-kit-r2-review-r2-d9c8a068.md
+      (d9c8a0686a5db069f2db09c9de204ba4d1d3caf4d564d476d444aadfdc387237,
+      "r2 APPROVED", nid and A5 MET; supersedes QE r1 b7b4bf7f). r2
+      conditions met: AE (first verb 01 reads all 8 gain_*:Mult = 0,
+      printed), Architect (nid fixed, an empty read cannot pass), QE
+      A5 ruling (8856a0e9, cited by the QE).
+    - KIT r1 VOID for running (G-US172-01 result
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/g-us172-01-r1-88393ca9/G-US172-01-result-r1.md,
+      sha256
+      88393ca91c4ef8df0697d910d594d6ddccc1f1a2254da0caf1e2a07a91135485:
+      STOP=1 FAIL=1 ok=41, both KIT defects: the reads.sh enum section
+      ran under bash -c without nid(), so no gain was read; A5
+      measured every file under gens/<id>/ instead of the firmware
+      path through t/). Its releases lapse: AE b54d2e56, Architect
+      plan approval
+      /Users/gabriela.bogk/mugge-team-evidence/live/architect/arch-US172-R5s-kit-r1-plan-approval-r1.md
+      (2a99c519f26d8f443eab34fdc83d2bb5fd7c1c30812f4068980c38a1f91cf974).
+    - PI SESSIONS: OBSERVE G-US172-01 (worker-1, verb 01) ended
+      11:47:47Z: live configurationRevision
+      3f28b6c75d2b40e1752bb8f1ca9ae67b76f90fdd, CLEAN; booted ==
+      current == a11skqm2. OBSERVE G-US172-02 (pre-obs on kit r2)
+      CLEAN:
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/g-us172-02-r1-cf585ba9/G-US172-02-result-r1.md,
+      sha256
+      cf585ba9222d9186a8a9ddca6c702b435880f71cf03395c77ecfc281818d1006,
+      STOP=0 FAIL=0 INCONCLUSIVE=0 ok=53, all 8 gains 0.000000
+      printed, gate closed. CHANGE G-US172-03 (R5s tryboot) granted to
+      worker-1; 02-06 done (above); 07/08/09 GO.
+    - GEN-6 RULING: Architect
+      /Users/gabriela.bogk/mugge-team-evidence/live/architect/arch-US172-gen6-rev-ruling-r1.md,
+      sha256
+      f83dd409309d81c027e806a25656a03de199c4a184018bf73eab1753a5eaac9f:
+      route C C-2 MET; R6n condition A CLEARED. Void clause (booted !=
+      a11skqm2 or another revision) NOT triggered by the live read.
+    - ROUTE C DISPATCHED once: release.yml run 41198461811, headSha
+      879eb919. Any Pi pull of its output is gated by SecSpec S5-S8.
+    - R6n: blocked ONLY by the workflow-scope push permission (owner
+      via team-lead).
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -19514,6 +19665,57 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   v326: Architect: worker-4 r2 b345e8b3 is consistent with lead r3
   7258ba58; no new ruling.
   - Next free -> F-509.
+- **F-509** (P3, docs; owner TW, with UX + AE; AFTER AC3; with the
+  safety.md #3/#6 rewrite; 2026-10-31; source
+  /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/F-341/frozen/PR77-followups-for-PM-r2.txt,
+  b978e19b): signal-gen pre-flight docs follow-ups from PR #77. (a) UX
+  N1: safety.md #3/#6 must say what to do on exit 124 (today only in
+  the script comment). (b) UX N2: safety.md gives the exact command,
+  the field max_level_dbfs and the expected value. (c) AE N1:
+  pre-flight #6 checks max_level_linear, not the rounded dBFS; the AE
+  ruling 17da8b9d keeps pre-flight #6 on status + max_level_linear,
+  with the N2 caveat in the docs. (d) AE N2: for state-changing
+  commands, exit 124 or 3 = state unknown -> send stop, then check
+  status (TW/AE decide whether this also needs code). (e) TW:
+  rt-signal-generator.md s7.2/7.3 lacks the status ack fields
+  max_level_dbfs/max_level_linear; s7.1 should name pi4audio-rpc. TW
+  reconcile proposal to UX + AE:
+  /Users/gabriela.bogk/mugge-team-evidence/live/technical-writer/F-509/F509-field-reconcile-proposal-r1.md,
+  sha256
+  61c3306f075d3c72748d3d713d5ef6c699d42ba4aa64409e5eac60e5f44810ae
+  (pass test max_level_linear = 0.1; the command prints only that
+  field). Written only after AC3 and once UX + AE agree. safety.md is
+  touched, so the amps-on rows mirror its wording.
+- **F-510** (P3, code; owner Architect; AFTER core tech per the
+  owner's 2026-10-26 order; 2026-10-31; source Architect 9394cb3b via
+  b978e19b): signal-gen cleanups from PR #77. (a) A1: max_level_dbfs()
+  rounds via *0.01, so ~14% of 0.01-dB values print junk digits (e.g.
+  -40.300000000000004); fix: divide by 100. (b) A2: handle_request
+  receives two cap values (argv f64 for validation + reported limits);
+  derive validation from the limits later.
+- **F-511** (P2, code; GATE set by the AE; option pick: Architect,
+  AFTER US-172; 2026-10-31; dup-check: no earlier item on peer-closed
+  requests, the socket backlog or a client allowlist): pi4audio-rpc: a
+  command whose client timed out (exit 124) is still executed later
+  from the server's socket backlog (AD 6c9e3943 A1, MEDIUM; harmless
+  for status). GATE (AE 17da8b9d): BEFORE any non-status use of
+  pi4audio-rpc AND BEFORE F-341 leaves the AMPS-ON list, one option
+  merges: (a) the server drops requests whose peer already closed; (b)
+  a status-only client allowlist; (c) AD
+  /Users/gabriela.bogk/mugge-team-evidence/live/advocatus-diaboli/ad-PR77-A1-fix-options-note-r1.md,
+  sha256
+  4d586512de160242de4e56863e1ff49c9f24b2ab5f0535acd2fb56bfca3b3b56:
+  the server sends a greeting on accept and drops any line buffered
+  before it (AD: (a) only narrows the window, since a client killed
+  before its FIN still gets its command run, and (a) wrongly refuses
+  half-close clients). The AE's preference for (a) predates (c). TEST
+  (Architect): the chosen option's test covers BOTH the
+  kill-before-FIN race AND a half-close client. Bundled: AD L1 (LOW):
+  a deadline of 0 (or 0.0) passes the regex and `timeout 0` means NO
+  timeout, so a busy server hangs the caller; fix by rejecting a
+  deadline that is not > 0 (usage 64). AMPS-ON wording changes stay in
+  step with docs/operations/safety.md via the TW.
+  - Next free -> F-512.
 
 ## Open PRs (2026-10-24, per CM)
 
