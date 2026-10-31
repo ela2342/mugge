@@ -13,8 +13,7 @@
 # same script text with only its PATH line swapped for host tools and a
 # findmnt stub (the fake FAT root is a plain directory); the swap is
 # asserted below. The length cases are built from the target's class
-# constants, so at OVERLAY_CLASS_MAX 31 every install dies (the real
-# overlay paths are longer): red by design until the constant is raised.
+# constants (CONST passes, CONST + 1 dies).
 #
 # Usage: nix build -L .#checks.<system>.pi5-prune-gens
 { pkgs, target }:

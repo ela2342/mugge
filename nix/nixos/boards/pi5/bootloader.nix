@@ -94,11 +94,11 @@ let
   # kernel loaded at that length (architect 56271517, f0750f9b E2).
   KERNEL_CLASS_MAX = 48;
   # Overlay class: overlays/README, overlay_map.dtb, hat_map.dtb and every
-  # dtoverlay= .dtbo. 31: the longest path proven APPLIED,
-  # t/overlays/vc4-kms-v3d-pi5.dtbo (architect ead362c2, 56271517). The
-  # L1s paths are up to 40, so the board-guard and the hook fail on
-  # purpose until an architect confirmation ruling raises this to 40.
-  OVERLAY_CLASS_MAX = 31;
+  # dtoverlay= .dtbo. 40: R5s-c applied
+  # g/<id8>/overlays/vc4-kms-v3d-pi5.dtbo at that length (architect
+  # confirmation aa797ef7, amending 56271517). Raise it only after a new
+  # APPLIED test at the new length.
+  OVERLAY_CLASS_MAX = 40;
 
   pruneGens = import ./prune-gens.nix {
     inherit lib pkgs idLen KERNEL_CLASS_MAX OVERLAY_CLASS_MAX;
