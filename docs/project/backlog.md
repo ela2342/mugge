@@ -1554,6 +1554,30 @@ priority!"
     TW list; F-504 owner + fix; F-441 serial adapter question (with
     the owner); F-481 role-prompt vehicle; F-497 amps-on row question;
     F-507 evidence home; F-508 owner answer.
+  - v322 PUSHED (CM, verified on the remote): chore/backlog =
+    92f62c3d4666de9446d79eb6bb16dae41c8962d6 (parent 11272832, file
+    sha256 0cc24bd3, +235/-0). v323 bases on it and consumes PM
+    addenda 5, 6 and 7 in
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/:
+    held-for-v323-add5-20261031.txt (bb76b98e...24c2), -add6-
+    (e47ebe37...54b3), -add7- (9b706e7d...2599); the later addendum
+    wins. v322 was built before several US-172 updates arrived; its
+    wait lines for the R5s grant, the QE criteria, route C and the
+    story kit are superseded by the US-172 v323 lines.
+  - OPEN TRACKING (v323; supersedes v322's line): US-172 R5s grant
+    (worker-1 kit pinning QE r5 + E1 + E2; E1/E2 Architect release +
+    AE ack) then R5s-b if applied, R5r (gen 1, no build; dropped if
+    pre-reads missing), R6n (Architect ruling on worker-4 85a1fac7);
+    route C dispatch (worker-1 evidence gen 6 = 3f28b6c7); R6a' after
+    route C; AC2 grant only after AE review of the T2 link list; QE
+    AC2 T3 test form; starvation guard at the US-172 F1 milestone or
+    2026-11-03T20:00 (PO f6393b6b); F-341 CI 41196044817 + body r3 +
+    PR (worker-2); F-383 S4 merge of main c33225c2 + PR (worker-3);
+    F-468/F-490 after F-341 (worker-2); F-439 main merge; #66 last;
+    F-320 D post-merge TW list; F-504 owner + fix; F-441 serial
+    adapter question (with the owner); F-481 role-prompt vehicle;
+    F-497 amps-on row question; F-507 evidence home; F-508 owner
+    answer + VM settings check (worker-4).
 
 ## Reserved IDs
 
@@ -1742,6 +1766,8 @@ decision on the US-152 bundle): F-508, US-183, D-072, T66.
 Next free (v322; supersedes the line above; F-508 confirmed free in
 v321, the addenda and the live/ evidence files at PM read, filed in
 this version): F-509, US-183, D-072, T66.
+Next free (v323; unchanged, no new IDs in this version): F-509,
+US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -4753,6 +4779,82 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     reconstructed by the PM.
   - F-441: the serial adapter question is now with the owner
     (team-lead).
+  - US-172 v323 STATE (supersedes the v322 R5s/R5s-b FILES, ROUTE C
+    and STORY KIT wait lines above where they differ):
+    - ORDER (Architect, R5r ruling below): R5s, then R5s-b IF APPLIED,
+      then R5r, then R6n.
+    - R5s GRANT waits on worker-1's kit and the binding criteria. The
+      AD challenge cae54e3e C1 NO LONGER blocks it: the Architect's
+      amendments f2acfb81 settled C1 and the AD released that file.
+      CRITERIA TEXT = QE r5
+      /Users/gabriela.bogk/mugge-team-evidence/live/quality-engineer/qe-US172-R5s-R6a-criteria-r5.md,
+      sha256
+      c0d2bc7f803ada07b228c14ba6977e8a97e6a183ab4084658562797def5c4c4e
+      (released by the QE AND the Architect; supersedes r1-r4, r4
+      1e236bfa VOID) + erratum E1 qe-US172-criteria-r5-erratum-E1.md,
+      sha256
+      6f82736b0182f739d77d7311f9f0cec67366b52464480cb7aa886a947b35f1d8
+      (E1.1 changes the B3f new-stream STOP match key) + erratum E2
+      qe-US172-criteria-r5-erratum-E2.md, sha256
+      a91271397fa821344a9cf2b0dd09ed5797396e162a4b97c5cf1b1a95ef24a30f
+      (replaces E1.3 in full: B3j one pipewire + one wireplumber, pids
+      = the managed units' MainPID). E1 and E2 WAIT for the
+      Architect's release and the AE's ack; the binding set for grants
+      is r5 + E1 + E2 once those are in. The CM checks that the kit
+      pins it. AE response to r5:
+      /Users/gabriela.bogk/mugge-team-evidence/live/audio-engineer/ae-US172-criteria-r5-c0d2bc7f-response-r1.txt
+      (740d22f0).
+    - R5r: Architect ruling r1
+      /Users/gabriela.bogk/mugge-team-evidence/live/architect/arch-US172-R5r-ruling-r1.md,
+      RELEASED at
+      e7b38dec12edf906a9af2ea5cc9456b035ce29c98a284a04dae8238f6ab9e0cf
+      (CM frozen copy
+      cm-relay/US-172/frozen/arch-US172-R5r-ruling-r1-e7b38dec.md,
+      444). Triggered by AD challenge on R6n r1
+      /Users/gabriela.bogk/mugge-team-evidence/live/advocatus-diaboli/ad-US172-challenge-R6n-r1.md,
+      sha256
+      f90eb93ccf36cf4813b45e09921a68859f4077d791f0c00626c66dd86f2f5311
+      (D1 high: the installer kernel differs from K in three ways,
+      incl. our kernel-rt.nix strip of ~74 forced options). Ruling: s1
+      AD D1(a): R6n's K means "6.12.62 tree OR our strip OR K's
+      DTB/overlay set", not RT; s2 AD D1(b) ACCEPTED: R5r = a tryboot
+      from r/ of gen 1 p9mzphhy (mugge-pi5-bootstrap, kernel 1734v1w9
+      linux-rpi 6.12.47, stock bcm2711_defconfig, 4K, non-RT
+      PREEMPT_VOLUNTARY; booted this Pi 2026-10-24) in the R5s layout
+      with both overlays from gen 1's own kernel tree; NO build;
+      DROPPED if its pre-reads (store paths still present) are
+      missing; s3 AD D2 accepted (already r5 F1 C-4); s4 AD D3
+      accepted as a record; s5 QE r5 released; s6 F-508 lead (see
+      F-508).
+    - R6n: worker-4 (spawned, worktree exp-US-172-R6n), build proposal
+      r1
+      /Users/gabriela.bogk/mugge-team-evidence/live/worker-4/w4-US172-R6n-proposal-r1.md,
+      sha256
+      85a1fac7a1332bfc80b2e47ab079f8ebf6d060329decd4351c3ed46b2d2cce30
+      (base 3f28b6c7; desk only, no local nix); waits for the
+      Architect's ruling. Architect device-tree reference diff r1
+      /Users/gabriela.bogk/mugge-team-evidence/live/architect/arch-US172-ref-diff-dt-r1.md,
+      sha256
+      a815a822dc6b5f7d461f389d811e5758bd50d495710f4f80a8ca28c958e849db:
+      K's disable-bt-pi5.dtbo byte-identical to stock 1.20250915;
+      vc4-kms-v3d-pi5.dtbo differs only in the unused `composite`
+      override.
+    - ROUTE C: head 879eb919, NOT dispatched. SecSpec cleared 1e2ed4e1
+      (db2fc337) and 879eb919
+      (/Users/gabriela.bogk/mugge-team-evidence/live/security-specialist/secspec-US172-routeC-S1-S3-879eb919-r1.md,
+      sha256
+      3d80afb8a55a68f148d3cddd3c448dc267867391acbb4feb8ba694ba1cc28432).
+      The Architect accepts 879eb919 on one condition: worker-1 proves
+      that gen 6's source commit is 3f28b6c7. The dispatch waits ONLY
+      on that evidence.
+    - STORY KIT COMPLETE (all PO-released): Part A' r3 a917246a ->
+      Part B r4 adcbd3c7 -> Part C r5 (for PO A2)
+      cm-relay/US-172/frozen/US-172-partC-r5-aa1950cf.diff, sha256
+      aa1950cf4e732492f44a400c25f8862afe98e1463c8f628ccc401a17f78906bc
+      (kit
+      /Users/gabriela.bogk/mugge-team-evidence/live/technical-writer/us172-story-r5/,
+      SHA256SUMS ab052854); applied on 27e90a0d = 6cf471a7 (CM). Relay
+      to worker-1 by the CM.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -4883,6 +4985,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   return. T8: valid only while "nothing connected" stands; not an
   amps-on permission; an HDMI audio finding blocks AC2. NO AC2 GRANT
   until the AE has reviewed the draft's T2 list.
+  v323: the TW Part C diff for A2 is DELIVERED and PO-released
+  (aa1950cf, see the US-172 story kit line). The QE acked AE b5ced821;
+  the QE T3 test form follows as its own file when the AC2 kit draft
+  starts.
   Status UPDATE (CM, worker-2, 2026-10-26; corrects "the owner's cold
   power cycle done" above only in its basis): the cold cycle is
   CONFIRMED by /proc/uptime (boot ~08:44:31Z; see the lane status at
@@ -19033,6 +19139,22 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   recommends both, (b) in force. Related but different: F-507 (macOS
   /tmp cleanup), the disk stop-line items (manual GC only). Dup check:
   no automatic-GC entry; ID free at PM read.
+  v323 LEAD (Architect R5r ruling e7b38dec s6; INFERENCE, unverified):
+  the R6a build ran in the nix-darwin linux-builder VM; inside that VM
+  nix has its own min-free/max-free (nixpkgs darwin-builder profile;
+  values unverified), which trigger nix's automatic GC when the VM
+  disk is low. That would explain a GC with no GC command in build.sh
+  and nothing in the Mac's /etc/nix/nix.conf. OPEN POINT (PM): a
+  VM-side GC deletes VM-store paths; it does not by itself explain the
+  R6a outputs also missing from the Mac store. Cause of the R6a loss
+  stays unverified.
+  v323 STAFFING (team-lead, final): the read-only check (the VM's
+  /etc/nix/nix.conf min-free/max-free and the nix-darwin linux-builder
+  settings) goes to worker-4 THROUGH THE CM, as a side task that fits
+  around R6n: no builds, no store changes, no VM restart; if reading
+  the VM config needs more than plain read access, worker-4 stops and
+  reports to team-lead. NOT worker-1. The open point above goes with
+  it, as a question for worker-4 and the Architect.
   - Next free -> F-509.
 
 ## Open PRs (2026-10-24, per CM)
