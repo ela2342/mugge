@@ -1724,6 +1724,38 @@ priority!"
     F-507 evidence home; F-508 owner answer (who ran the 10-29 Mac GC;
     team-lead) + TW docs vehicle for the out-link lesson; Mac disk 2.6
     GiB free (below the 10 GiB stop line; owner).
+  - v328 PUSHED (CM, verified on the remote): chore/backlog =
+    0ffbb08de13a025a61824a2f14b946c901c8ff97 (fast-forward from
+    6c901706, file sha256 26a6944d, +202/-0 in 5 hunks). v329 bases on
+    it and consumes PM addenda 26-27 in
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/:
+    held-for-v329-add26-20261031.txt (31449e00...a528) and -add27-
+    (dd3bacbc...281f). Built at a MILESTONE (R5s-b result). v328
+    correction: its "PATH-LENGTH HYPOTHESIS CONFIRMED" is superseded;
+    length-or-depth is OPEN until the Architect answers AD bbea6df3
+    (US-172 v329 state below).
+  - OPEN TRACKING (v329; supersedes v328's line): US-172 R5s-b
+    classification (Architect) then 07/08/09 restore go (CM; worker-1
+    holds the G-US172-04 lock); Architect answer to AD bbea6df3
+    (length-or-depth; DTB source; firmware-log read; reference
+    layouts); O1 HDMI-A-1 "connected" (AE); then the Architect's
+    re-judgement of R5r (keep on t/) and R6n; production os_prefix fix
+    scheme (Architect; worker branch + PR); R5r kit (worker-4); R6n
+    (frozen 21f28b34; owner workflow-scope push block only); route C
+    run 41198461811 (Pi pull gated by SecSpec S5-S8); R6a' after route
+    C; AC2 grant only after AE review of the T2 link list; QE AC2 T3
+    test form; starvation guard at the US-172 F1 milestone or
+    2026-11-03T20:00 (PO f6393b6b); PR #77 (F-341) 7/7, CI 41199141583
+    in progress + CM check + merge; F-383 S4 CI 41198071247 + PR
+    (worker-3); F-468/F-490 after F-341 (worker-2); F-509 (TW, after
+    AC3; UX + AE agree on 61c3306f); F-510 (Architect, after core
+    tech); F-511 option pick (Architect, after US-172); F-439 main
+    merge; #66 last; F-320 D post-merge TW list; F-504 owner + fix;
+    F-441 serial adapter question (with the owner); F-481 role-prompt
+    vehicle; F-497 amps-on row question; F-507 evidence home; F-508
+    owner answer (who ran the 10-29 Mac GC; team-lead) + TW docs
+    vehicle for the out-link lesson; Mac disk 2.6 GiB free (below the
+    10 GiB stop line; owner).
 
 ## Reserved IDs
 
@@ -5278,6 +5310,58 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       879eb919. Any Pi pull of its output is gated by SecSpec S5-S8.
     - R6n: blocked ONLY by the workflow-scope push permission (owner
       via team-lead).
+  - US-172 v329 STATE (MILESTONE; supersedes the v328 lines above
+    where they differ):
+    - R5s-b RESULT (G-US172-04, CHANGE, worker-1, kit r2 8c3eaae7,
+      variant sb): TRYBOOT-APPLIED, and vc4 + v3d PROBE AND BIND on
+      the PREEMPT_RT kernel with overlays applied and the blacklist
+      removed, with no hang or panic. The GPU comes up for the first
+      time on this kernel: card1 = v3d, card2 = vc4-drm, renderD128 =
+      v3d; connectors HDMI-A-1 connected, HDMI-A-2 disconnected; dmesg
+      "[drm] Initialized v3d 1.0.0", "[drm] Initialized vc4 0.0.0 for
+      axi:gpu", "fb0: vc4drmfb frame buffer device". Result
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/g-us172-04-06-r1-e18300cd/G-US172-04-result-06-r1.md,
+      sha256
+      e18300cd948c8f5c7c302ffc042aa3f896c52187424fed12958c161d087985b2
+      (CM-verified, frozen; PM: all six step SHA256SUMS check OK).
+      Every step rc=0, STOP=0 FAIL=0 INCONCLUSIVE=0; 06 END
+      2026-10-31T12:12:25Z. Kernel identity unchanged (RT, PAGESIZE
+      4096, same Image, booted a11skqm2). Audio safety held: gains 8/8
+      = 0 at PRE, TB and RETURN; gate closed; no HDMI PipeWire sink or
+      ALSA card (no HDMI audio: "dmas" DT property missing); PipeWire
+      SCHED_FIFO/88, no restarts; links 24 == PRE; 67.8 C. No late
+      evidence (pstore new [], no panic lines, no in-between boots).
+    - R5s-b RECORDS (not gates): O1 HDMI-A-1 reads "connected" (sent
+      to the AE; "nothing connected" refers to the audio outputs). O2
+      v3d Transparent Hugepage hint (informational). O3 A4 README
+      "present" vs PLAN Q3 ("no README").
+    - NEXT ON THE PI: 07/08/09 restore of G-US172-04 waits on the
+      Architect's classification and the CM's go; worker-1 holds the
+      CHANGE lock. Then the Architect re-judges R5r and R6n.
+    - R5s CLOSED: G-US172-03 07/08/09 restore OK, released by the CM:
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/g-us172-03-09-r1-f77231e0/G-US172-03-result-09-r1.md,
+      sha256
+      f77231e0742d64c25a66a7467352cf183587df9f5018620a223175fca49b6ee0
+      (07 85143d7c, 08 0006a726, 09 0bc73f9d; PM: all listed files
+      check OK). Pi back on gen 6 a11skqm2, normal boot, state == PRE,
+      identity holds, gains 8/8 = 0, gate closed. Record for the
+      Architect: the normal-boot cmdline has the firmware-added
+      bcm2708_fb.* tokens, which the tryboot cmdline did not.
+    - CAUSE WORDING (AD challenge
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/ad-US172-challenge-R5s-classification-r1-bbea6df3.md,
+      sha256
+      bbea6df3c6c74f10b22c200959dd54e229d3dc7f65f8f518f0e1883e4bad310d;
+      with the Architect; did not block R5s-b): R5s changed both the
+      path LENGTH (67 -> 31 chars) and the DEPTH (2 levels -> 1), so
+      the cause is recorded as length-or-depth, OPEN, not "length
+      confirmed". The AD asks: confirm the base DTB really loads from
+      gens/.../ (the 57-char data point); keep the longest overlay
+      path well under 57 and name the longest dtbo; let the production
+      scheme's own layout be the test boot (that also clears depth);
+      try a firmware-log read (vclog --msg) in one OBSERVE session if
+      the tool is already in the closure (no install); compare against
+      known layouts (stock RPi OS flat overlays/, other NixOS-on-Pi5
+      installers) and weigh overlay rollback fidelity; keep R5r on t/.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
