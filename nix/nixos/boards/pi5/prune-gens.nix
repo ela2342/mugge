@@ -16,8 +16,10 @@
 # 1. Generation: build g/<id8> (via g/<id8>.tmp), or reuse it if its
 #    .complete holds <id>. Another <id> there is an <id8> collision: die.
 # 2. Pointer: every file the firmware opens must exist in g/<id8>/ and fit
-#    its path class limit (architect 2b485056 item 4.6); then write
-#    config.txt. A die before this point leaves config.txt unchanged.
+#    its path class limit (architect 2b485056 item 4.6), and the new
+#    config.txt must end with the os_prefix= line and exactly one newline
+#    (architect 03f33254); then write config.txt. A die before this point
+#    leaves config.txt unchanged.
 # 3. Prune, only if the previous os_prefix= is known (architect 63e41531
 #    A3; otherwise nothing is deleted). Keeps new, previous, booted,
 #    chosen and the newest other present generation, so >=2 generations
@@ -194,9 +196,18 @@ pkgs.writeShellScript "install-pi5-gen" ''
   for o in $overlays; do
     fits overlay "$OVERLAY_CLASS_MAX" "overlays/$o.dtbo"
   done
-  sed "s|@ID@|$id8|" "$template" > "$fw/config.txt.new"
-  sync "$fw/config.txt.new"
-  mv -f "$fw/config.txt.new" "$fw/config.txt"
+  new="$fw/config.txt.new"
+  sed "s|@ID@|$id8|" "$template" > "$new"
+  # The bytes written end with the os_prefix= line and exactly one
+  # newline: an unterminated last line may be lost (architect 03f33254).
+  # The last byte is a newline, and the last line (so not a blank one) is
+  # os_prefix=.
+  if ! { [ -z "$(tail -c1 "$new")" ] && [ "$(tail -n1 "$new")" = "os_prefix=$prefix" ]; }; then
+    rm -f "$new"
+    die "config.txt.new does not end with os_prefix=$prefix and exactly one newline; config.txt is unchanged"
+  fi
+  sync "$new"
+  mv -f "$new" "$fw/config.txt"
   sync "$fw"
 
   # 3. Prune. Unknown previous pointer: delete nothing (63e41531 A3).

@@ -55,6 +55,8 @@ let
     { c = "c16b"; what = "legacy name rule"; s = brokenTo "*)" "${b32 32}|${b32 32}.tmp)"; }
     { c = "c16c"; what = "symlink skip"; s = broken ''[ ! -L "$d" ]''; }
     { c = "c26"; what = "vfat guard"; s = broken ''[ "$fstype" = vfat ]''; }
+    { c = "c11b"; what = "final-newline check"; s = broken ''[ -z "$(tail -c1 "$new")" ]''; }
+    { c = "c11c"; what = "last-line check"; s = broken ''[ "$(tail -n1 "$new")" = "os_prefix=$prefix" ]''; }
   ];
 
   # Config templates: the real one, and variants at and over the class
@@ -72,9 +74,14 @@ let
   tReal = tmpl "real" T;
   tKernelAt = tmpl "kernel-at" (altered "\nkernel=Image\n" "\nkernel=${kname K}\n");
   tKernelOver = tmpl "kernel-over" (altered "\nkernel=Image\n" "\nkernel=${kname (K + 1)}\n");
-  tOverlayAt = tmpl "overlay-at" (T + "dtoverlay=${oname O}\n");
-  tOverlayOver = tmpl "overlay-over" (T + "dtoverlay=${oname (O + 1)}\n");
-  tOverlayMissing = tmpl "overlay-missing" (T + "dtoverlay=absent-pi5\n");
+  # Extra dtoverlay= lines go before os_prefix=, which stays last.
+  withOverlay = o: altered "\nos_prefix=" "\ndtoverlay=${o}\nos_prefix=";
+  tOverlayAt = tmpl "overlay-at" (withOverlay (oname O));
+  tOverlayOver = tmpl "overlay-over" (withOverlay (oname (O + 1)));
+  tOverlayMissing = tmpl "overlay-missing" (withOverlay "absent-pi5");
+  tUnterminated = tmpl "unterminated" (let r = lib.removeSuffix "\n" T; in
+    if r == T then throw "pi5-prune-gens: template has no final newline" else r);
+  tBlankEnd = tmpl "blank-end" (T + "\n");
   CD = lib.removeSuffix "/" target.container;
 in
 pkgs.runCommand "pi5-prune-gens" { } ''
@@ -394,6 +401,35 @@ pkgs.runCommand "pi5-prune-gens" { } ''
     TMPL=${tOverlayAt}
     run $D > /dev/null
     expect_pointer $D
+    pass
+  }
+
+  # (11b, 11c) The written config.txt must end with the os_prefix= line
+  # and exactly one newline (architect 03f33254): an unterminated or a
+  # blank last line dies, config.txt and the earlier generation are
+  # byte-identical, no config.txt.new is left.
+  c11b() {
+    setup "11b config.txt without its final newline dies"
+    link 1 $C; link 2 $D
+    gen $C
+    oldcfg $C
+    boot $C
+    TMPL=${tUnterminated}
+    before=$(snapold $D)
+    runfail $D "does not end with os_prefix=$CT$(short $D)/ and exactly one newline; config.txt is unchanged"
+    [ "$(snapold $D)" = "$before" ] || fail "FAT changed"
+    pass
+  }
+  c11c() {
+    setup "11c config.txt ending in a blank line dies"
+    link 1 $C; link 2 $D
+    gen $C
+    oldcfg $C
+    boot $C
+    TMPL=${tBlankEnd}
+    before=$(snapold $D)
+    runfail $D "does not end with os_prefix=$CT$(short $D)/ and exactly one newline; config.txt is unchanged"
+    [ "$(snapold $D)" = "$before" ] || fail "FAT changed"
     pass
   }
 
@@ -874,7 +910,7 @@ pkgs.runCommand "pi5-prune-gens" { } ''
     pass
   }
 
-  cases="c1 c2 c3a c3b c3c c9 c9b c10 c10b c11 p1 p1b p2a p2b p2c p3 p4 p5 p6 p7 p7b p8 p10 p11 p12
+  cases="c1 c2 c3a c3b c3c c9 c9b c10 c10b c11 c11b c11c p1 p1b p2a p2b p2c p3 p4 p5 p6 p7 p7b p8 p10 p11 p12
     c13 c14 c15 c15b c16 c16b c16c c17 c19 c20 c21 c22 c24 c25 c26"
   for c in $cases; do "$c"; done
   [ "$passed" -eq "$total" ] && [ "$total" -gt 0 ] || { echo "FAIL: $passed/$total" >&2; exit 1; }

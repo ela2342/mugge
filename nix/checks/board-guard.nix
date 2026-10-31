@@ -89,6 +89,12 @@ let
   audioOffAfterVc4 = t: let i = lineIdx t (lib.escapeRegex vc4Line); in
     i != null && i + 1 < builtins.length (lines t) && builtins.elemAt (lines t) (i + 1) == "dtparam=audio=off";
 
+  # The os_prefix= line is last, followed by exactly one "\n": an
+  # unterminated last line may be lost (architect 03f33254).
+  endsWithPrefix = t: let ls = lines t; n = builtins.length ls; in
+    n >= 2 && builtins.elemAt ls (n - 1) == ""
+      && builtins.match "os_prefix=.+" (builtins.elemAt ls (n - 2)) != null;
+
   # Negative cases: each alters the real rendered text in one way, and
   # the predicate must reject it (QE 74504b2f, 3f80f141, d272764d). Each
   # alteration must change the text, or the case is void.
@@ -117,6 +123,9 @@ let
     { name = "dtparam=audio=off not directly after the vc4 line fails";
       ok = let a = altered t "${vc4Line}\ndtparam=audio=off\n" "${vc4Line}\n"; in
         audioOff (a + "dtparam=audio=off\n") && !audioOffAfterVc4 (a + "dtparam=audio=off\n"); }
+    { name = "config.txt without its final newline fails";
+      ok = lib.hasSuffix "\n" t && !endsWithPrefix (lib.removeSuffix "\n" t); }
+    { name = "config.txt ending in a blank line fails"; ok = !endsWithPrefix (t + "\n"); }
   ];
   greetdOnVc4 = c: lib.hasInfix
     ''DRIVERS=="vc4-drm", TAG+="systemd", ENV{SYSTEMD_WANTS}+="greetd.service"''
@@ -225,6 +234,7 @@ let
     { name = "disable-bt-pi5 in config.txt"; ok = lib.hasInfix "dtoverlay=disable-bt-pi5" (configTxt c); }
     { name = "kernel class paths <= KERNEL_CLASS_MAX (US-172 R1)"; ok = kernelFits c (configTxt c); }
     { name = "overlay class paths <= OVERLAY_CLASS_MAX (US-172 R1)"; ok = overlayFits c (configTxt c); }
+    { name = "config.txt ends with os_prefix= and exactly one newline (03f33254)"; ok = endsWithPrefix (configTxt c); }
     { name = "no root authorized_keys"; ok = rootKeys c == [ ] && c.users.users.root.openssh.authorizedKeys.keyFiles == [ ]; }
     { name = "PermitRootLogin no"; ok = (ssh c).PermitRootLogin == "no"; }
     { name = "no password authentication"; ok = !(ssh c).PasswordAuthentication; }
