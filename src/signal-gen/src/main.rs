@@ -201,12 +201,11 @@ impl ProcessState {
     fn new(
         channels: usize,
         rate: u32,
-        max_level_dbfs: f64,
+        safety: SafetyLimits,
         ramp_ms: u32,
         file_samples: SharedFileSamples,
     ) -> Self {
         let ramp_samples = FadeRamp::ms_to_samples(ramp_ms, rate);
-        let safety = SafetyLimits::from_dbfs(max_level_dbfs);
 
         Self {
             channels,
@@ -468,6 +467,7 @@ fn run_pipewire(
     event_queue: Arc<DeviceEventQueue>,
     shutdown: Arc<AtomicBool>,
     file_samples: SharedFileSamples,
+    limits: SafetyLimits,
 ) {
     pipewire::init();
 
@@ -532,7 +532,7 @@ fn run_pipewire(
     let mut proc_state = ProcessState::new(
         args.channels as usize,
         args.rate,
-        args.max_level_dbfs,
+        limits,
         args.ramp_ms,
         file_samples,
     );
@@ -703,6 +703,7 @@ fn run_rpc_server(
     event_queue: Arc<DeviceEventQueue>,
     shutdown: Arc<AtomicBool>,
     max_level_dbfs: f64,
+    limits: SafetyLimits,
     file_samples: SharedFileSamples,
     sample_rate: u32,
     port_file: Option<&str>,
@@ -747,6 +748,7 @@ fn run_rpc_server(
                     &event_queue,
                     &shutdown,
                     max_level_dbfs,
+                    &limits,
                     &mut latest_state,
                     &file_samples,
                     sample_rate,
@@ -774,6 +776,7 @@ fn handle_client(
     event_queue: &DeviceEventQueue,
     shutdown: &AtomicBool,
     max_level_dbfs: f64,
+    limits: &SafetyLimits,
     latest_state: &mut StateSnapshot,
     file_samples: &SharedFileSamples,
     sample_rate: u32,
@@ -838,7 +841,7 @@ fn handle_client(
                 let response = match rpc::parse_line(line) {
                     Ok(req) => {
                         let result =
-                            rpc::handle_request(&req, cmd_queue, max_level_dbfs, latest_state, file_samples, sample_rate);
+                            rpc::handle_request(&req, cmd_queue, max_level_dbfs, limits, latest_state, file_samples, sample_rate);
                         match result {
                             rpc::HandleResult::Ack(cmd) => rpc::format_ack(&cmd),
                             rpc::HandleResult::Error(cmd, msg) => {
@@ -901,6 +904,10 @@ fn main() {
         args.ramp_ms,
     );
 
+    // The one SafetyLimits instance (F-341): the RT thread clips with it and
+    // the RPC thread reports it in `status`. Both get copies of this value.
+    let limits = SafetyLimits::from_dbfs(args.max_level_dbfs);
+
     // Shared shutdown flag.
     let shutdown = Arc::new(AtomicBool::new(false));
 
@@ -930,6 +937,7 @@ fn main() {
     let rpc_event_queue = event_queue.clone();
     let rpc_shutdown = shutdown.clone();
     let max_level_dbfs = args.max_level_dbfs;
+    let rpc_limits = limits;
     let rpc_file_samples = file_samples.clone();
     let rpc_sample_rate = args.rate;
     let rpc_port_file = args.port_file.clone();
@@ -943,6 +951,7 @@ fn main() {
                 rpc_event_queue,
                 rpc_shutdown,
                 max_level_dbfs,
+                rpc_limits,
                 rpc_file_samples,
                 rpc_sample_rate,
                 rpc_port_file.as_deref(),
@@ -958,6 +967,7 @@ fn main() {
         event_queue.clone(),
         shutdown.clone(),
         file_samples.clone(),
+        limits,
     );
 
     info!("PipeWire loop exited, waiting for RPC server thread...");
@@ -1088,8 +1098,18 @@ mod tests {
     // -----------------------------------------------------------------------
 
     #[test]
+    fn process_state_clips_with_the_given_limits() {
+        // F-341: the RT state must clip with the instance it was handed (the
+        // one main also gives the RPC thread), not build its own.
+        let limits = SafetyLimits::from_dbfs(-30.0);
+        let state = ProcessState::new(2, 48000, limits, 20, test_file_samples());
+        assert_eq!(state.safety.max_level_linear(), limits.max_level_linear());
+        assert_eq!(state.safety.max_level_dbfs(), -30.0);
+    }
+
+    #[test]
     fn process_state_initial_is_stopped() {
-        let state = ProcessState::new(8, 48000, -20.0, 20, test_file_samples());
+        let state = ProcessState::new(8, 48000, SafetyLimits::from_dbfs(-20.0), 20, test_file_samples());
         assert_eq!(state.play_state, PlayState::Stopped);
         assert_eq!(state.active_signal, SignalType::Silence);
         assert_eq!(state.active_channels, 0);
@@ -1097,7 +1117,7 @@ mod tests {
 
     #[test]
     fn play_command_activates_generator() {
-        let mut state = ProcessState::new(2, 48000, -20.0, 20, test_file_samples());
+        let mut state = ProcessState::new(2, 48000, SafetyLimits::from_dbfs(-20.0), 20, test_file_samples());
         state.apply_command(Command {
             kind: CommandKind::Play {
                 signal: SignalType::Sine,
@@ -1118,7 +1138,7 @@ mod tests {
 
     #[test]
     fn stop_command_initiates_fade_out() {
-        let mut state = ProcessState::new(2, 48000, -20.0, 20, test_file_samples());
+        let mut state = ProcessState::new(2, 48000, SafetyLimits::from_dbfs(-20.0), 20, test_file_samples());
         state.apply_command(Command {
             kind: CommandKind::Play {
                 signal: SignalType::Sine,
@@ -1140,7 +1160,7 @@ mod tests {
 
     #[test]
     fn set_frequency_updates_state() {
-        let mut state = ProcessState::new(2, 48000, -20.0, 20, test_file_samples());
+        let mut state = ProcessState::new(2, 48000, SafetyLimits::from_dbfs(-20.0), 20, test_file_samples());
         state.apply_command(Command {
             kind: CommandKind::SetFrequency { frequency: 440.0 },
         });
@@ -1149,7 +1169,7 @@ mod tests {
 
     #[test]
     fn set_channel_updates_state() {
-        let mut state = ProcessState::new(8, 48000, -20.0, 20, test_file_samples());
+        let mut state = ProcessState::new(8, 48000, SafetyLimits::from_dbfs(-20.0), 20, test_file_samples());
         state.apply_command(Command {
             kind: CommandKind::SetChannel { channels: 0b1111_0000 },
         });
@@ -1160,7 +1180,7 @@ mod tests {
     fn multi_command_drain_in_process() {
         let cmd_queue = CommandQueue::new();
         let state_queue = StateQueue::new();
-        let mut state = ProcessState::new(2, 48000, -20.0, 20, test_file_samples());
+        let mut state = ProcessState::new(2, 48000, SafetyLimits::from_dbfs(-20.0), 20, test_file_samples());
 
         cmd_queue
             .push(Command {
@@ -1192,7 +1212,7 @@ mod tests {
     fn process_generates_silence_when_stopped() {
         let cmd_queue = CommandQueue::new();
         let state_queue = StateQueue::new();
-        let mut state = ProcessState::new(2, 48000, -20.0, 20, test_file_samples());
+        let mut state = ProcessState::new(2, 48000, SafetyLimits::from_dbfs(-20.0), 20, test_file_samples());
 
         let mut buf = vec![1.0f32; 512]; // pre-fill with non-zero
         state.process(&mut buf, 256, &cmd_queue, &state_queue);
@@ -1207,7 +1227,7 @@ mod tests {
     fn process_pushes_state_snapshot() {
         let cmd_queue = CommandQueue::new();
         let state_queue = StateQueue::new();
-        let mut state = ProcessState::new(2, 48000, -20.0, 20, test_file_samples());
+        let mut state = ProcessState::new(2, 48000, SafetyLimits::from_dbfs(-20.0), 20, test_file_samples());
 
         let mut buf = vec![0.0f32; 512];
         state.process(&mut buf, 256, &cmd_queue, &state_queue);
@@ -1223,7 +1243,7 @@ mod tests {
     fn burst_auto_stop_triggers_fade_out() {
         let cmd_queue = CommandQueue::new();
         let state_queue = StateQueue::new();
-        let mut state = ProcessState::new(1, 48000, -20.0, 20, test_file_samples());
+        let mut state = ProcessState::new(1, 48000, SafetyLimits::from_dbfs(-20.0), 20, test_file_samples());
 
         state.apply_command(Command {
             kind: CommandKind::Play {

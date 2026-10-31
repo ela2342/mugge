@@ -9,11 +9,20 @@
 //! that produces samples above the requested level, the hard clip prevents
 //! them from reaching the output.
 
+/// Rounding step in dB for the reported cap (`max_level_dbfs()`). The one
+/// place to change if the AE rules a different resolution.
+pub const REPORT_DBFS_STEP: f64 = 0.01;
+
 /// Immutable safety limits, set once at startup from `--max-level-dbfs`.
 ///
 /// The `max_level_linear` field cannot be changed at runtime -- not via RPC,
 /// not via any mechanism. Changing it requires restarting the process with a
 /// different CLI flag value.
+///
+/// `Copy` so that `main` can build ONE instance and hand the same value to
+/// the RT process state (which clips with it) and to the RPC thread (which
+/// reports it in `status`, F-341). There is no second construction site.
+#[derive(Clone, Copy, Debug)]
 pub struct SafetyLimits {
     max_level_linear: f32,
 }
@@ -36,6 +45,16 @@ impl SafetyLimits {
     /// Return the maximum linear amplitude.
     pub fn max_level_linear(&self) -> f32 {
         self.max_level_linear
+    }
+
+    /// Return the cap in dBFS, as reported by the `status` RPC (F-341).
+    ///
+    /// Derived from the linear value the hard clip actually uses, rounded to
+    /// `REPORT_DBFS_STEP` so that an f32 round trip reads back as the
+    /// configured value (e.g. -20.0 rather than -19.99999995).
+    pub fn max_level_dbfs(&self) -> f64 {
+        let raw = 20.0 * (self.max_level_linear as f64).log10();
+        (raw / REPORT_DBFS_STEP).round() * REPORT_DBFS_STEP
     }
 
     /// Apply hard clip to every sample in the buffer.
@@ -155,6 +174,15 @@ mod tests {
         limits.hard_clip(&mut buffer);
         assert_eq!(buffer[0], limit, "Positive sample should be clamped to limit");
         assert_eq!(buffer[1], -limit, "Negative sample should be clamped to -limit");
+    }
+
+    #[test]
+    fn max_level_dbfs_round_trips() {
+        for db in [-0.5, -20.0, -30.0, -120.0] {
+            assert_eq!(SafetyLimits::from_dbfs(db).max_level_dbfs(), db);
+        }
+        assert_eq!(SafetyLimits::from_linear(0.1).max_level_dbfs(), -20.0);
+        assert_eq!(SafetyLimits::from_linear(0.05).max_level_dbfs(), -26.02);
     }
 
     #[test]

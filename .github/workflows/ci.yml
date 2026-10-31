@@ -179,6 +179,9 @@ jobs:
       - name: conf.d fragment names check (F-400, US-173)
         run: cachix watch-exec mugge -- nix build --no-link --print-build-logs .#checks.aarch64-linux.conf-fragment-names
 
+      - name: pi4audio-rpc pre-flight client check (F-341)
+        run: cachix watch-exec mugge -- nix build --no-link --print-build-logs .#checks.aarch64-linux.pi4audio-rpc
+
       - name: Run unit + Rust tests
         run: cachix watch-exec mugge -- nix run .#test-all
 
