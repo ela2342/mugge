@@ -16,6 +16,7 @@ import copy
 import dataclasses
 import os
 import re
+import shutil
 import sys
 from pathlib import Path
 from unittest.mock import patch
@@ -188,7 +189,19 @@ class TestParity:
 
     @pytest.fixture(scope="class")
     def routes_result(self, session_run, bundle):
-        root, _ = session_run
+        root, result = session_run
+        # F-348 made this an explicit operator hand-off: copy a run into the
+        # session dir (production side: F-372 v319 L5).
+        src = Path(result["output_dir"]) / "impulse_responses"
+        assert src.resolve().is_relative_to((root / "state").resolve())
+        session_dir = root / "session" / PROFILE_NAME
+        dst = session_dir / "impulse_responses"
+        shutil.copytree(src, dst)
+        # The loader takes a flat ir_*.wav first and a flat correction for a
+        # missing speaker, so both would make the parity check vacuous.
+        assert sorted(p.name for p in dst.glob("ir_*.wav")) == sorted(
+            f"ir_{k}.wav" for k in bundle.profile["speakers"])
+        assert sorted(session_dir.glob("ir_*.wav")) == []
         req = filter_routes.FilterGenerateRequest(
             profile=PROFILE_NAME, mode="crossover_plus_correction",
             generate_pw_conf=False)
