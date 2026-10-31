@@ -396,6 +396,10 @@
             inherit pkgs;
             target = self.nixosConfigurations.mugge-pi5-deploy.config.system.build.pi5PruneGens;
           };
+          wireplumber-no-bypass = import ./nix/checks/wireplumber-no-bypass.nix { nixos = self.nixosConfigurations.mugge-pi5-deploy; };  # F-318
+          jack-self-connect = import ./nix/checks/jack-self-connect.nix { nixos = self.nixosConfigurations.mugge-pi5-deploy; };  # F-318, US-173
+          conf-fragment-names = import ./nix/checks/conf-fragment-names.nix { nixos = self.nixosConfigurations.mugge-pi5-deploy; };  # F-400, US-173
+          pi4audio-rpc = import ./nix/checks/pi4audio-rpc.nix { nixos = self.nixosConfigurations.mugge-pi5-deploy; };  # F-341
 
           app-source-paths = appSourceCheck;
 
@@ -407,7 +411,7 @@
             cp -r ${./src/room-correction} room-correction
             chmod -R u+w web-ui room-correction
             cd web-ui
-            python -m pytest tests/ -v -rs --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --tb=short
+            python -m pytest tests/ -v -rs --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --ignore=tests/service-destructive/ --tb=short
             touch $out
           '';
 
@@ -560,7 +564,7 @@
               export PI_AUDIO_MOCK=1
               echo "=== web-ui unit tests ==="
               cd ${repoSrc}/src/web-ui
-              ${testPython}/bin/python -m pytest tests/ -v -rs --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --tb=short
+              ${testPython}/bin/python -m pytest tests/ -v -rs --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --ignore=tests/service-destructive/ --tb=short
               echo ""
               echo "=== room-correction tests ==="
               cd ${repoSrc}/src/room-correction
@@ -573,6 +577,10 @@
               echo "=== drivers tests ==="
               cd ${repoSrc}/scripts/drivers
               ${testPython}/bin/python -m pytest tests/ -v -rs --tb=short
+              echo ""
+              echo "=== stability tests (pi5_thermal_watch, US-173 AC9) ==="
+              cd ${repoSrc}/scripts/stability
+              ${testPython}/bin/python -m pytest tests/ -v --tb=short
               echo ""
               echo "=== audio-common tests ==="
               cd ${repoSrc}/src
@@ -620,7 +628,7 @@
               echo "========== test-all (unit + integration) =========="
               export PI_AUDIO_MOCK=1
               cd ${repoSrc}/src/web-ui
-              ${testPython}/bin/python -m pytest tests/ -v -rs --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --tb=short
+              ${testPython}/bin/python -m pytest tests/ -v -rs --ignore=tests/integration/ --ignore=tests/e2e/ --ignore=tests/service-integration/ --ignore=tests/service-destructive/ --tb=short
               echo ""
               echo "=== room-correction tests ==="
               cd ${repoSrc}/src/room-correction
@@ -633,6 +641,10 @@
               echo "=== drivers tests ==="
               cd ${repoSrc}/scripts/drivers
               ${testPython}/bin/python -m pytest tests/ -v -rs --tb=short
+              echo ""
+              echo "=== stability tests (pi5_thermal_watch, US-173 AC9) ==="
+              cd ${repoSrc}/scripts/stability
+              ${testPython}/bin/python -m pytest tests/ -v --tb=short
               echo ""
               echo "=== audio-common tests ==="
               cd ${repoSrc}/src
@@ -882,6 +894,38 @@
                 cargoLock.lockFile = ./src/Cargo.lock;
                 buildAndTestSubdir = "signal-gen";
               });
+              # F-465: venue profiles for GM and the web UI, read-only from the
+              # flake source. A source path (no build), so board-guard can hash
+              # the packaged files at eval time.
+              venues = builtins.path {
+                name = "pi4audio-venues";
+                path = ./configs/venues;
+                filter = path: type: type == "regular" && pkgs.lib.hasSuffix ".yml" path;
+              };
+              # US-173 AC9: D-069 thermal watch for Pi 5 load runs (stdlib
+              # only; run with sudo). The writer adds its own "#!" line and
+              # runs flake8 on the result, so the script's shebang is
+              # dropped here; a second "#!" on line 2 fails E265.
+              pi5-thermal-watch = let
+                lines = pkgs.lib.splitString "\n"
+                  (builtins.readFile ./scripts/stability/pi5_thermal_watch.py);
+              in
+                assert pkgs.lib.hasPrefix "#!" (builtins.head lines);
+                pkgs.writers.writePython3Bin "pi5-thermal-watch" { }
+                  (builtins.concatStringsSep "\n" (builtins.tail lines));
+              # F-341: one-shot RPC client for the signal-gen/GM pre-flight.
+              # The writer adds its own "#!" line and runs shellcheck on the
+              # result, so the script's shebang is dropped here (SC1128).
+              pi4audio-rpc = let
+                lines = pkgs.lib.splitString "\n"
+                  (builtins.readFile ./src/signal-gen/scripts/pi4audio-rpc);
+              in
+                assert pkgs.lib.hasPrefix "#!" (builtins.head lines);
+                pkgs.writeShellApplication {
+                  name = "pi4audio-rpc";
+                  runtimeInputs = [ pkgs.coreutils ];
+                  text = builtins.concatStringsSep "\n" (builtins.tail lines);
+                };
             };
           };
 

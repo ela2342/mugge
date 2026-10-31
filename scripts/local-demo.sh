@@ -670,6 +670,7 @@ start_services() {
     export PI4AUDIO_HARD_LIMIT_SPL_DB=95
     export PI4AUDIO_FILTER_OUTPUT_DIR="$DEMO_BASE_DIR/filters"
     export PI4AUDIO_SESSION_DIR="$DEMO_BASE_DIR/sessions"
+    export XDG_STATE_HOME="$DEMO_BASE_DIR/state"
     export PI4AUDIO_PW_CONF_DIR="$XDG_CONFIG_HOME/pipewire/pipewire.conf.d"
     export PI4AUDIO_COEFFS_DIR="$DEMO_BASE_DIR/coeffs"
     export PI4AUDIO_CAL_DIR="$DEMO_BASE_DIR/calibration"

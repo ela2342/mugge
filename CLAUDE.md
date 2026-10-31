@@ -463,10 +463,11 @@ pre-flight checklists, and PREEMPT_RT as a safety requirement (D-013).
   **Gain attenuation:** The filter-chain convolver config uses one `linear`
   builtin per channel (8) for gain. Since D-063 all 8 gain nodes boot at
   Mult 0.0 and Add 0.0 (the universal audio gate is closed); any other
-  value after a boot is a FAIL. Opening the gate ramps each channel to the
-  active venue profile's `gain_db` (D-009 hard cap 0 dB). The old fixed
+  value after a boot is a FAIL. Opening the gate steps each channel
+  instantly to the active venue profile's `gain_db`, with no ramp (F-315;
+  D-009 hard cap 0 dB). The old fixed
   defaults 0.001 (-60 dB mains) and 0.000631 (-64 dB subs) are pre-D-063;
-  they survive only in the watchdog unlatch restore table (defect F-320).
+  since F-320 D, GraphManager no longer writes them on watchdog unlatch.
   Runtime `pw-cli` changes are session-only and revert to the `.conf` boot
   value (0.0) on PW restart (C-009 verified). The old `config.gain`
   approach is silently ignored by PW 1.4.9+ (TK-237).

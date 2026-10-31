@@ -389,8 +389,19 @@ belong in `tests/service-integration/`, not `tests/e2e/`.
 | `src/web-ui/tests/unit/` | Unit | No | No |
 | `src/web-ui/tests/integration/` | Browser integration | Yes (Playwright) | No (mocked backend) |
 | `tests/service-integration/` | Service integration | No | Yes (local-demo) |
+| `src/web-ui/tests/service-destructive/` | Destructive service integration | No | Yes (own fresh local-demo stack per run) |
 | `src/web-ui/tests/e2e/` | E2E | Yes (Playwright) | Yes (local-demo) |
 | `tests/e2e-harness/` | E2E harness/utilities | N/A (shared helpers) | Yes (local-demo) |
+
+**Destructive service tests** break the stack on purpose. For example, they
+remove a monitored PipeWire node to trip the GraphManager watchdog. They
+never share a stack with service-integration or E2E: `scripts/test-e2e.sh`
+runs them last, in step 5, on a fresh stack with `--destructive`, and stops
+that stack afterwards. The unit runs ignore the directory. A trip must be
+real, i.e. a change to the PipeWire graph, not a test-only RPC (QE
+f79c7a5a). **Without `--destructive`, the tests skip.** So a CI or worker
+report must show the tier as N collected / N passed / 0 skipped / 0 error;
+a skip counts as not run.
 
 > **Shorthand convention:** Prose in this document and in role prompts uses
 > `tests/e2e/` as shorthand for `src/web-ui/tests/e2e/`, and
