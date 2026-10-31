@@ -55,7 +55,29 @@ let
   lineIdx = c: re: lib.lists.findFirstIndex (l: builtins.match re l != null) null (txtLines c);
   firstDt = c: lineIdx c "dt(overlay|param)=.*";
   osFilesFirst = c: firstDt c != null && lib.all (re: let i = lineIdx c re; in i != null && i < firstDt c)
-    [ "os_prefix=gens/@ID@/" "kernel=Image" "initramfs initrd followkernel" "cmdline=cmdline.txt" ];
+    [ "os_prefix=g/@ID@/" "kernel=Image" "initramfs initrd followkernel" "cmdline=cmdline.txt" ];
+  # US-172 R1 (architect ruling 04d8b687): the firmware skips any file
+  # whose path is longer than 48 characters. Every path it opens, built
+  # from the rendered config.txt with @ID@ at its real length (<id8>):
+  # kernel, initramfs, cmdline, the DTBs, overlays/README, the overlay and
+  # HAT maps, and every dtoverlay= .dtbo.
+  txtValues = c: re: lib.concatMap (l: let m = builtins.match re l; in
+    if m == null then [ ] else m) (txtLines c);
+  txtValue = c: re: let v = txtValues c re; in
+    if builtins.length v == 1 then builtins.head v else null;
+  fwPaths = c: let
+    prefix = lib.replaceStrings [ "@ID@" ]
+      [ (lib.concatStrings (lib.genList (_: "x") c.system.build.pi5IdLen)) ]
+      (txtValue c "os_prefix=(.*)");
+    files = [ (txtValue c "kernel=(.*)") (txtValue c "initramfs ([^ ]+) followkernel")
+      (txtValue c "cmdline=(.*)") ];
+  in map (f: prefix + f) (files ++ c.system.build.pi5Dtbs
+    ++ [ "overlays/README" "overlays/overlay_map.dtb" "overlays/hat_map.dtb" ]
+    ++ map (o: "overlays/${o}.dtbo") (txtValues c "dtoverlay=([^,]*).*"));
+  fwPathsShort = c: txtValue c "os_prefix=(.*)" != null
+    && lib.all (v: v != null) [ (txtValue c "kernel=(.*)") (txtValue c "initramfs ([^ ]+) followkernel") (txtValue c "cmdline=(.*)") ]
+    && txtValues c "dtoverlay=([^,]*).*" != [ ]
+    && lib.all (p: builtins.stringLength p <= 48) (fwPaths c);
   # US-172: dtparam=audio=off sets the vc4 overlay's parameter, so it
   # must directly follow that overlay line.
   audioOffAfterVc4 = c: let i = lineIdx c "dtoverlay=vc4-kms-v3d-pi5,noaudio"; in
@@ -144,6 +166,7 @@ let
     { name = "firewall and nftables enabled"; ok = firewalled c; }
     { name = "disable-bt-pi5 in config.txt"; ok = lib.hasInfix "dtoverlay=disable-bt-pi5" (configTxt c); }
     { name = "config.txt: os_prefix and OS files before any dtoverlay/dtparam (US-172)"; ok = osFilesFirst c; }
+    { name = "every firmware path <= 48 characters (US-172 R1)"; ok = fwPathsShort c; }
     { name = "no root authorized_keys"; ok = rootKeys c == [ ] && c.users.users.root.openssh.authorizedKeys.keyFiles == [ ]; }
     { name = "PermitRootLogin no"; ok = (ssh c).PermitRootLogin == "no"; }
     { name = "no password authentication"; ok = !(ssh c).PasswordAuthentication; }

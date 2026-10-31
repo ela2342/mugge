@@ -22,29 +22,40 @@
 #     os_prefix and treats overlays as shared." The kernel's overlays/ has
 #     no README, so the hook writes one into every generation.
 #
-#   /boot/firmware/config.txt            pointer (os_prefix=gens/<id>/)
-#   /boot/firmware/gens/<id>/            Image, initrd, cmdline.txt,
+#   /boot/firmware/config.txt            pointer (os_prefix=g/<id8>/)
+#   /boot/firmware/g/<id8>/              Image, initrd, cmdline.txt,
 #                                        bcm2712*.dtb, overlays/, .complete
-#   /boot/firmware/gens/MAP.txt          system profile generation -> <id>
+#   /boot/firmware/g/MAP.txt             system profile generation -> <id>
 #
-# <id> is the 32-character store hash of the system toplevel.
+# <id> is the 32-character store hash of the system toplevel, <id8> its
+# first 8 characters. .complete holds the full <id>.
+#
+# Layout L1s (US-172, architect ruling 04d8b687): the firmware skips any
+# file whose path is longer than 48 characters. Under the old
+# gens/<id>/ layout the overlay paths were 51-67 characters, so no
+# dtoverlay= took effect. The longest path the firmware opens under
+# g/<id8>/ is g/<id8>/overlays/vc4-kms-v3d-pi5.dtbo (40); board-guard
+# asserts <= 48 for the whole set.
 #
 # Write sequence (architect ruling):
-#   1. Build the generation in gens/<id>.tmp, fsync, rename to gens/<id>,
-#      then write the .complete marker. A directory without .complete is
-#      rebuilt on the next run.
-#   2. Check that gens/<id>/.complete exists, then write config.txt.new,
+#   1. Build the generation in g/<id8>.tmp, fsync, rename to g/<id8>,
+#      then write .complete (via .complete.new and a rename). A directory
+#      without .complete is rebuilt on the next run. A .complete that
+#      names another <id> is an 8-character id collision: the hook fails
+#      before config.txt is written.
+#   2. Check that g/<id8>/.complete names <id>, then write config.txt.new,
 #      fsync, rename over config.txt, fsync the FAT root directory.
 #   3. Only then prune (prune-gens.nix): keeps new, previous, booted and
 #      the newest other present generation, so >=2 whenever >=2 exist
 #      (AC2a). Remove all others and any stale .tmp directories. A pruned
-#      generation is never recreated.
+#      generation is never recreated. The old gens/<id>/ directories are
+#      removed unless previous or booted, and gens/ once it is empty.
 #
 # Residual risk (accepted): vfat has no atomic rename guarantee. A power
 # loss during step 2 can leave config.txt missing or truncated, and the
 # firmware will not boot. Recovery: mount the SD card on another machine
-# and copy a config.txt that points to an existing gens/<id>/ (MAP.txt
-# lists them). Steps 1 and 3 never touch the generation that the old
+# and copy a config.txt that points to an existing g/<id8>/ or gens/<id>/
+# (g/MAP.txt lists them). Steps 1 and 3 never touch the generation that the old
 # config.txt points to, so that generation is always intact.
 #
 # config.txt is rendered from the generation being activated, so a
@@ -56,7 +67,7 @@
 # rule has nothing to keep. A fresh install has one generation.
 #
 # Device tree: the firmware applies the dtoverlay= lines below to the DTB
-# it loads, from gens/<id>/overlays/. NixOS does not merge overlays on the
+# it loads, from g/<id8>/overlays/. NixOS does not merge overlays on the
 # Pi 5 (hardware.nix).
 { config, lib, pkgs, ... }:
 
@@ -67,7 +78,10 @@ let
   # the name newer firmware uses for D0.
   pi5Dtbs = [ "bcm2712-rpi-5-b.dtb" "bcm2712d0-rpi-5-b.dtb" "bcm2712-d-rpi-5-b.dtb" ];
 
-  pruneGens = import ./prune-gens.nix { inherit lib pkgs; };
+  # Length of <id8>, the generation directory name (layout L1s).
+  idLen = 8;
+
+  pruneGens = import ./prune-gens.nix { inherit lib pkgs idLen; };
 
   # Line order matters (US-172):
   #   - os_prefix= and the OS file names come first, before any dtoverlay=
@@ -88,7 +102,7 @@ let
     kernel=Image
     initramfs initrd followkernel
     cmdline=cmdline.txt
-    os_prefix=gens/${id}/
+    os_prefix=g/${id}/
   '' + lib.optionalString board.hat.blockHifiberry ''
     # HiFiBerry block, layer (a): do not apply the HAT EEPROM overlay.
     force_eeprom_read=0
@@ -119,17 +133,23 @@ let
     toplevel=$(readlink -f "$top")
     id=$(basename "$toplevel" | cut -c1-32)
     case "$id" in
+      *[!0-9a-z]*) die "unexpected toplevel id '$id'" ;;
       ${lib.concatStrings (lib.genList (_: "?") 32)}) ;;
       *) die "unexpected toplevel id '$id'" ;;
     esac
-    gens="$fw/gens"
-    gen="$gens/$id"
+    id8=$(echo "$id" | cut -c1-${toString idLen})
+    gens="$fw/g"
+    gen="$gens/$id8"
     kdir=$(dirname "$(readlink -f "$toplevel/kernel")")
 
     mkdir -p "$gens"
 
-    # 1. Generation directory.
-    if [ ! -e "$gen/.complete" ]; then
+    # 1. Generation directory. An existing one is reused only if its
+    # .complete names this <id>; another <id> is an <id8> collision.
+    if [ -e "$gen/.complete" ]; then
+      have=$(cat "$gen/.complete")
+      [ "$have" = "$id" ] || die "$gen/.complete names '$have', not $id (id8 collision); config.txt not changed"
+    else
       rm -rf "$gen.tmp" "$gen"
       mkdir -p "$gen.tmp"
       cp -L --no-preserve=mode "$toplevel/kernel" "$gen.tmp/Image"
@@ -143,20 +163,24 @@ let
       echo "Overlays for NixOS generation $toplevel" > "$gen.tmp/overlays/README"
       sync -f "$gen.tmp"
       mv "$gen.tmp" "$gen"
-      touch "$gen/.complete"
+      echo "$id" > "$gen/.complete.new"
+      sync "$gen/.complete.new"
+      mv "$gen/.complete.new" "$gen/.complete"
       sync "$gen/.complete" "$gens"
     fi
 
     # 2. Pointer. Never point at an incomplete generation.
-    [ -e "$gen/.complete" ] || die "$gen is incomplete; config.txt not changed"
+    [ "$(cat "$gen/.complete" 2>/dev/null)" = "$id" ] || die "$gen is incomplete; config.txt not changed"
+    # The previous os_prefix= value as written (g/<id8>/, or gens/<id>/
+    # from a generation before L1s); prune-gens.nix parses it.
     prev=""
     if [ -f "$fw/config.txt" ]; then
-      prev=$(sed -n 's|^os_prefix=gens/\([^/]*\)/$|\1|p' "$fw/config.txt")
+      prev=$(sed -n 's|^os_prefix=||p' "$fw/config.txt" | head -n 1)
     fi
     cat > "$fw/config.txt.new" <<'EOF'
     ${configTxt "@ID@"}
     EOF
-    sed -i "s|@ID@|$id|" "$fw/config.txt.new"
+    sed -i "s|@ID@|$id8|" "$fw/config.txt.new"
     sync "$fw/config.txt.new"
     mv -f "$fw/config.txt.new" "$fw/config.txt"
     sync "$fw"
@@ -166,7 +190,7 @@ let
     if [ -e /run/booted-system ]; then
       booted=$(basename "$(readlink -f /run/booted-system)" | cut -c1-32)
     fi
-    ${pruneGens} "$gens" /nix/var/nix/profiles "$id" "$prev" "$booted"
+    ${pruneGens} "$fw" /nix/var/nix/profiles "$id" "$prev" "$booted"
   '';
 in
 {
@@ -176,8 +200,11 @@ in
   };
   # Keep nixpkgs' generic-extlinux-compatible off: nothing reads extlinux.
   boot.loader.generic-extlinux-compatible.enable = lib.mkForce false;
-  # Exposed for board-guard; the hook replaces @ID@.
+  # Exposed for board-guard; the hook replaces @ID@ with <id8>.
   system.build.pi5ConfigTxt = configTxt "@ID@";
+  # Exposed for board-guard's path-length check (US-172 R1).
+  system.build.pi5Dtbs = pi5Dtbs;
+  system.build.pi5IdLen = idLen;
   # Exposed for board-guard and the pi5-prune-gens check (same script as
   # the hook runs).
   system.build.pi5PruneGens = pruneGens;
