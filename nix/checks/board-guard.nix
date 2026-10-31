@@ -153,6 +153,24 @@ let
   hasCardBlock = c: builtins.any (p: lib.hasInfix "wireplumber-block-cards" p.name)
     c.services.pipewire.wireplumber.configPackages;
 
+  # US-172 GL tools option (architect 6f394d52, QE 9e6fb25b G1-G4). The
+  # same configuration with the option off, for the on/off comparisons.
+  glTools = [ "glmark2" "mesa-demos" "grim" ];
+  glOff = conf: (nixosConfigurations.${conf}.extendModules {
+    modules = [ { mugge.pi5.glDiagnostics.enable = false; } ];
+  }).config;
+  pkgNames = c: map (p: p.pname or (p.name or "")) c.environment.systemPackages;
+  hasAllGl = c: lib.all (n: builtins.elem n (pkgNames c)) glTools;
+  hasNoGl = c: !builtins.any (n: builtins.elem n glTools) (pkgNames c);
+  # G2: packages only.
+  unitsAndAccounts = c: map builtins.attrNames
+    [ c.systemd.services c.systemd.user.services c.users.users c.users.groups ];
+  # G4 (eval): the glmark2 entry builds the wayland-glesv2 flavour, which
+  # is the glmark2-es2-wayland binary. The 02 read checks the file.
+  glmark2Es2Wayland = c: let g = builtins.filter (p: (p.pname or "") == "glmark2") c.environment.systemPackages; in
+    builtins.length g == 1
+      && builtins.any (f: builtins.match "-Dflavors=(.*,)?wayland-glesv2(,.*)?" f != null) ((builtins.head g).mesonFlags or [ ]);
+
   # Real kernel attributes, not only our option (eval-only: no build).
   kernel = c: c.boot.kernelPackages.kernel;
   isRtKernel = c: (kernel c).modDirVersion == "6.12.62"
@@ -207,6 +225,7 @@ let
   pi4 = conf:
     let c = cfg conf; in map (a: check conf a.name a.ok) ([
       { name = "board is pi4"; ok = c.mugge.board.name == "pi4"; }
+      { name = "no mugge.pi5 options (GL tools option is pi5 only, 6f394d52)"; ok = !(c.mugge ? pi5); }
       { name = "PREEMPT_RT kernel variant"; ok = c.mugge.board.kernel.variant == "rt"; }
       { name = "kernel 6.12.62 with PREEMPT_RT=y"; ok = isRtKernel c; }
       { name = "NVMe stripped (US-114)"; ok = !c.mugge.board.kernel.keepNvme && kconf c "BLK_DEV_NVME" == "n"; }
@@ -220,7 +239,8 @@ let
       { name = "no ALSA card-block rule (Pi 4 follow-up)"; ok = !hasCardBlock c; }
     ] ++ venues c);
 
-  pi5Common = conf: c: [
+  # off: evaluated once per configuration.
+  pi5Common = conf: c: let off = glOff conf; in [
     { name = "board is pi5"; ok = c.mugge.board.name == "pi5"; }
     { name = "NVMe kept"; ok = c.mugge.board.kernel.keepNvme; }
     { name = "external bootloader hook"; ok = c.boot.loader.external.enable; }
@@ -254,6 +274,13 @@ let
     { name = "no password authentication"; ok = !(ssh c).PasswordAuthentication; }
     { name = "no keyboard-interactive authentication"; ok = !(ssh c).KbdInteractiveAuthentication; }
     { name = "configurationRevision set"; ok = c.system.configurationRevision != null; }
+    { name = "GL tools option on by default (6f394d52)"; ok = c.mugge.pi5.glDiagnostics.enable; }
+    { name = "GL tools on: glmark2, mesa-demos, grim in systemPackages (G1)"; ok = hasAllGl c; }
+    { name = "GL tools off: none of them in systemPackages (G1)"; ok = !off.mugge.pi5.glDiagnostics.enable && hasNoGl off; }
+    { name = "GL tools on/off: same services, user services, users, groups (G2)"; ok = unitsAndAccounts c == unitsAndAccounts off; }
+    { name = "GL tools on/off: same config.txt and kernel drv (G3)"; ok = configTxt c == configTxt off
+        && (kernel c).drvPath == (kernel off).drvPath; }
+    { name = "glmark2 builds glmark2-es2-wayland (G4, eval)"; ok = glmark2Es2Wayland c; }
   ];
 
   pi5Bootstrap = conf:

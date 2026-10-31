@@ -15,6 +15,7 @@
   imports = [
     ./hardware.nix
     ./bootloader.nix
+    ./gl-diagnostics.nix
   ];
 
   mugge.board = {
