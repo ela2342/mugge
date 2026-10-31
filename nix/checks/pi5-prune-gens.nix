@@ -6,7 +6,11 @@
 # survive, what config.txt and g/MAP.txt say, and that every guard dies
 # before the pointer. Layout L1s: US-172, architect rulings 04d8b687,
 # 2b485056, 63e41531; SecSpec acb8fb17 L1-L5; QE c639203e, 9a21330d,
-# 74504b2f, 3f80f141, da578961, ad6a8bda.
+# 74504b2f, 3f80f141, da578961, ad6a8bda. Stage-only mode: architect
+# 993d02b6 Q1, SecSpec 6e3cfa20 SO1/SO2, QE 056d79df S1-S2, 15e38621
+# S4-S8. The script is called in the hook's form: the fixed paths, then
+# [--stage-only] <toplevel>, the hook's "$@" (board-guard asserts that the
+# hook adds nothing else).
 #
 # target: system.build.pi5PruneGens of the Pi 5 configuration. board-guard
 # asserts that the hook calls exactly this store path. The check runs the
@@ -57,6 +61,12 @@ let
     { c = "c26"; what = "vfat guard"; s = broken ''[ "$fstype" = vfat ]''; }
     { c = "c11b"; what = "final-newline check"; s = broken ''[ -z "$(tail -c1 "$new")" ]''; }
     { c = "c11c"; what = "last-line check"; s = broken ''[ "$(tail -n1 "$new")" = "os_prefix=$prefix" ]''; }
+    # Stage-only (architect 993d02b6 Q1, SecSpec 6e3cfa20 SO1/SO2, QE
+    # 056d79df S1-S2, 15e38621 S4-S8).
+    { c = "s1"; what = "stage-only exit"; s = brokenTo "false" ''[ -n "$stageonly" ]''; }
+    { c = "s5"; what = "exact --stage-only match"; s = brokenTo "2:*)" ''"2:--stage-only")''; }
+    { c = "s4"; what = "stageonly initialisation"; s = brokenTo ":" ''stageonly=""''; }
+    { c = "SO=1; c26"; what = "vfat guard in stage-only mode"; s = broken ''[ "$fstype" = vfat ]''; }
   ];
 
   # Config templates: the real one, and variants at and over the class
@@ -115,8 +125,12 @@ pkgs.runCommand "pi5-prune-gens" { } ''
   # setup LABEL: fresh fake FAT root, store and profiles. The FAT root
   # holds files the install must never touch. No config.txt, no booted
   # system, no chosen prefix.
+  # SO=1: the case runs the install in stage-only mode (run, runfail);
+  # seeding (inst) is always a normal install.
+  SO=""
   setup() {
     label="$1"
+    [ -z "$SO" ] || label="stage-only: $1"
     total=$((total + 1))
     root=$(readlink -f "$(mktemp -d)")
     fw="$root/fw"
@@ -176,14 +190,21 @@ pkgs.runCommand "pi5-prune-gens" { } ''
   # os_prefix= last). oldraw VALUE: real template with os_prefix=VALUE.
   oldcfg() { sed "s|@ID@|$(short "$1")|" "$REAL" > "$fw/config.txt"; }
   oldraw() { { sed '/^os_prefix=/d' "$REAL"; printf 'os_prefix=%s\n' "$1"; } > "$fw/config.txt"; }
-  # run ID: install ID with template $TMPL. inst ID: the same, quietly,
-  # to seed a real generation (and the pointer to it).
+  # call FW ARG...: the install script with FW, template $TMPL and the
+  # fake paths, then ARG... in the hook's place ("$@" of
+  # install-pi5-bootloader: [--stage-only] <toplevel>).
+  call() { f="$1"; shift; "$S" "$f" "$TMPL" "$profiles" "$root/booted" "$root/chosen" "$@"; }
+  top() { echo "$store/$1-nixos-system-mugge"; }
+  # run ID: install ID, in the form nixos-rebuild uses (or stage-only if
+  # SO=1). inst ID: a normal install, quietly, to seed a real generation
+  # (and the pointer to it).
   run() {
     mktop "$1"
-    "$S" "$fw" "$store/$1-nixos-system-mugge" "$TMPL" "$profiles" "$root/booted" "$root/chosen"
+    if [ -n "$SO" ]; then call "$fw" --stage-only "$(top "$1")"; else call "$fw" "$(top "$1")"; fi
   }
-  inst() { run "$1" > /dev/null 2>&1 || fail "seeding $1 failed"; }
-  # runfail ID TEXT...: the install dies, and its message has every TEXT.
+  inst() { mktop "$1"; call "$fw" "$(top "$1")" > /dev/null 2>&1 || fail "seeding $1 failed"; }
+  # runfail ID TEXT...: the install dies, and its message has every TEXT
+  # (and the STAGE-ONLY line in stage-only mode).
   runfail() {
     i="$1"
     shift
@@ -191,6 +212,7 @@ pkgs.runCommand "pi5-prune-gens" { } ''
     for m in "$@"; do
       grep -qF -- "$m" "$root/err" || fail "die message lacks '$m': $(cat "$root/err")"
     done
+    [ -z "$SO" ] || grep -qF STAGE-ONLY "$root/err" || fail "no STAGE-ONLY line: $(cat "$root/err")"
   }
   # snap [DIR]: every path under DIR (default the FAT root) with the hash
   # of each file.
@@ -200,6 +222,8 @@ pkgs.runCommand "pi5-prune-gens" { } ''
     done)
   }
   # snapold ID: snap without g/MAP.txt and without ID's g/ directory.
+  # snapbut ID: snap without ID's g/ directory only.
+  snapbut() { snap | grep -v -e "^\./$CD/$(short "$1")\(/\|$\)" || true; }
   snapold() { snap | grep -v -e "^\./$CD/MAP\.txt" -e "^\./$CD/$(short "$1")\(/\|$\)" || true; }
   # dirsof DIR: directory names in DIR, sorted, space-separated.
   dirsof() { (cd "$1" && find . -mindepth 1 -maxdepth 1 -type d | sed 's|^\./||' | sort | tr '\n' ' '); }
@@ -880,7 +904,8 @@ pkgs.runCommand "pi5-prune-gens" { } ''
     setup "24 empty FAT root dies"
     link 1 $D
     before=$(snap)
-    if "$S" "" "$store/$D-nixos-system-mugge" "$TMPL" "$profiles" "$root/booted" "$root/chosen" 2> "$root/err"; then
+    mktop $D
+    if call "" ''${SO:+--stage-only} "$(top $D)" 2> "$root/err"; then
       fail "did not die"
     fi
     grep -qF "empty FAT root" "$root/err" || fail "message: $(cat "$root/err")"
@@ -891,7 +916,8 @@ pkgs.runCommand "pi5-prune-gens" { } ''
     setup "25 relative FAT root dies"
     link 1 $D
     before=$(snap)
-    if (cd "$root" && "$S" fw "$store/$D-nixos-system-mugge" "$TMPL" "$profiles" "$root/booted" "$root/chosen") 2> "$root/err"; then
+    mktop $D
+    if (cd "$root" && call fw ''${SO:+--stage-only} "$(top $D)") 2> "$root/err"; then
       fail "did not die"
     fi
     grep -qF "is not absolute" "$root/err" || fail "message: $(cat "$root/err")"
@@ -910,9 +936,91 @@ pkgs.runCommand "pi5-prune-gens" { } ''
     pass
   }
 
+  # ---- Stage-only mode (architect 993d02b6 Q1, SecSpec 6e3cfa20) ----
+  # QE 056d79df S1-S2 and 15e38621 S4-S8.
+
+  # stagetree: config.txt -> C (booted, chosen), complete A, B, C in g/,
+  # g/MAP.txt, legacy gens/E with gens/MAP.txt. A normal install of D
+  # would prune A and B.
+  stagetree() {
+    link 1 $A; link 2 $B; link 3 $C; link 4 $D
+    gen $A; gen $B
+    inst $C
+    boot $C
+    lgen $E
+    echo "old map" > "$legacy/MAP.txt"
+  }
+
+  # (S1) Stage-only builds g/<id8> in full and exits 0. Everything else
+  # on the FAT (config.txt, gens/, g/MAP.txt, the other g/ dirs, a
+  # prunable A and B) is byte-identical, no config.txt.new is left, and
+  # stdout is byte for byte the config.txt the normal install then
+  # writes for the same input. stderr has STAGE-ONLY and no prune step
+  # (S6, S7); the normal run has the prune step, prunes A and B (so the
+  # prune is observable) and has no STAGE-ONLY.
+  s1() {
+    setup "S1 stage-only stages, writes nothing else, prints the config"
+    stagetree
+    before=$(snapbut $D)
+    mktop $D
+    call "$fw" --stage-only "$(top $D)" > "$root/out" 2> "$root/err" || fail "stage-only exit $?: $(cat "$root/err")"
+    [ "$(snapbut $D)" = "$before" ] || fail "FAT outside $CD/$(short $D)/ changed"
+    [ "$(cat "$g/$(short $D)/.complete")" = $D ] || fail ".complete is not $D"
+    for f in Image initrd cmdline.txt ${lib.escapeShellArgs target.dtbs} overlays/README overlays/overlay_map.dtb; do
+      [ -f "$g/$(short $D)/$f" ] || fail "staged generation lacks $f"
+    done
+    sed "s|@ID@|$(short $D)|" "$TMPL" | cmp -s - "$root/out" || fail "stdout is not the rendered config.txt"
+    grep -qF STAGE-ONLY "$root/err" || fail "no STAGE-ONLY line on stderr"
+    ! grep -qF "prune step" "$root/err" || fail "stage-only reached the prune step"
+    call "$fw" "$(top $D)" > /dev/null 2> "$root/err2" || fail "normal install failed"
+    cmp -s "$root/out" "$fw/config.txt" || fail "stdout differs from the config.txt the normal install wrote"
+    grep -qF "prune step" "$root/err2" || fail "normal install shows no prune step"
+    ! grep -qF STAGE-ONLY "$root/err2" || fail "normal install printed STAGE-ONLY"
+    expect_dirs $C $D
+    pass
+  }
+
+  # (S4) The form nixos-rebuild uses, with any plausible stage-only name
+  # in the environment, is a normal install (SO1: argv only).
+  s4() {
+    setup "S4 environment cannot select stage-only"
+    stagetree
+    mktop $D
+    env STAGE_ONLY=1 STAGEONLY=1 stage_only=1 stageonly=1 \
+      "$S" "$fw" "$TMPL" "$profiles" "$root/booted" "$root/chosen" "$(top $D)" > /dev/null 2> "$root/err" \
+      || fail "install failed: $(cat "$root/err")"
+    expect_pointer $D
+    ! grep -qF STAGE-ONLY "$root/err" || fail "STAGE-ONLY with the flag only in the environment"
+    expect_dirs $C $D
+    pass
+  }
+
+  # (S5) A misspelt, misplaced, repeated or missing argument is refused
+  # before anything is written.
+  s5() {
+    setup "S5 unknown or misplaced arguments are refused, nothing written"
+    stagetree
+    mktop $D
+    T=$(top $D)
+    before=$(snap)
+    for a in "--stage-onyl $T" "--stageonly $T" "--Stage-only $T" "-s $T" "$T --stage-only" \
+      "--stage-only --stage-only $T" "--stage-only $T extra" "--stage-only" "stage-only" ""; do
+      # shellcheck disable=SC2086
+      if call "$fw" $a > /dev/null 2> "$root/err"; then fail "accepted '$a'"; fi
+      [ "$(snap)" = "$before" ] || fail "FAT changed for '$a'"
+    done
+    pass
+  }
+
   cases="c1 c2 c3a c3b c3c c9 c9b c10 c10b c11 c11b c11c p1 p1b p2a p2b p2c p3 p4 p5 p6 p7 p7b p8 p10 p11 p12
-    c13 c14 c15 c15b c16 c16b c16c c17 c19 c20 c21 c22 c24 c25 c26"
+    c13 c14 c15 c15b c16 c16b c16c c17 c19 c20 c21 c22 c24 c25 c26 s1 s4 s5"
   for c in $cases; do "$c"; done
+  # (S2, S8) Every guard that dies before the pointer dies the same way in
+  # stage-only mode: collision, class limits, missing files, the final
+  # newline, empty, relative and non-vfat FAT roots.
+  SO=1
+  for c in c1 c9 c9b c10 c10b c11b c11c c24 c25 c26; do "$c"; done
+  SO=""
   [ "$passed" -eq "$total" ] && [ "$total" -gt 0 ] || { echo "FAIL: $passed/$total" >&2; exit 1; }
 
   # (8) Negative controls: each guard removed once turns its case red

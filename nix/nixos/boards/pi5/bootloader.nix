@@ -137,11 +137,16 @@ let
   '';
 
   # The whole install (generation, pointer, prune) is one script, so the
-  # pi5-prune-gens check runs exactly this code offline.
+  # pi5-prune-gens check runs exactly this code offline. The hook's own
+  # arguments go last and unchanged: nixos-rebuild calls
+  # `install-pi5-bootloader <toplevel>`; the stage-only mode (architect
+  # 993d02b6 Q1, SecSpec 6e3cfa20 SO1) is
+  # `install-pi5-bootloader --stage-only <toplevel>`. install-pi5-gen
+  # parses and checks them (prune-gens.nix).
   installHook = pkgs.writeShellScript "install-pi5-bootloader" ''
     set -euo pipefail
-    exec ${pruneGens} /boot/firmware "$1" ${pruneGens.templateFile} \
-      /nix/var/nix/profiles /run/booted-system /proc/device-tree/chosen/os_prefix
+    exec ${pruneGens} /boot/firmware ${pruneGens.templateFile} \
+      /nix/var/nix/profiles /run/booted-system /proc/device-tree/chosen/os_prefix "$@"
   '';
 in
 {

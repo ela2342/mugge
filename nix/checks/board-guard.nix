@@ -21,13 +21,22 @@ let
     if ok then "PASS ${conf}: ${name}"
     else throw "board-guard: ${conf}: ${name} FAILED";
 
-  # The hook text calls the exact store path the pi5-prune-gens check runs,
-  # with the rendered config template. Context is dropped only for the
-  # string comparison.
-  hookRunsPrune = c: let s = c.system.build.pi5PruneGens; in lib.hasInfix
-    (builtins.unsafeDiscardStringContext "${s} /boot/firmware \"$1\" ${s.templateFile} ")
-    (builtins.unsafeDiscardStringContext c.boot.loader.external.installHook.text)
-    && s.configTemplate == configTxt c;
+  # The hook is exactly one exec of the store path the pi5-prune-gens
+  # check runs, with the rendered config template, the fixed paths and its
+  # own arguments last and unchanged ("$@"). So it reads no environment
+  # and adds no mode of its own: install-pi5-gen alone parses
+  # [--stage-only] <toplevel> (SecSpec 6e3cfa20 SO1), and the check runs
+  # it in that form. Context is dropped only for the string comparison;
+  # the first line is writeShellScript's #! line.
+  hookText = c: builtins.unsafeDiscardStringContext c.boot.loader.external.installHook.text;
+  hookForm = c: text: let s = c.system.build.pi5PruneGens; in
+    builtins.filter (l: l != "") (lib.tail (lines text)) == map builtins.unsafeDiscardStringContext [
+      "set -euo pipefail"
+      "exec ${s} /boot/firmware ${s.templateFile} \\"
+      "  /nix/var/nix/profiles /run/booted-system /proc/device-tree/chosen/os_prefix \"$@\""
+    ];
+  hookRunsPrune = c: hookForm c (hookText c)
+    && c.system.build.pi5PruneGens.configTemplate == configTxt c;
   hasNoauto = c: builtins.elem "noauto" c.fileSystems."/boot/firmware".options;
   hasUs156Route = c: c.networking.interfaces ? end0
     && c.networking.interfaces.end0.ipv4.routes != [ ];
@@ -126,6 +135,11 @@ let
     { name = "config.txt without its final newline fails";
       ok = lib.hasSuffix "\n" t && !endsWithPrefix (lib.removeSuffix "\n" t); }
     { name = "config.txt ending in a blank line fails"; ok = !endsWithPrefix (t + "\n"); }
+    { name = "hook passing only \"$1\" fails";
+      ok = !hookForm c (altered (hookText c) "os_prefix \"$@\"" "os_prefix \"$1\""); }
+    { name = "hook selecting stage-only from the environment fails (SO1)";
+      ok = !hookForm c (altered (hookText c) "set -euo pipefail\n"
+        "set -euo pipefail\n[ -z \"\${STAGE_ONLY-}\" ] || set -- --stage-only \"$@\"\n"); }
   ];
   greetdOnVc4 = c: lib.hasInfix
     ''DRIVERS=="vc4-drm", TAG+="systemd", ENV{SYSTEMD_WANTS}+="greetd.service"''
@@ -210,7 +224,7 @@ let
     { name = "board is pi5"; ok = c.mugge.board.name == "pi5"; }
     { name = "NVMe kept"; ok = c.mugge.board.kernel.keepNvme; }
     { name = "external bootloader hook"; ok = c.boot.loader.external.enable; }
-    { name = "hook runs pi5PruneGens (AC2a check target)"; ok = hookRunsPrune c; }
+    { name = "hook is exactly exec pi5PruneGens <fixed paths> \"$@\" (AC2a check target, SO1)"; ok = hookRunsPrune c; }
     { name = "no extlinux"; ok = !c.boot.loader.generic-extlinux-compatible.enable; }
     { name = "no grub"; ok = !c.boot.loader.grub.enable; }
     { name = "no NixOS DT overlays"; ok = c.hardware.deviceTree.overlays == [ ]; }

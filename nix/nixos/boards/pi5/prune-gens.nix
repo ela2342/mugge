@@ -1,13 +1,24 @@
 # prune-gens.nix — steps 1-3 of the Pi 5 bootloader hook (bootloader.nix)
 #
-# Usage: install-pi5-gen <fw> <toplevel> <template> <profiles> <booted> <chosen>
+# Usage: install-pi5-gen <fw> <template> <profiles> <booted> <chosen> [--stage-only] <toplevel>
 #   <fw>        FAT root (/boot/firmware); must be absolute and a mounted vfat
-#   <toplevel>  the system toplevel being activated
 #   <template>  config.txt with @ID@ for <id8> (bootloader.nix configTxt)
 #   <profiles>  system profile directory (/nix/var/nix/profiles)
 #   <booted>    /run/booted-system (absent in the nixos-install chroot)
 #   <chosen>    /proc/device-tree/chosen/os_prefix, the prefix the firmware
 #               booted from
+#   <toplevel>  the system toplevel being activated
+# The hook passes its own arguments last, unchanged, so nixos-rebuild's
+# call `install-pi5-bootloader <toplevel>` arrives here as the final
+# argument.
+#
+# --stage-only (architect 993d02b6 Q1, SecSpec 6e3cfa20 SO1/SO2): runs
+# every check and step 1 exactly as below, renders and checks
+# config.txt.new, prints it to stdout and removes it, then exits 0 before
+# the rename. config.txt, gens/ and g/MAP.txt are not written and nothing
+# is pruned. Selected only by this argument, never by the environment; a
+# line with "STAGE-ONLY" goes to stderr. Any other option, or arguments in
+# another order, is refused before anything is written.
 #
 # <id> is the 32-character toplevel hash, <id8> its first idLen
 # characters (US-172 layout L1s, architect ruling 04d8b687). A directory
@@ -57,13 +68,23 @@ pkgs.writeShellScript "install-pi5-gen" ''
 
   die() { echo "install-pi5-gen: $*" >&2; exit 1; }
 
-  [ "$#" -eq 6 ] || die "usage: install-pi5-gen <fw> <toplevel> <template> <profiles> <booted> <chosen>"
+  usage="usage: install-pi5-gen <fw> <template> <profiles> <booted> <chosen> [--stage-only] <toplevel>"
+  [ "$#" -ge 6 ] || die "$usage"
   fw="$1"
-  top="$2"
-  template="$3"
-  profiles="$4"
-  bootedlink="$5"
-  chosenfile="$6"
+  template="$2"
+  profiles="$3"
+  bootedlink="$4"
+  chosenfile="$5"
+  shift 5
+  stageonly=""
+  case "$#:$1" in
+    "2:--stage-only") stageonly=1; shift ;;
+    1:-*|2:-*) die "unknown option '$1'; $usage" ;;
+    1:*) ;;
+    *) die "$usage" ;;
+  esac
+  top="$1"
+  [ -z "$stageonly" ] || echo "install-pi5-gen: STAGE-ONLY: writes only the generation directory; config.txt is not written and nothing is pruned" >&2
 
   # Never work on an empty or relative root, and never write the
   # generation tree into the root filesystem by mistake (SecSpec L5).
@@ -206,11 +227,19 @@ pkgs.writeShellScript "install-pi5-gen" ''
     rm -f "$new"
     die "config.txt.new does not end with os_prefix=$prefix and exactly one newline; config.txt is unchanged"
   fi
+  # Stage-only ends here, the one point where it differs (993d02b6 Q1).
+  if [ -n "$stageonly" ]; then
+    cat "$new"
+    rm -f "$new"
+    echo "install-pi5-gen: STAGE-ONLY: $gen staged; config.txt unchanged, nothing pruned" >&2
+    exit 0
+  fi
   sync "$new"
   mv -f "$new" "$fw/config.txt"
   sync "$fw"
 
   # 3. Prune. Unknown previous pointer: delete nothing (63e41531 A3).
+  echo "install-pi5-gen: config.txt points at $prefix; prune step" >&2
   # Newest other present generation. Compare N numerically (10 > 9), not
   # in glob order.
   alt8=""
