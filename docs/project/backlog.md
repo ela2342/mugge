@@ -1514,6 +1514,46 @@ priority!"
     F-504 owner + fix; F-441 UART question (batchable now the owner is
     home); F-481 role-prompt vehicle; F-497 amps-on row question at
     the next safety.md batch; F-507 evidence home.
+  - v321 PUSHED (CM, verified on the remote): chore/backlog =
+    112728322ec5c4f4093d9703f27fcdea4cbaee4d (parent c1b0c483, file
+    sha256 eff933e0, +417/-0). v322 bases on it. v322 consumes PM
+    addenda 2, 3 and 4 in
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/:
+    held-for-v322-add2-20261031.txt (sha256 9352ddce...6cfcaa), -add3-
+    (58c35e13...aa50), -add4- (deb09d44...6cda). Addendum 3 C0 voids
+    the addendum 2 story-kit line; addendum 4 D0 voids the addendum 3
+    QE r4 sha; this version carries the corrected text only.
+  - EVIDENCE HOME (team-lead rule, 2026-10-31): every NEW team file
+    goes under
+    /Users/gabriela.bogk/mugge-team-evidence/live/<role-or-item>/,
+    never under /tmp. The snapshot
+    /Users/gabriela.bogk/mugge-team-evidence/20261031-tmp-snapshot/
+    (SHA256SUMS 51251f1b; F383-mutated-trees SHA256SUMS 1b9ba355) is
+    read-only. Released files keep their paths. Backlog versions from
+    v322 on live in
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/.
+  - MAC AUTO-GC -> F-508 (P2, see the P3 tail). Team-lead put the
+    question to the owner (options (a) find the trigger, then the
+    owner decides; (b) protect needed outputs and re-check store paths
+    before use; team recommends both). (a) goes to the Architect, then
+    worker-4 once it exists; NOT worker-1.
+  - OWNERS (team-lead 2026-10-31): F-341 = worker-2; then F-468/F-490
+    = worker-2 (QE 5edc5622); F-383 step 4 = worker-3 (spawned). All
+    three GitHub/CI work only, no local nix, no Pi. worker-1 stays on
+    US-172 (R5s kit, route C).
+  - OPEN TRACKING (v322; supersedes v321's line): US-172 R5s grant +
+    tryboot (CM; AE kit release covers R5s and R5s-b), then R5s-b on
+    its own grant; route C head 879eb919 (Architect branch ruling +
+    SecSpec delta check, then dispatch); R6a' after route C; TW Part C
+    diff (PO A2); QE criteria next revision with the AE R5s-b stream
+    STOP; AC2 grant only after AE review of the T2 link list;
+    starvation guard at the US-172 F1 milestone or 2026-11-03T20:00
+    (PO f6393b6b); F-341 CI 41196044817 + body r3 + PR (worker-2);
+    F-383 S4 merge of main c33225c2 + PR (worker-3); F-468/F-490 after
+    F-341 (worker-2); F-439 main merge; #66 last; F-320 D post-merge
+    TW list; F-504 owner + fix; F-441 serial adapter question (with
+    the owner); F-481 role-prompt vehicle; F-497 amps-on row question;
+    F-507 evidence home; F-508 owner answer.
 
 ## Reserved IDs
 
@@ -1699,6 +1739,9 @@ Next free (v321; supersedes the line above; F-505 to F-507 confirmed
 free on all local and fetched origin refs and the CM relay files at PM
 read, filed in this version; US-183 still held for the UX story
 decision on the US-152 bundle): F-508, US-183, D-072, T66.
+Next free (v322; supersedes the line above; F-508 confirmed free in
+v321, the addenda and the live/ evidence files at PM read, filed in
+this version): F-509, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -4127,6 +4170,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       opens the PR -> 7 reviews. Staffing below US-172 (PO f6393b6b
       item 3). Build warnings seen in the F-341 CI -> F-506 (not fixed
       in this PR unless the Architect asks).
+    - v322 TEST IDS for body r3 (QE, at 8e169407; signal-gen is
+      binary-only, both tests in its bin unit-test target), each cited
+      as a "... ok" line from the CI T1 log (test-signal-gen) at the
+      post-merge head: (a) rpc::tests::acks_are_flat_json_objects
+      (src/signal-gen/src/rpc.rs:950) = the e3e9bbe6 no-nested-object
+      condition (ack, error, the fallback, status with max_level_*);
+      (b) test_pi4audio_rpc.py against the BUILT pi4audio-rpc (store
+      path or PATH from writeShellApplication): rc 3, t4 rc 124 and
+      the deadline-default cases pass; (c) "T4" =
+      tests::process_state_clips_with_the_given_limits
+      (src/signal-gen/src/main.rs:1101), confirmed by the QE, worker-2
+      and the CM ("T4" was worker-6's label in fa28c800). The pre-#76
+      run 40754223514 does not count: one dispatch at the merged head
+      (41196044817 at cc34d3f4).
 
 - **AMPS-ON PRECONDITION** (AE + Architect): "pcm-bridge/level-bridge
   PW nodes don't come back after a PipeWire restart, so metering is
@@ -4622,6 +4679,80 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - F-441 UART question (is a 3.3 V USB-serial adapter or Pi Debug
     Probe at hand?) is no longer parked: batch it with the next
     physical owner task (the AC10 HDMI plug or a power pull).
+  - US-172 ROUTE (v322; supersedes the R6a "NEXT TEST" line above):
+    Architect restart reading r1 ee7e28f4 (frozen
+    cm-relay/US-172/frozen/, PM verified). The Pi 5 fails only when
+    the firmware applies an overlay through o/ (runs 2-3 HANG and
+    R5b-d FAIL-K are the same early panic); the cmdline additions are
+    NOT the cause; overlay fixups resolve against the base DTB;
+    overlay paths under gens/<id>/overlays/ are 66-67 chars, which
+    fits a ~64-byte firmware path limit (inference); the line-order
+    theory is refuted. Two real mismatches vs Raspbian: H-o overlay
+    location/prefix (LEADS), H-k kernel config/RT (second). Plan:
+    route C = the bcm2712 rebuild on GitHub ARM runners + cachix
+    (nothing built on the Mac), and meanwhile R5s = one tryboot of the
+    current gen 6 with a short t/ prefix, no overlay_prefix, cmdline
+    base + us172r5=s panic=60, unattended; then R6a'.
+  - R5s / R5s-b FILES (all PM verified): Architect objections to PO AC
+    15eeca90; Architect R5s amendments
+    /Users/gabriela.bogk/mugge-team-evidence/live/architect/arch-US172-R5s-amendments-r1.md
+    f2acfb81 (overlay_prefix removal confirmed; the vc4,v3d blacklist
+    STAYS on R5s; released; per the CM it settles AD challenge
+    cae54e3e item C1, which had blocked the R5s grant); Raspbian
+    reference fetch list 7056da5c and reference diff r1
+    /Users/gabriela.bogk/mugge-team-evidence/live/architect/arch-US172-raspbian-ref-diff-r1.md
+    17f5b568; AD challenge
+    /Users/gabriela.bogk/mugge-team-evidence/live/advocatus-diaboli/ad-US172-challenge-restart-reading-r1.md
+    cae54e3e; AE response 73098417; QE O6 response 0b466ed8. QE
+    criteria: r1 3d1006cd, r2 885ff6ca, r3 a595eb91 all VOID; BINDING
+    = r4
+    /Users/gabriela.bogk/mugge-team-evidence/live/quality-engineer/qe-US172-R5s-R6a-criteria-r4.md,
+    sha256
+    1e236bfa7597a62258265a7d77c77f3e45e4de250a94b2432a874e73d8d3b346
+    (QE-confirmed release sha). r4 lacks the AE R5s-b new-audio-stream
+    STOP; the QE adds it in the next revision (r5 not released at PM
+    read).
+  - AE R5s-b ADDENDUM r1
+    /Users/gabriela.bogk/mugge-team-evidence/live/audio-engineer/ae-US172-R5s-b-addendum-r1.txt,
+    sha256
+    1f59d864c8628a9d6048eb6b254c01eb4ac1bfc37deefdf1fbf50e3fa4ccc418:
+    on R5s no HDMI audio card is expected, any HDMI card despite the
+    blacklist is a finding to the AE and the Architect; R5s-b
+    (blacklist removed, first boot where vc4 can bind) takes ALL AE
+    R5s conditions unchanged (C1-C4 96cf081b, NBs 81e36ef3, S-a to S-d
+    73098417, QE A2b/A6/B3f/B3g/B3h/B3j/B7), with its own pre-reads;
+    B3j is a STOP item; a new desktop audio output stream (pw-dump, vs
+    the R5s baseline) is a STOP even with nothing linked;
+    cmdline-r5s-b.txt = cmdline-r5s.txt token for token minus
+    modprobe.blacklist=vc4,v3d, marker us172r5=sb. One AE kit release
+    covers both if cmdline-r5s-b.txt is pinned; R5s-b needs its OWN
+    CHANGE grant, AE-checked, after R5s's return-obs (gains 0, gate
+    closed, link set = pre) passed. LATE bucket: return-obs also
+    covers gains, gate and links. R6a': its own release.
+  - ROUTE C: head 879eb919 pushed, NOT dispatched (CM); waits for the
+    Architect's branch ruling and SecSpec's delta check against
+    /Users/gabriela.bogk/mugge-team-evidence/live/security-specialist/secspec-US172-routeC-conditions-r1.md
+    (936e9acb; S1-S8 belong to the route C grant). Earlier heads
+    1e2ed4e1 (diff vs 250199bc 4fcb0a7e) superseded.
+  - STORY KIT (supersedes the "STORY TEXT UPDATE SCHEDULED" line
+    above): TW kit r1 (incl. Part A r1 a1eb4aca), kit r2 (Part A r2
+    d12c7e9d, never released, still had AC hunks) and Part B r3
+    (2fd57170) are VOID. RELEASED by the PO: Part A' r3 (non-AC)
+    /Users/gabriela.bogk/mugge-team-evidence/live/technical-writer/us172-story-r3/US-172-partAprime-r3.diff,
+    sha256
+    a917246ad6d9a9fff0dbde557595409231666b9575a7a160732d0a32aa41c997,
+    then Part B r4 (ACs)
+    /Users/gabriela.bogk/mugge-team-evidence/live/technical-writer/us172-story-r4/US-172-partB-r4-on-Aprime-r3.diff,
+    sha256
+    adcbd3c75e054c3c7907e03da48b067ce8de97ce6161edd465e07010a54916d2.
+    Applied on 27e90a0d they give ff45b4b0 (CM); relayed by the CM to
+    worker-1. Next: TW Part C diff for PO A2 (below).
+  - LOST (Architect): the v8 kit scripts are not in /tmp (F-507);
+    worker-1 looks in ~/mugge-pi5-prewipe-20261024/ or the worktrees,
+    or rebuilds the kit from the intact pins /tmp/us172-r5v8/pins. Not
+    reconstructed by the PM.
+  - F-441: the serial adapter question is now with the owner
+    (team-lead).
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -4699,6 +4830,59 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   /tmp/pm-backlog/us172-ac2-architect.txt was deleted by the /tmp
   cleanup (F-507); the verbatim AC2 text above (pushed in v320,
   chore/backlog c1b0c483) is the citation basis. Not reconstructed.
+  AC TEXT (v322; supersedes PO r1 24c0efd1 and the OPEN AE note above)
+  = PO r2
+  /Users/gabriela.bogk/mugge-team-evidence/live/product-owner/us172-ac-po-r2.md,
+  sha256 a010c97b0e1c1b9a... + addendum A1
+  us172-ac-po-r2-addendum-A1.md, sha256
+  3841f7cd9b64f7a246ebd33a974430a65d23a161c7ebe4bfd64872ccb5087ba2 +
+  addendum A2 us172-ac-po-r2-addendum-A2.md, sha256
+  5f22dd67cf16885c21804cd1d9c291e66a484a4603d0a85582272cb4165c4d57
+  (all PM verified). Inputs cited by r2: QE 9bba10e0 (O1-O6, N1), AE
+  7586d390 (S1-S6), PO 57772dd0, Architect 15eeca90 (A1, A2, B1, B2,
+  C1), PO f9eb363b.
+  r2 in short: MILESTONE = AC1 + AC2a + AC11 on the same boot; a
+  tryboot pass is reported as "graphics works on a test boot; not yet
+  installed". WHERE ACCEPTANCE IS READ: the DEFAULT boot of a
+  generation deployed from the PR head (configurationRevision = PR
+  head, not dirty); if bcm2712/16K is adopted the PR also makes
+  T51/US-163 AC3 per board, carries the AE RT check on the default
+  boot and updates the pi5-bootstrap memory note. AC1: remote reboot +
+  one batched cold boot; /dev/dri card* + renderD128; /sys/class/drm
+  driver links cover v3d + vc4-drm; HDMI-A-1/2 connectors; live DT
+  nodes okay or absent, BT disabled; QE O2 dmesg rule, any hit -> STOP
+  to the Architect. AC2: the Architect's 30-min run verbatim, plus
+  "AC11 passes on this boot" and "AC1 passes on this boot". AC2a:
+  renderD128 fd held by Mixxx + eglinfo -B renderer V3D; environ
+  checks; 10-min Mixxx on AE 7586d390 S1-S6 terms, null sink only; QE
+  O4 pass rule; D-069 thermal. AC10: the owner only plugs the cable;
+  SSH checks; grim screenshot. AC11: uname -v PREEMPT_RT +
+  CONFIG_PREEMPT_RT=y in /proc/config.gz; loaded Image sha = toplevel
+  kernel sha; config sha match; PAGESIZE 16384 (bcm2712) / 4096
+  (bcm2711).
+  A1 (from QE 0b466ed8 (d)) adds to AC11: `readlink
+  /run/booted-system` equals the toplevel under test; a mismatch alone
+  fails AC11 (modules from another build). A2 replaces the AC2 OPEN
+  paragraph with a binding reference to the AE ruling below; "the gate
+  may stay closed" stays quoted but is overridden (the gate MUST stay
+  closed). The TW is asked for a Part C diff on top of Part B r4 (not
+  delivered at PM read).
+  AC2 AE RULING r1
+  /Users/gabriela.bogk/mugge-team-evidence/live/audio-engineer/ae-US172-AC2-stability-run-ruling-r1.txt,
+  sha256
+  b5ced82192afd90de8bc60cf359460f8304f785b439a59d8d20416767f4ab393 (PM
+  verified; routed by the PM to the PO, QE, Architect and CM). AE S1
+  stays for AC2a only. T1: the gate stays closed, all 8 gains read 0
+  before, during and after. T2: Mixxx master -> convolver inputs only;
+  convolver out -> USBStreamer AUX0-3 only; cue out_2/3 -> AUX4/5 NOT
+  linked; the grant lists every pair by full port name and the AE
+  reviews that list. T3: every 60 s check the link set, gains/gate, a
+  digital-silence floor at the USBStreamer playback side and a
+  non-zero Mixxx level; any fail = stop at once, run VOID. T4-T7: deck
+  control as S5; quantum set before start; D-069 thermal; a full
+  return. T8: valid only while "nothing connected" stands; not an
+  amps-on permission; an HDMI audio finding blocks AC2. NO AC2 GRANT
+  until the AE has reviewed the draft's T2 list.
   Status UPDATE (CM, worker-2, 2026-10-26; corrects "the owner's cold
   power cycle done" above only in its basis): the cold cycle is
   CONFIRMED by /proc/uptime (boot ~08:44:31Z; see the lane status at
@@ -12878,6 +13062,14 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   cited. Staffing: below US-172 (PO f6393b6b item 3 applies by
   analogy; team-lead call). worker-7 is not in the respawned team;
   F-383 S4 needs a new owner (team-lead).
+  v322 OWNER: worker-3 (team-lead, spawned 2026-10-31), GitHub/CI work
+  only. Worktree .claude/worktrees/fix-F-383-step4-merge, local branch
+  fix/F-383-step4-r4-local at 64097aed; first merges main c33225c2
+  again; nothing pushed yet. QE: 941855f8 R-1..R-3 stand (sha
+  verified); "post-#76 main" = c33225c2, so R-2 reads: git diff
+  64097aed <new merge> == git diff 90aba97e c33225c2. If R-1 or R-2
+  fails, M1/M2 re-run locally only once the disk is above the 10 GiB
+  line.
 - **F-384** (Architect; AE confirms the priority; P1; 2026-10-25)
   correction.py step 9 (main b0666c02,
   src/room-correction/room_correction/correction.py:130-143): the
@@ -15657,6 +15849,11 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   VM/Mac-built paths copy to the Pi 5 as ela unsigned and SecSpec's
   VM-signing conditions lapse. Revisit with the sudo policy before any
   multi-user or gig use. LOW (SecSpec).
+  v322 add-on (SecSpec route C conditions 936e9acb B1; PM dup check:
+  same item, no new ID): ela being a Nix trusted user is what makes
+  the command-line key/substituter options work; accepted for now. Fix
+  direction before gig use: move the mugge substituter and key into
+  nix.settings trusted-substituters and drop ela from trusted-users.
 - #49 follow-ups: M6/M7, L7-L9, TW docs items a-d,
   `-p no:cacheprovider`, 0444 seeds.
 - Docs: CLAUDE.md IEM text (ch 7-8 via convolver since D-063) with the
@@ -17266,6 +17463,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   - W2 CLOSED (CM; MESSAGE-ONLY): owner-decided, with signing tracked
     as F-456. The SecSpec and the Architect are informed. Consistent
     with the F-456 entry above (owner quote recorded there).
+  - v322 add-on (SecSpec 936e9acb B2; team-lead: falls under F-456; no
+    new ID): the cachix auth token used by route C has WRITE access to
+    the cache that production pulls from, so branch experiments can
+    push paths into it. Acceptable under the threat model (supply
+    chain out of scope; content-addressed; pulled only when
+    referenced). Related: AD L3 (#49, cachix watch-exec pushes the
+    tracked tree; cache visibility).
 - **F-457** PipeWire 1.6.2 override makes reverse dependencies cache
   misses (filed 2026-10-27; ID free across main, all origin/* and
   local branches at PM read; full record below, folded from the PM
@@ -18462,6 +18666,9 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   cause (our own page), but the guard fails safe; no text change
   before P2; an interim wording is in item 3c, for the AE to release
   only if the cause fix lags.
+  v322 OWNER (team-lead 2026-10-31): F-490/F-468 diagnosis = worker-2,
+  after F-341 (QE ruling 5edc5622); GitHub/CI work only, no local nix,
+  no Pi.
 - **F-491** MEDIUM (AE; US-174 room correction; blocks only s218 in
   rooms where it trips, NOT home-lab 174d; filed 2026-10-28 on AE
   ruling r1 /tmp/cm-relay/F-383/frozen/ as
@@ -18799,6 +19006,34 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   backlog text is the record). Dup check: no /tmp cleanup or
   evidence-retention entry; ID free at PM read.
   - Next free -> F-508.
+- **F-508** P2 (process/infra; owner Architect for the read-only
+  trigger search, then worker-4 once it exists, NOT worker-1; any Mac
+  Nix config change is the owner's (nix-darwin); filed 2026-10-31): an
+  automatic Nix garbage collection on the Mac deletes store outputs
+  without anyone running a GC. Found by worker-1 (relayed by the CM);
+  PM verified in the frozen R6a build log
+  20261031-tmp-snapshot/us172-r6a/build.log, sha256
+  c90c012bb46579b91044b51660a639cf8df2907dc788d4e4c06c63e4d81ceca8:
+  l.72614 "deleting garbage...", then 1099 "deleting '/nix/store/...'"
+  lines, ending l.90250 "deleted more than 2351194112 bytes;
+  stopping", all inside the 2026-10-27 R6a nix build (build.sh has no
+  GC command). Among them l.72621
+  a11skqm2...-nixos-system-mugge-25.11.20260320.812b398, an OLDER
+  toplevel. This GC ran BEFORE the R6a kernel install (hh3lic79,
+  l.73914), so the log does not show the R6a outputs being deleted; a
+  later run is the likely (unverified) cause of the US-172 R6a
+  BLOCKER. /etc/nix/nix.conf has no min-free/max-free; trigger
+  unknown. Disk 75 GiB free before, 38 GiB after the build. Why P2: it
+  bypasses the owner rule that GC and store deletes are owner-only,
+  and any output kept only in the Mac store (R6a, route C pulls,
+  M-runs) can vanish between steps. Owner question via team-lead
+  (2026-10-31): (a) find the trigger, the owner decides on switching
+  it off (off can fill the disk faster); (b) keep needed outputs as GC
+  roots or in cachix and re-check store paths right before use; team
+  recommends both, (b) in force. Related but different: F-507 (macOS
+  /tmp cleanup), the disk stop-line items (manual GC only). Dup check:
+  no automatic-GC entry; ID free at PM read.
+  - Next free -> F-509.
 
 ## Open PRs (2026-10-24, per CM)
 
