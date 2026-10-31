@@ -1605,6 +1605,35 @@ priority!"
     answer (who ran the Mac GC; team-lead) + worker-4 Mac nix-daemon
     log read if still wanted + out-link list home (CM) + TW docs
     vehicle.
+  - v324 PUSHED (CM, verified on the remote): chore/backlog =
+    c1cdaf22631a7259a5043e999ffeb96866d2d11f (parent 8da52dcd, file
+    sha256 02b70e71, +125/-0). v325 bases on it and consumes PM
+    addenda 12-14 in
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/:
+    held-for-v325-add12-20261031.txt (fcd2afef...29b8), -add13-
+    (3baeb0f5...825b), -add14- (3f4cb265...6a09); the later addendum
+    wins. v324 corrections: its R6n line "ruling on 85a1fac7 still
+    open" is WRONG (ruled in 2e985576 section 2); its "E4 NOT
+    RECORDED" is superseded (E4 = 46636459); my message to team-lead
+    dated the Mac GC "31 Oct"; the right date is 2026-10-29
+    ~13:20-13:26Z (team-lead asked the owner with the right date).
+  - OPEN TRACKING (v325; supersedes v324's line): US-172 R5s grant
+    (worker-1 kit; QE kit pin review) then R5s-b if applied, R5r
+    (criteria r5 + E1-E5 complete; Pi-store copy of gen 1 only),
+    R5r-bt if needed (own AE envelope), R6n (SecSpec S1-S3 on 3e5c8314
+    + owner workflow-scope push block + gen-6 base; after R5r); route
+    C dispatch (worker-1 evidence gen 6 = 3f28b6c7; whether it needs
+    the workflow scope: CM question); R6a' after route C; AC2 grant
+    only after AE review of the T2 link list; QE AC2 T3 test form;
+    starvation guard at the US-172 F1 milestone or 2026-11-03T20:00
+    (PO f6393b6b); F-341 CI 41196044817 + body r3 + PR (worker-2);
+    F-383 S4 CI 41198071247 + PR (worker-3); F-468/F-490 after F-341
+    (worker-2); F-439 main merge; #66 last; F-320 D post-merge TW
+    list; F-504 owner + fix; F-441 serial adapter question (with the
+    owner); F-481 role-prompt vehicle; F-497 amps-on row question;
+    F-507 evidence home; F-508 owner answer (who ran the 10-29 Mac GC;
+    team-lead) + TW docs vehicle for the out-link lesson; Mac disk 2.6
+    GiB free (below the 10 GiB stop line; owner).
 
 ## Reserved IDs
 
@@ -1796,6 +1825,8 @@ this version): F-509, US-183, D-072, T66.
 Next free (v323; unchanged, no new IDs in this version): F-509,
 US-183, D-072, T66.
 Next free (v324; unchanged, no new IDs in this version): F-509,
+US-183, D-072, T66.
+Next free (v325; unchanged, no new IDs in this version): F-509,
 US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
@@ -4927,6 +4958,57 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       lib.mkForce no;` in C2 now (K has no THP line: THP depends on
       !PREEMPT_RT); runs AFTER R5r. The ruling on worker-4's proposal
       85a1fac7 is still open.
+  - US-172 v325 STATE (supersedes the v324 E4, R5r and R6n lines above
+    where they differ):
+    - CORRECTION: the R6n proposal 85a1fac7 IS ruled, in section 2 of
+      2e985576 (CM frozen + relayed; worker-4 acked).
+    - CRITERIA COMPLETE: E4 =
+      /Users/gabriela.bogk/mugge-team-evidence/live/quality-engineer/qe-US172-criteria-r5-erratum-E4.md,
+      sha256
+      466364597f009d1ed8e261b0d647369c69e5130e07c3d90d044228b00fa04f83
+      ONLY (QE confirmed; e58f881a was an unsent draft overwritten in
+      place: VOID; QE lesson: even an unsent draft gets a new path),
+      Architect release
+      /Users/gabriela.bogk/mugge-team-evidence/live/architect/arch-US172-criteria-E4-release-r1.md,
+      sha256
+      d3dfb03a80cfa4658e2e9f5be6bfdd5479570130176b3404d3e0a2b7cbc5e4f2.
+      E5 =
+      /Users/gabriela.bogk/mugge-team-evidence/live/quality-engineer/qe-US172-criteria-r5-erratum-E5.md,
+      sha256
+      613063f3fcb51eeff4d73494492b67e32b767a917768cf3d9b4f292393c16951
+      (text-only R5r cleanup: noaudio placement, 15-char comm names),
+      Architect release
+      /Users/gabriela.bogk/mugge-team-evidence/live/architect/arch-US172-criteria-E5-release-r1.md,
+      sha256
+      63b634cf4a516e66a32e60c9a25609cee9a415278b8b68e40fa67fd450c645bb;
+      AE release per the CM (no AE file located by the PM). R5s pins
+      r5 + E1 + E2; R5r pins r5 + E1-E5 (E3 is Part G, R5r only). QE
+      next: the kit pin review.
+    - R5r: AE envelope erratum 1
+      /Users/gabriela.bogk/mugge-team-evidence/live/audio-engineer/ae-US172-R5r-envelope-r1-erratum-1.txt,
+      sha256
+      23bf01e1ba3e993796f0eabac401deaacb0a23d50fb9b83f3c8ebda39c4ed86a:
+      ",noaudio" stays on the vc4 dtoverlay line in config.txt; the
+      cmdline matches token for token. Audio on the R5r tryboot boot =
+      STOP the run (AE) AND the boot is INCONCLUSIVE (Architect G7);
+      no conflict. NO MAC FALLBACK: gen 1 p9mzphhy and kernel 1734v1w9
+      were removed from the Mac store by the 2026-10-29 GC (F-508);
+      R5r depends on the Pi store copy, checked by pre-read G1.
+    - R6n: worker-4 head 21f28b340a77ccd0682fdce5d2faf3f080a59ffd
+      conforms (Architect
+      /Users/gabriela.bogk/mugge-team-evidence/live/architect/arch-US172-R6n-21f28b34-conformance-r1.md,
+      sha256
+      b021b57928a3ef31110918ab2918500c055e2ea7db29b5fb0b51a57dbd9a3aad).
+      Frozen diffs in cm-relay/US-172/frozen/:
+      R6n-21f28b34-vs-3f28b6c7-2784dfcb.diff
+      (2784dfcbd7bfe67c1153b73bbf6ad9611efb64f62872b3e1c40dbaa9acc88240)
+      and R6n-21f28b34-release.yml-vs-879eb919-3e5c8314.diff
+      (3e5c83143a8ff78764ca821d0459eec1c616ffd0fb8e1ccbde439db0d732fc53).
+      PUSH BLOCKED (permission): our GitHub login lacks the workflow
+      scope and R6n changes release.yml; with team-lead for the owner;
+      not to be worked around. Waits on SecSpec S1-S3, the push, the
+      gen-6 base; runs after R5r. Outputs: --out-link on the CI runner
+      + full cachix push, no Mac root (worker-4).
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -13259,6 +13341,13 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   "RELEASED, no blocking points" (test code only, routes_result
   fixture; nothing under src/ changes). CM confirmed and relayed it to
   worker-3.
+  v325: QE O1 ruling
+  /Users/gabriela.bogk/mugge-team-evidence/live/quality-engineer/qe-F383-S4-Q1b-O1-ruling-r1.md,
+  sha256
+  aa3092d8c2e961bf2724d2fefb6c920c9a0e2055c034c7d7e6304792b08a2881: no
+  extra CI dispatch, no new remote ref (relayed to worker-3). 6cd4c016
+  pushed; CI run 41198071247 dispatched once (run_e2e=true). PR next
+  (worker-3).
 - **F-384** (Architect; AE confirms the priority; P1; 2026-10-25)
   correction.py step 9 (main b0666c02,
   src/room-correction/room_correction/correction.py:130-143): the
@@ -19280,6 +19369,30 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   if kept) in the next docs batch, with the F-507/F-481 vehicle.
   Related: the Low line on ela's missing per-user GC-root dir on the
   Pi.
+  v325 FINDINGS (worker-4 r1
+  /Users/gabriela.bogk/mugge-team-evidence/live/worker-4/w4-F508-findings-r1.md,
+  sha256
+  0a048095434f19a9bfa0392a49fefc73ab9c8bf95191f77cefa3c2f92a4e9024,
+  and r2
+  /Users/gabriela.bogk/mugge-team-evidence/live/worker-4/w4-F508-findings-r2.md,
+  sha256
+  b345e8b361a5388852725abfd65140bfeac57261e56a9de3bcf4fc92d796e063;
+  Architect: agrees with lead r3 and makes it more precise): the VM
+  auto-GC (1099 deletions) came from the VM daemon and did NOT delete
+  the R6a outputs. An EXPLICIT GC or store delete ran ON THE MAC on
+  2026-10-29 ~13:20-13:26Z (14:20-14:26 Berlin): gc-socket created
+  13:26:16Z, db/reserved recreated 13:26Z, all temproots older than
+  13:20Z pruned; the Mac has min-free 0, so not automatic. It removed
+  bp7j2r0d, hh3lic79, a11skqm2, p9mzphhy and 1734v1w9. There is no Mac
+  nix-daemon log; shell history was not read. Who/what ran it:
+  UNKNOWN, owner question asked by team-lead. Restarting the
+  linux-builder recreates its ~30 GB qcow2: owner decision only. Mac
+  /nix free: 2.6 GiB (2026-10-31 ~11:35Z).
+  OUT-LINK LIST HOME settled (CM yes, Architect agrees): live GC roots
+  are listed in the CM log
+  (/Users/gabriela.bogk/mugge-team-evidence/live/cm-log-YYYYMMDD), one
+  line per root: path, store path, owner, removal point. The CM
+  applies the lesson to the route C, R6n and R5r kit checks.
   - Next free -> F-509.
 
 ## Open PRs (2026-10-24, per CM)
