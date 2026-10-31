@@ -37,6 +37,9 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    # F-341: pre-flight client (`pi4audio-rpc 4001 '{"cmd":"status"}'`).
+    environment.systemPackages = [ pi4audio-packages.pi4audio-rpc ];
+
     systemd.user.services.pi4audio-signal-gen = {
       description = "RT Signal Generator for Pi Audio Workstation (D-037, D-040)";
       after = [ "pipewire.service" "wireplumber.service" "pi4audio-graph-manager.service" ];

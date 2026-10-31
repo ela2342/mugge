@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# pi4audio-rpc -- send ONE JSON command to a local pi4audio RPC server
+# (signal-gen 4001, later GraphManager 4002) and print its reply (F-341).
+#
+# Usage: pi4audio-rpc <port> '<json>' [deadline_s]
+#
+# Connects to 127.0.0.1:<port> only, sends <json> as one line, then skips
+# state broadcasts and events until the first line that starts with
+# {"type":"ack"  -- that line is the reply and is printed on stdout.
+# The server handles one client at a time and one command per connection
+# here, so the first ack is ours. The json is sent as given, not built.
+#
+# Exit status:
+#   0    ack with "ok":true
+#   1    ack without "ok":true (refused or failed command)
+#   2    connect failed (nothing listening on the port)
+#   3    the server closed the connection before an ack
+#   124  no ack before the deadline (default 3 s). A busy server -- another
+#        client, e.g. a measurement session, still connected -- also ends
+#        here. Fail-closed: close that session or wait; do not retry in a loop.
+#   64   usage error
+#
+# The deadline is enforced by coreutils timeout around the process that holds
+# the socket, so when it fires that process is killed and the server sees EOF.
+set -euo pipefail
+
+usage() {
+    echo "usage: pi4audio-rpc <port> '<json>' [deadline_s]" >&2
+    exit 64
+}
+
+# Inner mode: runs under timeout and is the only holder of the socket.
+if [ "${1:-}" = "--connected-part" ]; then
+    port=$2
+    json=$3
+    if ! { exec 3<>"/dev/tcp/127.0.0.1/$port"; } 2>/dev/null; then
+        exit 2
+    fi
+    printf '%s\n' "$json" >&3
+    while IFS= read -r line <&3 || [ -n "$line" ]; do
+        case $line in
+            '{"type":"ack",'* | '{"type":"ack"}')
+                exec 3>&-
+                printf '%s\n' "$line"
+                case $line in
+                    *',"ok":true,'* | *',"ok":true}'*) exit 0 ;;
+                    *) exit 1 ;;
+                esac
+                ;;
+        esac
+    done
+    exit 3
+fi
+
+if [ $# -lt 2 ] || [ $# -gt 3 ]; then
+    usage
+fi
+port=$1
+json=$2
+deadline=${3:-3}
+if ! [[ $port =~ ^[0-9]{1,5}$ ]] || [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
+    usage
+fi
+[[ $deadline =~ ^[0-9]+(\.[0-9]+)?$ ]] || usage
+case $json in
+    *$'\n'* | '') usage ;;
+esac
+
+rc=0
+timeout "$deadline" "$BASH" "${BASH_SOURCE[0]}" --connected-part "$port" "$json" || rc=$?
+case $rc in
+    0 | 1) ;;
+    2) echo "pi4audio-rpc: cannot connect to 127.0.0.1:$port" >&2 ;;
+    3) echo "pi4audio-rpc: 127.0.0.1:$port closed the connection before an ack" >&2 ;;
+    124) echo "pi4audio-rpc: no ack from 127.0.0.1:$port within ${deadline} s (server busy or not answering)" >&2 ;;
+    *) echo "pi4audio-rpc: failed (exit $rc)" >&2 ;;
+esac
+exit "$rc"
