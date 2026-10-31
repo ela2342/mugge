@@ -1824,6 +1824,44 @@ priority!"
     vehicle for the out-link lesson; Mac disk 2.6 GiB free (below the
     10 GiB stop line; owner). PARKED: R5r (aecc01dc) and R6n
     (21f28b34).
+  - v331 PUSHED (CM, remote verified): chore/backlog =
+    4b6038b52fd2e14b162f1993bc76b92335003ef3 (+79/-0 on e660f4fa).
+    v332 bases on it and consumes PM addenda 33-34 in
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/:
+    held-for-v332-add33-20261031.txt (e6cef0d9...9025) and -add34-
+    (3b08e1e9...e2b3). Built at a MILESTONE (G-US172-05 Pi result;
+    Architect layout ruling 04d8b687 + amendment 2b485056).
+  - OPEN TRACKING (v332; supersedes v331's line): US-172 CRITICAL PATH
+    (layout ruling 04d8b687 as amended by 2b485056): R5s-c kit
+    (worker-1; QE + AE release the delta, then the CM grants) and its
+    reading (Architect); s4 layout implementation (worker-4, single
+    writer, story/US-172-layout-l1s on 5fc3a012; board-guard numbers
+    HELD until the Architect answers AD 747a83c4 S1/S2) -> PR under
+    Rule 13 -> branch build at a CM-picked venue (not the Mac below 10
+    GiB) -> branch tryboot (R4 + F1 renderer reads + F2 soak with the
+    production filter-chain, QE sets the length) -> DEPLOY -> US-172
+    acceptance reads (PO/QE) incl. F5 owner look OR compositor
+    screenshot (PO picks; an owner look is batched by the PM);
+    Architect answer to AD 747a83c4 (S1 overlay-class limit, S2/E3, S3
+    booted detection, S4 collision message) and whether a /dev/mem
+    firmware-log read is wanted (with SecSpec); TW rollback-limitation
+    docs + S4 line (US-172 scope); route C run 41198461811 (Pi pull
+    gated by SecSpec S5-S8); R6a' after route C; AC2 grant only after
+    AE review of the T2 link list; QE AC2 T3 test form; starvation
+    guard at the US-172 F1 milestone (AC1 + AC2a + AC11 on one boot)
+    or 2026-11-03T20:00 (PO f6393b6b); PR #77 (F-341) 7/7, CI
+    41199141583 + CM check + merge; F-383 S4 CI 41198071247 + PR
+    (worker-3); F-468/F-490 after F-341 (worker-2); F-439 PR
+    UNSTAFFED, waits until US-172 no longer needs worker-4; F-509 (TW,
+    after AC3; UX + AE agree on 61c3306f); F-510 (Architect, after
+    core tech); F-511 option pick (Architect, after US-172); #66 last;
+    F-320 D post-merge TW list; F-504 owner + fix; F-441 serial
+    adapter question (with the owner); F-481 role-prompt vehicle;
+    F-497 amps-on row question; F-507 evidence home; F-508 owner
+    answer (who ran the 10-29 Mac GC; team-lead) + TW docs vehicle for
+    the out-link lesson; Mac disk 2.6 GiB free (below the 10 GiB stop
+    line; owner). PARKED: R5r (aecc01dc, not reviewed) and R6n
+    (21f28b34); R6n revives on ANY hang or GPU reset in the F2 soak.
 
 ## Reserved IDs
 
@@ -5536,6 +5574,103 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       AC1 + AC2a + AC11 on one boot; AC2a (eglinfo renderer V3D, Mixxx
       holding renderD128) is not shown yet. Date trigger
       2026-11-03T20:00 stands.
+  - US-172 v332 STATE (MILESTONE; supersedes the v331 lines above
+    where they differ):
+    - LAYOUT SCHEME RULING r1 (CRITICAL PATH):
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/arch-US172-layout-scheme-ruling-r1-04d8b687.md,
+      sha256
+      04d8b687449749d02fdc2498ad5d3319a927a7a339d869790b8e0f9663b4b249.
+      Requirements: R1 every firmware-opened path <= 48 chars (but see
+      AD 747a83c4 S1 below); R2 keep the atomic write sequence
+      (generation dir, .complete, pointer, prune; the old config.txt
+      target is never touched); R3 overlays stay per generation; R4
+      the adopted layout is shown TRYBOOT-APPLIED before merge. CHOSEN
+      L1s: os_prefix=g/<id8>/ (first 8 hash chars; longest path 40
+      chars; depth 3 unchanged). L2/L3 flat shared overlays REJECTED
+      (break R2 and R3). L4 FALLBACK: root-level n<id7>/ (38 chars,
+      depth 2), prune limited to ^n[0-9a-z]{7}(\.tmp)?$.
+    - R5s-c (no build, no Mac disk): kit r2 with t/ replaced by
+      g/a11skqm2/ (a byte copy of gen 6's dir incl. README), variant
+      sb, verbs 01-09 as before; B2 expects g/a11skqm2/(overlays/); A5
+      gated on R1. QE + AE release the delta, then the CM grants.
+      Reading per 04d8b687: APPLIED + bound -> L1s final; skipped ->
+      L4; K/HANG/INCONCLUSIVE -> Architect. AD 747a83c4 S1(b) disputes
+      "skipped -> L4" (see below).
+    - s4 IMPLEMENTATION (worker-4, single writer, branch
+      story/US-172-layout-l1s stacked on PR #52 head 5fc3a012): (1)
+      bootloader.nix: container g/, id8, the full id in .complete, die
+      before the pointer on an 8-char collision, header comment cites
+      the ruling; (2) prune-gens.nix: id8 map, "present" only on a
+      full-id .complete match, g/MAP.txt, legacy gens/<id32> removed
+      only if neither prev nor booted, gens/ once empty; (3)
+      board-guard eval-time R1 assert incl. dtoverlay names parsed
+      from the rendered pi5ConfigTxt; (4) pi5-prune-gens check:
+      collision, legacy prev/booted/other, MAP.txt; (5) L4 variant
+      ready if needed; (4.6, from 2b485056 F4) runtime R1 check in the
+      hook over the files it actually wrote, dying before the pointer
+      write. Board-guard numbers HELD until the Architect answers AD
+      747a83c4.
+    - s5 ACCEPTANCE before merge: branch build at a CM-picked venue
+      within the disk rules; first boot of the branch layout is a
+      tryboot (config.txt keeps a known-booting target until APPLIED;
+      QE + worker kit, Architect review); pass = R4 + F1 + F2; then
+      DEPLOY on the CM's grant; then the US-172 acceptance reads
+      (PO/QE). After the switch, gen 6 under gens/ is a no-graphics
+      rollback target until pruned.
+    - AMENDMENT 2b485056
+      (/Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/arch-US172-R5s-b-AD-response-and-R5r-kit-disposition-r1-2b485056.md,
+      sha256
+      2b485056ee1a6e01f699c004115bc57df1805e48cce113ccd49320632ec55780;
+      accepts AD d02fb6f8 F1-F5): F1 two REQUIRED renderer reads, (a)
+      EGL/GL renderer = V3D in the user session (compositor env + a GL
+      client on the same seat), (b) Mesa v3d driver in the toplevel
+      closure (missing = FAIL before any boot). F2 soak minimums: real
+      GL load on v3d TOGETHER WITH the production filter-chain at
+      production quantum, gains 0, gate closed; pass = same boot_id,
+      no GPU reset/timeout/hang lines, no xrun growth beyond PRE,
+      R5s-b audio STOP items; R6n revives on ANY hang or GPU reset. F3
+      DT node status + bound drivers are primary; the bcm2708_fb token
+      is secondary only. F4 old gens/ generations are not rewritten;
+      LIMITATION: rolling back to a pre-fix generation silently gives
+      no graphics and Bluetooth not disabled (status quo; TW documents
+      it); new item 4.6. F5 final acceptance needs one owner look at
+      the desktop OR a compositor screenshot + F1 reads (PO picks; an
+      owner look is batched). R5r kit not reviewed (dropped).
+    - AD CHALLENGE on the layout ruling
+      (/Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/ad-US172-challenge-layout-scheme-r1-747a83c4.md,
+      sha256
+      747a83c4419a820b7f93f743be96bec7a757a06dae2b3d38aef831aa5895a784;
+      with the Architect; NON-BLOCKING for the R5s-c kit): S1 MED the
+      48-char rule is shown for DTBs only; overlay-class paths (dtbo,
+      README, overlay_map/hat_map) should be capped at the longest
+      overlay path proven APPLIED (31 today, 40 if R5s-c applies); an
+      R5s-c "skipped" proves nothing about depth (L4 then needs its
+      own staged test or a name <= 31); keep the README-probe
+      mechanism in view. S2 E3 not redundant (could name the failing
+      file). S3 LOW define how the legacy prune finds "booted";
+      unknown -> remove nothing from gens/. S4 LOW the collision die
+      message names cause and fix; one TW docs line.
+    - G-US172-05 CLOSED (OBSERVE, E3):
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/g-us172-05-e3-r1-82b1a4ff/G-US172-05-result-r1.md,
+      sha256
+      82b1a4ffc1571bb0b47810310d1f34545fee9e47e5748b6c9e4575a1b256eb07.
+      E3 = N/A: vclog, vcgencmd, vcmailbox, dtc, strings absent from
+      the gen-6 closure; nothing installed. Records: the firmware log
+      sits at chosen/log 0x3ff22000 (512 KiB), readable only via a raw
+      /dev/mem read as root (NOT done; needs an Architect + SecSpec
+      ruling and its own grant); chosen/overlay_prefix is 47 chars, so
+      the formed overlay path is 67 (matches f6519788); firmware
+      2025-08-28, hash 000d3ca2..., variant start_cd (for the
+      Architect). No Pi session open.
+    - STAFFING: worker-1 = R5s-c kit; worker-4 = s4 layout
+      implementation; F-439 waits until US-172 no longer needs
+      worker-4 (team-lead override; no handover). Moot and filed: QE
+      R5r review
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/qe-US172-R5r-kit-r1-review-r1-f5dd73aa.md
+      (sha256
+      f5dd73aaf254c8018520e2cf1b8d435e2d0e0e46d33b5d9ddbb7458aa79669c2);
+      worker-4 G1 pre-read kit 37d35016, not granted (CM-reported; not
+      found under live/ by the PM).
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
