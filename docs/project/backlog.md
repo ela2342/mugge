@@ -1662,6 +1662,34 @@ priority!"
     home; F-508 owner answer (who ran the 10-29 Mac GC; team-lead) +
     TW docs vehicle for the out-link lesson; Mac disk 2.6 GiB free
     (below the 10 GiB stop line; owner).
+  - v326 PUSHED (CM, verified on the remote): chore/backlog =
+    f129eb11772c530ad75b539daa63381ea42d3265 (parent 051bff6f, file
+    sha256 57e2dda5, +62/-0). v327 bases on it and consumes PM addenda
+    17 and 18 in
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/:
+    held-for-v327-add17-20261031.txt (4217ac56...5056), -add18-
+    (039a1027...a191); the later addendum wins. CM note: the v326
+    commit subject mentions "story push, gen-6 evidence"; those two
+    items are recorded here in v327, not in v326. No history rewrite.
+  - OPEN TRACKING (v327; supersedes v326's line): US-172 R5s grant
+    (kit r1 8dd2573c: QE pin check Q2/Q3 + Architect plan approval Q5;
+    AE Q4 accepted) then R5s-b if applied, R5r (worker-4 building the
+    kit; G1 pre-reads as a separately pinned read-only script; no Pi
+    access until granted), R5r-bt if needed (own AE envelope), R6n
+    (frozen 21f28b34; Architect ruling on gen-6 evidence 456f6906 for
+    condition A + owner workflow-scope push block; after R5r); route C
+    dispatch (Architect ruling on 456f6906; live confirmation under
+    OBSERVE G-US172-01); R6a' after route C; AC2 grant only after AE
+    review of the T2 link list; QE AC2 T3 test form; starvation guard
+    at the US-172 F1 milestone or 2026-11-03T20:00 (PO f6393b6b);
+    F-341 CI 41196044817 + body r3 + PR (worker-2); F-383 S4 CI
+    41198071247 + PR (worker-3); F-468/F-490 after F-341 (worker-2);
+    F-439 main merge; #66 last; F-320 D post-merge TW list; F-504
+    owner + fix; F-441 serial adapter question (with the owner); F-481
+    role-prompt vehicle; F-497 amps-on row question; F-507 evidence
+    home; F-508 owner answer (who ran the 10-29 Mac GC; team-lead) +
+    TW docs vehicle for the out-link lesson; Mac disk 2.6 GiB free
+    (below the 10 GiB stop line; owner).
 
 ## Reserved IDs
 
@@ -1857,6 +1885,8 @@ US-183, D-072, T66.
 Next free (v325; unchanged, no new IDs in this version): F-509,
 US-183, D-072, T66.
 Next free (v326; unchanged, no new IDs in this version): F-509,
+US-183, D-072, T66.
+Next free (v327; unchanged, no new IDs in this version): F-509,
 US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
@@ -5069,6 +5099,34 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
     - E5 AE RELEASE: no file; the AE released 613063f3 by message to
       the QE and the CM, the QE confirmed. CM asked the AE for a file
       + sha; until then "per the CM".
+  - US-172 v327 STATE (supersedes the v326 lines above where they
+    differ):
+    - STORY COMMIT PUSHED: story/US-172-pi5-drm =
+      5fc3a0121887d87f1fa62d5fee6ec8b813a4d86e (parent 27e90a0d). The
+      CM re-applied Part A' r3 a917246a + Part B r4 adcbd3c7 + Part C
+      r5 aa1950cf cleanly; US-172.md = 6cf471a7.
+    - AE RELEASE FILES (replace "per the CM"): E1-E5
+      /Users/gabriela.bogk/mugge-team-evidence/live/audio-engineer/ae-US172-criteria-r5-E1-E5-release-r1.txt,
+      sha256
+      ba1a7600695a04ca1b7b1d408e78b4a11e45ef74593e9cabd0b112e2f311eda4;
+      R5s kit r1
+      /Users/gabriela.bogk/mugge-team-evidence/live/audio-engineer/ae-US172-R5s-kit-r1-release-r1.txt,
+      sha256
+      b54d2e561c6185eed35f6475f6132b5ba03bb74e84b4540c11abfe5254f101c1:
+      Q4 ACCEPTED; N1: reboot verbs and power pulls are announced to
+      team-lead, announce-only.
+    - R5s GRANT now waits ONLY on the QE pin check (Q2, Q3) and the
+      Architect's plan approval (Q5). worker-1's acks are complete.
+      The R5s kit is NOT re-pinned for R5r.
+    - GEN-6 EVIDENCE (desk, from the PR63 snapshot):
+      /Users/gabriela.bogk/mugge-team-evidence/live/worker-1/gen6-rev-r1/gen6-rev-evidence-r1.md,
+      sha256
+      456f69063938f5ef0b72f818a273ddc76bf6a354b66f18b608ec02b5c61ff0e7
+      (CM frozen copy): gen 6 = 3f28b6c7, clean. With the Architect
+      for a ruling on the route C dispatch and R6n condition A; NOT
+      yet a ruling. Live confirmation under OBSERVE G-US172-01.
+    - R5r KIT: worker-4 acked all 13 R5r inputs and is building it;
+      the G1 pre-reads go in as a separately pinned read-only script.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
