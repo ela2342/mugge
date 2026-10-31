@@ -1947,6 +1947,56 @@ priority!"
     QE O1 (monitor or dummy plug on HDMI-A-1), AC10 unplug + AC1 power
     pull visit. PARKED: R5r (aecc01dc) and R6n (21f28b34); R6n revives
     on ANY hang or GPU reset in the soak.
+  - v334 PUSHED (CM, remote verified): chore/backlog =
+    be6d73d6899a69848db3186260817ba6c604c58a (file 0800b0ed, +146/-0
+    on 158e8560). v335 bases on it and consumes PM addenda 54-75 in
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/held-for-v335-addNN-20261031.txt:
+    54 936fae3f, 55 55f1c1ba, 56 733503f5, 57 2d7f0aa6, 58 88248b71,
+    59 6883db23, 60 3da2ce23, 61 156b4eab, 62 a7ebc2dc, 63 2a3f8f20,
+    64 4e689357, 65 591c7b7b, 66 cef7da13, 67 d9d05a25, 68 78a26561,
+    69 b663dfe7, 70 4bc72545, 71 97e3114e, 72 d614a310, 73 00a58605,
+    74 1fcce54e, 75 2094d7e5 (add75 sha256
+    2094d7e5c61db520d80961ed99cfb9a94de772779cfb8a5042a11844af0d06c2).
+    Built on the 30-minute cadence after the F-439 input set closed.
+    New IDs: F-513, F-514.
+  - DESTRUCTIVE-TEST COUNT 2 -> 1 (team-lead question; add56, add61):
+    CLOSED, no new ID. Deliberate F-320 D option (ii) (QE
+    46dc45da95924d3d7f4bf808eaa89f45978b429df3472e7ad54fc0d33e417dea,
+    AE
+    97bb2cb916d10f3d895b33334fc25c2e1373ac38f58d31fd8239a520e718bea4);
+    the single test is L2
+    TestUnlatchWritesNoGain::test_l2_hw_out_at_floor_after_unlatch on
+    main and at 10f9b8bf (QE, message). Any further drop is caught by
+    QE e7a6c4d2 R2-b.
+  - F-383 S4: run 41198071247 was cancelled by an unknown party (run
+    list shows "failure", job-level cancel); all four workers said
+    they did not cancel it. CM dispatched ONE re-run 41204049745 at
+    6cd4c016 (run_e2e=true, 13:06:15Z) under the don't-block rule;
+    stopped only if the owner says the cancel was deliberate. worker-3
+    watching read-only. Result PENDING.
+  - OPEN TRACKING (v335; supersedes v334's line): US-172 CRITICAL
+    PATH: worker-4 L1s head 14fc07ee HELD (has Arch F2 03f33254 + docs
+    r10/r11; MISSING stage-only hook mode and pi5 glDiagnostics; then
+    Part D r13 docs commit on top; Part D r14 for A12 to follow) ->
+    ONE push + ONE CI run -> PR under Rule 13 (supersedes #52) ->
+    branch build at a CM-picked venue (not the Mac below 10 GiB) -> s5
+    branch tryboot + 15-min GL soak (worker-1 kit d1 e1486700 -> r2 on
+    desk) -> AC2a per PO A12 (own AE release for the AC2a kit) ->
+    DEPLOY -> acceptance reads; starvation guard at the F1 milestone
+    or 2026-11-03T20:00 (PO f6393b6b). F-439 (worker-2): input set
+    COMPLETE (r4 aa4b57fd + AE be3da6a3 CH-1 + UX b8f5c054/20db8650 +
+    QE f1858c33/9c959f10); commits on 10f9b8bf -> CM push -> PR-event
+    CI (only valid R1/R2) -> body r2 (must name "CH-1 fixes F-513" +
+    AE H1-H4 + H2 test; A3 called a BACKSTOP) -> Rule 13 -> merge
+    before #66; then CM freezes + deletes the two scratch branches.
+    F-383 S4 run 41204049745 + PR (worker-3). TW safety.md batch (low,
+    below US-172): F-513 wording on amps-on row 9 + F-344/F-345 onto
+    an amps-on row (AE picks the row), landing with the backlog
+    amps-on row. F-514 (UX, after core tech). F-468/F-490 after F-439
+    is in review; F-341 AC1 + AC3 Pi 5 run; F-512, F-509, F-510,
+    F-511, #66 last, F-504, F-441, F-481, F-497, F-507, F-508 as in
+    v334. Mac disk about 1 GiB free, below the 10 GiB stop line
+    (owner). PARKED: R5r, R6n as in v334.
 
 ## Reserved IDs
 
@@ -2149,6 +2199,8 @@ Next free (v328; supersedes the line above; F-509, F-510, F-511 filed
 in this version): F-512, US-183, D-072, T66.
 Next free (v334; supersedes the line above; F-512 filed in this
 version): F-513, US-183, D-072, T66.
+Next free (v335; supersedes the line above; F-513, F-514 filed in this
+version): F-515, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -5962,6 +6014,97 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       Part D r11. Pins depending on worker-4's head (toplevel, id8,
       file list) stay named placeholders; the kit is not routed for
       release before they are filled. worker-4 = L1s branch.
+  - US-172 v335 STATE (supersedes the v334 lines above where they
+    differ):
+    - G-US172-07 QE restore check
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/qe-US172-R5s-c-restore-check-r1-d79a61ad.md
+      (sha256
+      d79a61add659b580d19c44a8c15b987c4933312d08394979b260f564672353b9):
+      MET; R5s-c closed. v334 "QE check PENDING" -> MET. Architect and
+      AD agreement message-only (CM-reported).
+    - s5 PLAN
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/PLAN-s5-r1-2d531131.md
+      (2d531131617315869843999e6941e25ff0c1ec99037fce931ebcdbc483925780)
+      rulings: Architect Q1-Q4
+      993d02b69b88913fbb957a5889c857d630ee4a31569208f0df4dca5539346ee3
+      (stage-only hook mode + glmark2 go INTO the L1s PR); joint Q2
+      86f2f4e3487891346114fa41092b9d06bf99907728c161b9c25be0fa06a1f971
+      (Architect writer) with SecSpec release
+      6e3cfa202d831dc2cb8e19dc5ce3fe405367e11d11df615529f24c7ce2d9bfe2,
+      replacing the Q2 part of 993d02b6; Architect Q3 packaging
+      6f394d5268633d016b0f2873a2553c2dd439e411aa94736cb944b54809b3c7b2
+      (pi5 glDiagnostics: glmark2, mesa-demos, grim, with an eval
+      check); PO Q3/Q5
+      /Users/gabriela.bogk/mugge-team-evidence/live/product-owner/po-US172-s5-plan-Q3-Q5-Q6-ruling-r1.md
+      (db9b747962282e7c55d6164526485480c9da21e20960308f3f1da0984e33826d);
+      Q6 FINAL = PO r2
+      73ce085ce2dfa8b446c947a979e852937602212c61c578faffc8eff263599708
+      (QE accepts; replaces the Q6 part of db9b7479). QE answers
+      37877522c5aca31a38d6d6dc3c89c2ed312a8dc861ece332d43ed1e988046066
+      (Q6 voided by erratum-1
+      056d79dff7a78ee3112d4d144ce459e3a7e40dd529a072684ac98bd3ac4d2c86;
+      PRE half of N5 voided, replaced by AE N2); QE erratum 6
+      47ce036d4e398547ef72858bb0760fe3ac5665c648734338c22352111885067e,
+      made BINDING for the soak kit by AE
+      478c6f6afd6c8c9b06ac5d2cccf54ba3561d851d267e7d36cfa7b237c37a6bf1;
+      Architect X2
+      a2269cbe245318147e5b73bbc344f83386cdce673df027584cbba13dc9c464d1
+      (W1 glmark2 windowed).
+    - L1s PR SCOPE (worker-4): also (a) stage-only hook mode (argv
+      flag; "STAGE-ONLY" on stderr; never reaches the prune script;
+      asserted by the check; SecSpec SO1/SO2, N1-N5 8d1e41d2; QE X3)
+      and (b) pi5 glDiagnostics (QE G1-G5
+      9e6fb25bda6c9f5bf54954ebbad610be994bcc31cb417e71b61c04ce3cc115d6;
+      QE S4-S8
+      15e386212de9d2c5994ee5aec486f8cb7a910faa61944e33e1c01fd4658d0e94).
+      Arch F2
+      03f33254262ed47dd1c7ff6d92b68b9f3fd645d76415e7f01552fd6d84e0fabb:
+      config.txt ends with exactly one \n after os_prefix. Head
+      14fc07ee HELD, not pushed (replaces 866608cf); worker-4 acks for
+      993d02b6, 6f394d52, db9b7479, 6e3cfa20, 7cfcb5cc, 056d79df,
+      9e6fb25b PENDING.
+    - BOARD-GUARD (AE
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/ae-US172-layout-ruling-04d8b687-response-r1-1a3addf3.txt,
+      1a3addf3a821c6d2e0f70761e1169372010c41ccd2db4250858dd9a116ffc57a,
+      B1): the eval-time board-guard on the rendered pi5ConfigTxt
+      ASSERTS that the vc4-kms-v3d-pi5 dtoverlay line carries
+      `noaudio` AND that `dtparam=audio=off` is present. The negative
+      eval checks FAIL when either audio-off setting is REMOVED (not
+      when audio is off). Removing either needs a new AE envelope.
+      (Direction as clarified in add70.)
+    - STORY TEXT: PO A11
+      /Users/gabriela.bogk/mugge-team-evidence/live/product-owner/us172-ac-po-r2-addendum-A11.md
+      (7cfcb5cc5c7a2bb61bed1d56d8d1f8f0c24af2f15a6b5124866432ecb53e9c35):
+      AC2a renderer reads may use the glmark2 line or labwc DRM
+      fdinfo; glmark2 stays in production; grim required on the PR
+      head; stage-only in scope. Part D r12 VOID. Part D r13 RELEASED:
+      PO release
+      dd94e32321a5d71d8e9d0f08618d5d5b3641782a7767395e804c6972c0f7a1f2,
+      kit us172-story-r13-737ec9fa/ SHA256SUMS
+      737ec9fa32eee7889ce5979ae7782097952bff352fdba001c38b82faafd543d1,
+      result
+      c3e81ae7ac7c6e00ab9fd146125af2e61ff5cec24bc9867a79cf3374ef7a8c0b
+      (CM dry-ran clean on 14fc07ee); docs commit ON TOP of the next
+      code commits. PO A12
+      dd42bea11bce4c9b1f286e2e6915102655fff1f9120a541bf9a099db0cd1cace:
+      (a) the milestone may be read on the soak tryboot via a separate
+      AC2a run, falling back to its own boot if no SOAK-PASS or the Pi
+      is >= 70 C after 10 min; (b) FINAL AC2a on the default boot of
+      the PR head with runtime sysctl bounds only; (c) the AC2a kit
+      needs its own AE release. AC text = r2 + A1..A12; TW Part D r14
+      (on r13) PENDING.
+    - AC2a SEQUENCING inputs (settled by A12): QE
+      a9d2eb253c87a62d552b6bc549816962f9ce3abc3a9de0f015cc047a37c688c9
+      (§A sequence, §B kbounds); Architect
+      f613178aaa2dc8e99324bdcbc58e4bd21a1b1eda4012ed97306c03573bf264a2
+      (concurs, K1/K2); AE
+      b6e5aedb0e2ccca640a98ce73a473165e77b3e041450fdf05c49d8b4d6de01ae
+      (sequence VALID with S-A1..S-A6).
+    - worker-1: soak kit d1 frozen, SUMS
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/w1-us172-s5-soak-kit-r1-SHA256SUMS-e1486700
+      (e1486700932a5fa5c4186d745aff13bcc2b57aa22391e19fdc39347e5e87445c),
+      desk only; r2 next, then the AC2a kit. Pi: no session active,
+      gen 6.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -18180,6 +18323,80 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       worker-3's release AND that confirmation. Any head change past
       20efc13c (incl. 10f9b8bf) -> QE diff re-check. F-468/F-490
       (worker-2) follow once the F-439 PR is in review.
+    - v335 STATE (supersedes the HANDOVER/INPUTS lines above):
+      HANDOVER COMPLETE, owner of record worker-2 (worker-3 released,
+      no unpushed work; PO condition f6393b6b: below US-172, GitHub/CI
+      only). CM pushed merge head
+      10f9b8bf1bf631519e7754385d2c4631e971d88d (parents 20efc13c +
+      08c03af7) to fix/F-439-unmute-fail-closed; no dispatch: only the
+      pull_request-event run is R1/R2 evidence.
+    - GOVERNING SET r4
+      /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/pm-F439-governing-set-named-r4-20261031.txt
+      (aa4b57fd44bac63f614ed74df9b03ea7f69abb32b500d5e23ec7105b68c0a622,
+      46 shas; frozen by the CM; worker-2 ACKED). r2 f58c030a and r3
+      1a13e80c VOID (files kept). Sources: PO
+      4331fd9c67eca027d880a42ab9933d34a99ab56b564a8e4aae5db8f153519dcc,
+      QE
+      69db1ed1b3d89c46aed01eb4caa6fd534c2c346a4b3bb794000d1b96c236bd7c,
+      QE
+      6b5971117be4d8f4898872e4c729356655cb7b30e414012408566c6fc7adb0f2,
+      UX
+      031e271f4d3e21fe0b4dfd52b00f26761cd9ce55aad1f744c5f5c6c527d8a4b3,
+      AE
+      d0151f1406ccd3f0e1627e8275d041fd4d56df7d4ad01f17f4a8eac9de951c15,
+      QE coverage
+      ddc52a33356e88b48d44ea1c417f8c9b5b4482a1c56f0bbfdbde669014c69da0
+      (PR tests cover 56043d31 C1-C6). AE review notice: the AE checks
+      C4-C6 in Rule 13.
+    - QE R1-R3: merge re-check 218395e2 (R1 PR-event CI green with
+      test_collectors; R2 collect-only of service-destructive; R3
+      re-check on head move); R2 ruling
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/F-439/frozen/qe-F439-R2-ruling-13be0415-r1-e7a6c4d2.md
+      (e7a6c4d2c571db54dc0ae741ffa7b2a50d673811b9d8e616d717b3573a3317f7):
+      worker-2 proposal 13be0415 ACCEPTED, R2 met by the same PR-event
+      run. SCRATCH branches scratch/F-439-tc 95634e36 +
+      scratch/F-439-tc2 f35d7bee KEPT until F-439 merges; then the CM
+      freezes stat + diff and deletes both.
+    - TEST PLAN r1
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/F-439/frozen/F439-test-plan-r1-acc63501.md
+      (acc63501841cce3285fbe9cb0a1f417e77ba9d734eac3064c84abd02b325bcb9):
+      AE CH-1 ruling
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/F-439/frozen/ae-F439-CH1-ruling-r1-be3da6a3.txt
+      (be3da6a3c7dd5b62592c3e0cff11aeab96081a487907708d49c28819edf33bc0):
+      CH-1 CONFIRMED and REQUIRED; binding H1 `target_mult >=
+      live_mult - READ_MARGIN -> continue`, READ_MARGIN = 1e-6 named
+      constant, MULT_CHANGE_THRESHOLD deleted; H2 no-rewrite-loop test
+      (base 0.001, target 0.0009985, 10 ticks -> exactly 1 write;
+      mutant 0 or 1e-7 red); H3 gate closed never written; H4 at most
+      one write per channel per 0.5 s, via guarded_set_mult. UX
+      b8f5c054 (U1, U2 accepted; U3 ABORT IN SCOPE: shows while
+      measuring with the gate closed, POSTs measurement/abort, no
+      /audio/mute) and UX
+      20db86503cf10d08cd239a75f2b7b3afb14050b9102bb5b965dd5fcf0db5d34e
+      (CH-1 makes the LIM badge match what is applied). QE
+      /Users/gabriela.bogk/mugge-team-evidence/live/quality-engineer/qe-F439-test-plan-acc63501-ruling-r1.md
+      (f1858c33bfefc2900e86b08071993b5ff57935570fbba6de8d4f104029f4cdd5):
+      plan ACCEPTED with conditions. Questions
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/F-439/frozen/F439-questions-r1-6c862f85.md
+      (6c862f855df8462d5efcb78c6226bf7aaa8fabd4b299a9194080201ab9cc8468):
+      Q1 (F-352 base-red) QE
+      /Users/gabriela.bogk/mugge-team-evidence/live/quality-engineer/qe-F439-questions-6c862f85-answers-r1.md
+      (9c959f101b1c38b966f90b891074f18beca507d5d5ea02f72e3a7893d8a2b497):
+      no base run, regression pins with a positive control; Q2 A3
+      order AE
+      c90cdb2807d87a53f00f7b49cf07f714bd255854b0cdadc3cadb70df3451baf1
+      + QE: CONFIRMED, order from backend.py l.741 -> l.751, "A3, when
+      reached" = BACKSTOP. INPUT SET COMPLETE; worker-2 cleared to
+      commit on 10f9b8bf (no local runs, disk).
+    - PR BODY: r1
+      /Users/gabriela.bogk/mugge-team-evidence/live/F-439/F439-pr-body-r1.md
+      (172c65b64ab85f0964966555ff473ca5bcde46f1b60afb2083ccf39b37dd216f)
+      NOT opened; PM gap list (add66) forwarded: cite r4 not r2; add
+      70541687, 3088f33b, 13be0415, ddc52a33, 6b597111; map C1-C6;
+      section D confirmed strings; UX unknown-gate test (button MUTE,
+      click closes). Body r2 MUST ALSO name "CH-1 fixes F-513 (limiter
+      skip of small reductions)" with AE be3da6a3 H1-H4 and the H2
+      test (team-lead), and call A3 a backstop.
 - **F-440** runner MAX_CUT_DB vs venue_pipeline: a D-009 question for
   the AE (filed 2026-10-27; ID free across main, all origin/* and
   local branches at PM read; full record below, folded from the PM
@@ -20459,6 +20676,54 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   uses hw:CARD=USBStreamer. The AE checks P4 in PR reviews. No fix
   work.
   - Next free -> F-513.
+- **F-513** MEDIUM (AE
+  /Users/gabriela.bogk/mugge-team-evidence/live/audio-engineer/ae-F513-severity-r1.txt,
+  sha256
+  3375085f7de61c8c379ee6f6eb6fd1d221aa56747d324508ac7b0958b479a874:
+  blocks amps-on for any use of the web-UI thermal limiter as
+  protection; not stop-the-line; no operating-rule change, rule 10(a)
+  keeps the limiter unconfigured; filed 2026-10-31 on team-lead
+  request; KNOWN DEFECT ON MAIN until F-439 merges; fix = F-439 CH-1
+  under AE be3da6a3 H1-H4): the web-UI thermal limiter never writes
+  small reductions. thermal_limiter.py skips any write with |target -
+  current| < MULT_CHANGE_THRESHOLD = 0.0001, an ABSOLUTE threshold in
+  linear Mult. At our gains (mains 0.001 = -60 dB, subs ~0.000631 =
+  -64 dB) that is 10-16 % of the whole gain, so reductions under ~0.9
+  dB on the mains and ~1.4-1.5 dB on the subs are never applied; in a
+  slow thermal rise the limiter lags by up to that much or never
+  applies a small final step. PM verified on origin/main 08c03af7
+  (local ref, no fetch): src/web-ui/app/thermal_limiter.py l.52
+  `MULT_CHANGE_THRESHOLD = 0.0001`, l.407 `if mult_diff <
+  MULT_CHANGE_THRESHOLD: continue`. Related: F-345 (same function,
+  writes while the gate is Closed; F-439 closes it), F-480 (slider
+  step, different code), status.md interim rule 11 / O-32. Dup check:
+  no existing entry. ID free across all local heads + remotes and
+  worktrees (no fetch). Closer: the F-439 PR body names CH-1 as the
+  F-513 fix and cites be3da6a3 H1-H4.
+  - AMPS-ON / safety.md (AE proposal; TW words it; lands TOGETHER with
+    the backlog amps-on row; low, below US-172): add to row 9 "; the
+    thermal limiter skips reductions smaller than ~1 dB (F-513, closes
+    with the F-439 PR)". Same TW batch: PM dup check found F-344 and
+    F-345 on NO amps-on row and nowhere in safety.md at origin/main
+    (only status.md rule 11 l.231, O-32 l.393, defect rows l.501-502,
+    defects-index l.326-327; US-159 row 13 carries G16/F-373 only;
+    v334 l.18571 refers to the F-450 withdrawal). The AE picks row 9
+    or a new row; a new row means a renumber with the matching backlog
+    update.
+- **F-514** LOW (UX note in 20db8650; not F-439 scope; after core tech
+  per the focus rule; filed 2026-10-31): the web-UI thermal "LIM x dB"
+  badge (dashboard thermal row, Protection card) shows the snapshot's
+  reduction_db, which comes from the COMPUTED reduction_factor
+  (thermal_limiter.py ~301/450), set before the write. When a write is
+  refused (gate closed) or fails, the badge still shows the target,
+  not what is applied. Read failure already has its own fault display
+  (56043d31 C3), and gate closed means no output, so impact is display
+  truth only. Fix direction (UX): show the applied value (current_mult
+  / base_mult). Related: F-513, F-345, F-439. Dup check: no existing
+  entry (reduction_db, "LIM x dB", badge + limiter/thermal in v334,
+  held addenda and origin/main docs). ID free across all local heads +
+  remotes and worktrees (no fetch).
+  - Next free -> F-515.
 
 ## Open PRs (2026-10-24, per CM)
 
