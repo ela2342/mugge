@@ -2029,6 +2029,46 @@ priority!"
     the US-172 relays). SecSpec G1 file (then a P3 backlog item).
     F-515 (TW docs, after core tech). F-514 (UX, after core tech).
     Others as in v335.
+  - v336 PUSHED (CM, remote verified): chore/backlog =
+    cbebf53fc193e12668a65d728acedf87c0c96324 (file 0e8cf6f6). v337
+    bases on it and consumes PM addenda 82-92 in
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/:
+    held-for-v337-add82-20261102.txt fb4f52bd, -add83 d94ae3e7, -add84
+    4b1fcc81, -add85 f79ca410, -add86 27e01c87, -add87 6e77e3c9,
+    -add88 2ce182af, -add89 7ff6e753, -add90 a9894cae, -add91
+    9098a1ef, -add92 03236e52 (sha256
+    03236e52b4f8bdaf45048f8d90fd47965defa4250f3f7b565710d670a7f9aa6b).
+    The addenda stay the full record (sha-cited rulings, verdicts,
+    trackers); v337 carries the state. Built at MILESTONE: PR #79
+    merged. New IDs: F-516 to F-527. Also PM ruling
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/pm-amps-on-row22-id-ruling-r2.txt
+    (842879e7d888d384341ce5e94a58a5e6c68205bfd0e02b2d7bbf64803a2a2c0f;
+    r1 2ba31852 VOID).
+  - PR #79 MERGED (CM): main 08c03af7 -> cf2705d9 (merge of head
+    8fdefe99, docs/safety-amps-on-F513-F344-F345); docs-only,
+    CI-exempt (PR CI 41402321873 green, test-and-build skipped); 7/7
+    at 8fdefe99: TW ad58a788, UX 19ee8329, SecSpec 02dd4409, AD
+    ba79fd38, Arch f44fe97c, QE 9d6181d5, AE 4e55b2f7 (all APPROVE);
+    owner acceptance under standing merge consent. safety.md only
+    (+2/-2, rows 9 and 20; blob d10c059a, file sha256 506630dc).
+    Amps-on rows 9 and 20 below now MIRROR the merged text (v337).
+  - OPEN TRACKING (v337; supersedes v336's line): US-172 CRITICAL
+    PATH: worker-4 L1s local head 7860ed16 (not pushed) folds Arch B
+    188a1b93 + SecSpec SO3 9a5105ce + Arch F1 1bed8ff7 + QE S2
+    1ce1ea98 with erratum c8ee713f (S2 hold lifted) -> ONE push + ONE
+    CI -> PR under Rule 13 (supersedes #52) -> then as in v336;
+    starvation guard 2026-11-03T20:00. F-439 PR #78: AE VETO r4
+    6fd0b5a6 + AD B1 + TW CR at 8c23f93f; worker-2 codes the B1 fix
+    (governing set below) + TW docs kit on ONE head that includes
+    cf2705d9; then all 7 re-review, PR CI, T3 = one release.yml
+    dispatch at the final head (QE 84e6d780; owner dispatches unless
+    the owner lets the CM); worker-2 B1 local test waits for
+    worker-4's heavy build (one heavy job at a time). F-383 S4:
+    10320a36 pushed, pre-PR run 41403085653 (a record; merge evidence
+    = PR CI). F-468/F-490 P3 after #78 (CM heavy go, R4 positive
+    control). #79 follow-ups: F-516 row 9 TW kit; QE C3/C4; Arch A2;
+    UX N1 (all non-blocking). F-523 to the owner via team-lead. Others
+    as in v336.
 
 ## Reserved IDs
 
@@ -2235,6 +2275,8 @@ Next free (v335; supersedes the line above; F-513, F-514 filed in this
 version): F-515, US-183, D-072, T66.
 Next free (v336; supersedes the line above; F-515 filed in this
 version): F-516, US-183, D-072, T66.
+Next free (v337; supersedes the line above; F-516 to F-527 filed in
+this version): F-528, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -3617,6 +3659,20 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      amps-on blocker, US-159.)
   9. The AC20 open blockers for amps-on / gig use: F-317, F-318,
      F-352, F-354, F-355 (F-358 resolved on the Pi 5; Pi 4 US-170).
+     MIRRORED v337 from merged safety.md (#79, main cf2705d9, blob
+     d10c059a; SUPERSEDES the row 9 text above), verbatim: "F-317,
+     F-318, F-352, F-354, F-355, F-513 | RT throttle off with no
+     watchdog backstop (F-317); non-JACK streams may auto-link to the
+     USBStreamer (F-318); the gain API can pass a NaN Mult (F-352) or
+     splice a name into a command (F-354); the thermal limiter can
+     latch a NaN level (F-355); the thermal limiter skips reductions
+     of up to ~1.5 dB (F-513, closes with the F-439 PR)". PENDING (TW
+     follow-up kit on cf2705d9, AE 9ddbbab3, AE #79 N1): add F-516 to
+     the item column and append "the thermal limiter can stop
+     protecting a channel (live gain unreadable) with no visible
+     warning (F-516)"; this row follows when that merges. QE C4: rows
+     9/20 get closure wording once #78 merges and the AE accepts the
+     closures.
   10. The 60-min flight-case thermal soak (GIG-READINESS entry, P1)
      PASS (AE: amps-on too, not only gig).
   11. F-372 (P1 below): the S-001 path check fix.
@@ -4097,6 +4153,24 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      gate (F-410, closes with the F-439 / F-320 F PR), and the GM
      watchdog unlatch writes no Mult (F-320 D). Both must be fixed; no
      interim operating rule counts; AE acceptance required"
+     MIRRORED v337 from merged safety.md (#79, main cf2705d9, blob
+     d10c059a; SUPERSEDES the row 20 text above), verbatim: "F-410,
+     F-320 D, F-344, F-345 | While the D-063 gate is closed, no action
+     other than Open Gate raises any Mult: the web UI unmute never
+     restores gains behind a closed gate (F-410, closes with the F-439
+     / F-320 F PR), and the GM watchdog unlatch writes no Mult (F-320
+     D, fixed: unlatch only clears the latch, and Open Gate is refused
+     while the watchdog is latched). Neither Config tab gain Apply
+     (F-344) nor the web-UI thermal limiter (F-345) writes a non-zero
+     Mult while the gate is closed, and the limiter is reduce-only
+     against the live value (both close with the F-439 PR, AE 455e0190
+     / 3232e202 §2(d)). F-410, F-344 and F-345 must still be fixed; no
+     interim operating rule counts; AE acceptance required". Row 20
+     keeps "any Mult" and is NOT narrowed to GM's 8 (AD, AE agree): it
+     is a no-raise rule for every gain_*; the 8-name limit is about
+     zeroing and sits in row 21 / F-348 rule edit 3. Arch A2: if #78
+     is split or closed unmerged, rows 9 and 20 ("closes with the
+     F-439 PR") are re-pointed in the same change.
   21. F-348 (MIRRORED v316, same source), verbatim: "No generated
      filter-chain conf can bring the gains up behind a closed gate. A
      generated conf writes the venue gains as its Mult defaults, and
@@ -4107,6 +4181,31 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      argument while F-037 (row 6) stands; lifting row 6 and row 21 are
      independent (carries into the 174d deploy gate, PO c06db0a8 item
      4).
+     PENDING v337 (AE r2
+     /Users/gabriela.bogk/mugge-team-evidence/live/audio-engineer/ae-B1-residual-F348-rule-wording-r2.txt,
+     4c04d715943d3921ab0aa096e508f8717b2f72e13e5aabc7c3ee5f4a7c9918e4,
+     governs; AE r1 e93a0118 and the row-22 file 94c33358 VOID; PM
+     ruling r2 842879e7): row 21 insert + F-348 rule edits 2/3 ride
+     the #78 docs kit; final when it merges. Edit 1, after "Holds when
+     F-348 is closed": "(including F-348b, US-159 G13 in full:
+     GraphManager's gate close, standby close, watchdog mute and
+     gain-integrity check cover every gain_* on the convolver, not
+     only its fixed 8 names; merged and verified on the Pi 5)". Edit
+     2, F-348 rule (2): the shipped conf's only gain_* nodes are GM's
+     8 (named), all 8 Mult defaults 0.0. Edit 3, after F-348 rule (3):
+     "Until F-348b is merged and verified on the Pi 5",
+     3-way/4-way/MEH profiles stay virtual-only; web UI MUTE/Close
+     Gate zero and verify every gain_* (F-439), GM's protections do
+     not. In the kit, not in row 20: the Arch A4 sentence (after a
+     mute, Open Gate restores only GM's 8; an N-way gain_* zeroed by
+     mute_all stays 0 until the profile is re-activated); the AE
+     checks this in the final-text review. NO ROW 22: row list,
+     numbering, lead-in and Gate rule unchanged. GM has no startup
+     zero (AE, main.rs at 08c03af7: zeroes the fixed 8 at standby
+     l.547, CloseGate l.772, gain-integrity mute l.984). F-348
+     cross-ref: items 2-3 re-confirmed at 8c23f93f (AE r4 V3, AD B1
+     (b), Arch r2 R6); fix F-348b is the row 21 condition (AE
+     4c04d715). Related half: F-339 (CloseGate Ok with no convolver).
   LEAD-IN AND GATE RULE (MIRRORED v316 from safety.md blob 4bec2343;
      SUPERSEDE every earlier lead-in and Gate rule text in this list).
      Lead-in, verbatim: "The list has 17 rows: 1-14 and 19-21 (rows
@@ -6174,6 +6273,16 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       backlog P3 LOW ("L1s legacy-delete gate: also require chosen8 ==
       booted8 and present(booted)"); F1 no objection, final check at
       PR head. Filed only when SecSpec's file + sha arrive.
+  - US-172 v337 STATE (supersedes the v336 lines above where they
+    differ):
+    - QE S2 erratum 1
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/qe-US172-L1s-S2-erratum-1-c8ee713f.md
+      (c8ee713f5e43dba3f2a077591b9e18156e1d03b5ae85974b8edaa2fd472e5e8a;
+      to 1ce1ea98, after Arch F1) frozen + relayed: S2 HOLD LIFTED.
+      worker-4 local head 7860ed16 (not pushed) folds 188a1b93,
+      9a5105ce, 1bed8ff7, 1ce1ea98, c8ee713f. SecSpec G1 filed as
+      F-521 (replaces the placeholder above); F1 EXIT trap: SecSpec no
+      objection, final check at the PR head.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -18482,6 +18591,52 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       (team-lead requirement MET); QE accepts the F-352 wording. Body
       r3 (worker-2) adds the QE label "green at base by construction"
       on the positive control. NEXT: 7 Rule 13 reviews.
+    - v337 STATE (#78 at 8c23f93f; details and shas in PM
+      add83-add92): RULE 13 at 8c23f93f: SecSpec A b71c66d9, QE A
+      b6c1e89a, UX A 3fba08eb, Arch A 5b94af1d, TW CHANGES REQUESTED
+      85b0a41e (+ A7 ff2c5251), AD REQUEST CHANGES 58c0c7ec (B1: MUTE
+      only close_gate; GM CloseGate zeroes only its fixed 8 names, so
+      N-way gains stay live, fail-open), AE VETO r4
+      /Users/gabriela.bogk/mugge-team-evidence/live/audio-engineer/ae-F439-PR78-rule13-review-r4.txt
+      (6fd0b5a6e1f4d8065eafbef0d90d932dd01a5a7c85a350fb2467d412d55ade65;
+      r3 bb6be0a6 VOID, never posted). ALL approvals lapse at the next
+      head; all 7 re-review.
+    - B1 GOVERNING SET (CM-frozen): Architect r2
+      /Users/gabriela.bogk/mugge-team-evidence/live/architect/arch-F439-PR78-B1-fix-ruling-r2.md
+      (2aee0f77ca03c5f8aac261f86c51be645c0778ff2e575739014781a936b39976;
+      r1 e231c203 VOID) + AE G1 release
+      e59333381ceee734dc9d7caaf1de968c66b64518181b2ac35549877e176797a0
+      (venue gate_close also uses mute_all; T7) + Architect addendum-1
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/F-439/frozen/arch-F439-PR78-B1-r2-addendum-1-r1-e5d95d8b.md
+      (e5d95d8b2a4d6bfb811de220361f01d2137be92691748fb4e475bd73096d8557)
+      with AE release
+      c9fce2ee270ae9377653b35760aab52b59b255a157e0c8c1d48310fe4e03f4a9
+      + QE test criteria
+      86666782a007aba150bd125e79d3e1ecfa50b6d6eb33e5e8f386796b16ebee03
+      + UX wording
+      16265b4e154c06b4db07a3ee59ea9b44c2d6aaa439417e5b99759daaadcf3eaa
+      (W2 BLOCKING for UX re-approval). Docs: AE 4c04d715 + PM r2
+      842879e7. Content: gain_guard.mute_all() (close_gate, discover
+      every gain_*, zero, read back 0.0); 502 close_gate_failed |
+      mute_unverified; activation aborts with mute_failed; T1-T7 red
+      at 8c23f93f. PO f424f29a: docs kit (PO 0f5caa38, option (a)) and
+      B1 code on ONE head, one CI, one round.
+    - T3 (QE
+      /Users/gabriela.bogk/mugge-team-evidence/live/quality-engineer/qe-PR78-T3-release-dispatch-ruling-r1.md,
+      84e6d780f61b0e85a539feda91df25bfd19961262f9e56dbc735cd1604616b61):
+      one release.yml workflow_dispatch on the branch at the FINAL
+      head, no tag; verify-ci skipped, SD image success, sd-card-image
+      artifact (kept 7 days), "Create GitHub release" skipped. Order:
+      final head -> PR CI green -> QE re-approval -> T3 at the same
+      head. The owner dispatches unless the owner (via team-lead) lets
+      the CM.
+    - #78 MERGE CHECKLIST (PM): head includes cf2705d9 (#79 merged
+      first; Arch A1: CM checks the safety.md rows); QE C3 test
+      re-check at the final head; UX N1: venue-setup step 33/13
+      operator text matches W5/W6 of 16265b4e; at merge: F-332
+      OBSOLETE (TW A2), F-513/F-344/F-345/F-410 to verify-on-Pi-5, QE
+      C4 / TW A6 closure wording for rows 9/20 after AE acceptance; CM
+      freezes + deletes the scratch branches.
 - **F-440** runner MAX_CUT_DB vs venue_pipeline: a D-009 question for
   the AE (filed 2026-10-27; ID free across main, all origin/* and
   local branches at PM read; full record below, folded from the PM
@@ -20852,6 +21007,97 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   ID free across all local heads + remotes and worktrees at PM read
   (no fetch).
   - Next free -> F-516.
+- **F-516** MEDIUM (UX 3fba08eb O1; rated by AE
+  /Users/gabriela.bogk/mugge-team-evidence/live/audio-engineer/ae-F516-severity-r1.txt,
+  9ddbbab363b9ef17ecee5f8a97d00b4c85f0c7418eca0b418a318dd61bd2dc7f;
+  BLOCKS AMPS-ON for any use that relies on the web-UI thermal
+  limiter; not stop-the-line; not a #78 blocker; filed 2026-11-02):
+  the limiter read-failure fault (thermal_readback_failed, AE 56043d31
+  C3) reaches snapshot() and /ws/system "thermal_limiter", but no
+  static JS reads it (git grep at 8c23f93f: no hit in static/). When a
+  channel's limiter has stopped protecting it, the operator sees
+  nothing. Fix ACs (UX owns the words): a visible degraded indicator
+  naming the channel while any fault is in /ws/system thermal_limiter;
+  it clears with the fault; test: inject a read failure, see indicator
+  + channel name, then clear. Amps-on: row 9 (PENDING TW kit, see row
+  9). Corrects F-514's rationale: "own fault display" holds for the
+  payload only, not the screen. Related: F-514, F-513, F-439, F-345.
+- **F-517** LOW (UX D1, waived on #78; filed 2026-11-02): on a 422 (G3
+  invalid value) the Config tab shows the right text and style but
+  does not revert the sliders (config.js applyGains, 422 branch),
+  unlike f05b5f4a ("revert, then show the text");
+  test_invalid_value_422 checks text only. Not reachable from the
+  sliders (range 0..max in steps). Fix: the same re-read-then-text
+  path as 409.
+- **F-518** LOW (UX O2; filed 2026-11-02): the status bar can show
+  "MUTED" twice with two meanings: the panic button (gate closed,
+  normal and startup state, F-439) and the safety indicator
+  sb-safety-text (statusbar.js ~400, watchdog latched, a fault). Under
+  stress a fault can't be told from a normal mute. Fix: rename the
+  safety indicator text (e.g. "WDOG"); separate item with its own UX
+  wording file.
+- **F-519** LOW (SecSpec N1, b71c66d9; filed 2026-11-02): the 502
+  bodies of /audio/mute and profile activation include str(exc) from
+  the GM client (detail); on the unauthenticated web UI (F-037) that
+  can show internal error text (localhost RPC address, socket error).
+  Fix: a fixed detail string, exception text in the log only.
+- **F-520** P3 (SecSpec N2, b71c66d9; pre-existing class under F-037;
+  filed 2026-11-02): GET /api/v1/audio/mute-status makes one GM
+  get_gate RPC per request; the GM RPC server spawns one thread per
+  connection with no limit (rpc.rs l.1494-1515); the venue gate routes
+  already do the same. Fix: cap concurrent GM RPC clients or
+  rate-limit the gate-read routes, so a flood cannot delay a
+  close_gate or the collector poll.
+- **F-521** P3 LOW (SecSpec G1,
+  /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/secspec-US172-L1s-G1-F1-1bed8ff7-r1-caeab00f.md,
+  caeab00f3bde61abe0450e458b6aa4e218d3796da2bbdf98274c8a341df5f475;
+  from Arch 1bed8ff7; not in L1s; filed 2026-11-02): "L1s
+  legacy-delete gate: also require chosen8 == booted8 and
+  present(booted) (Arch 1bed8ff7 G1, SecSpec LOW)."
+- **F-522** LOW (TW A3, 85b0a41e; docs; filed 2026-11-02):
+  docs/architecture/config-management-midi-control.md l.137/261/268
+  (/api/v1/unpanic, "unmute ramps in") is a planned-API design doc
+  that contradicts the D-063 "Open Gate only" rule after F-439. Fix: a
+  note when that design is next touched.
+- **F-523** (process; severity: owner's call, QE 84e6d780 §4; filed
+  2026-11-02): Rule 13 T3 is not evidenced for merged PRs #73, #76,
+  #77. Their backlog merge records list PR-event CI only; no
+  release.yml dispatch is recorded (T3 left ci.yml at 5744317a,
+  2026-04-05). Precedent: #49/#50 met T3 by an owner-dispatched
+  release.yml run at the PR head. PM follow-up: check the other code
+  PRs merged since 5744317a. Whether anything is needed after the
+  merge is the owner's call (team-lead).
+- **F-524** LOW (CI hygiene; filed 2026-11-02): dorny/paths-filter
+  (ci.yml l.75, pinned 0e4a8c6e = v3.0.4) raises a Node.js 20
+  deprecation warning (F-439 CI 41205412472 log l.1169). Same class as
+  F-253 (RESOLVED, actions/checkout v4->v6); new action, new ID.
+  Architect/QE may set the P-level. Blocks nothing.
+- **F-525** LOW (production hygiene, Architect 574a3321; filed
+  2026-11-02): room_correction min_phase _cepstral_minimum_phase
+  returns a view on the full FFT buffer; any caller that caches the
+  result keeps 0.25-0.5 GiB alive. Production does not hold it today.
+  Fix: return a copy. Found via F-383 (diag 10ec01a1; the test-only
+  fix is F-383 S4).
+- **F-526** LOW (AE
+  /Users/gabriela.bogk/mugge-team-evidence/live/audio-engineer/ae-F526-severity-r1.txt,
+  ab14deb447572f3f1b0f1d1638a3d6dd1178ee555bbe1e8bb765a0370dda3c3a;
+  does NOT block amps-on; filed 2026-11-02): venue_routes.py gate
+  status reads gate.get("gate_open", True) (l.209 at 8c23f93f; Arch
+  e5d95d8b said l.207), so a missing key reads as OPEN. It only
+  changes the Open Gate route's response body after open_gate()
+  succeeded; it cannot open the gate or raise a gain; the F-439
+  mute_unverified latch does not use it. Fix: report a missing key as
+  "unknown", like the latch state; any later PR, not #78.
+- **F-527** LOW (UX N1, 16265b4e, non-blocking; filed 2026-11-02):
+  speaker-config.js ignores the activation response's `instructions`
+  text; showing it after "Activated: <name>" would help. Not in #78
+  unless worker-2 chooses to.
+  - Dup checks for F-516 to F-527: done per item in PM add82-add86
+    (v336, the held addenda and origin/main docs); IDs free across all
+    local heads + remotes and worktrees at PM read (no fetch). No new
+    ID: AE V3 = F-348 items 2-3 (fix F-348b) + F-339; AE-N1 folded
+    into #78 V1; TW A2 = F-332 OBSOLETE at the #78 merge.
+  - Next free -> F-528.
 
 ## Open PRs (2026-10-24, per CM)
 
