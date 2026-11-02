@@ -8,7 +8,8 @@
 #   mesa-demos  eglinfo
 #   grim        Wayland screenshot (AC10 picture)
 # Packages only: no services, units, users or groups, and none of them
-# opens an audio device. Nothing else belongs in this list; a further tool
+# opens an audio device. Off by default in the bootstrap image, which has
+# no display stack (architect 188a1b93). Nothing else belongs in this list; a further tool
 # needs its own ruling. Declared here only, so other boards have no such
 # option (board-guard).
 { config, lib, pkgs, ... }:
@@ -16,8 +17,9 @@
 {
   options.mugge.pi5.glDiagnostics.enable = lib.mkOption {
     type = lib.types.bool;
-    default = true;
-    description = "Ship the GL self-test tools glmark2, mesa-demos and grim (US-172, architect 6f394d52).";
+    default = !config.mugge.bootstrap.minimal;
+    defaultText = lib.literalExpression "!config.mugge.bootstrap.minimal";
+    description = "Ship the GL self-test tools glmark2, mesa-demos and grim (US-172, architect 6f394d52). Off in the bootstrap image (architect 188a1b93).";
   };
 
   config = lib.mkIf config.mugge.pi5.glDiagnostics.enable {

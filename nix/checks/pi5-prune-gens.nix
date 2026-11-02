@@ -67,6 +67,10 @@ let
     { c = "s5"; what = "exact --stage-only match"; s = brokenTo "2:*)" ''"2:--stage-only")''; }
     { c = "s4"; what = "stageonly initialisation"; s = brokenTo ":" ''stageonly=""''; }
     { c = "SO=1; c26"; what = "vfat guard in stage-only mode"; s = broken ''[ "$fstype" = vfat ]''; }
+    # SecSpec 9a5105ce SO3, architect 1bed8ff7 F1.
+    { c = "so3"; what = "stage-only print check"; s = brokenTo ''if ! { cat "$new" || true; }; then'' ''if ! cat "$new"; then''; }
+    { c = "so3"; what = "built-generation EXIT trap"; s = brokenTo ":"
+        "trap '[ -z \"$built\" ] || rm -rf \"$gen\" \"$gen.tmp\" || true; rm -f \"$fw/config.txt.new\" || true' EXIT"; }
   ];
 
   # Config templates: the real one, and variants at and over the class
@@ -1012,8 +1016,25 @@ pkgs.runCommand "pi5-prune-gens" { } ''
     pass
   }
 
+  # (SO3, SecSpec 9a5105ce) Stage-only with stdout closed: printing the
+  # config fails, so the run dies, config.txt.new is gone, and so is the
+  # generation this run built (architect 1bed8ff7 F1). The FAT is
+  # byte-identical to before.
+  so3() {
+    setup "SO3 stage-only with a failing stdout dies and leaves the FAT unchanged"
+    stagetree
+    mktop $D
+    before=$(snap)
+    if call "$fw" --stage-only "$(top $D)" >&- 2> "$root/err"; then fail "stage-only exit 0 with stdout closed"; fi
+    grep -qF "could not print config.txt.new" "$root/err" || fail "die message lacks the print failure: $(cat "$root/err")"
+    [ ! -e "$fw/config.txt.new" ] || fail "config.txt.new left behind"
+    [ ! -e "$g/$(short $D)" ] || fail "generation $(short $D) built by the failed run left behind"
+    [ "$(snap)" = "$before" ] || fail "FAT changed"
+    pass
+  }
+
   cases="c1 c2 c3a c3b c3c c9 c9b c10 c10b c11 c11b c11c p1 p1b p2a p2b p2c p3 p4 p5 p6 p7 p7b p8 p10 p11 p12
-    c13 c14 c15 c15b c16 c16b c16c c17 c19 c20 c21 c22 c24 c25 c26 s1 s4 s5"
+    c13 c14 c15 c15b c16 c16b c16c c17 c19 c20 c21 c22 c24 c25 c26 s1 s4 s5 so3"
   for c in $cases; do "$c"; done
   # (S2, S8) Every guard that dies before the pointer dies the same way in
   # stage-only mode: collision, class limits, missing files, the final

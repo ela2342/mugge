@@ -117,30 +117,42 @@ let
   overlayName = c: n: filler (n - prefixLen c - builtins.stringLength "overlays/" - builtins.stringLength ".dtbo");
   overlayAt = c: n: configTxt c + "dtoverlay=${overlayName c n}\n";
   overlayPath = c: n: fwPrefix c (overlayAt c n) + "overlays/${overlayName c n}.dtbo";
+  # Each case is { name, got, want }: got is the predicate's own result on
+  # the altered text, and the log line names it, so every rejection shows
+  # as "rejects (red)" in the CI log (QE 1ce1ea98). want = false for a
+  # rejection, true for the at-the-limit cases. A sanity condition on the
+  # altered text itself throws instead of passing silently.
+  sane = cond: msg: v: if cond then v else throw "board-guard: negative case setup broken (${msg})";
   negatives = c: let t = configTxt c; b = c.system.build; k = b.pi5KernelClassMax; o = b.pi5OverlayClassMax; in [
-    { name = "kernel path at KERNEL_CLASS_MAX (${toString k}) passes"; ok = kernelFits c (kernelAt c k); }
-    { name = "kernel path at KERNEL_CLASS_MAX + 1 fails"; ok = !kernelFits c (kernelAt c (k + 1)); }
-    { name = "overlay path at OVERLAY_CLASS_MAX (${toString o}) is in the overlay class and within the limit";
-      ok = builtins.elem (overlayPath c o) (overlayPaths c (overlayAt c o))
+    { name = "kernel path at KERNEL_CLASS_MAX (${toString k})"; want = true; got = kernelFits c (kernelAt c k); }
+    { name = "kernel path at KERNEL_CLASS_MAX + 1"; want = false; got = kernelFits c (kernelAt c (k + 1)); }
+    { name = "overlay path at OVERLAY_CLASS_MAX (${toString o}), in the overlay class"; want = true;
+      got = builtins.elem (overlayPath c o) (overlayPaths c (overlayAt c o))
         && builtins.stringLength (overlayPath c o) == o && within o (overlayPath c o); }
-    { name = "overlay path at OVERLAY_CLASS_MAX + 1 fails";
-      ok = builtins.stringLength (overlayPath c (o + 1)) == o + 1 && !overlayFits c (overlayAt c (o + 1)); }
-    { name = "os_prefix outside the container fails";
-      ok = !kernelFits c (altered t "os_prefix=${b.pi5Container}@ID@/" "os_prefix=@ID@/"); }
-    { name = "vc4 line without noaudio fails"; ok = !vc4Noaudio (altered t vc4Line "dtoverlay=vc4-kms-v3d-pi5"); }
-    { name = "no dtparam=audio=off fails"; ok = !audioOff (altered t "dtparam=audio=off\n" ""); }
-    { name = "dtparam=audio=off not directly after the vc4 line fails";
-      ok = let a = altered t "${vc4Line}\ndtparam=audio=off\n" "${vc4Line}\n"; in
-        audioOff (a + "dtparam=audio=off\n") && !audioOffAfterVc4 (a + "dtparam=audio=off\n"); }
-    { name = "config.txt without its final newline fails";
-      ok = lib.hasSuffix "\n" t && !endsWithPrefix (lib.removeSuffix "\n" t); }
-    { name = "config.txt ending in a blank line fails"; ok = !endsWithPrefix (t + "\n"); }
-    { name = "hook passing only \"$1\" fails";
-      ok = !hookForm c (altered (hookText c) "os_prefix \"$@\"" "os_prefix \"$1\""); }
-    { name = "hook selecting stage-only from the environment fails (SO1)";
-      ok = !hookForm c (altered (hookText c) "set -euo pipefail\n"
+    { name = "overlay path at OVERLAY_CLASS_MAX + 1"; want = false;
+      got = sane (builtins.stringLength (overlayPath c (o + 1)) == o + 1) "overlay path length"
+        (overlayFits c (overlayAt c (o + 1))); }
+    { name = "os_prefix outside the container"; want = false;
+      got = kernelFits c (altered t "os_prefix=${b.pi5Container}@ID@/" "os_prefix=@ID@/"); }
+    { name = "vc4 line without noaudio"; want = false; got = vc4Noaudio (altered t vc4Line "dtoverlay=vc4-kms-v3d-pi5"); }
+    { name = "no dtparam=audio=off"; want = false; got = audioOff (altered t "dtparam=audio=off\n" ""); }
+    { name = "dtparam=audio=off not directly after the vc4 line"; want = false;
+      got = let a = altered t "${vc4Line}\ndtparam=audio=off\n" "${vc4Line}\n" + "dtparam=audio=off\n"; in
+        sane (audioOff a) "audio=off still present" (audioOffAfterVc4 a); }
+    { name = "config.txt without its final newline"; want = false;
+      got = sane (lib.hasSuffix "\n" t) "rendered text ends in a newline" (endsWithPrefix (lib.removeSuffix "\n" t)); }
+    { name = "config.txt ending in a blank line"; want = false; got = endsWithPrefix (t + "\n"); }
+    { name = "hook passing only \"$1\""; want = false;
+      got = hookForm c (altered (hookText c) "os_prefix \"$@\"" "os_prefix \"$1\""); }
+    { name = "hook selecting stage-only from the environment (SO1)"; want = false;
+      got = hookForm c (altered (hookText c) "set -euo pipefail\n"
         "set -euo pipefail\n[ -z \"\${STAGE_ONLY-}\" ] || set -- --stage-only \"$@\"\n"); }
   ];
+  verdict = v: if v then "accepts" else "rejects (red)";
+  negativeChecks = c: map (n: {
+    name = "negative: ${n.name}: predicate ${verdict n.got}, expected ${verdict n.want}";
+    ok = n.got == n.want;
+  }) (negatives c);
   greetdOnVc4 = c: lib.hasInfix
     ''DRIVERS=="vc4-drm", TAG+="systemd", ENV{SYSTEMD_WANTS}+="greetd.service"''
     c.services.udev.extraRules;
@@ -239,8 +251,7 @@ let
       { name = "no ALSA card-block rule (Pi 4 follow-up)"; ok = !hasCardBlock c; }
     ] ++ venues c);
 
-  # off: evaluated once per configuration.
-  pi5Common = conf: c: let off = glOff conf; in [
+  pi5Common = conf: c: [
     { name = "board is pi5"; ok = c.mugge.board.name == "pi5"; }
     { name = "NVMe kept"; ok = c.mugge.board.kernel.keepNvme; }
     { name = "external bootloader hook"; ok = c.boot.loader.external.enable; }
@@ -274,13 +285,6 @@ let
     { name = "no password authentication"; ok = !(ssh c).PasswordAuthentication; }
     { name = "no keyboard-interactive authentication"; ok = !(ssh c).KbdInteractiveAuthentication; }
     { name = "configurationRevision set"; ok = c.system.configurationRevision != null; }
-    { name = "GL tools option on by default (6f394d52)"; ok = c.mugge.pi5.glDiagnostics.enable; }
-    { name = "GL tools on: glmark2, mesa-demos, grim in systemPackages (G1)"; ok = hasAllGl c; }
-    { name = "GL tools off: none of them in systemPackages (G1)"; ok = !off.mugge.pi5.glDiagnostics.enable && hasNoGl off; }
-    { name = "GL tools on/off: same services, user services, users, groups (G2)"; ok = unitsAndAccounts c == unitsAndAccounts off; }
-    { name = "GL tools on/off: same config.txt and kernel drv (G3)"; ok = configTxt c == configTxt off
-        && (kernel c).drvPath == (kernel off).drvPath; }
-    { name = "glmark2 builds glmark2-es2-wayland (G4, eval)"; ok = glmark2Es2Wayland c; }
   ];
 
   pi5Bootstrap = conf:
@@ -292,10 +296,14 @@ let
       { name = "no vc4-kms overlay"; ok = !hasVc4 c; }
       { name = "8080 not opened (no web UI)"; ok = !(tcpOpen c 8080); }
       { name = "TCP inbound exactly [22]"; ok = allTcpPorts c == [ 22 ] && allTcpRanges c == [ ]; }
+      # Architect 188a1b93: the option follows bootstrap.minimal.
+      { name = "GL tools off in the bootstrap: none of glmark2, mesa-demos, grim (188a1b93)";
+        ok = !c.mugge.pi5.glDiagnostics.enable && hasNoGl c; }
     ]);
 
+  # off: the same configuration with the GL tools option off.
   pi5Full = conf:
-    let c = cfg conf; in map (a: check conf a.name a.ok) (pi5Common conf c ++ [
+    let c = cfg conf; off = glOff conf; in map (a: check conf a.name a.ok) (pi5Common conf c ++ [
       { name = "PREEMPT_RT kernel variant"; ok = c.mugge.board.kernel.variant == "rt"; }
       { name = "kernel 6.12.62 with PREEMPT_RT=y"; ok = isRtKernel c; }
       { name = "NVMe-oF stripped (F-366)"; ok = nvmeFabricsStripped c; }
@@ -304,7 +312,14 @@ let
       { name = "vc4-kms overlay with noaudio"; ok = vc4Noaudio (configTxt c); }
       { name = "dtparam=audio=off present"; ok = audioOff (configTxt c); }
       { name = "dtparam=audio=off directly after the vc4 overlay (US-172)"; ok = audioOffAfterVc4 (configTxt c); }
-    ] ++ map (n: { name = "negative: ${n.name}"; inherit (n) ok; }) (negatives c) ++ [
+      { name = "GL tools option on by default outside the bootstrap (6f394d52, 188a1b93)"; ok = c.mugge.pi5.glDiagnostics.enable; }
+      { name = "GL tools on: glmark2, mesa-demos, grim in systemPackages (G1)"; ok = hasAllGl c; }
+      { name = "GL tools off: none of them in systemPackages (G1)"; ok = !off.mugge.pi5.glDiagnostics.enable && hasNoGl off; }
+      { name = "GL tools on/off: same services, user services, users, groups (G2)"; ok = unitsAndAccounts c == unitsAndAccounts off; }
+      { name = "GL tools on/off: same config.txt and kernel drv (G3)"; ok = configTxt c == configTxt off
+          && (kernel c).drvPath == (kernel off).drvPath; }
+      { name = "glmark2 builds glmark2-es2-wayland (G4, eval)"; ok = glmark2Es2Wayland c; }
+    ] ++ negativeChecks c ++ [
       { name = "greetd skipped without a DRM card (F-367)"; ok = c.systemd.services.greetd.unitConfig.ConditionPathExistsGlob == "/dev/dri/card*"; }
       { name = "greetd started by the vc4 DRM card (US-172 AC8)"; ok = greetdOnVc4 c; }
       { name = "greetd started only by the udev rule (US-172 AC8)"; ok = c.systemd.services.greetd.wantedBy == [ ] && c.systemd.services.greetd.aliases == [ ]; }

@@ -15,7 +15,9 @@
 # --stage-only (architect 993d02b6 Q1, SecSpec 6e3cfa20 SO1/SO2): runs
 # every check and step 1 exactly as below, renders and checks
 # config.txt.new, prints it to stdout and removes it, then exits 0 before
-# the rename. config.txt, gens/ and g/MAP.txt are not written and nothing
+# the rename. If the print fails, config.txt.new is removed and the run
+# dies (SecSpec 9a5105ce SO3). config.txt, gens/ and g/MAP.txt are not
+# written and nothing
 # is pruned. Selected only by this argument, never by the environment; a
 # line with "STAGE-ONLY" goes to stderr. Any other option, or arguments in
 # another order, is refused before anything is written.
@@ -30,7 +32,8 @@
 #    its path class limit (architect 2b485056 item 4.6), and the new
 #    config.txt must end with the os_prefix= line and exactly one newline
 #    (architect 03f33254); then write config.txt. A die before this point
-#    leaves config.txt unchanged.
+#    leaves config.txt unchanged and removes a generation built by this
+#    run; a reused one is never removed (architect 1bed8ff7 F1).
 # 3. Prune, only if the previous os_prefix= is known (architect 63e41531
 #    A3; otherwise nothing is deleted). Keeps new, previous, booted,
 #    chosen and the newest other present generation, so >=2 generations
@@ -169,6 +172,11 @@ pkgs.writeShellScript "install-pi5-gen" ''
   fi
 
   mkdir -p "$g"
+  # A generation this run built is removed again if the run dies before
+  # it is staged or pointed at, so a refusal leaves no valid .complete
+  # that could count as a post-fix generation (architect 1bed8ff7 F1).
+  built=""
+  trap '[ -z "$built" ] || rm -rf "$gen" "$gen.tmp" || true; rm -f "$fw/config.txt.new" || true' EXIT
 
   # 1. Generation directory. An existing one is reused only if its
   # .complete names this <id>; another <id> is an <id8> collision
@@ -193,6 +201,7 @@ pkgs.writeShellScript "install-pi5-gen" ''
     echo "Overlays for NixOS generation $toplevel" > "$gen.tmp/overlays/README"
     sync -f "$gen.tmp"
     mv "$gen.tmp" "$gen"
+    built=1
     echo "$id" > "$gen/.complete.new"
     sync "$gen/.complete.new"
     mv "$gen/.complete.new" "$gen/.complete"
@@ -229,12 +238,17 @@ pkgs.writeShellScript "install-pi5-gen" ''
   fi
   # Stage-only ends here, the one point where it differs (993d02b6 Q1).
   if [ -n "$stageonly" ]; then
-    cat "$new"
+    if ! cat "$new"; then
+      rm -f "$new"
+      die "could not print config.txt.new; config.txt is unchanged"
+    fi
+    built=""
     rm -f "$new"
     echo "install-pi5-gen: STAGE-ONLY: $gen staged; config.txt unchanged, nothing pruned" >&2
     exit 0
   fi
   sync "$new"
+  built=""
   mv -f "$new" "$fw/config.txt"
   sync "$fw"
 
