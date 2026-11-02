@@ -7,8 +7,9 @@
 # before the pointer. Layout L1s: US-172, architect rulings 04d8b687,
 # 2b485056, 63e41531; SecSpec acb8fb17 L1-L5; QE c639203e, 9a21330d,
 # 74504b2f, 3f80f141, da578961, ad6a8bda. Stage-only mode: architect
-# 993d02b6 Q1, SecSpec 6e3cfa20 SO1/SO2, QE 056d79df S1-S2, 15e38621
-# S4-S8. The script is called in the hook's form: the fixed paths, then
+# 993d02b6 Q1, SecSpec 6e3cfa20 SO1/SO2 and 9a5105ce SO3, QE 056d79df
+# S1-S2, 15e38621 S4-S8, 1ce1ea98 S2/S8 with erratum c8ee713f. Refusal
+# cleanup: architect 1bed8ff7 F1. The script is called in the hook's form: the fixed paths, then
 # [--stage-only] <toplevel>, the hook's "$@" (board-guard asserts that the
 # hook adds nothing else).
 #
@@ -47,6 +48,19 @@ let
     then pkgs.writeShellScript "install-pi5-gen-broken" (swap (lib.replaceStrings [ guard ] [ to ] body))
     else throw "pi5-prune-gens: guard not in the script: ${guard}";
   broken = brokenTo "true";
+  # splitOnce SEP TEXT: [before after]; SEP must occur exactly once.
+  splitOnce = sep: text: let p = lib.splitString sep text; in
+    if builtins.length p == 2 then p else throw "pi5-prune-gens: '${sep}' not exactly once in the script";
+  # QE c8ee713f M-e: the script with step 3's prune of g/ (from its
+  # header up to the post-fix count) moved before step 2.
+  pruneBefore46 = let
+    a = splitOnce "# 3. Prune." body;
+    b = splitOnce "# Post-fix generations" (builtins.elemAt a 1);
+    c = splitOnce "# 2. Pointer." (builtins.elemAt a 0);
+  in pkgs.writeShellScript "install-pi5-gen-broken" (swap (builtins.elemAt c 0
+    + "# 3. Prune." + builtins.elemAt b 0 + "# 2. Pointer." + builtins.elemAt c 1
+    + "# Post-fix generations" + builtins.elemAt b 1));
+  trapLine = "trap '[ -z \"$built\" ] || rm -rf \"$gen\" \"$gen.tmp\" || true; rm -f \"$fw/config.txt.new\" || true' EXIT";
   b32 = n: lib.concatStrings (lib.genList (_: "[0-9a-df-np-sv-z]") n);
   mutants = [
     { c = "c1"; what = "collision guard"; s = broken ''[ "$have" = "$id" ]''; }
@@ -69,8 +83,15 @@ let
     { c = "SO=1; c26"; what = "vfat guard in stage-only mode"; s = broken ''[ "$fstype" = vfat ]''; }
     # SecSpec 9a5105ce SO3, architect 1bed8ff7 F1.
     { c = "so3"; what = "stage-only print check"; s = brokenTo ''if ! { cat "$new" || true; }; then'' ''if ! cat "$new"; then''; }
-    { c = "so3"; what = "built-generation EXIT trap"; s = brokenTo ":"
-        "trap '[ -z \"$built\" ] || rm -rf \"$gen\" \"$gen.tmp\" || true; rm -f \"$fw/config.txt.new\" || true' EXIT"; }
+    { c = "so3"; what = "built-generation EXIT trap"; s = brokenTo ":" trapLine; }
+    # QE 1ce1ea98 S2, erratum c8ee713f E1-4 M-a to M-e; S8 id check.
+    { c = "s2a"; what = "built-generation EXIT trap (M-a)"; s = brokenTo ":" trapLine; }
+    { c = "s2r"; what = "built check in the EXIT trap (M-b)";
+      s = brokenTo "trap 'rm -rf \"$gen\" \"$gen.tmp\" || true; rm -f \"$fw/config.txt.new\" || true' EXIT" trapLine; }
+    { c = "s2c"; what = "reset before the pointer rename (M-c)"; s = brokenTo "mv -f \"$new\"" "built=\"\"\nmv -f \"$new\""; }
+    { c = "SO=1; s2c"; what = "reset before the stage-only exit (M-d)"; s = brokenTo "rm -f \"$new\"\n  echo" "built=\"\"\n  rm -f \"$new\"\n  echo"; }
+    { c = "s2a"; what = "prune-after-4.6 order (M-e)"; s = pruneBefore46; }
+    { c = "c27"; what = "toplevel id check"; s = brokenTo "*) ;;" "*) die \"unexpected toplevel id '$id'\" ;;"; }
   ];
 
   # Config templates: the real one, and variants at and over the class
@@ -102,6 +123,8 @@ pkgs.runCommand "pi5-prune-gens" { } ''
   set -euo pipefail
 
   S=${install}
+  # S0: the unmutated script, for seeding a pre-state inside a mutant run.
+  S0=${install}
   REAL=${tReal}
   CT=${target.container}
   CD=${CD}
@@ -939,6 +962,19 @@ pkgs.runCommand "pi5-prune-gens" { } ''
     [ "$(snap)" = "$before" ] || fail "FAT changed"
     pass
   }
+  # (27) A toplevel whose id is not 32 Nix base32 characters dies before
+  # any write (QE 1ce1ea98 S8).
+  c27() {
+    setup "27 bad toplevel id dies, nothing written"
+    link 3 $C; link 4 $D
+    gen $D
+    oldcfg $D
+    boot $D
+    before=$(snap)
+    runfail $FE "unexpected toplevel id '$FE'"
+    [ "$(snap)" = "$before" ] || fail "FAT changed"
+    pass
+  }
 
   # ---- Stage-only mode (architect 993d02b6 Q1, SecSpec 6e3cfa20) ----
   # QE 056d79df S1-S2 and 15e38621 S4-S8.
@@ -958,17 +994,22 @@ pkgs.runCommand "pi5-prune-gens" { } ''
   # (S1) Stage-only builds g/<id8> in full and exits 0. Everything else
   # on the FAT (config.txt, gens/, g/MAP.txt, the other g/ dirs, a
   # prunable A and B) is byte-identical, no config.txt.new is left, and
-  # stdout is byte for byte the config.txt the normal install then
-  # writes for the same input. stderr has STAGE-ONLY and no prune step
-  # (S6, S7); the normal run has the prune step, prunes A and B (so the
-  # prune is observable) and has no STAGE-ONLY.
+  # stdout is byte for byte the config.txt the normal install writes for
+  # the same input. stderr has STAGE-ONLY and no prune step (S6, S7); the
+  # normal run has the prune step, prunes A and B (so the prune is
+  # observable) and has no STAGE-ONLY. The normal run works on fw2, a
+  # copy of the FAT taken before the stage-only run, so both start from
+  # the identical pre-state (QE 1ce1ea98 S1).
   s1() {
     setup "S1 stage-only stages, writes nothing else, prints the config"
     stagetree
     before=$(snapbut $D)
+    cp -a "$fw" "$root/fw2"
+    [ "$(snap "$root/fw2")" = "$(snap)" ] || fail "copy of the pre-state differs"
     mktop $D
     call "$fw" --stage-only "$(top $D)" > "$root/out" 2> "$root/err" || fail "stage-only exit $?: $(cat "$root/err")"
     [ "$(snapbut $D)" = "$before" ] || fail "FAT outside $CD/$(short $D)/ changed"
+    [ ! -e "$fw/config.txt.new" ] || fail "config.txt.new left behind"
     [ "$(cat "$g/$(short $D)/.complete")" = $D ] || fail ".complete is not $D"
     for f in Image initrd cmdline.txt ${lib.escapeShellArgs target.dtbs} overlays/README overlays/overlay_map.dtb; do
       [ -f "$g/$(short $D)/$f" ] || fail "staged generation lacks $f"
@@ -976,11 +1017,13 @@ pkgs.runCommand "pi5-prune-gens" { } ''
     sed "s|@ID@|$(short $D)|" "$TMPL" | cmp -s - "$root/out" || fail "stdout is not the rendered config.txt"
     grep -qF STAGE-ONLY "$root/err" || fail "no STAGE-ONLY line on stderr"
     ! grep -qF "prune step" "$root/err" || fail "stage-only reached the prune step"
-    call "$fw" "$(top $D)" > /dev/null 2> "$root/err2" || fail "normal install failed"
-    cmp -s "$root/out" "$fw/config.txt" || fail "stdout differs from the config.txt the normal install wrote"
+    call "$root/fw2" "$(top $D)" > /dev/null 2> "$root/err2" || fail "normal install failed"
+    cmp -s "$root/out" "$root/fw2/config.txt" || fail "stdout differs from the config.txt the normal install wrote"
     grep -qF "prune step" "$root/err2" || fail "normal install shows no prune step"
     ! grep -qF STAGE-ONLY "$root/err2" || fail "normal install printed STAGE-ONLY"
-    expect_dirs $C $D
+    [ "$(dirsof "$root/fw2/$CD")" = "$(short $C) $(short $D) " ] \
+      || fail "normal install: $CD/ dirs '$(dirsof "$root/fw2/$CD")', want C and D (A and B pruned)"
+    [ "$(snapbut $D)" = "$before" ] || fail "normal run on the copy changed the stage-only FAT"
     pass
   }
 
@@ -1033,14 +1076,108 @@ pkgs.runCommand "pi5-prune-gens" { } ''
     pass
   }
 
+  # ---- S2: refusals and success paths (QE 1ce1ea98, erratum c8ee713f;
+  # architect 1bed8ff7 F1). All run in both modes.
+
+  # s2pre: the S2 assertions after a refusal: no prune (A and B survive,
+  # no prune step line), no config.txt.new, and the FAT except ID's g/
+  # directory is byte-identical to $before, sha of every file.
+  s2pre() {
+    [ -d "$g/$(short $A)" ] && [ -d "$g/$(short $B)" ] || fail "prunable A or B removed"
+    ! grep -qF "prune step" "$root/err" || fail "refused run reached the prune step"
+    [ ! -e "$fw/config.txt.new" ] || fail "config.txt.new left behind"
+    [ "$(snapbut "$1")" = "$before" ] || fail "FAT outside $CD/$(short "$1")/ changed"
+  }
+
+  # (S2-a, E1-1) Built-fresh refusal at 4.6: kernel path over
+  # KERNEL_CLASS_MAX, overlay path over OVERLAY_CLASS_MAX, and a
+  # dtoverlay .dtbo that does not exist. There is no g/<id8> before; the
+  # run dies with the 4.6 message, and g/<id8>/ and g/<id8>.tmp are gone
+  # again (F1).
+  s2a() {
+    for v in "${tKernelOver} ${kname (K + 1)} is $((K + 1)) characters, over the kernel class limit $K" \
+      "${tOverlayOver} overlays/${oname (O + 1)}.dtbo is $((O + 1)) characters, over the overlay class limit $O" \
+      "${tOverlayMissing} overlays/absent-pi5.dtbo is missing"; do
+      setup "S2-a built-fresh refusal at 4.6 removes its generation: ''${v#* }"
+      stagetree
+      TMPL=''${v%% *}
+      before=$(snap)
+      runfail $D "''${v#* }" "config.txt is unchanged"
+      s2pre $D
+      [ ! -e "$g/$(short $D)" ] || fail "refused generation $(short $D) left behind"
+      [ ! -e "$g/$(short $D).tmp" ] || fail "$(short $D).tmp left behind"
+      [ "$(snap)" = "$before" ] || fail "FAT changed"
+      pass
+    done
+  }
+
+  # (S2-a', E1-2) Reused refusal: g/<id8> already holds D (staged by an
+  # earlier stage-only run of the unmutated script), then the same
+  # overlay refusals. The reused directory survives byte-identical.
+  s2r() {
+    for v in "${tOverlayOver} overlays/${oname (O + 1)}.dtbo is $((O + 1)) characters, over the overlay class limit $O" \
+      "${tOverlayMissing} overlays/absent-pi5.dtbo is missing"; do
+      setup "S2-a' reused refusal at 4.6 keeps the reused generation: ''${v#* }"
+      stagetree
+      mktop $D
+      "$S0" "$fw" "$TMPL" "$profiles" "$root/booted" "$root/chosen" --stage-only "$(top $D)" > /dev/null 2>&1 \
+        || fail "seeding the staged $D failed"
+      [ "$(cat "$g/$(short $D)/.complete")" = $D ] || fail "seed: no staged $D"
+      TMPL=''${v%% *}
+      before=$(snapbut $D)
+      reused=$(snap "$g/$(short $D)")
+      runfail $D "''${v#* }" "config.txt is unchanged"
+      [ -d "$g/$(short $D)" ] || fail "reused generation $(short $D) removed"
+      [ "$(snap "$g/$(short $D)")" = "$reused" ] || fail "reused generation $(short $D) changed"
+      s2pre $D
+      pass
+    done
+  }
+
+  # (S2-b) Collision die, a precondition: A2 has A's <id8>. No new
+  # generation, no new .complete, FAT byte-identical, no prune.
+  s2b() {
+    setup "S2-b collision die writes nothing and prunes nothing"
+    stagetree
+    link 5 $A2
+    before=$(snapbut $A2)
+    full=$(snap)
+    runfail $A2 "id8 $(short $A) already holds toplevel $A, new toplevel $A2"
+    s2pre $A2
+    [ "$(cat "$g/$(short $A)/.complete")" = $A ] || fail "$(short $A)/.complete changed"
+    [ "$(snap)" = "$full" ] || fail "FAT changed"
+    pass
+  }
+
+  # (E1-3) Success keeps the generation this run built: present with
+  # .complete, no config.txt.new; normal mode points config.txt at it,
+  # stage-only leaves config.txt as it was.
+  s2c() {
+    setup "S2 success keeps its built generation"
+    stagetree
+    cp "$fw/config.txt" "$root/config.before"
+    run $D > /dev/null 2> "$root/err" || fail "install failed: $(cat "$root/err")"
+    [ "$(cat "$g/$(short $D)/.complete" 2>/dev/null)" = $D ] || fail "built generation $(short $D) not present after success"
+    [ ! -e "$fw/config.txt.new" ] || fail "config.txt.new left behind"
+    if [ -n "$SO" ]; then
+      cmp -s "$root/config.before" "$fw/config.txt" || fail "stage-only changed config.txt"
+    else
+      expect_pointer $D
+    fi
+    pass
+  }
+
   cases="c1 c2 c3a c3b c3c c9 c9b c10 c10b c11 c11b c11c p1 p1b p2a p2b p2c p3 p4 p5 p6 p7 p7b p8 p10 p11 p12
-    c13 c14 c15 c15b c16 c16b c16c c17 c19 c20 c21 c22 c24 c25 c26 s1 s4 s5 so3"
+    c13 c14 c15 c15b c16 c16b c16c c17 c19 c20 c21 c22 c24 c25 c26 c27 s1 s4 s5 so3
+    s2a s2r s2b s2c"
   for c in $cases; do "$c"; done
   # (S2, S8) Every guard that dies before the pointer dies the same way in
-  # stage-only mode: collision, class limits, missing files, the final
-  # newline, empty, relative and non-vfat FAT roots.
+  # stage-only mode. The preconditions (collision, toplevel id, empty,
+  # relative and non-vfat FAT roots) refuse before any write; the 4.6
+  # class-limit and missing-file refusals and the final-newline check
+  # follow S2-a (QE 1ce1ea98 S8, erratum c8ee713f).
   SO=1
-  for c in c1 c9 c9b c10 c10b c11b c11c c24 c25 c26; do "$c"; done
+  for c in c1 c9 c9b c10 c10b c11b c11c c24 c25 c26 c27 s2a s2r s2b s2c; do "$c"; done
   SO=""
   [ "$passed" -eq "$total" ] && [ "$total" -gt 0 ] || { echo "FAIL: $passed/$total" >&2; exit 1; }
 
@@ -1052,7 +1189,8 @@ pkgs.runCommand "pi5-prune-gens" { } ''
       echo "FAIL: 8 case ${m.c} passed with the ${m.what} removed" >&2
       exit 1
     fi
-    echo "PASS: 8 case ${m.c} red with the ${m.what} removed"
+    # The reason it went red, so the log shows it (QE c8ee713f E1-4).
+    echo "PASS: 8 case ${m.c} red with the ${m.what} removed; $(grep -m1 '^FAIL' "$TMPDIR/mutant.log" || echo 'died without a FAIL line')"
     nmut=$((nmut + 1))
   '') mutants}
 
