@@ -2069,6 +2069,49 @@ priority!"
     control). #79 follow-ups: F-516 row 9 TW kit; QE C3/C4; Arch A2;
     UX N1 (all non-blocking). F-523 to the owner via team-lead. Others
     as in v336.
+  - v337 PUSHED (CM; PM checked the local ref, no fetch):
+    chore/backlog = 0c29180f59a4d103a581321470d7b23d1aeda6b9, parent
+    cbebf53f (file
+    655037dd5cbb14c8fac56d70ea204653cd265ca777c6a3220ba54692dce0b8ae).
+    v338 bases on it and consumes PM addenda 93-112 in
+    /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/
+    (held-for-v338-add93-20261102.txt to -add112-20261102.txt; last
+    one -add112 sha256
+    67e40c5ea5caeeaebadd1b5f2a99dddc885ef25df97cf2f151ff7530f92e3db1).
+    The addenda stay the full record (sha-cited rulings, verdicts,
+    trackers); v338 carries the state. Built by CADENCE (30 min since
+    v337). No new IDs; next free stays F-528.
+  - #79 (merged cf2705d9): NO process deviation. team-lead's hold was
+    withdrawn; the merge was correct under standing consent (add93).
+  - PR #80 "docs(safety): add F-516 to amps-on row 9", head
+    2a48090a35c6ae1ef22622cb8415af7c24574372 on main cf2705d9,
+    docs-only (CI-exempt; PR CI 41404970665 green, test-and-build
+    skipped). RULE 13 7/7 at 2a48090a: TW 63da9b1f, UX f14d4297,
+    SecSpec a5234053, AE 6d9e2bb5, QE 97718d25 (C1 MET; C2 a head move
+    or update-branch voids it; C3 whichever of #80 / the #78 docs kit
+    merges second is dry-run on the then-current main, no fuzz), AD
+    37b00356, Arch 3ed7ced1. ONLY OPEN: OWNER ACCEPTANCE. Whether
+    standing consent covers docs-only PRs is open with the owner
+    (team-lead hold); until the owner answers, #80 needs owner
+    acceptance (add96 corrects add93/add94).
+  - OPEN TRACKING (v338; supersedes v337's line): US-172 L1s: head
+    ea35aae1 PUSHED (parent 7860ed16, test-only commit), CI dispatch
+    41405536654 RUNNING; next: PR with body r2 (supersedes #52) -> 7
+    reviews; QE review acfc7790: C2 MET (worker-4 7fef8b0f), C1
+    (PR-event CI log at the PR head) and C3 (body r2 cites it; local
+    logs labelled pre-PR) OPEN; starvation guard 2026-11-03T20:00.
+    US-172 AC2a: kit A01-A06 in desk drafting; tools r1 a5f5c51c needs
+    a revision for QE EN-1/2/3/5 (+EN-6 if AD D1 adopted); deck-start
+    step OPEN (AE r2 b828936b held on AD D1); worker-1 acks of
+    7f320c26, c181eceb, 8d2fd2b2 MISSING, escalated to team-lead by
+    the CM; full-track generation HELD on disk. F-439 #78: worker-2
+    local head 6401d6a9 (merge of 4f5b47de + cf2705d9, not pushed),
+    run script r3 5e85dbd4; GO HELD on disk (CM threshold 11 GiB for
+    this job); then push -> all 7 re-review -> PR CI -> T3. #78/#80
+    order: whichever merges second needs update-branch, which voids
+    its approvals (re-review; for #80 a re-check may be enough,
+    reviewers decide). DISK ~10.1 GiB, at the 10 GiB stop line; one
+    heavy job at a time on the CM's go. Others as in v337.
 
 ## Reserved IDs
 
@@ -3673,6 +3716,10 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
      warning (F-516)"; this row follows when that merges. QE C4: rows
      9/20 get closure wording once #78 merges and the AE accepts the
      closures.
+     v338: the F-516 row 9 change is PR #80 (head 2a48090a; safety.md
+     there = TW kit safety.r1.md bc2a45f8, AE 56dea7ee): 7/7, waiting
+     for owner acceptance. Row 9 above stays as mirrored in v337 until
+     #80 merges; then it mirrors the merged text.
   10. The 60-min flight-case thermal soak (GIG-READINESS entry, P1)
      PASS (AE: amps-on too, not only gig).
   11. F-372 (P1 below): the S-001 path check fix.
@@ -6283,6 +6330,71 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       9a5105ce, 1bed8ff7, 1ce1ea98, c8ee713f. SecSpec G1 filed as
       F-521 (replaces the placeholder above); F1 EXIT trap: SecSpec no
       objection, final check at the PR head.
+  - US-172 v338 STATE (supersedes the v337 lines above where they
+    differ; shas in PM add95-add112):
+    - L1s: story/US-172-layout-l1s head
+      ea35aae1aa95d2bfb32afedc694dd48852406620 PUSHED (parent
+      7860ed16; only nix/checks/pi5-prune-gens.nix +154/-16). CI
+      dispatch 41405536654 RUNNING. PR body r1
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/L1s-ea35aae1/US-172-L1s-pr-body-r1.md
+      (083d26a3). QE review
+      /Users/gabriela.bogk/mugge-team-evidence/live/quality-engineer/qe-US172-L1s-ea35aae1-review-r1.md
+      (acfc7790f2d48b1343af0eca7a015a71f6d0c745fca63af517d4035443361174):
+      E1-1..E1-6 MET; C1 OPEN (PR-event CI log at the PR head with the
+      named lines); C2 MET (worker-4
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/L1s-ea35aae1/w4-qe-C2-answer-r1-7fef8b0f.md,
+      7fef8b0f89d3cf71e7c04c74f1b714c61a210184c24df1c07e142f15673087cb,
+      QE acked); C3 OPEN (body r2). The local logs, prune-gens
+      57fc05dc and board-guard 58949d37, are PRE-PR RECORDS ONLY;
+      board-guard's clean tree is accepted as worker-4's statement. QE
+      N1/N2/N3: FYI, no F-ID unless the Architect rules.
+    - AC2a governing set for worker-1's kit (CM relay set is
+      authoritative): QE plan answers 401bbef2 + erratum 5d93d36d; AD
+      challenge 609dba5d (G5/G6 are kit-build items the AD checks at
+      kit review; G7 the CM's, in the grant); Architect Q-A1 24a697a7
+      (M1-M6) + addendum-1 68fd01c8; AE C7/C8 1b14eb49; AE plan
+      answers d5024521 (Q-A2 ACCEPTED); AE track-level amendment
+      b4d40733; QE T2 target c181eceb (peak -20 dBFS +-0.5; RMS -33.5
+      dBFS +-2 FIXED, replaces -28); Q-A6 answered by the CM (F's
+      deploy/reboot is a separate DEPLOY grant).
+    - AC2a tools r1
+      /Users/gabriela.bogk/mugge-team-evidence/live/worker-1/us172-ac2a-kit-r1/SHA256SUMS-tools-r1
+      (a5f5c51c, 111/111) is NOT final: QE early notes
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/qe-AC2a-tools-early-notes-r1-7f320c26.md
+      (7f320c26c29d42406896768cf6744169adbee811fd328d734c4c3ea7a3f38d91)
+      EN-1 RMS check mandatory at the fixed target, EN-2 real pass and
+      fail selftests at the target, EN-3 band check covers the end of
+      the file (EN-4 FYI, DC bin); QE addendum-1
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/qe-AC2a-tools-early-notes-addendum-1-8d2fd2b2.md
+      (8d2fd2b21d606bd9a7425a83ed68da9f41df8b4137eeed6a99aefceb74d02605)
+      EN-5 an empty band window = ERROR (needed either way), EN-6 only
+      if AD D1 is adopted.
+    - AC2a DECK START (OPEN): worker-1 Q
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/w1-ac2a-Q-deckstart-r1-4cacf262.md
+      (4cacf262): form (a) leaves the deck silent; proposed form (a'),
+      a seeded Auto DJ queue. Inputs: QE T3
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/qe-AC2a-QD1-T3-inputs-r1-1555d9eb.md
+      (1555d9eb; no objection; I-4 new bound: a 10 min run must link
+      within 4 min of start or it is VOID); AD
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/ad-AC2a-QD3-input-r1-b258d00b.md
+      (b258d00b; D1 proposed 120 s silent lead-in, AE decides; D2 G6
+      released for (a') if the step 3 grim shows no dialog, else STOP;
+      D3 explicit GL waveform type in the seed, recorded in A03);
+      Architect facts
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/arch-AC2a-deckstart-facts-r1-2df942c3.md
+      (2df942c3, facts not a ruling; F2 pipewire-alsa second node,
+      PIPEWIRE_AUTOCONNECT=false is the AE's call; F3 A01 Xwayland/xcb
+      check; F4 null sink JACK name). AE answer r1 403c284d VOID
+      (never released); r2
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/ae-AC2a-deckstart-QD1-QD3-answer-r2-b828936b.txt
+      (b828936bce3963487351b370804d729ef25e02822f692a4a77b89f7b799f66e5)
+      folds in I-1..I-5 and AD D2, does NOT decide AD D1: QE/AD
+      co-release round HELD (CM asked the AE). PM tracking note: 120 s
+      lead-in + the 4 min link bound leave less margin in a 10 min
+      run; the AE and QE decide.
+    - worker-1 acks of 7f320c26, c181eceb and 8d2fd2b2 MISSING after
+      two CM requests; escalated to team-lead (CM). Full-track
+      generation HELD on disk.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -18637,6 +18749,26 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       OBSOLETE (TW A2), F-513/F-344/F-345/F-410 to verify-on-Pi-5, QE
       C4 / TW A6 closure wording for rows 9/20 after AE acceptance; CM
       freezes + deletes the scratch branches.
+    - v338 STATE (#78; shas in PM add93-add102): worker-2 acked all
+      governing rulings plus UX W4 final
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/F-439/frozen/ux-W4-final-r1-695b493d.txt
+      (695b493d64e882e13857a2df18cdaf9f9b948917da7927fed5ebeebc3ccb7e85;
+      amends 16265b4e W4/W6: nothing is written before the mute check,
+      and a failed mute may already have zeroed some gains; 16265b4e
+      stands otherwise), QE F-468 L2 rule 94c3f932 and SecSpec
+      02dd4409. Local head 6401d6a9 (merge of 4f5b47de + cf2705d9, no
+      rebase), NOT pushed; run script r3
+      /Users/gabriela.bogk/mugge-team-evidence/live/F-439/w2-b1-runs/run-b1-r3.sh
+      (5e85dbd4; r2 4c00418d VOID). GO HELD on disk (below the CM's 11
+      GiB go threshold for this job). Browser step goes to CI.
+    - #78 MERGE CHECKLIST additions (v338): "head includes cf2705d9"
+      is met at 6401d6a9 once pushed; body r4 wording consistent with
+      row 20 ("closes with the F-439 PR" vs "if QE confirms repro";
+      SecSpec 02dd4409 note; the TW's call); the A4 check point goes
+      into the re-review bundle note (CM); #78/#80 order: whichever
+      merges second needs update-branch (voids its approvals,
+      re-review) and a CM dry-run on the then-current main, no fuzz
+      (QE C3 on #80).
 - **F-440** runner MAX_CUT_DB vs venue_pipeline: a D-009 question for
   the AE (filed 2026-10-27; ID free across main, all origin/* and
   local branches at PM read; full record below, folded from the PM
