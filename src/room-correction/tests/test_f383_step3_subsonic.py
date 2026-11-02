@@ -99,9 +99,14 @@ def _reference(h, design, oversample, floor_rel):
 
 @functools.lru_cache(maxsize=None)
 def _subsonic_reference(hpf, slope, oversample):
-    """Each case's reference is built once per grid (Q3)."""
+    """Each case's reference is built once per grid (Q3).
+
+    The copy drops the n_fft complex buffer the returned slice is a view
+    of; cached, that buffer is 0.25-0.5 GiB per entry and OOMed the CI
+    runner (F-383 S4).
+    """
     return _reference(_subsonic(hpf, slope), _design_vec(hpf, slope), oversample,
-                      crossover._LR_LOG_FLOOR)
+                      crossover._LR_LOG_FLOOR).copy()
 
 
 def _residual_db(h, ref):
@@ -204,6 +209,7 @@ class TestSubsonicF1:
             min_phase.minimum_phase_residual_db(
                 h, design_mag=_design_vec(20.0, 24.0), oversample=M1_OVERSAMPLE,
                 floor_rel=crossover._LR_LOG_FLOOR)
+        assert _subsonic_reference(20.0, 24.0, M1_OVERSAMPLE).flags.owndata
 
     @pytest.mark.parametrize("hpf,slope", CASES, ids=CASE_IDS)
     def test_residual_at_1024x(self, hpf, slope):
