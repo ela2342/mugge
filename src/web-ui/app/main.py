@@ -48,8 +48,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from starlette.responses import Response
 from fastapi.staticfiles import StaticFiles
 
-from .audio_mute import AudioMuteManager
 from .collectors.thermal_monitor import ThermalMonitor
+from . import gain_guard
 from .config_routes import router as config_router
 from .graph_routes import router as graph_router
 from .mode_manager import ModeManager
@@ -140,7 +140,6 @@ async def lifespan(app: FastAPI):
     )
     app.state.mode_manager = mode_manager
     app.state.measurement_task = None
-    app.state.audio_mute = AudioMuteManager()
     # F-162: Event set when measurement session needs the signal-gen RPC slot.
     # The /ws/siggen proxy checks this and disconnects to free the single-client slot.
     app.state.siggen_evict = asyncio.Event()
@@ -396,37 +395,37 @@ async def list_pcm_sources():
     return {"sources": sorted(PCM_SOURCES.keys())}
 
 
-# -- Audio mute/unmute (F-040) --
+# -- Audio mute (F-040, F-439) --
+# MUTE closes the D-063 gate (GM zeroes all gains).  There is no unmute:
+# the only way back is Open Gate (/api/v1/venue/gate/open).
 
 @app.post("/api/v1/audio/mute")
-async def audio_mute(request: Request):
-    """Mute all filter-chain outputs by setting gain nodes to Mult=0.0."""
-    mgr: AudioMuteManager = request.app.state.audio_mute
-    if MOCK_MODE:
-        mgr.is_muted = True
-        return JSONResponse({"ok": True})
-    result = await mgr.mute()
-    status = 200 if result.get("ok") else 502
-    return JSONResponse(result, status_code=status)
+async def audio_mute():
+    """Mute all outputs by closing the audio gate."""
+    try:
+        await gain_guard.close_gate()
+    except Exception as exc:  # noqa: BLE001 — any failure: not muted
+        log.error("Mute failed: close_gate: %s: %s", type(exc).__name__, exc)
+        return JSONResponse(
+            {"ok": False, "error": "close_gate_failed", "detail": str(exc)},
+            status_code=502)
+    return JSONResponse({"ok": True, "gate_open": False})
 
 
 @app.post("/api/v1/audio/unmute")
-async def audio_unmute(request: Request):
-    """Unmute: restore gain nodes to pre-mute Mult values."""
-    mgr: AudioMuteManager = request.app.state.audio_mute
-    if MOCK_MODE:
-        mgr.is_muted = False
-        return JSONResponse({"ok": True})
-    result = await mgr.unmute()
-    status = 200 if result.get("ok") else 502
-    return JSONResponse(result, status_code=status)
+async def audio_unmute():
+    """Removed (F-439): unmute restored pre-mute gains past a closed gate."""
+    return JSONResponse(
+        {"ok": False, "error": "unmute_removed",
+         "detail": "Unmute was removed. Use Open Gate to play again."},
+        status_code=410)
 
 
 @app.get("/api/v1/audio/mute-status")
-async def audio_mute_status(request: Request):
-    """Return current mute state."""
-    mgr: AudioMuteManager = request.app.state.audio_mute
-    return {"is_muted": mgr.is_muted}
+async def audio_mute_status():
+    """Current mute state from a fresh gate reading."""
+    gate = await gain_guard.read_gate_state()
+    return {"is_muted": gate == "closed", "gate": gate}
 
 
 # -- WebSocket endpoints --

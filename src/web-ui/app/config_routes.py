@@ -7,6 +7,11 @@ Endpoints:
 
 Safety:
     - D-009: Mult hard cap at 1.0 (0 dB).  UI soft cap at -20 dB (0.1).
+    - G3 (F-352): non-finite, negative, > 1.0 and subnormal Mults are
+      rejected (422), never clamped.
+    - D-063 (F-344): a non-zero gain is only written while the gate reads
+      open (``gain_guard``); otherwise 409 with reason gate_closed or
+      gate_unknown.
     - Quantum changes require PipeWire restart awareness (USBStreamer transient
       risk documented in ``docs/operations/safety.md``).
 """
@@ -19,18 +24,19 @@ import os
 import subprocess
 from typing import Dict, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ValidationError, field_validator
 
-from .pw_helpers import pw_dump, find_convolver_node, find_gain_node, read_mult, set_mult, find_quantum, find_sample_rate, find_filter_info
+from .gain_guard import GATE_CLOSED, GATE_UNKNOWN, guarded_set_mult
+from .pw_helpers import (
+    MULT_HARD_CAP, pw_dump, find_convolver_node, find_gain_node, read_mult,
+    find_quantum, find_sample_rate, find_filter_info, validate_mult,
+)
 
 log = logging.getLogger(__name__)
 
 MOCK_MODE = os.environ.get("PI_AUDIO_MOCK", "1") == "1"
-
-# D-009: hard cap — gain Mult must never exceed 1.0 (0 dB).
-MULT_HARD_CAP = 1.0
 
 # Fallback gain node names for the default 2-way stereo topology.
 # Used in mock mode and as validator fallback.  On a real Pi, gain nodes
@@ -99,10 +105,11 @@ class GainRequest(BaseModel):
             if not name.startswith("gain_"):
                 raise ValueError(f"Invalid gain node name: {name!r}. "
                                  f"Must start with 'gain_'")
-            if mult < 0.0:
-                raise ValueError(f"Mult must be >= 0.0, got {mult} for {name}")
-            if mult > MULT_HARD_CAP:
-                v[name] = MULT_HARD_CAP
+            # G3: refuse, never clamp (F-352 AC1).
+            try:
+                v[name] = validate_mult(mult)
+            except ValueError as exc:
+                raise ValueError(f"{name}: {exc}") from None
         return v
 
 
@@ -173,15 +180,43 @@ async def get_config():
     }
 
 
+def _invalid_gain_request(detail: list) -> JSONResponse:
+    """422 without echoing the input: NaN/Infinity are not valid JSON (F-352)."""
+    return JSONResponse(status_code=422, content={"detail": detail})
+
+
 @router.post("/gain")
-async def set_gain(body: GainRequest):
+async def set_gain(request: Request):
     """Set gain Mult values for one or more channels.
 
-    Enforces D-009 hard cap: Mult <= 1.0 (0 dB).
+    Values are validated by ``GainRequest`` (G3, D-009 cap 1.0).  The body
+    is validated here rather than by FastAPI, whose 422 echoes the input
+    and cannot encode NaN or Infinity.  Every write goes through
+    ``guarded_set_mult``: a non-zero Mult needs the gate open.  The first
+    gate refusal stops the batch with 409; values written before it are
+    listed in ``applied``.
     """
+    try:
+        body = GainRequest.model_validate(await request.json())
+    except ValueError as exc:  # bad JSON or a ValidationError
+        if isinstance(exc, ValidationError):
+            return _invalid_gain_request([
+                {"loc": list(e["loc"]), "msg": e["msg"], "type": e["type"]}
+                for e in exc.errors()])
+        return _invalid_gain_request([{"loc": ["body"], "msg": "invalid JSON",
+                                       "type": "json_invalid"}])
+
     if MOCK_MODE:
+        async def write(_node_id: int, name: str, mult: float) -> bool:
+            _mock_gains[name] = mult
+            return True
+
+        applied = {}
         for name, mult in body.gains.items():
-            _mock_gains[name] = min(mult, MULT_HARD_CAP)
+            result = await guarded_set_mult(0, name, mult, write=write)
+            if not result.ok:
+                return _gate_refused(result.reason, applied)
+            applied[name] = mult
         return JSONResponse({"ok": True, "gains": _mock_gains})
 
     pw_data = await pw_dump()
@@ -195,14 +230,15 @@ async def set_gain(body: GainRequest):
     errors = []
     applied = {}
     for name, mult in body.gains.items():
-        mult = min(mult, MULT_HARD_CAP)
         node_id, _ = find_gain_node(pw_data, name)
         if node_id is None:
             errors.append(f"node '{name}' not found")
             continue
-        ok = await set_mult(node_id, name, mult)
-        if ok:
+        result = await guarded_set_mult(node_id, name, mult)
+        if result.ok:
             applied[name] = mult
+        elif result.reason in (GATE_CLOSED, GATE_UNKNOWN):
+            return _gate_refused(result.reason, applied)
         else:
             errors.append(f"pw-cli failed for '{name}'")
 
@@ -216,6 +252,17 @@ async def set_gain(body: GainRequest):
     if errors:
         result["warnings"] = errors
     return JSONResponse(result)
+
+
+def _gate_refused(reason: str | None, applied: dict) -> JSONResponse:
+    """409 for a gain write the gate rule refused (UX f05b5f4a, 9c7109b4)."""
+    log.info("Gain write refused: %s (applied before refusal: %s)",
+             reason, applied)
+    return JSONResponse(
+        status_code=409,
+        content={"ok": False, "error": "gate_not_open", "reason": reason,
+                 "applied": applied},
+    )
 
 
 @router.post("/quantum")

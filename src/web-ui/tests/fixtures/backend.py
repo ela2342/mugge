@@ -13,6 +13,7 @@ import functools
 import importlib.util
 import json
 import os
+import re
 import socket
 import struct
 import subprocess
@@ -561,6 +562,71 @@ def wait_for_peaks(port: int, channels, predicate, timeout: float) -> list[float
         time.sleep(0.1)
 
 
+CONVOLVER_NODE_NAME = "pi4audio-convolver"
+GAIN_NAMES = (
+    "gain_left_hp", "gain_right_hp", "gain_sub1_lp", "gain_sub2_lp",
+    "gain_hp_l", "gain_hp_r", "gain_iem_l", "gain_iem_r",
+)
+
+
+def _convolver_id() -> int:
+    for obj in _pw_dump():
+        props = (obj.get("info") or {}).get("props") or {}
+        if props.get("node.name") == CONVOLVER_NODE_NAME:
+            return obj["id"]
+    pytest.fail(f"{CONVOLVER_NODE_NAME} not in pw-dump", pytrace=False)
+
+
+GAIN_PARAMS = ("Mult", "Add")
+GAIN_KEYS = tuple(f"{name}:{param}" for name in GAIN_NAMES for param in GAIN_PARAMS)
+# pw-cli prints Props floats with %f: this line means |v| < 5e-7 (~-126 dB);
+# nan, inf and -0.000000 do not match it (AE 70541687 C2/C3).
+ZERO_LINE = "Float 0.000000"
+
+
+def read_back_gains() -> dict[str, str]:
+    """Read all 16 gain values (8 Mult, 8 Add) from PipeWire, unparsed.
+
+    Values come from the live Props via pw-cli enum-params, never from
+    pw-dump (F-349) or the web-ui state; pw-dump only finds the node id.
+    Returns the raw value line per "<gain>:<param>" key.  FAIL, printing
+    the raw line, unless the line after each key is a Float line; FAIL
+    unless the keys are exactly GAIN_KEYS, each once (AE 1fb3da7c P2).
+    """
+    node_id = _convolver_id()
+    out = subprocess.run(["pw-cli", "enum-params", str(node_id), "Props"],
+                         capture_output=True, text=True, timeout=10)
+    if out.returncode != 0:
+        pytest.fail(f"pw-cli enum-params {node_id} failed: {out.stderr}",
+                    pytrace=False)
+    lines = out.stdout.splitlines()
+    values: dict[str, str] = {}
+    for i, line in enumerate(lines):
+        key = re.search(r'String\s+"(gain_\w+:(?:Mult|Add))"', line)
+        if not key:
+            continue
+        name = key.group(1)
+        raw = lines[i + 1].strip() if i + 1 < len(lines) else None
+        if raw is None or not raw.startswith("Float "):
+            pytest.fail(f"{name}: value line is not a Float: {raw!r}", pytrace=False)
+        if name in values:
+            pytest.fail(f"{name} read back twice: {values[name]!r}, {raw!r}",
+                        pytrace=False)
+        values[name] = raw
+    missing = [k for k in GAIN_KEYS if k not in values]
+    extra = sorted(set(values) - set(GAIN_KEYS))
+    if missing or extra:
+        pytest.fail(f"gain values read back: missing {missing}, extra {extra}: "
+                    f"{values}", pytrace=False)
+    return {k: values[k] for k in GAIN_KEYS}
+
+
+def nonzero_gains(values: dict[str, str], param: str | None = None) -> dict[str, str]:
+    """The values whose line is not exactly ZERO_LINE, optionally one param."""
+    return {k: v for k, v in values.items()
+            if v != ZERO_LINE and (param is None or k.endswith(f":{param}"))}
+
+
 def _gate_state(base_url: str) -> dict:
     status, body = _api_get(base_url, "/api/v1/venue/current")
     return body if status == 200 else {"status": status, **(body or {})}
@@ -649,9 +715,9 @@ def virtual_gate_open(tone_on_sw_tap, base_url, level_hw_out_port):
     the gate is still closed, then opens through the product path (venue
     select + gate open), so the gains are the venue's. Returns the
     expected hw-out tone peak on the mains (tone peak + venue gain_db).
-    Teardown, also after a failed test: unmute, close the gate, assert the
-    API reports it closed and unmuted, and assert hw-out is back at the
-    floor.
+    Teardown, also after a failed test: close the gate, assert the API
+    reports it closed and muted (F-439: mute = gate closed, no unmute),
+    assert hw-out is back at the floor and all 16 gain values read 0.
     """
     refusal = virtual_stack_refusal(BACKEND_TYPE, _pw_dump())
     if refusal:
@@ -672,16 +738,17 @@ def virtual_gate_open(tone_on_sw_tap, base_url, level_hw_out_port):
             pytest.fail(f"gate open failed: {status} {body}", pytrace=False)
         yield expected
     finally:
-        # Unmute before closing: unmute restores the pre-mute gains, so
-        # doing it after the close would reopen the path behind a closed gate.
-        _api_post(base_url, "/api/v1/audio/unmute")
         _api_post(base_url, "/api/v1/venue/gate/close")
         gate = _gate_state(base_url)
         _, mute = _api_get(base_url, "/api/v1/audio/mute-status")
-        if gate.get("gate_open") is not False or mute.get("is_muted") is not False:
+        if gate.get("gate_open") is not False or mute.get("is_muted") is not True:
             pytest.fail(f"teardown left gate={gate} mute={mute}", pytrace=False)
         peaks = wait_for_peaks(level_hw_out_port, STIMULUS_HW_OUT_CHANNELS,
                                lambda p: max(p) <= LEVEL_FLOOR_DB, timeout=2.0)
         if max(peaks) > LEVEL_FLOOR_DB:
             pytest.fail(f"hw-out not at the floor after gate close: {peaks}",
                         pytrace=False)
+        live = nonzero_gains(read_back_gains())
+        if live:
+            pytest.fail(f"teardown left non-zero gains behind the closed gate: "
+                        f"{live}", pytrace=False)

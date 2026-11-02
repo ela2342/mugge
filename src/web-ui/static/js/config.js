@@ -13,6 +13,9 @@
  *   - D-009: Mult hard cap at 1.0 (0 dB) enforced server-side.
  *   - UI soft cap: slider max at 0.1 (-20 dB) by default.
  *   - Quantum changes show a warning about audio path impact.
+ *   - F-439: a non-zero gain needs the D-063 gate open.  A refusal (409)
+ *     re-reads the gains from the server so the sliders show what is
+ *     really applied; the text is chosen by HTTP status and reason code.
  */
 
 "use strict";
@@ -41,6 +44,18 @@
     var currentQuantum = null;
     var currentSampleRate = 48000;
     var dirty = false;
+
+    // F-439 refusal texts (UX f05b5f4a, 9c7109b4).
+    var GATE_REFUSED_TEXT = {
+        gate_closed: ["Not applied: the audio gate is closed, so no gain was " +
+            "changed. Gains can only be changed while the gate is open.", "c-warning"],
+        gate_unknown: ["Not applied: the audio gate state could not be checked, " +
+            "so no gain was changed. Try again; if this keeps happening, check " +
+            "that the audio services are running.", "c-danger"]
+    };
+    var GATE_REFUSED_DEFAULT = ["Not applied: the audio gate is not confirmed " +
+        "open, so no gain was changed.", "c-warning"];
+    var INVALID_GAIN_TEXT = "Not applied: invalid gain value, so no gain was changed.";
 
     // -- Helpers --
 
@@ -167,8 +182,8 @@
 
     // -- API calls --
 
-    function fetchConfig() {
-        fetch("/api/v1/config")
+    function getConfig() {
+        return fetch("/api/v1/config")
             .then(function (r) {
                 if (!r.ok) throw new Error("HTTP " + r.status);
                 return r.json();
@@ -177,10 +192,44 @@
                 buildGainSliders(data.gains || {});
                 updateQuantumButtons(data.quantum, data.sample_rate);
                 updateFilterInfo(data.filter_chain || {});
+                return data;
+            });
+    }
+
+    function fetchConfig() {
+        getConfig()
+            .then(function () {
                 setStatus("cfg-gain-status", "", "");
             })
             .catch(function (err) {
                 setStatus("cfg-gain-status", "Failed to load config: " + err.message, "c-danger");
+            });
+    }
+
+    // F-439: the applied gains are not known — show "--", disable the
+    // sliders until a readback succeeds (buildGainSliders re-enables).
+    function setGainsUnknown() {
+        for (var i = 0; i < GAIN_NODES.length; i++) {
+            var name = GAIN_NODES[i];
+            var slider = document.getElementById("cfg-gain-" + name);
+            var valueEl = document.getElementById("cfg-gain-value-" + name);
+            if (slider) slider.disabled = true;
+            if (valueEl) valueEl.textContent = "-- dB";
+        }
+        var applyBtn = document.getElementById("cfg-gain-apply");
+        var resetBtn = document.getElementById("cfg-gain-reset");
+        if (applyBtn) applyBtn.disabled = true;
+        if (resetBtn) resetBtn.disabled = true;
+    }
+
+    // F-439: gate refusal — fresh readback first, THEN the text, so the
+    // sliders match the server and the text is the last thing written.
+    function onGateRefused(reason) {
+        var text = GATE_REFUSED_TEXT[reason] || GATE_REFUSED_DEFAULT;
+        getConfig()
+            .catch(function () { setGainsUnknown(); })
+            .then(function () {
+                setStatus("cfg-gain-status", text[0], text[1]);
             });
     }
 
@@ -203,8 +252,21 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ gains: payload })
         })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
+            .then(function (r) {
+                return r.json().catch(function () { return {}; })
+                    .then(function (data) { return { status: r.status, data: data }; });
+            })
+            .then(function (res) {
+                var data = res.data || {};
+                if (res.status === 409) {
+                    onGateRefused(data.reason);
+                    return;
+                }
+                if (res.status === 422) {
+                    setStatus("cfg-gain-status", INVALID_GAIN_TEXT, "c-danger");
+                    if (applyBtn) applyBtn.disabled = false;
+                    return;
+                }
                 if (data.ok) {
                     // Update currentGains with applied values
                     for (var key in payload) {

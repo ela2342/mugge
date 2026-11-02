@@ -15,9 +15,18 @@ import socket
 import pytest
 from playwright.sync_api import expect
 
+from fixtures.backend import (  # noqa: F401
+    tone_on_sw_tap,
+    virtual_gate_open,
+)
+
 pytestmark = [pytest.mark.browser, pytest.mark.slow]
 
 WS_DATA_TIMEOUT_MS = 15_000
+
+PANIC_TITLE_MUTE = "Mute all outputs now (closes the audio gate)"
+PANIC_TITLE_MUTED = ("All outputs muted: the audio gate is closed. To play "
+                     "again, use OPEN GATE in the Audio Gate section.")
 
 
 # ---------------------------------------------------------------------------
@@ -158,9 +167,18 @@ class TestPanicButton:
         expect(btn).to_be_visible()
 
     def test_panic_button_has_text(self, demo_page):
-        """Panic button shows 'MUTE' text."""
+        """Panic button shows 'MUTED': GM starts with the gate closed (F-439)."""
+        _wait_for_ws_data(demo_page)
+        btn = demo_page.locator('[data-testid="panic-button"]')
+        expect(btn).to_have_text("MUTED")
+        expect(btn).to_have_attribute("title", PANIC_TITLE_MUTED)
+
+    def test_panic_button_gate_open_reads_mute(self, virtual_gate_open, demo_page):
+        """Gate open (virtual stack): the button reads 'MUTE' with its tooltip."""
+        _wait_for_ws_data(demo_page)
         btn = demo_page.locator('[data-testid="panic-button"]')
         expect(btn).to_have_text("MUTE")
+        expect(btn).to_have_attribute("title", PANIC_TITLE_MUTE)
 
 
 # ===========================================================================

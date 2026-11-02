@@ -1759,56 +1759,50 @@ class TestActivateProfileImpl:
         assert not conf_path.exists()
 
     def test_mute_failure_blocks_activation(self, activate_dir):
-        """If mute fails (non-mock), activation should abort."""
+        """If close_gate fails (non-mock), activation should abort (F-439)."""
         profile = _make_profile()
-        mock_mute = AsyncMock(return_value={"ok": False, "error": "pw-cli timeout"})
-        mute_mgr = MagicMock()
-        mute_mgr.mute = mock_mute
+        close_gate = AsyncMock(side_effect=RuntimeError("GM timeout"))
 
         result = _run_async(
-            _activate_profile_impl("test-2way", profile, mute_mgr, False)
+            _activate_profile_impl("test-2way", profile, close_gate, False)
         )
         assert result["activated"] is False
         assert result["error"] == "mute_failed"
-        assert "pw-cli timeout" in result["detail"]
+        assert "GM timeout" in result["detail"]
         # No config file should be written
         conf_path = activate_dir["pw_conf"] / _PW_CONF_FILENAME
         assert not conf_path.exists()
 
     def test_mute_skipped_in_mock_mode(self, activate_dir):
-        """Mock mode skips mute even if mute_manager is provided."""
+        """Mock mode skips the gate close even if close_gate is provided."""
         profile = _make_profile()
-        mock_mute = AsyncMock()
-        mute_mgr = MagicMock()
-        mute_mgr.mute = mock_mute
+        close_gate = AsyncMock()
 
         async def run():
             with _patch_pw_gen("# mock PW config\n"):
                 return await _activate_profile_impl(
-                    "test-2way", profile, mute_mgr, True
+                    "test-2way", profile, close_gate, True
                 )
 
         result = _run_async(run())
         assert result["activated"] is True
-        mock_mute.assert_not_called()
+        close_gate.assert_not_called()
 
     def test_mute_called_in_non_mock_mode(self, activate_dir):
-        """Non-mock mode calls mute before config generation."""
+        """Non-mock mode closes the gate before config generation (F-439)."""
         profile = _make_profile()
-        mock_mute = AsyncMock(return_value={"ok": True})
-        mute_mgr = MagicMock()
-        mute_mgr.mute = mock_mute
+        close_gate = AsyncMock(return_value=None)
 
         async def run():
             with _patch_pw_gen("# mock PW config\n"):
                 return await _activate_profile_impl(
-                    "test-2way", profile, mute_mgr, False
+                    "test-2way", profile, close_gate, False
                 )
 
         result = _run_async(run())
         assert result["activated"] is True
         assert result["safety_flow"] == "muted"
-        mock_mute.assert_called_once()
+        close_gate.assert_awaited_once_with()
 
     def test_config_generation_failure(self, activate_dir):
         """If PW config generation raises, activation fails gracefully."""

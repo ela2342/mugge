@@ -1,15 +1,17 @@
 """Shared PipeWire pw-dump / pw-cli helpers.
 
-Extracted from ``audio_mute.py`` so that both the mute manager and the
-config routes can read/write gain nodes and query PipeWire state without
-duplicating subprocess logic.
+Shared by the config routes, the thermal limiter and ``gain_guard`` so
+they can read/write gain nodes and query PipeWire state without
+duplicating subprocess logic.  (``audio_mute.py`` was removed in F-439.)
 
 Functions:
     pw_dump()         — Run ``pw-dump`` and return parsed JSON.
     find_convolver_node() — Find the convolver capture node ID.
     find_gain_node()  — Find a gain node's Mult from the convolver params.
     read_mult()       — Read Mult via pw-cli enum-params (fallback).
+    validate_mult()   — G3 check for a Mult value (finite, 0..1, no subnormal).
     set_mult()        — Set a gain node's Mult value via ``pw-cli``.
+                        Only ``gain_guard.guarded_set_mult`` may call it.
     find_quantum()    — Read the current clock.force-quantum from pw-dump.
     find_filter_info() — Read filter-chain node metadata.
 
@@ -32,6 +34,7 @@ Architecture (verified on Pi, OBSERVE S-004):
 import asyncio
 import json
 import logging
+import math
 import re
 import subprocess
 
@@ -277,13 +280,55 @@ def _parse_mult_from_enum(text: str, node_name: str | None = None) -> float | No
     return None
 
 
+# D-009: gain Mult must never exceed 1.0 (0 dB).
+MULT_HARD_CAP = 1.0
+
+# Smallest normal float32. PipeWire stores Mult as a float, so a value
+# below this is a subnormal (or flushes to zero) on the RT path (F-352).
+FLT_MIN = 1.17549435e-38
+
+
+def validate_mult(mult) -> float:
+    """Return ``mult`` as a float if it is a valid Mult, else raise ValueError.
+
+    G3 (F-352 AC1/AC2): finite, 0 <= mult <= 1.0, and not a subnormal
+    (0 < |mult| < FLT_MIN).  Invalid values are refused, never clamped.
+    -0.0 is normalised to +0.0.
+    """
+    if isinstance(mult, bool) or not isinstance(mult, (int, float)):
+        raise ValueError(f"Mult must be a number, got {type(mult).__name__}")
+    mult = float(mult)
+    if not math.isfinite(mult):
+        raise ValueError(f"Mult must be finite, got {mult}")
+    if mult < 0.0:
+        raise ValueError(f"Mult must be >= 0.0, got {mult}")
+    if mult > MULT_HARD_CAP:
+        raise ValueError(f"Mult must be <= {MULT_HARD_CAP}, got {mult}")
+    if 0.0 < mult < FLT_MIN:
+        raise ValueError(f"Mult {mult} is subnormal (below {FLT_MIN})")
+    return mult + 0.0  # -0.0 + 0.0 == +0.0
+
+
+def format_mult(mult: float) -> str:
+    """Format a validated Mult for pw-cli: 9 significant digits (float32)."""
+    return f"{mult:.9g}"
+
+
 def _set_mult_sync(node_id: int, node_name: str, mult: float) -> subprocess.CompletedProcess | None:
-    """Run ``pw-cli s`` synchronously (called from thread pool)."""
+    """Run ``pw-cli s`` synchronously (called from thread pool).
+
+    Re-validates ``mult`` (F-352 AC2): an invalid value never reaches pw-cli.
+    """
+    try:
+        mult = validate_mult(mult)
+    except ValueError as exc:
+        log.error("Refusing pw-cli write for %s: %s", node_name, exc)
+        return None
     param_key = f"{node_name}:Mult"
     try:
         return subprocess.run(
             ["pw-cli", "s", str(node_id), "Props",
-             f'{{ params = [ "{param_key}" {mult} ] }}'],
+             f'{{ params = [ "{param_key}" {format_mult(mult)} ] }}'],
             capture_output=True, timeout=5,
         )
     except subprocess.TimeoutExpired:
@@ -300,7 +345,16 @@ async def set_mult(node_id: int, node_name: str, mult: float) -> bool:
     Uses ``asyncio.to_thread`` to avoid event loop starvation (F-059).
     Targets the convolver node with the full param key
     ``<node_name>:Mult``, matching the filter-chain builtin param format.
+
+    Low-level writer with no gate check: callers go through
+    ``gain_guard.guarded_set_mult`` (one Mult writer, PO r3 §3).  An
+    invalid value is refused here too, without running pw-cli.
     """
+    try:
+        mult = validate_mult(mult)
+    except ValueError as exc:
+        log.error("Refusing set_mult for %s: %s", node_name, exc)
+        return False
     result = await asyncio.to_thread(_set_mult_sync, node_id, node_name, mult)
     if result is None:
         return False
