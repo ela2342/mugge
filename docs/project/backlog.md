@@ -1997,6 +1997,38 @@ priority!"
     F-511, #66 last, F-504, F-441, F-481, F-497, F-507, F-508 as in
     v334. Mac disk about 1 GiB free, below the 10 GiB stop line
     (owner). PARKED: R5r, R6n as in v334.
+  - v335 PUSHED (CM, remote verified): chore/backlog =
+    5e70ed24def590abf0863b997104dc1f9a1a23a8 (file fd823e8c, base
+    be6d73d6, +265/-0). v336 bases on it and consumes PM addenda 76-81
+    in /Users/gabriela.bogk/mugge-team-evidence/live/project-manager/:
+    held-for-v336-add76-20261031.txt 2a4c4220, -add77-20261031
+    c69aed38, -add78-20261031 e0ae934f, -add79-20261031 fd8d40cb,
+    -add80-20261031 e219c459, -add81-20261102 e1adcefa (sha256
+    e1adcefac5be129c07ca53bd57b7e6c5a550f5412c2c76e055cbccc3af044749).
+    Built at MILESTONES (owner freed the Mac disk; PR #78 PR-event CI
+    green). New ID: F-515.
+  - DISK STOP 2026-10-31 -> 2026-11-02: the Mac ran out of space
+    (ENOSPC, ~150 MiB free); team tool calls, file writes and messages
+    failed and work stopped. The owner freed space: 22 GiB free on
+    2026-11-02, above the 10 GiB stop line.
+  - OPEN TRACKING (v336; supersedes v335's line): US-172 CRITICAL
+    PATH: L1s a1bdd18a CI 41205308187 SUCCESS; worker-4 next head =
+    Arch B 188a1b93 + SecSpec SO3 9a5105ce + Arch F1 1bed8ff7 (S2 held
+    for a QE erratum) -> ONE push + ONE CI -> PR under Rule 13
+    (supersedes #52) -> branch build at a CM-picked venue -> s5
+    tryboot + 15-min GL soak (worker-1 kit r2, joint 068b0988 C1/C2)
+    -> AC2a per PO A12 -> DEPLOY -> acceptance reads; starvation guard
+    2026-11-03T20:00 (PO f6393b6b). F-439 PR #78 at 8c23f93f: PR-event
+    CI 41205412472 SUCCESS; body r2b a757fd75 names CH-1 fixes F-513;
+    body r3 (QE positive-control label) -> 7 Rule 13 reviews -> merge
+    before #66; then CM freezes + deletes the scratch branches; on
+    merge F-513, F-344, F-345, F-410 move to verify-on-Pi-5. F-383 S4:
+    run 41204049745 killed by a runner shutdown at ~19 min (not a
+    result; same point as 41198071247); worker-3 diagnosing,
+    re-dispatch held. safety.md rows 9/20 r2 docs-only PR (CM, after
+    the US-172 relays). SecSpec G1 file (then a P3 backlog item).
+    F-515 (TW docs, after core tech). F-514 (UX, after core tech).
+    Others as in v335.
 
 ## Reserved IDs
 
@@ -2201,6 +2233,8 @@ Next free (v334; supersedes the line above; F-512 filed in this
 version): F-513, US-183, D-072, T66.
 Next free (v335; supersedes the line above; F-513, F-514 filed in this
 version): F-515, US-183, D-072, T66.
+Next free (v336; supersedes the line above; F-515 filed in this
+version): F-516, US-183, D-072, T66.
 FINAL (PO, 2026-10-25; supersedes the v87 PROVISIONAL block): the
 owner says GPU acceleration is a prerequisite (Wayland doesn't start
 without it), and ruled, verbatim: "Separate PR is fine. Just make
@@ -6105,6 +6139,41 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       (e1486700932a5fa5c4186d745aff13bcc2b57aa22391e19fdc39347e5e87445c),
       desk only; r2 next, then the AC2a kit. Pi: no session active,
       gen 6.
+  - US-172 v336 STATE (supersedes the v335 lines above where they
+    differ):
+    - L1s head a1bdd18a PUSHED (stage-only hook mode, pi5
+      glDiagnostics, Part D r13 + r14 docs commits; replaces
+      14fc07ee); CI 41205308187 SUCCESS. Earlier run 41201406562 at
+      466345d9 success (CM-reported). Part D r14 release record not
+      yet seen by the PM.
+    - NEW RULINGS for worker-4's next head: Architect B
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/arch-US172-L1s-glDiagnostics-bootstrap-r1-188a1b93.md
+      (188a1b9301f79fb45e0b19a32d61d0f043e5f5c0763e51c6b0dbe79d92d1864f):
+      glDiagnostics OFF in the bootstrap + an eval case. Joint
+      (SecSpec writer, both released)
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/joint-US172-L1s-stageonly-transient-write-r1-068b0988.md
+      (068b09882ad7b530f15bd36f1e996e14822e496e27a0199a38fc5b6656368b53):
+      transient config.txt.new accepted; C1/C2 kit conditions for
+      worker-1; in force, settled by SecSpec
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/secspec-US172-L1s-stageonly-crossing-settlement-r1-9a5105ce.md
+      (9a5105cea7345071587f0fc2cb784e5c8524a41dadb70c7fba8e5534579e8351),
+      which adds SO3 (rm on cat failure). Arch draft 9cd3893a VOID;
+      SecSpec
+      084b4f38e7420cdf490a4f74db7a5a1e630c7d649b08d6e5a58b7f25edcac8d0
+      moot. QE
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/qe-US172-L1s-S2-complete-deviation-r1-1ce1ea98.md
+      (1ce1ea98ebc9b3e7ea5a92b035421a48346192fe5078bd8d8291ffb3e5b4e61e):
+      S2 deviation accepted with S2-a/S2-b + S8 correction; S2 work
+      HELD for a QE erratum. Architect
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/US-172/frozen/arch-US172-L1s-refused-gen-complete-answer-r1-1bed8ff7.md
+      (1bed8ff74580acc6688ea5e68a72d25a4b5820d6d82a84f3052d838adef643b5):
+      a refused gen's .complete is NOT harmless (LOW) for the
+      legacy-delete gate; F1 EXIT trap REQUIRED in L1s; G1 gate
+      proposal to the backlog by default.
+    - SecSpec on 1bed8ff7: PLACEHOLDER (message only): G1 not for L1s,
+      backlog P3 LOW ("L1s legacy-delete gate: also require chosen8 ==
+      booted8 and present(booted)"); F1 no objection, final check at
+      PR head. Filed only when SecSpec's file + sha arrive.
 - WirePlumber threads also get RTKit RR/20 (same RLIMIT_NICE / nice
   -11 EPERM cause as F-358). Outside AC13 and US-163 scope; after
   US-163. (Architect) Deploy-2 finding F1 (CM, QE): on the Pi 5 at
@@ -18397,6 +18466,22 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
       click closes). Body r2 MUST ALSO name "CH-1 fixes F-513 (limiter
       skip of small reductions)" with AE be3da6a3 H1-H4 and the H2
       test (team-lead), and call A3 a backstop.
+    - v336 STATE: head 8c23f93f PUSHED (fast-forward from 10f9b8bf;
+      CH-1 = F-513 fix, T1-T4, H2, the C6(iv) pin, the F-352 positive
+      control, U1-U3; patch-id d9281b96). QE R3 re-check
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/F-439/frozen/qe-F439-R3-recheck-8c23f93f-r1-4e6cd29d.md
+      (4e6cd29d1b893e68847f082d1ffd48ef6346be06513ebb3c4e1b7d74823e533d):
+      PASSED. PR #78 OPEN; PR-event CI 41205412472 SUCCESS (R1/R2
+      evidence). Body r2
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/F-439/frozen/F439-pr-body-r2-ba16e985.md
+      (ba16e98578e54b8af2cd55a6dabcf666d41bff9c009f3c834a566e5ab8226bdc),
+      then r2b
+      /Users/gabriela.bogk/mugge-team-evidence/live/cm-relay/F-439/frozen/F439-pr-body-r2b-a757fd75.md
+      (a757fd75b240e82e7232c20c39120609235a1d117aa5c6e9b9065f5aabf67635):
+      names "CH-1 fixes F-513" in the title, l.24 and the closes table
+      (team-lead requirement MET); QE accepts the F-352 wording. Body
+      r3 (worker-2) adds the QE label "green at base by construction"
+      on the positive control. NEXT: 7 Rule 13 reviews.
 - **F-440** runner MAX_CUT_DB vs venue_pipeline: a D-009 question for
   the AE (filed 2026-10-27; ID free across main, all origin/* and
   local branches at PM read; full record below, folded from the PM
@@ -20724,6 +20809,49 @@ Recorded in B3 v7/v8 (US-172.md, stories index row).
   held addenda and origin/main docs). ID free across all local heads +
   remotes and worktrees (no fetch).
   - Next free -> F-515.
+  - AMPS-ON ROWS 9/20 (v336; supersedes the v335 AMPS-ON line above;
+    mirror rule: final when the safety.md change merges): TW r2
+    /Users/gabriela.bogk/mugge-team-evidence/live/technical-writer/safety-amps-on-F513-F344-F345-r2/,
+    SHA256SUMS
+    24e49f2d130f4a5f55359f8e8ea4520af65ca7e866a8c367619bd0c064925fd0,
+    diff
+    f67192517c289e2e222ead5162a21de521477b54eed7c21d7838f5727516cfea
+    on origin/main 08c03af7; r1
+    c4ec52e43d33425139154050b8ef20cf785f146607d1cab899a0180baf79fccc
+    VOID. AE approval
+    /Users/gabriela.bogk/mugge-team-evidence/live/audio-engineer/ae-safety-rows-9-20-r1-review-r1.txt
+    (5eee293dc6636c111b4c7693e73f9b01d40de60e1503bb3603d9939e2c793e2f;
+    W1 taken as written, no new round). AE row ruling
+    /Users/gabriela.bogk/mugge-team-evidence/live/audio-engineer/ae-F344-F345-amps-on-row-r1.txt
+    (454f4c9ea86e4e82e3b156cb95940a2a842ab2ff94058ce0e8e6e5b7c241b8c7).
+    Row 9 (F-317, F-318, F-352, F-354, F-355, F-513): "the thermal
+    limiter skips reductions of up to ~1.5 dB (F-513, closes with the
+    F-439 PR)". Row 20 (F-410, F-320 D, F-344, F-345): neither Config
+    tab gain Apply (F-344) nor the web-UI thermal limiter (F-345)
+    writes a non-zero Mult while the gate is closed; the limiter is
+    reduce-only against the live value (both close with the F-439 PR);
+    "F-410, F-344 and F-345 must still be fixed; no interim operating
+    rule counts; AE acceptance required". No new row, no renumber.
+    status.md interim rule 11 stays until the fix is verified on the
+    Pi 5. Vehicle: separate docs-only PR on a fresh branch from
+    origin/main (CM agrees), low priority.
+- **F-515** P3 LOW (docs; owner TW; outside US-172; after core tech
+  per the focus rule; filed 2026-11-02; TW side finding from US-172
+  R5s-c): SETUP-MANUAL.md at origin/main 08c03af7 hardcodes the
+  USBStreamer ALSA card number: l.584 and l.600 `api.alsa.path =
+  "hw:1,0"` in the 20-usbstreamer.conf example, and l.614 says to
+  adjust hw:1,0 and that the 5.3 udev rule "should keep it stable". On
+  the Pi 5 the card index moved 1 -> 0 between boots (G-US172-06/07);
+  AE fc136bb5 (F-512 P1/P4): card numbers are not stable, name the
+  card (hw:CARD=USBStreamer). Fix: TW edit of those lines to name the
+  card and drop the "stays stable" claim; the AE checks per F-512 P4.
+  Lab notes (US-000, US-000b: hw:3,0) are history, not changed.
+  Related: F-512, the SETUP-MANUAL section 14 fix (2026-10-25,
+  different lines). Dup check: no existing entry (hw:1,0, hw:CARD,
+  SETUP-MANUAL + hw: in v335, held addenda 76-81, origin/main docs).
+  ID free across all local heads + remotes and worktrees at PM read
+  (no fetch).
+  - Next free -> F-516.
 
 ## Open PRs (2026-10-24, per CM)
 
